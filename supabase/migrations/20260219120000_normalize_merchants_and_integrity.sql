@@ -282,10 +282,18 @@ BEGIN
                 v_merchants_user_id_udt_name
             );
         ELSE
-            v_user_id_expr := 'NULL';
+            IF v_merchants_user_id_udt_name IS NOT NULL THEN
+                v_user_id_expr := format('NULL::%s', v_merchants_user_id_udt_name);
+            ELSE
+                v_user_id_expr := 'NULL';
+            END IF;
         END IF;
     ELSE
-        v_user_id_expr := 'NULL';
+        IF v_merchants_user_id_udt_name IS NOT NULL THEN
+            v_user_id_expr := format('NULL::%s', v_merchants_user_id_udt_name);
+        ELSE
+            v_user_id_expr := 'NULL';
+        END IF;
     END IF;
 
     IF v_merchants_status_udt_name = 'merchant_status' THEN
@@ -320,13 +328,21 @@ BEGIN
                 v_merchants_charity_donation_udt_name
             );
         ELSE
-            v_charity_donation_expr := 'NULLIF(TRIM(l.charity_donation_amount::text), '''')';
+            IF v_merchants_charity_donation_udt_name IS NOT NULL THEN
+                v_charity_donation_expr := format('NULL::%s', v_merchants_charity_donation_udt_name);
+            ELSE
+                v_charity_donation_expr := 'NULL';
+            END IF;
         END IF;
     ELSE
         IF v_merchants_charity_donation_udt_name IN ('int2', 'int4', 'int8', 'numeric', 'float4', 'float8') THEN
             v_charity_donation_expr := format('0::%s', v_merchants_charity_donation_udt_name);
         ELSE
-            v_charity_donation_expr := 'NULL';
+            IF v_merchants_charity_donation_udt_name IS NOT NULL THEN
+                v_charity_donation_expr := format('NULL::%s', v_merchants_charity_donation_udt_name);
+            ELSE
+                v_charity_donation_expr := 'NULL';
+            END IF;
         END IF;
     END IF;
 
@@ -334,14 +350,29 @@ BEGIN
         IF v_merchants_onboarding_fee_paid_udt_name = 'bool' THEN
             v_onboarding_fee_paid_expr :=
                 'CASE WHEN lower(COALESCE(NULLIF(TRIM(l.onboarding_fee_paid::text), ''''), ''false'')) IN (''true'', ''t'', ''1'', ''yes'', ''y'') THEN true ELSE false END';
+        ELSIF v_merchants_onboarding_fee_paid_udt_name IN ('int2', 'int4', 'int8') THEN
+            v_onboarding_fee_paid_expr := format(
+                'CASE WHEN lower(COALESCE(NULLIF(TRIM(l.onboarding_fee_paid::text), ''''), ''0'')) IN (''true'', ''t'', ''1'', ''yes'', ''y'') THEN 1::%1$s ELSE 0::%1$s END',
+                v_merchants_onboarding_fee_paid_udt_name
+            );
         ELSE
-            v_onboarding_fee_paid_expr := 'NULLIF(TRIM(l.onboarding_fee_paid::text), '''')';
+            IF v_merchants_onboarding_fee_paid_udt_name IS NOT NULL THEN
+                v_onboarding_fee_paid_expr := format('NULL::%s', v_merchants_onboarding_fee_paid_udt_name);
+            ELSE
+                v_onboarding_fee_paid_expr := 'NULL';
+            END IF;
         END IF;
     ELSE
         IF v_merchants_onboarding_fee_paid_udt_name = 'bool' THEN
             v_onboarding_fee_paid_expr := 'false';
+        ELSIF v_merchants_onboarding_fee_paid_udt_name IN ('int2', 'int4', 'int8') THEN
+            v_onboarding_fee_paid_expr := format('0::%s', v_merchants_onboarding_fee_paid_udt_name);
         ELSE
-            v_onboarding_fee_paid_expr := 'NULL';
+            IF v_merchants_onboarding_fee_paid_udt_name IS NOT NULL THEN
+                v_onboarding_fee_paid_expr := format('NULL::%s', v_merchants_onboarding_fee_paid_udt_name);
+            ELSE
+                v_onboarding_fee_paid_expr := 'NULL';
+            END IF;
         END IF;
     END IF;
 
