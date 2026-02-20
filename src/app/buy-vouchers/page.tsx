@@ -432,10 +432,14 @@ function BuyVouchersContent() {
               </div>
 
               <div className="mt-6">
-                <label className="block text-sm font-headline font-semibold text-foreground mb-2">
+                <label
+                  htmlFor="voucher-amount-select"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
                   Voucher Amount (R)
                 </label>
                 <select
+                  id="voucher-amount-select"
                   value={voucherAmount}
                   onChange={(e) => setVoucherAmount(Number(e.target.value))}
                   className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-body"
