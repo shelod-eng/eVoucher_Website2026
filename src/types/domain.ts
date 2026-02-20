@@ -16,8 +16,22 @@ export interface MerchantOnboardingRequest {
 
 export interface PurchaseVoucherRequest {
   merchantId: string;
-  faceValue: number;
+  productId?: string;
+  faceValue?: number;
   paymentMethod: 'visa' | 'payfast' | 'eft' | 'debit_credit';
+}
+
+export interface VoucherPricingBreakdown {
+  faceValue: number;
+  totalDiscountPct: number;
+  consumerBenefitPct: number;
+  evoucherBenefitPct: number;
+  totalDiscountAmount: number;
+  consumerBenefitAmount: number;
+  evoucherBenefitAmount: number;
+  consumerPrice: number;
+  merchantReceivableAfterTotalDiscount: number;
+  merchantReceivableAfterEvoucherBenefit: number;
 }
 
 export interface PurchaseVoucherResponse {
@@ -25,6 +39,7 @@ export interface PurchaseVoucherResponse {
   status: 'pending' | 'completed' | 'failed';
   checkoutUrl?: string | null;
   voucherCode?: string;
+  pricing?: VoucherPricingBreakdown;
 }
 
 export interface RedeemVoucherRequest {

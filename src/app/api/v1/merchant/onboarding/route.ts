@@ -9,6 +9,12 @@ function validate(body: MerchantOnboardingRequest): string | null {
   if (!body.contactName?.trim()) return 'Contact name is required.';
   if (!body.email?.trim()) return 'Email is required.';
   if (!body.phone?.trim()) return 'Phone is required.';
+  if (
+    body.discountPercentage !== undefined &&
+    (!Number.isFinite(body.discountPercentage) || body.discountPercentage < 0 || body.discountPercentage > 100)
+  ) {
+    return 'Discount percentage must be between 0 and 100.';
+  }
   return null;
 }
 
@@ -60,6 +66,7 @@ export async function POST(request: Request) {
           account_number: body.accountNumber?.trim() || null,
           branch_code: body.branchCode?.trim() || null,
           account_holder_name: body.accountHolderName?.trim() || null,
+          default_total_discount_pct: body.discountPercentage ?? 5,
           status: 'pending',
         },
         { onConflict: 'user_id' }

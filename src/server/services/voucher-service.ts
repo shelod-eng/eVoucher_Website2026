@@ -1,9 +1,13 @@
+import { DiscountPricingBreakdown } from '@/lib/pricing';
+
 export interface IssueVoucherInput {
   customerId: string;
   merchantId?: string;
+  productId?: string;
   merchantName: string;
   faceValue: number;
   discountPercent: number;
+  pricing: DiscountPricingBreakdown;
   voucherCode: string;
   expiresAt: string;
 }

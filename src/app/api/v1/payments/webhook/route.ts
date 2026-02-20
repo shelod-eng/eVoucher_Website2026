@@ -4,6 +4,7 @@ import { MockPaymentProvider } from '@/server/services/payment/mock-payment-prov
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { writeAuditEvent } from '@/server/utils/audit';
 import { generateSecureVoucherCode, sha256 } from '@/server/utils/security';
+import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 
 interface WebhookPayload {
   eventId?: string;
@@ -66,6 +67,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Transaction not found.' }, { status: 404 });
     }
 
+    const faceValue = Number(transaction.face_value ?? transaction.amount);
+    const rawTotalDiscountPct = transaction.total_discount_pct ?? null;
+    const rawConsumerBenefitPct = transaction.consumer_benefit_pct ?? null;
+    const derivedTotalDiscountPct =
+      rawTotalDiscountPct !== null && rawTotalDiscountPct !== undefined
+        ? Number(rawTotalDiscountPct)
+        : rawConsumerBenefitPct !== null && rawConsumerBenefitPct !== undefined
+          ? Number(rawConsumerBenefitPct) * 2
+          : DEFAULT_TOTAL_DISCOUNT_PCT;
+    const totalDiscountPct = Number.isFinite(derivedTotalDiscountPct)
+      ? derivedTotalDiscountPct
+      : DEFAULT_TOTAL_DISCOUNT_PCT;
+    const pricing = calculateDiscountPricing(faceValue, totalDiscountPct);
+
     let voucherCode: string | null = transaction.voucher_code;
     if (normalizedStatus === 'completed' && !voucherCode) {
       const { data: merchant, error: merchantError } = await admin
@@ -83,9 +98,11 @@ export async function POST(request: Request) {
       await voucherService.issueVoucher({
         customerId: transaction.customer_id,
         merchantId: merchant.id,
+        productId: transaction.product_id ?? undefined,
         merchantName: merchant.business_name,
-        faceValue: Number(transaction.amount),
-        discountPercent: 15,
+        faceValue: pricing.faceValue,
+        discountPercent: pricing.consumerBenefitPct,
+        pricing,
         voucherCode,
         expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
       });
@@ -109,6 +126,9 @@ export async function POST(request: Request) {
         provider,
         normalizedStatus,
         voucherCode,
+        faceValue: pricing.faceValue,
+        consumerPrice: pricing.consumerPrice,
+        totalDiscountPct: pricing.totalDiscountPct,
       },
       requestId: payload.eventId,
     });
@@ -117,6 +137,7 @@ export async function POST(request: Request) {
       status: normalizedStatus,
       transactionReference: payload.transactionReference,
       voucherCode,
+      pricing,
     });
   } catch (error: any) {
     return NextResponse.json(

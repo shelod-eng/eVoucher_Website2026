@@ -5,12 +5,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
+import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT, DiscountPricingBreakdown } from '@/lib/pricing';
 
 interface MerchantOption {
   id: string;
   businessName: string;
   email: string;
   status: string;
+  defaultTotalDiscountPct: number;
 }
 
 type PaymentMethod = 'visa' | 'payfast' | 'eft' | 'debit_credit';
@@ -28,8 +30,14 @@ export default function BuyVouchers() {
   const [voucherCode, setVoucherCode] = useState<string | null>(null);
   const [transactionReference, setTransactionReference] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [pricingResult, setPricingResult] = useState<DiscountPricingBreakdown | null>(null);
   const [error, setError] = useState('');
   const router = useRouter();
+  const selectedMerchantDetails = merchants.find((merchant) => merchant.id === selectedMerchant) ?? null;
+  const previewPricing = calculateDiscountPricing(
+    voucherAmount,
+    selectedMerchantDetails?.defaultTotalDiscountPct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+  );
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -95,6 +103,7 @@ export default function BuyVouchers() {
     setProcessing(true);
     setError('');
     setPurchaseStatus(null);
+    setPricingResult(null);
 
     try {
       const response = await fetch('/api/v1/vouchers/purchase', {
@@ -116,9 +125,11 @@ export default function BuyVouchers() {
       setVoucherCode(data.voucherCode || null);
       setTransactionReference(data.transactionReference || null);
       setCheckoutUrl(data.checkoutUrl || null);
+      setPricingResult(data.pricing ?? previewPricing);
     } catch (purchaseError: any) {
       setPurchaseStatus('failed');
       setError(purchaseError?.message || 'Failed to process payment. Please try again.');
+      setPricingResult(previewPricing);
     } finally {
       setProcessing(false);
     }
@@ -183,6 +194,22 @@ export default function BuyVouchers() {
                 <p className="text-sm font-body text-muted-foreground">
                   <span className="font-semibold text-foreground">Payment status:</span> {purchaseStatus}
                 </p>
+                {pricingResult && (
+                  <>
+                    <p className="text-sm font-body text-muted-foreground">
+                      <span className="font-semibold text-foreground">Face value:</span> R
+                      {pricingResult.faceValue.toFixed(2)}
+                    </p>
+                    <p className="text-sm font-body text-muted-foreground">
+                      <span className="font-semibold text-foreground">You paid:</span> R
+                      {pricingResult.consumerPrice.toFixed(2)}
+                    </p>
+                    <p className="text-sm font-body text-muted-foreground">
+                      <span className="font-semibold text-foreground">Consumer benefit:</span>{' '}
+                      {pricingResult.consumerBenefitPct.toFixed(2)}%
+                    </p>
+                  </>
+                )}
                 {transactionReference && (
                   <p className="text-sm font-body text-muted-foreground">
                     <span className="font-semibold text-foreground">Transaction ref:</span> {transactionReference}
@@ -268,6 +295,9 @@ export default function BuyVouchers() {
                         <div className="flex-1">
                           <h3 className="font-headline font-bold text-foreground">{merchant.businessName}</h3>
                           <p className="text-sm text-muted-foreground font-body">{merchant.email}</p>
+                          <p className="text-xs text-primary font-body mt-1">
+                            Discount budget: {merchant.defaultTotalDiscountPct.toFixed(2)}%
+                          </p>
                         </div>
                         {selectedMerchant === merchant.id && (
                           <Icon name="CheckCircleIcon" size={24} variant="solid" className="text-primary" />
@@ -331,20 +361,44 @@ export default function BuyVouchers() {
 
               <div className="bg-muted/50 rounded-xl p-4 mb-6">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground font-body">Voucher Amount</span>
-                  <span className="font-headline font-bold text-foreground">R{voucherAmount.toFixed(2)}</span>
+                  <span className="text-sm text-muted-foreground font-body">Face Value</span>
+                  <span className="font-headline font-bold text-foreground">R{previewPricing.faceValue.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground font-body">Discount (15%)</span>
+                  <span className="text-sm text-muted-foreground font-body">
+                    Total Discount Budget ({previewPricing.totalDiscountPct.toFixed(2)}%)
+                  </span>
+                  <span className="font-headline font-bold text-success">-R{previewPricing.totalDiscountAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-muted-foreground font-body">
+                    Consumer Benefit ({previewPricing.consumerBenefitPct.toFixed(2)}%)
+                  </span>
                   <span className="font-headline font-bold text-success">
-                    -R{(voucherAmount * 0.15).toFixed(2)}
+                    -R{previewPricing.consumerBenefitAmount.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-muted-foreground font-body">
+                    eVoucher Benefit ({previewPricing.evoucherBenefitPct.toFixed(2)}%)
+                  </span>
+                  <span className="font-headline font-bold text-primary">
+                    R{previewPricing.evoucherBenefitAmount.toFixed(2)}
                   </span>
                 </div>
                 <div className="border-t border-border pt-2 mt-2">
                   <div className="flex items-center justify-between">
                     <span className="font-headline font-semibold text-foreground">You Pay</span>
                     <span className="font-headline font-bold text-2xl text-primary">
-                      R{(voucherAmount * 0.85).toFixed(2)}
+                      R{previewPricing.consumerPrice.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-2 pt-2 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground font-body">Merchant Receivable (FV - Total Discount)</span>
+                    <span className="font-headline font-semibold text-foreground">
+                      R{previewPricing.merchantReceivableAfterTotalDiscount.toFixed(2)}
                     </span>
                   </div>
                 </div>

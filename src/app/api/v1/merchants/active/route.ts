@@ -12,7 +12,7 @@ export async function GET() {
     const admin = createAdminClient();
     const { data, error } = await admin
       .from('merchants')
-      .select('id,business_name,email,status')
+      .select('id,business_name,email,status,default_total_discount_pct')
       .in('status', ['active', 'approved'])
       .order('business_name', { ascending: true });
 
@@ -24,6 +24,7 @@ export async function GET() {
         businessName: merchant.business_name,
         email: merchant.email,
         status: merchant.status,
+        defaultTotalDiscountPct: Number(merchant.default_total_discount_pct ?? 5),
       })),
     });
   } catch (error: any) {

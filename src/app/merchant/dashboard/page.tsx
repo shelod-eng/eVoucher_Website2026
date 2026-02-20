@@ -12,6 +12,7 @@ interface Merchant {
   status: string;
   onboarding_fee_paid: boolean;
   charity_donation_amount: number;
+  default_total_discount_pct: number;
   created_at: string;
   approved_at: string | null;
   email: string;
@@ -211,6 +212,12 @@ export default function MerchantDashboard() {
                   <span className="text-sm font-body text-muted-foreground">Charity Contribution</span>
                   <span className="font-headline font-semibold text-foreground">
                     R{Number(merchant?.charity_donation_amount || 0).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <span className="text-sm font-body text-muted-foreground">Default Discount Budget</span>
+                  <span className="font-headline font-semibold text-foreground">
+                    {Number(merchant?.default_total_discount_pct || 5).toFixed(2)}%
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
