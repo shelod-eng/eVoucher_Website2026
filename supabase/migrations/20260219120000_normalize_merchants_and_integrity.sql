@@ -82,8 +82,12 @@ DECLARE
     v_sql TEXT;
     v_user_id_expr TEXT;
     v_status_expr TEXT;
+    v_charity_donation_expr TEXT;
+    v_onboarding_fee_paid_expr TEXT;
     v_merchants_user_id_udt_name TEXT;
     v_merchants_status_udt_name TEXT;
+    v_merchants_charity_donation_udt_name TEXT;
+    v_merchants_onboarding_fee_paid_udt_name TEXT;
     v_has_user_id BOOLEAN;
     v_has_business_name BOOLEAN;
     v_has_name BOOLEAN;
@@ -253,6 +257,22 @@ BEGIN
       AND column_name = 'status'
     LIMIT 1;
 
+    SELECT udt_name
+    INTO v_merchants_charity_donation_udt_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'merchants'
+      AND column_name = 'charity_donation_amount'
+    LIMIT 1;
+
+    SELECT udt_name
+    INTO v_merchants_onboarding_fee_paid_udt_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'merchants'
+      AND column_name = 'onboarding_fee_paid'
+    LIMIT 1;
+
     IF v_has_user_id THEN
         IF v_merchants_user_id_udt_name = 'uuid' THEN
             v_user_id_expr := 'CASE WHEN NULLIF(TRIM(l.user_id::text), '''') ~* ''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'' THEN NULLIF(TRIM(l.user_id::text), '''')::uuid ELSE NULL END';
@@ -286,6 +306,43 @@ BEGIN
             ELSE
                 '''pending'''
         END;
+    END IF;
+
+    IF v_has_charity_donation_amount THEN
+        IF v_merchants_charity_donation_udt_name IN ('int2', 'int4', 'int8') THEN
+            v_charity_donation_expr := format(
+                'CASE WHEN NULLIF(TRIM(l.charity_donation_amount::text), '''') ~ ''^-?[0-9]+$'' THEN NULLIF(TRIM(l.charity_donation_amount::text), '''')::%1$s ELSE 0::%1$s END',
+                v_merchants_charity_donation_udt_name
+            );
+        ELSIF v_merchants_charity_donation_udt_name IN ('numeric', 'float4', 'float8') THEN
+            v_charity_donation_expr := format(
+                'CASE WHEN NULLIF(TRIM(l.charity_donation_amount::text), '''') ~ ''^-?[0-9]+(\.[0-9]+)?$'' THEN NULLIF(TRIM(l.charity_donation_amount::text), '''')::%1$s ELSE 0::%1$s END',
+                v_merchants_charity_donation_udt_name
+            );
+        ELSE
+            v_charity_donation_expr := 'NULLIF(TRIM(l.charity_donation_amount::text), '''')';
+        END IF;
+    ELSE
+        IF v_merchants_charity_donation_udt_name IN ('int2', 'int4', 'int8', 'numeric', 'float4', 'float8') THEN
+            v_charity_donation_expr := format('0::%s', v_merchants_charity_donation_udt_name);
+        ELSE
+            v_charity_donation_expr := 'NULL';
+        END IF;
+    END IF;
+
+    IF v_has_onboarding_fee_paid THEN
+        IF v_merchants_onboarding_fee_paid_udt_name = 'bool' THEN
+            v_onboarding_fee_paid_expr :=
+                'CASE WHEN lower(COALESCE(NULLIF(TRIM(l.onboarding_fee_paid::text), ''''), ''false'')) IN (''true'', ''t'', ''1'', ''yes'', ''y'') THEN true ELSE false END';
+        ELSE
+            v_onboarding_fee_paid_expr := 'NULLIF(TRIM(l.onboarding_fee_paid::text), '''')';
+        END IF;
+    ELSE
+        IF v_merchants_onboarding_fee_paid_udt_name = 'bool' THEN
+            v_onboarding_fee_paid_expr := 'false';
+        ELSE
+            v_onboarding_fee_paid_expr := 'NULL';
+        END IF;
     END IF;
 
     v_sql := format(
@@ -416,7 +473,7 @@ BEGIN
         CASE WHEN v_has_account_number THEN 'NULLIF(TRIM(l.account_number), '''')' ELSE 'NULL' END,
         CASE WHEN v_has_branch_code THEN 'NULLIF(TRIM(l.branch_code), '''')' ELSE 'NULL' END,
         v_status_expr,
-        CASE WHEN v_has_charity_donation_amount THEN 'COALESCE(l.charity_donation_amount, 0)' ELSE '0' END,
+        v_charity_donation_expr,
         CASE WHEN v_has_registration_number THEN 'NULLIF(TRIM(l.registration_number), '''')' ELSE 'NULL' END,
         CASE
             WHEN v_has_tax_number THEN 'NULLIF(TRIM(l.tax_number), '''')'
@@ -434,7 +491,7 @@ BEGIN
             ELSE 'NULL'
         END,
         CASE WHEN v_has_account_holder_name THEN 'NULLIF(TRIM(l.account_holder_name), '''')' ELSE 'NULL' END,
-        CASE WHEN v_has_onboarding_fee_paid THEN 'COALESCE(l.onboarding_fee_paid, false)' ELSE 'false' END,
+        v_onboarding_fee_paid_expr,
         CASE WHEN v_has_approved_at THEN 'l.approved_at' ELSE 'NULL' END,
         CASE WHEN v_has_created_at THEN 'COALESCE(l.created_at, CURRENT_TIMESTAMP)' ELSE 'CURRENT_TIMESTAMP' END
     );
