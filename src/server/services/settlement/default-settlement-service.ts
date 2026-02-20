@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import {
   SettlementQueueResult,
   SettlementReconcileResult,
@@ -11,7 +12,7 @@ export class DefaultSettlementService implements SettlementService {
 
     const { data: pendingRedemptions, error } = await admin
       .from('redemption_history')
-      .select('id, merchant_name, amount')
+      .select('id, voucher_id, merchant_name, amount')
       .eq('transaction_type', 'redemption');
 
     if (error) throw error;
@@ -31,12 +32,35 @@ export class DefaultSettlementService implements SettlementService {
     if (merchantsError) throw merchantsError;
 
     const merchantMap = new Map((merchants ?? []).map((m) => [m.business_name, m.id]));
+    const voucherIds = pendingRedemptions
+      .map((row) => row.voucher_id as string | null)
+      .filter((id): id is string => Boolean(id));
+
+    const voucherDiscountMap = new Map<string, number>();
+    if (voucherIds.length > 0) {
+      const { data: vouchers, error: vouchersError } = await admin
+        .from('customer_vouchers')
+        .select('id,total_discount_pct')
+        .in('id', voucherIds);
+
+      if (vouchersError) throw vouchersError;
+      (vouchers ?? []).forEach((voucher) => {
+        voucherDiscountMap.set(voucher.id, Number(voucher.total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT));
+      });
+    }
+
     const payouts = pendingRedemptions
-      .map((row) => ({
-        merchant_id: merchantMap.get(row.merchant_name),
-        amount: Number((Number(row.amount) * 0.7).toFixed(2)),
-        status: 'pending',
-      }))
+      .map((row) => {
+        const totalDiscountPct = row.voucher_id
+          ? voucherDiscountMap.get(row.voucher_id) ?? DEFAULT_TOTAL_DISCOUNT_PCT
+          : DEFAULT_TOTAL_DISCOUNT_PCT;
+        const payoutMultiplier = Math.max(0, 1 - totalDiscountPct / 100);
+        return {
+          merchant_id: merchantMap.get(row.merchant_name),
+          amount: Number((Number(row.amount) * payoutMultiplier).toFixed(2)),
+          status: 'pending',
+        };
+      })
       .filter((row) => Boolean(row.merchant_id));
 
     if (payouts.length === 0) return { queuedPayouts: 0 };

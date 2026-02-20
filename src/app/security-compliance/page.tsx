@@ -5,6 +5,7 @@ import SecurityArchitecture from './components/SecurityArchitecture';
 import RegulatoryCompliance from './components/RegulatoryCompliance';
 import FraudPrevention from './components/FraudPrevention';
 import SecurityMonitoring from './components/SecurityMonitoring';
+import OperationalCompliancePanel from './components/OperationalCompliancePanel';
 import AuditTransparency from './components/AuditTransparency';
 import DataSovereignty from './components/DataSovereignty';
 import SecurityCTA from './components/SecurityCTA';
@@ -25,6 +26,7 @@ export default function SecurityCompliancePage() {
         <RegulatoryCompliance />
         <FraudPrevention />
         <SecurityMonitoring />
+        <OperationalCompliancePanel />
         <AuditTransparency />
         <DataSovereignty />
         <SecurityCTA />

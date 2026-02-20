@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
+import { isMerchantRole, resolveUserRole } from '@/server/utils/role';
 
 interface CreateMerchantProductRequest {
   productName: string;
@@ -35,8 +36,16 @@ async function resolveMerchantId(admin: ReturnType<typeof createAdminClient>, us
 
 export async function GET() {
   try {
-    const { user } = await getAuthenticatedUser();
+    const { supabase, user } = await getAuthenticatedUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { role } = await resolveUserRole(supabase, user);
+    if (!isMerchantRole(role)) {
+      return NextResponse.json(
+        { error: 'Merchant product management is merchant-only.', code: 'merchant_only' },
+        { status: 403 }
+      );
+    }
 
     const admin = createAdminClient();
     const merchant = await resolveMerchantId(admin, user.id);
@@ -70,8 +79,16 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await getAuthenticatedUser();
+    const { supabase, user } = await getAuthenticatedUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { role } = await resolveUserRole(supabase, user);
+    if (!isMerchantRole(role)) {
+      return NextResponse.json(
+        { error: 'Merchant product management is merchant-only.', code: 'merchant_only' },
+        { status: 403 }
+      );
+    }
 
     const body = (await request.json()) as CreateMerchantProductRequest;
     const validationError = validateCreate(body);

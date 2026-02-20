@@ -11,39 +11,87 @@ const PartnerLogos = () => {
   const partners: Partner[] = [
   {
     name: 'Pick n Pay',
-    logo: "https://img.rocket.new/generatedImages/rocket_gen_img_1854d5482-1767528559838.png",
-    alt: 'Pick n Pay retail store logo with green and white branding',
+    logo: '/assets/images/merchants/picknpay.png',
+    alt: 'Pick n Pay retail logo',
     category: 'Retail'
   },
   {
     name: 'Shoprite',
-    logo: "https://img.rocket.new/generatedImages/rocket_gen_img_1dd123703-1767528559798.png",
-    alt: 'Shoprite supermarket logo with red and yellow colors',
+    logo: '/assets/images/merchants/shoprite.png',
+    alt: 'Shoprite supermarket logo',
     category: 'Retail'
   },
   {
     name: 'Boxer',
-    logo: "https://img.rocket.new/generatedImages/rocket_gen_img_19f2efae6-1767528559477.png",
-    alt: 'Boxer stores logo with blue and white warehouse theme',
-    category: 'Retail'
-  },
-  {
-    name: 'Spar',
-    logo: "https://img.rocket.new/generatedImages/rocket_gen_img_1135f5151-1767528558581.png",
-    alt: 'Spar convenience store logo with green pine tree symbol',
+    logo: '/assets/images/merchants/boxer.png',
+    alt: 'Boxer stores logo',
     category: 'Retail'
   },
   {
     name: 'Checkers',
-    logo: "https://img.rocket.new/generatedImages/rocket_gen_img_110ead140-1767528561075.png",
-    alt: 'Checkers supermarket logo with blue and white checkered pattern',
+    logo: '/assets/images/merchants/checkers.png',
+    alt: 'Checkers supermarket logo',
     category: 'Retail'
   },
   {
-    name: 'Woolworths',
-    logo: "https://img.rocket.new/generatedImages/rocket_gen_img_1554c0b59-1767528569527.png",
-    alt: 'Woolworths premium retail logo with elegant green branding',
+    name: 'USave',
+    logo: '/assets/images/merchants/usave.png',
+    alt: 'USave retail logo',
     category: 'Retail'
+  },
+  {
+    name: 'Game',
+    logo: '/assets/images/merchants/game.png',
+    alt: 'Game retail logo',
+    category: 'Retail'
+  },
+  {
+    name: 'Edgars',
+    logo: '/assets/images/merchants/edgars.png',
+    alt: 'Edgars retail logo',
+    category: 'Retail'
+  },
+  {
+    name: 'Mr Price',
+    logo: '/assets/images/merchants/mr-price.png',
+    alt: 'Mr Price retail logo',
+    category: 'Retail'
+  },
+  {
+    name: 'Engen',
+    logo: '/assets/images/merchants/engen.png',
+    alt: 'Engen logo',
+    category: 'Partner'
+  },
+  {
+    name: 'Cell C',
+    logo: '/assets/images/merchants/cellc.png',
+    alt: 'Cell C logo',
+    category: 'Partner'
+  },
+  {
+    name: 'Telkom',
+    logo: '/assets/images/merchants/telkom.jpg',
+    alt: 'Telkom logo',
+    category: 'Partner'
+  },
+  {
+    name: 'Rea Vaya',
+    logo: '/assets/images/merchants/reyavaya.png',
+    alt: 'Rea Vaya logo',
+    category: 'Transport'
+  },
+  {
+    name: 'A Re Yeng',
+    logo: '/assets/images/merchants/areyeng.png',
+    alt: 'A Re Yeng logo',
+    category: 'Transport'
+  },
+  {
+    name: 'PRASA Be Moved',
+    logo: '/assets/images/merchants/prasa-be-moved.png',
+    alt: 'PRASA Be Moved logo',
+    category: 'Transport'
   }];
 
 
@@ -60,9 +108,9 @@ const PartnerLogos = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-center">
-          {partners.map((partner, index) =>
+          {partners.map((partner) =>
           <div
-            key={index}
+            key={partner.name}
             className="flex items-center justify-center p-4 bg-card rounded-lg border border-border hover:shadow-md transition-shadow duration-300 grayscale hover:grayscale-0">
 
               <AppImage

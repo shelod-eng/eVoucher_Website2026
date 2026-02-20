@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
@@ -22,8 +22,18 @@ export default function MerchantOnboarding() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { user, role, signUp } = useAuth();
   const supabase = createClient();
+
+  useEffect(() => {
+    if (!user) return;
+    const resolvedRole = String(role ?? user.user_metadata?.role ?? '').toLowerCase();
+    if (resolvedRole === 'merchant') {
+      router.replace('/merchant/dashboard');
+    } else if (resolvedRole) {
+      router.replace('/shop');
+    }
+  }, [user, role, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

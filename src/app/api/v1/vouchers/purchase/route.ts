@@ -7,6 +7,7 @@ import { DefaultVoucherService } from '@/server/services/voucher/default-voucher
 import { writeAuditEvent } from '@/server/utils/audit';
 import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
+import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 
 function validate(body: PurchaseVoucherRequest): string | null {
   if (!body.merchantId?.trim()) return 'Merchant is required.';
@@ -19,17 +20,112 @@ function validate(body: PurchaseVoucherRequest): string | null {
   return null;
 }
 
+function isMissingAdminEnvError(error: any) {
+  return String(error?.message ?? '').includes(
+    'Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL'
+  );
+}
+
+export async function GET(request: Request) {
+  try {
+    const { supabase, user } = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'You must be signed in to view payment status.', code: 'unauthenticated' },
+        { status: 401 }
+      );
+    }
+
+    const { role } = await resolveUserRole(supabase, user);
+    if (!isConsumerRole(role)) {
+      return NextResponse.json(
+        {
+          error: 'Only signed-in consumers can view voucher purchase status.',
+          code: 'consumer_only_purchase',
+        },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const transactionReference = searchParams.get('transactionReference');
+    if (!transactionReference) {
+      return NextResponse.json(
+        { error: 'transactionReference is required.', code: 'missing_reference' },
+        { status: 400 }
+      );
+    }
+
+    const admin = createAdminClient();
+    const { data: transaction, error } = await admin
+      .from('payment_transactions')
+      .select('transaction_reference,payment_status,voucher_code')
+      .eq('transaction_reference', transactionReference)
+      .eq('customer_id', user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!transaction) {
+      return NextResponse.json(
+        { error: 'Transaction not found for this account.', code: 'transaction_not_found' },
+        { status: 404 }
+      );
+    }
+
+    const status = String(transaction.payment_status || 'pending').toLowerCase();
+    return NextResponse.json({
+      transactionReference: transaction.transaction_reference,
+      status,
+      voucherCode: transaction.voucher_code ?? null,
+      checkoutUrl:
+        status === 'pending'
+          ? `https://payments.local/checkout/${encodeURIComponent(transaction.transaction_reference)}`
+          : null,
+    });
+  } catch (error: any) {
+    if (isMissingAdminEnvError(error)) {
+      return NextResponse.json(
+        {
+          error:
+            'Server is missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL. Add them to run purchases.',
+          code: 'missing_admin_env',
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: error?.message || 'Failed to fetch purchase status.', code: 'purchase_status_failed' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const { user } = await getAuthenticatedUser();
+    const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'You must be signed in to buy vouchers.', code: 'unauthenticated' },
+        { status: 401 }
+      );
+    }
+
+    const { role } = await resolveUserRole(supabase, user);
+    if (!isConsumerRole(role)) {
+      return NextResponse.json(
+        {
+          error: 'Only signed-in consumers can buy vouchers.',
+          code: 'consumer_only_purchase',
+        },
+        { status: 403 }
+      );
     }
 
     const body = (await request.json()) as PurchaseVoucherRequest;
     const validationError = validate(body);
     if (validationError) {
-      return NextResponse.json({ error: validationError }, { status: 400 });
+      return NextResponse.json({ error: validationError, code: 'invalid_purchase_input' }, { status: 400 });
     }
 
     const admin = createAdminClient();
@@ -45,7 +141,10 @@ export async function POST(request: Request) {
       .single();
 
     if (merchantError || !merchant) {
-      return NextResponse.json({ error: 'Merchant not available.' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Merchant not available.', code: 'merchant_not_available' },
+        { status: 404 }
+      );
     }
 
     let productId: string | null = null;
@@ -63,7 +162,10 @@ export async function POST(request: Request) {
         .single();
 
       if (productError || !product) {
-        return NextResponse.json({ error: 'Selected product is not available.' }, { status: 404 });
+        return NextResponse.json(
+          { error: 'Selected product is not available.', code: 'product_not_available' },
+          { status: 404 }
+        );
       }
 
       productId = product.id;
@@ -85,7 +187,13 @@ export async function POST(request: Request) {
       };
     } else {
       if (body.faceValue === undefined) {
-        return NextResponse.json({ error: 'Face value is required when no product is selected.' }, { status: 400 });
+        return NextResponse.json(
+          {
+            error: 'Face value is required when no product is selected.',
+            code: 'missing_face_value',
+          },
+          { status: 400 }
+        );
       }
       pricing = calculateDiscountPricing(
         body.faceValue,
@@ -170,7 +278,13 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || 'Failed to process voucher purchase.' },
+      isMissingAdminEnvError(error)
+        ? {
+            error:
+              'Server is missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL. Add them to run purchases.',
+            code: 'missing_admin_env',
+          }
+        : { error: error?.message || 'Failed to process voucher purchase.', code: 'purchase_failed' },
       { status: 500 }
     );
   }

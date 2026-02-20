@@ -4,7 +4,11 @@ import { MockPaymentProvider } from '@/server/services/payment/mock-payment-prov
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { writeAuditEvent } from '@/server/utils/audit';
 import { generateSecureVoucherCode, sha256 } from '@/server/utils/security';
-import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
+import {
+  calculateDiscountPricing,
+  CONSUMER_DISCOUNT_SHARE,
+  DEFAULT_TOTAL_DISCOUNT_PCT,
+} from '@/lib/pricing';
 
 interface WebhookPayload {
   eventId?: string;
@@ -70,12 +74,18 @@ export async function POST(request: Request) {
     const faceValue = Number(transaction.face_value ?? transaction.amount);
     const rawTotalDiscountPct = transaction.total_discount_pct ?? null;
     const rawConsumerBenefitPct = transaction.consumer_benefit_pct ?? null;
+    const rawEvoucherBenefitPct = transaction.evoucher_benefit_pct ?? null;
     const derivedTotalDiscountPct =
       rawTotalDiscountPct !== null && rawTotalDiscountPct !== undefined
         ? Number(rawTotalDiscountPct)
-        : rawConsumerBenefitPct !== null && rawConsumerBenefitPct !== undefined
-          ? Number(rawConsumerBenefitPct) * 2
-          : DEFAULT_TOTAL_DISCOUNT_PCT;
+        : rawConsumerBenefitPct !== null &&
+            rawConsumerBenefitPct !== undefined &&
+            rawEvoucherBenefitPct !== null &&
+            rawEvoucherBenefitPct !== undefined
+          ? Number(rawConsumerBenefitPct) + Number(rawEvoucherBenefitPct)
+          : rawConsumerBenefitPct !== null && rawConsumerBenefitPct !== undefined
+            ? Number(rawConsumerBenefitPct) / CONSUMER_DISCOUNT_SHARE
+            : DEFAULT_TOTAL_DISCOUNT_PCT;
     const totalDiscountPct = Number.isFinite(derivedTotalDiscountPct)
       ? derivedTotalDiscountPct
       : DEFAULT_TOTAL_DISCOUNT_PCT;

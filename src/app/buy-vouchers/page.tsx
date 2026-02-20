@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT, DiscountPricingBreakdown } from '@/lib/pricing';
@@ -20,20 +20,35 @@ type PurchaseStatus = 'pending' | 'completed' | 'failed' | null;
 
 export default function BuyVouchers() {
   const { user, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
   const [merchants, setMerchants] = useState<MerchantOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMerchant, setSelectedMerchant] = useState<string | null>(null);
   const [voucherAmount, setVoucherAmount] = useState<number>(100);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [refreshingStatus, setRefreshingStatus] = useState(false);
   const [purchaseStatus, setPurchaseStatus] = useState<PurchaseStatus>(null);
   const [voucherCode, setVoucherCode] = useState<string | null>(null);
   const [transactionReference, setTransactionReference] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [pricingResult, setPricingResult] = useState<DiscountPricingBreakdown | null>(null);
+  const [blockingReason, setBlockingReason] = useState<string | null>(null);
+  const [blockingCode, setBlockingCode] = useState<string | null>(null);
   const [error, setError] = useState('');
   const router = useRouter();
+  const faceValueFromQuery = Number(searchParams.get('faceValue') ?? '');
+  const merchantIdFromQuery = searchParams.get('merchantId');
+  const productIdFromQuery = searchParams.get('productId');
   const selectedMerchantDetails = merchants.find((merchant) => merchant.id === selectedMerchant) ?? null;
+  const amountOptions = useMemo(() => {
+    const defaults = [100, 200, 300, 500, 1000];
+    if (Number.isFinite(faceValueFromQuery) && faceValueFromQuery > 0) {
+      defaults.push(faceValueFromQuery);
+    }
+    return Array.from(new Set(defaults)).sort((a, b) => a - b);
+  }, [faceValueFromQuery]);
   const previewPricing = calculateDiscountPricing(
     voucherAmount,
     selectedMerchantDetails?.defaultTotalDiscountPct ?? DEFAULT_TOTAL_DISCOUNT_PCT
@@ -46,23 +61,58 @@ export default function BuyVouchers() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
+    if (!user) return;
+    const role = String(user.user_metadata?.role ?? '').toLowerCase();
+    if (role === 'merchant') {
+      setBlockingCode('consumer_only_purchase');
+      setBlockingReason('Only consumer accounts can buy vouchers. Please sign in as a consumer.');
+    }
+  }, [user]);
+
+  useEffect(() => {
     if (user) {
       void fetchMerchants();
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!merchants.length) return;
+
+    if (merchantIdFromQuery && merchants.some((merchant) => merchant.id === merchantIdFromQuery)) {
+      setSelectedMerchant(merchantIdFromQuery);
+    }
+
+    if (Number.isFinite(faceValueFromQuery) && faceValueFromQuery > 0) {
+      setVoucherAmount(faceValueFromQuery);
+    }
+
+    if (productIdFromQuery) {
+      setSelectedProductId(productIdFromQuery);
+    }
+  }, [merchants, merchantIdFromQuery, faceValueFromQuery, productIdFromQuery]);
+
   const fetchMerchants = async () => {
     try {
       setLoading(true);
+      setBlockingReason(null);
+      setBlockingCode(null);
       const response = await fetch('/api/v1/merchants/active', {
         method: 'GET',
         credentials: 'include',
       });
       const data = await response.json();
       if (!response.ok) {
+        setBlockingCode(data.code ?? null);
+        setBlockingReason(data.error ?? 'Unable to load merchants for purchase.');
         throw new Error(data.error || 'Failed to fetch merchants');
       }
       setMerchants(data.merchants || []);
+      if (data.blockReason === 'no_active_merchants') {
+        setBlockingCode('no_active_merchants');
+        setBlockingReason(
+          'No active merchants are available for voucher purchase right now. Please onboard/approve merchants first.'
+        );
+      }
     } catch (fetchError: any) {
       setError(fetchError?.message || 'Failed to fetch merchants.');
     } finally {
@@ -98,7 +148,7 @@ export default function BuyVouchers() {
   ];
 
   const handlePurchase = async () => {
-    if (!selectedMerchant || !selectedPaymentMethod) return;
+    if (!selectedMerchant || !selectedPaymentMethod || blockingReason) return;
 
     setProcessing(true);
     setError('');
@@ -112,12 +162,21 @@ export default function BuyVouchers() {
         credentials: 'include',
         body: JSON.stringify({
           merchantId: selectedMerchant,
+          productId: selectedProductId ?? undefined,
           faceValue: voucherAmount,
           paymentMethod: selectedPaymentMethod,
         }),
       });
       const data = await response.json();
       if (!response.ok) {
+        setBlockingCode(data.code ?? null);
+        if (data.code === 'consumer_only_purchase') {
+          setBlockingReason('This route is consumer-only. Sign in as a consumer account to continue.');
+        } else if (data.code === 'missing_admin_env') {
+          setBlockingReason(
+            'Server configuration is incomplete. Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL.'
+          );
+        }
         throw new Error(data.error || 'Failed to process purchase');
       }
 
@@ -132,6 +191,33 @@ export default function BuyVouchers() {
       setPricingResult(previewPricing);
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleRefreshPurchaseStatus = async () => {
+    if (!transactionReference) return;
+    try {
+      setRefreshingStatus(true);
+      setError('');
+      const response = await fetch(
+        `/api/v1/vouchers/purchase?transactionReference=${encodeURIComponent(transactionReference)}`,
+        {
+          method: 'GET',
+          credentials: 'include',
+        }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to refresh payment status.');
+      }
+
+      setPurchaseStatus(data.status);
+      setVoucherCode(data.voucherCode || null);
+      setCheckoutUrl(data.checkoutUrl || null);
+    } catch (statusError: any) {
+      setError(statusError?.message || 'Failed to refresh payment status.');
+    } finally {
+      setRefreshingStatus(false);
     }
   };
 
@@ -227,12 +313,35 @@ export default function BuyVouchers() {
                 )}
               </div>
 
-              <button
-                onClick={() => router.push('/customer/dashboard')}
-                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-headline font-semibold hover:bg-primary/90 transition-all duration-300"
-              >
-                Go to Customer Dashboard
-              </button>
+              <div className="space-y-3">
+                {purchaseStatus === 'pending' && checkoutUrl && (
+                  <a
+                    href={checkoutUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block w-full py-3 text-center bg-warning text-white rounded-lg font-headline font-semibold hover:opacity-90 transition-all duration-300"
+                  >
+                    Open Checkout
+                  </a>
+                )}
+
+                {purchaseStatus === 'pending' && (
+                  <button
+                    onClick={() => void handleRefreshPurchaseStatus()}
+                    disabled={refreshingStatus}
+                    className="w-full py-3 bg-card border border-border rounded-lg font-headline font-semibold hover:bg-muted transition-all duration-300 disabled:opacity-60"
+                  >
+                    {refreshingStatus ? 'Refreshing...' : 'I Have Paid - Refresh Status'}
+                  </button>
+                )}
+
+                <button
+                  onClick={() => router.push('/customer/dashboard')}
+                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-headline font-semibold hover:bg-primary/90 transition-all duration-300"
+                >
+                  Go to Customer Dashboard
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -256,6 +365,20 @@ export default function BuyVouchers() {
           {error && (
             <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg">
               <p className="text-sm text-error font-body">{error}</p>
+            </div>
+          )}
+
+          {blockingReason && (
+            <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg">
+              <p className="text-sm text-warning font-body">{blockingReason}</p>
+              {blockingCode === 'consumer_only_purchase' && (
+                <button
+                  onClick={() => router.push('/customer/login')}
+                  className="mt-3 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-headline font-semibold"
+                >
+                  Go to Consumer Login
+                </button>
+              )}
             </div>
           )}
 
@@ -317,12 +440,17 @@ export default function BuyVouchers() {
                   onChange={(e) => setVoucherAmount(Number(e.target.value))}
                   className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-body"
                 >
-                  <option value={100}>R100</option>
-                  <option value={200}>R200</option>
-                  <option value={300}>R300</option>
-                  <option value={500}>R500</option>
-                  <option value={1000}>R1000</option>
+                  {amountOptions.map((amount) => (
+                    <option key={amount} value={amount}>
+                      R{amount}
+                    </option>
+                  ))}
                 </select>
+                {selectedProductId && (
+                  <p className="mt-2 text-xs text-muted-foreground font-body">
+                    Product-based checkout preselected from Shop/Cart.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -406,7 +534,7 @@ export default function BuyVouchers() {
 
               <button
                 onClick={handlePurchase}
-                disabled={!selectedMerchant || !selectedPaymentMethod || processing}
+                disabled={!selectedMerchant || !selectedPaymentMethod || processing || Boolean(blockingReason)}
                 className="w-full py-4 bg-primary text-primary-foreground rounded-lg font-headline font-semibold hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
               >
                 {processing ? 'Processing...' : 'Complete Purchase'}

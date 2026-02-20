@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
+  role: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, metadata?: any) => Promise<void>;
@@ -17,14 +18,42 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
 
+  const resolveUserRole = async (currentUser: User | null): Promise<string | null> => {
+    if (!currentUser) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('AuthContext: failed to resolve role from profile:', error.message);
+      } else if (data?.role) {
+        return String(data.role).toLowerCase();
+      }
+    } catch (roleError) {
+      console.warn('AuthContext: unexpected role lookup error:', roleError);
+    }
+
+    const metadataRole = String(currentUser.user_metadata?.role ?? '')
+      .toLowerCase()
+      .trim();
+    return metadataRole || null;
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
+      async (_event: AuthChangeEvent, session: Session | null) => {
         setUser(session?.user ?? null);
+        const resolvedRole = await resolveUserRole(session?.user ?? null);
+        setRole(resolvedRole);
         setLoading(false);
       }
     );
@@ -42,6 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     console.log('AuthContext: signIn successful:', data.user?.id);
+    const resolvedRole = await resolveUserRole(data.user ?? null);
+    setRole(resolvedRole);
     router.refresh();
   };
 
@@ -59,17 +90,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     console.log('AuthContext: signUp successful:', data.user?.id);
+    const resolvedRole = await resolveUserRole(data.user ?? null);
+    setRole(resolvedRole);
     if (error) throw error;
   };
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    setRole(null);
     router.refresh();
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, role, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

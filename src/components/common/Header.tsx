@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/AppIcon';
 
 interface HeaderProps {
@@ -10,15 +12,43 @@ interface HeaderProps {
 
 const Header = ({ className = '' }: HeaderProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, role, signOut } = useAuth();
+  const userRole = String(role ?? user?.user_metadata?.role ?? '').toLowerCase();
+  const isMerchant =
+    userRole === 'merchant' ||
+    pathname?.startsWith('/merchant') ||
+    pathname?.startsWith('/merchants');
+  const isSignedIn = Boolean(user);
 
-  const navItems = [
+  const publicNavItems = [
     { label: 'Home', href: '/', icon: 'HomeIcon' },
     { label: 'Consumer', href: '/consumer-experience', icon: 'UserIcon' },
     { label: 'Merchants', href: '/merchants', icon: 'BuildingStorefrontIcon' },
-    { label: 'Buy Vouchers', href: '/buy-vouchers', icon: 'ShoppingCartIcon' },
-    { label: 'Sign In', href: '/signin', icon: 'ArrowRightOnRectangleIcon' },
     { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
   ];
+
+  const consumerNavItems = [
+    { label: 'Home', href: '/', icon: 'HomeIcon' },
+    { label: 'Shop', href: '/shop', icon: 'BuildingStorefrontIcon' },
+    { label: 'Wallet', href: '/wallet', icon: 'WalletIcon' },
+    { label: 'Cart', href: '/cart', icon: 'ShoppingCartIcon' },
+    { label: 'Rewards', href: '/rewards', icon: 'SparklesIcon' },
+    { label: 'Analytics', href: '/analytics', icon: 'ChartBarIcon' },
+  ];
+
+  const merchantNavItems = [
+    { label: 'Home', href: '/', icon: 'HomeIcon' },
+    { label: 'Dashboard', href: '/merchant/dashboard', icon: 'BuildingStorefrontIcon' },
+    { label: 'Analytics', href: '/analytics', icon: 'ChartBarIcon' },
+    { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
+  ];
+
+  const navItems = isSignedIn ? (isMerchant ? merchantNavItems : consumerNavItems) : publicNavItems;
+
+  const dashboardHref =
+    isMerchant ? '/merchant/dashboard' : '/customer/dashboard';
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -26,6 +56,16 @@ const Header = ({ className = '' }: HeaderProps) => {
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      closeMobileMenu();
+      router.push('/signin');
+    } catch (error) {
+      console.error('Sign out failed:', error);
+    }
   };
 
   return (
@@ -60,6 +100,34 @@ const Header = ({ className = '' }: HeaderProps) => {
                 <span>{item.label}</span>
               </Link>
             ))}
+
+            {user ? (
+              <>
+                <Link
+                  href={dashboardHref}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-all duration-300 ease-smooth"
+                >
+                  <Icon name="UserCircleIcon" size={18} variant="outline" />
+                  <span>Dashboard</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void handleSignOut()}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-all duration-300 ease-smooth"
+                >
+                  <Icon name="ArrowLeftOnRectangleIcon" size={18} variant="outline" />
+                  <span>Log Out</span>
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/signin"
+                className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-all duration-300 ease-smooth"
+              >
+                <Icon name="ArrowRightOnRectangleIcon" size={18} variant="outline" />
+                <span>Sign In</span>
+              </Link>
+            )}
           </nav>
 
           {/* Mobile Menu Button */}
@@ -87,6 +155,36 @@ const Header = ({ className = '' }: HeaderProps) => {
                   <span>{item.label}</span>
                 </Link>
               ))}
+
+              {user ? (
+                <>
+                  <Link
+                    href={dashboardHref}
+                    onClick={closeMobileMenu}
+                    className="flex items-center space-x-3 px-4 py-3 rounded-md text-base font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-colors duration-200"
+                  >
+                    <Icon name="UserCircleIcon" size={20} variant="outline" />
+                    <span>Dashboard</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => void handleSignOut()}
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-md text-base font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-colors duration-200 text-left"
+                  >
+                    <Icon name="ArrowLeftOnRectangleIcon" size={20} variant="outline" />
+                    <span>Log Out</span>
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/signin"
+                  onClick={closeMobileMenu}
+                  className="flex items-center space-x-3 px-4 py-3 rounded-md text-base font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-colors duration-200"
+                >
+                  <Icon name="ArrowRightOnRectangleIcon" size={20} variant="outline" />
+                  <span>Sign In</span>
+                </Link>
+              )}
             </nav>
           </div>
         )}

@@ -40,6 +40,8 @@ export default function CustomerDashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [blockingCode, setBlockingCode] = useState<string | null>(null);
+  const [blockingReason, setBlockingReason] = useState<string | null>(null);
   const [redeemingVoucherId, setRedeemingVoucherId] = useState<string | null>(null);
   const [redeemStatus, setRedeemStatus] = useState('');
   const router = useRouter();
@@ -60,12 +62,16 @@ export default function CustomerDashboard() {
     try {
       setLoading(true);
       setError('');
+      setBlockingCode(null);
+      setBlockingReason(null);
       const response = await fetch('/api/v1/customer/dashboard', {
         method: 'GET',
         credentials: 'include',
       });
       const data = await response.json();
       if (!response.ok) {
+        setBlockingCode(data.code ?? null);
+        setBlockingReason(data.error ?? 'Dashboard is currently unavailable.');
         throw new Error(data.error || 'Failed to load dashboard');
       }
 
@@ -110,7 +116,7 @@ export default function CustomerDashboard() {
       }
 
       setRedeemStatus(
-        `Redeemed successfully. Remaining balance: R${Number(data.remainingBalance).toFixed(2)}. Payout queued: ${data.merchantPayoutQueued ? 'Yes' : 'No'}`
+        `Redeemed successfully. Remaining balance: R${Number(data.remainingBalance).toFixed(2)}. Merchant payout queued: ${data.merchantPayoutQueued ? 'Yes' : 'No'}${data.merchantPayoutAmount !== undefined ? ` (R${Number(data.merchantPayoutAmount).toFixed(2)})` : ''}.`
       );
       await fetchDashboardData();
     } catch (redeemError: any) {
@@ -173,6 +179,30 @@ export default function CustomerDashboard() {
           {error && (
             <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg">
               <p className="text-sm text-error font-body">{error}</p>
+            </div>
+          )}
+
+          {blockingReason && (
+            <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg">
+              <p className="text-sm text-warning font-body">{blockingReason}</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                {blockingCode === 'unauthenticated' && (
+                  <button
+                    onClick={() => router.push('/customer/login')}
+                    className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-headline font-semibold"
+                  >
+                    Go to Consumer Login
+                  </button>
+                )}
+                {blockingCode === 'consumer_only_dashboard' && (
+                  <button
+                    onClick={() => router.push('/merchant/dashboard')}
+                    className="px-4 py-2 rounded-lg bg-secondary text-white font-headline font-semibold"
+                  >
+                    Open Merchant Dashboard
+                  </button>
+                )}
+              </div>
             </div>
           )}
 

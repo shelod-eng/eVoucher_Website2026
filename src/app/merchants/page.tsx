@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function MerchantsPage() {
   const businessTypes = ['Spaza Shop', 'Supermarket', 'Pharmacy', 'Restaurant', 'Transport', 'Other'];
@@ -28,7 +29,23 @@ export default function MerchantsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
+  const { user, role, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) return;
+
+    const resolvedRole = String(role ?? user.user_metadata?.role ?? '').toLowerCase();
+    if (resolvedRole && resolvedRole !== 'merchant') {
+      router.replace('/shop');
+      return;
+    }
+
+    if (resolvedRole === 'merchant') {
+      router.replace('/merchant/dashboard');
+    }
+  }, [authLoading, user, role, router]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>

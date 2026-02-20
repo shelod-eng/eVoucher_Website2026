@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { RedeemVoucherRequest } from '@/types/domain';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
@@ -48,9 +49,22 @@ export async function POST(request: Request) {
       idempotencyKey: body.idempotencyKey.trim(),
     });
 
+    const { data: voucherRecord } = await admin
+      .from('customer_vouchers')
+      .select('total_discount_pct')
+      .eq('voucher_code', body.voucherCode.trim())
+      .eq('customer_id', user.id)
+      .maybeSingle();
+
+    const totalDiscountPct = Number(
+      voucherRecord?.total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+    );
+    const payoutMultiplier = Math.max(0, 1 - totalDiscountPct / 100);
+    const merchantPayoutAmount = Number((Number(body.amount) * payoutMultiplier).toFixed(2));
+
     await admin.from('merchant_payouts').insert({
       merchant_id: merchant.id,
-      amount: Number((Number(body.amount) * 0.7).toFixed(2)),
+      amount: merchantPayoutAmount,
       status: 'pending',
     });
 
@@ -85,6 +99,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       remainingBalance: redemption.remainingBalance,
       redemptionId: redemption.redemptionId,
+      merchantPayoutAmount,
       merchantPayoutQueued: true,
     });
   } catch (error: any) {

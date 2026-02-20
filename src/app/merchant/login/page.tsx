@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -12,8 +12,18 @@ export default function MerchantLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { user, role, signIn } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!user) return;
+    const resolvedRole = String(role ?? user.user_metadata?.role ?? '').toLowerCase();
+    if (resolvedRole === 'merchant') {
+      router.replace('/merchant/dashboard');
+    } else if (resolvedRole) {
+      router.replace('/shop');
+    }
+  }, [user, role, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

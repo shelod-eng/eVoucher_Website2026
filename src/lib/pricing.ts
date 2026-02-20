@@ -1,4 +1,6 @@
 export const DEFAULT_TOTAL_DISCOUNT_PCT = 5;
+export const CONSUMER_DISCOUNT_SHARE = 0.7;
+export const PLATFORM_DISCOUNT_SHARE = 0.3;
 
 export interface DiscountPricingBreakdown {
   faceValue: number;
@@ -29,12 +31,12 @@ export function calculateDiscountPricing(
     throw new Error('Total discount percentage must be between 0 and 100.');
   }
 
-  const consumerBenefitPct = totalDiscountPct / 2;
-  const evoucherBenefitPct = totalDiscountPct / 2;
+  const consumerBenefitPct = roundCurrency(totalDiscountPct * CONSUMER_DISCOUNT_SHARE);
+  const evoucherBenefitPct = roundCurrency(totalDiscountPct - consumerBenefitPct);
 
   const totalDiscountAmount = roundCurrency(faceValue * (totalDiscountPct / 100));
   const consumerBenefitAmount = roundCurrency(faceValue * (consumerBenefitPct / 100));
-  const evoucherBenefitAmount = roundCurrency(faceValue * (evoucherBenefitPct / 100));
+  const evoucherBenefitAmount = roundCurrency(totalDiscountAmount - consumerBenefitAmount);
 
   return {
     faceValue: roundCurrency(faceValue),
