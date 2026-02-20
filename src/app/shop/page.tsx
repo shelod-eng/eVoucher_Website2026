@@ -7,6 +7,9 @@ import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { addCartItem } from '@/lib/cart';
 
+const SHOP_CACHE_KEY = 'evoucher_shop_catalog_cache_v1';
+const SHOP_CACHE_TTL_MS = 2 * 60 * 1000;
+
 interface MerchantSummary {
   id: string;
   businessName: string;
@@ -27,6 +30,7 @@ interface CatalogProduct {
   consumer_benefit_pct: number;
   consumer_benefit_amount: number;
   consumer_price: number;
+  is_fallback?: boolean;
 }
 
 export default function ShopPage() {
@@ -49,9 +53,30 @@ export default function ShopPage() {
   useEffect(() => {
     if (!user) return;
 
+    const cachedCatalog = typeof window !== 'undefined' ? window.sessionStorage.getItem(SHOP_CACHE_KEY) : null;
+    if (cachedCatalog) {
+      try {
+        const parsed = JSON.parse(cachedCatalog) as {
+          merchants: MerchantSummary[];
+          products: CatalogProduct[];
+          ussdAccessCode: string;
+          fetchedAt: number;
+        };
+
+        if (Date.now() - parsed.fetchedAt < SHOP_CACHE_TTL_MS) {
+          setMerchants(parsed.merchants ?? []);
+          setProducts(parsed.products ?? []);
+          setUssdAccessCode(parsed.ussdAccessCode ?? '*120*384#');
+          setLoading(false);
+        }
+      } catch {
+        // Ignore invalid cached payload
+      }
+    }
+
     const fetchCatalog = async () => {
       try {
-        setLoading(true);
+        setLoading(!cachedCatalog);
         setError('');
         const response = await fetch('/api/v1/shop/catalog', {
           method: 'GET',
@@ -63,6 +88,18 @@ export default function ShopPage() {
         setMerchants(data.merchants ?? []);
         setProducts(data.products ?? []);
         setUssdAccessCode(data.ussdAccessCode ?? '*120*384#');
+
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem(
+            SHOP_CACHE_KEY,
+            JSON.stringify({
+              merchants: data.merchants ?? [],
+              products: data.products ?? [],
+              ussdAccessCode: data.ussdAccessCode ?? '*120*384#',
+              fetchedAt: Date.now(),
+            })
+          );
+        }
       } catch (catalogError: any) {
         setError(catalogError?.message || 'Failed to load shop catalog.');
       } finally {
@@ -92,6 +129,9 @@ export default function ShopPage() {
       quantity: 1,
     });
     setStatusMessage(`${product.product_name} added to cart.`);
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => setStatusMessage(''), 2400);
+    }
   };
 
   const handleBuyNow = (product: CatalogProduct) => {
@@ -183,6 +223,32 @@ export default function ShopPage() {
                 </button>
               </div>
             </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedMerchantId('all')}
+                className={`px-3 py-2 rounded-lg border text-xs font-headline font-semibold ${
+                  selectedMerchantId === 'all'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border hover:bg-muted'
+                }`}
+              >
+                All Merchants
+              </button>
+              {merchants.map((merchant) => (
+                <button
+                  key={merchant.id}
+                  onClick={() => setSelectedMerchantId(merchant.id)}
+                  className={`px-3 py-2 rounded-lg border text-xs font-headline font-semibold ${
+                    selectedMerchantId === merchant.id
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:bg-muted'
+                  }`}
+                >
+                  {merchant.businessName} ({merchant.productCount})
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-6">
@@ -214,6 +280,11 @@ export default function ShopPage() {
                       Save {Number(product.consumer_benefit_pct).toFixed(2)}%
                     </span>
                   </div>
+                  {product.is_fallback && (
+                    <p className="mb-3 text-xs text-warning font-body">
+                      Starter catalog item (auto-generated until merchant publishes custom products).
+                    </p>
+                  )}
 
                   <div className="space-y-2 mb-5">
                     <div className="flex items-center justify-between text-sm font-body">

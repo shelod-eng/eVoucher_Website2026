@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
 
+const DASHBOARD_CACHE_KEY = 'evoucher_customer_dashboard_cache_v1';
+const DASHBOARD_CACHE_TTL_MS = 60 * 1000;
+
 interface UserProfile {
   full_name: string;
   email: string;
@@ -60,7 +63,30 @@ export default function CustomerDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      setLoading(true);
+      const cachedPayload =
+        typeof window !== 'undefined' ? window.sessionStorage.getItem(DASHBOARD_CACHE_KEY) : null;
+
+      if (cachedPayload) {
+        try {
+          const parsed = JSON.parse(cachedPayload) as {
+            profile: UserProfile | null;
+            vouchers: Voucher[];
+            transactions: Transaction[];
+            fetchedAt: number;
+          };
+
+          if (Date.now() - parsed.fetchedAt < DASHBOARD_CACHE_TTL_MS) {
+            setUserProfile(parsed.profile);
+            setVouchers(parsed.vouchers ?? []);
+            setTransactions(parsed.transactions ?? []);
+            setLoading(false);
+          }
+        } catch {
+          // Ignore invalid cache payload
+        }
+      }
+
+      setLoading(!cachedPayload);
       setError('');
       setBlockingCode(null);
       setBlockingReason(null);
@@ -78,6 +104,18 @@ export default function CustomerDashboard() {
       setUserProfile(data.profile || null);
       setVouchers(data.vouchers || []);
       setTransactions(data.transactions || []);
+
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem(
+          DASHBOARD_CACHE_KEY,
+          JSON.stringify({
+            profile: data.profile || null,
+            vouchers: data.vouchers || [],
+            transactions: data.transactions || [],
+            fetchedAt: Date.now(),
+          })
+        );
+      }
     } catch (dashboardError: any) {
       setError(dashboardError?.message || 'Failed to load customer dashboard.');
     } finally {

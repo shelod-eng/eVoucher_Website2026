@@ -6,6 +6,9 @@ import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
 
+const WALLET_CACHE_KEY = 'evoucher_wallet_cache_v1';
+const WALLET_CACHE_TTL_MS = 60 * 1000;
+
 interface Voucher {
   id: string;
   merchant_name: string;
@@ -64,7 +67,29 @@ export default function WalletPage() {
 
     const fetchWalletData = async () => {
       try {
-        setLoading(true);
+        const cachedPayload =
+          typeof window !== 'undefined' ? window.sessionStorage.getItem(WALLET_CACHE_KEY) : null;
+        if (cachedPayload) {
+          try {
+            const parsed = JSON.parse(cachedPayload) as {
+              vouchers: Voucher[];
+              transactions: Transaction[];
+              paymentMethods: LegacyPaymentMethod[];
+              fetchedAt: number;
+            };
+
+            if (Date.now() - parsed.fetchedAt < WALLET_CACHE_TTL_MS) {
+              setVouchers(parsed.vouchers ?? []);
+              setTransactions(parsed.transactions ?? []);
+              setLegacyPaymentMethods(parsed.paymentMethods ?? []);
+              setLoading(false);
+            }
+          } catch {
+            // Ignore invalid cache payload
+          }
+        }
+
+        setLoading(!cachedPayload);
         setError('');
         const response = await fetch('/api/v1/customer/dashboard', {
           method: 'GET',
@@ -76,6 +101,19 @@ export default function WalletPage() {
         setVouchers(data.vouchers ?? []);
         setTransactions(data.transactions ?? []);
         setLegacyPaymentMethods(data.paymentMethods ?? []);
+
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem(
+            WALLET_CACHE_KEY,
+            JSON.stringify({
+              vouchers: data.vouchers ?? [],
+              transactions: data.transactions ?? [],
+              paymentMethods: data.paymentMethods ?? [],
+              fetchedAt: Date.now(),
+            })
+          );
+        }
+
         await fetchManagedPaymentMethods();
       } catch (walletError: any) {
         setError(walletError?.message || 'Failed to load wallet.');
@@ -378,4 +416,3 @@ export default function WalletPage() {
     </div>
   );
 }
-

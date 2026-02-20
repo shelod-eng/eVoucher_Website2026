@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,7 +30,7 @@ const Header = ({ className = '' }: HeaderProps) => {
   ];
 
   const consumerNavItems = [
-    { label: 'Home', href: '/', icon: 'HomeIcon' },
+    { label: 'Home', href: '/customer/dashboard', icon: 'HomeIcon' },
     { label: 'Shop', href: '/shop', icon: 'BuildingStorefrontIcon' },
     { label: 'Wallet', href: '/wallet', icon: 'WalletIcon' },
     { label: 'Cart', href: '/cart', icon: 'ShoppingCartIcon' },
@@ -39,7 +39,7 @@ const Header = ({ className = '' }: HeaderProps) => {
   ];
 
   const merchantNavItems = [
-    { label: 'Home', href: '/', icon: 'HomeIcon' },
+    { label: 'Home', href: '/merchant/dashboard', icon: 'HomeIcon' },
     { label: 'Dashboard', href: '/merchant/dashboard', icon: 'BuildingStorefrontIcon' },
     { label: 'Analytics', href: '/analytics', icon: 'ChartBarIcon' },
     { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
@@ -49,6 +49,18 @@ const Header = ({ className = '' }: HeaderProps) => {
 
   const dashboardHref =
     isMerchant ? '/merchant/dashboard' : '/customer/dashboard';
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+
+    const prefetchTargets = isMerchant
+      ? ['/merchant/dashboard', '/analytics', '/support']
+      : ['/customer/dashboard', '/shop', '/wallet', '/cart', '/rewards', '/analytics', '/buy-vouchers'];
+
+    prefetchTargets.forEach((target) => {
+      router.prefetch(target);
+    });
+  }, [isSignedIn, isMerchant, router]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);

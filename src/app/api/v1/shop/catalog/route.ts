@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
+import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
+
+const STARTER_FACE_VALUES = [100, 200, 500];
 
 export async function GET() {
   try {
@@ -14,7 +17,7 @@ export async function GET() {
       admin
         .from('merchants')
         .select('id,business_name,email,status,default_total_discount_pct')
-        .in('status', ['active', 'approved'])
+        .in('status', ['active', 'approved', 'pending'])
         .order('business_name', { ascending: true }),
       admin
         .from('merchant_products')
@@ -40,11 +43,49 @@ export async function GET() {
           ...product,
           merchant_name: merchant?.business_name ?? 'Unknown Merchant',
           merchant_email: merchant?.email ?? '',
+          is_fallback: false,
         };
       });
 
+    const fallbackProducts = merchants.flatMap((merchant) => {
+      const merchantHasProducts = catalogProducts.some(
+        (product) => product.merchant_id === merchant.id
+      );
+      if (merchantHasProducts) return [];
+
+      const totalDiscountPct = Number(
+        merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+      );
+
+      return STARTER_FACE_VALUES.map((faceValue) => {
+        const pricing = calculateDiscountPricing(faceValue, totalDiscountPct);
+        return {
+          id: `starter-${merchant.id}-${faceValue}`,
+          merchant_id: merchant.id,
+          merchant_name: merchant.business_name,
+          merchant_email: merchant.email,
+          product_name: `${merchant.business_name} Voucher R${faceValue}`,
+          face_value: pricing.faceValue,
+          total_discount_pct: pricing.totalDiscountPct,
+          consumer_benefit_pct: pricing.consumerBenefitPct,
+          evoucher_benefit_pct: pricing.evoucherBenefitPct,
+          total_discount_amount: pricing.totalDiscountAmount,
+          consumer_benefit_amount: pricing.consumerBenefitAmount,
+          evoucher_benefit_amount: pricing.evoucherBenefitAmount,
+          consumer_price: pricing.consumerPrice,
+          merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
+          merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          is_fallback: true,
+        };
+      });
+    });
+
+    const allCatalogProducts = [...catalogProducts, ...fallbackProducts];
+
     const merchantSummaries = merchants.map((merchant) => {
-      const merchantProducts = catalogProducts.filter((product) => product.merchant_id === merchant.id);
+      const merchantProducts = allCatalogProducts.filter((product) => product.merchant_id === merchant.id);
       const avgDiscount =
         merchantProducts.length > 0
           ? merchantProducts.reduce(
@@ -66,7 +107,7 @@ export async function GET() {
 
     return NextResponse.json({
       merchants: merchantSummaries,
-      products: catalogProducts,
+      products: allCatalogProducts,
       ussdAccessCode: '*120*384#',
     });
   } catch (error: any) {
