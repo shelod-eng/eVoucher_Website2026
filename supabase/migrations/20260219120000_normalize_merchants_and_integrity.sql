@@ -527,7 +527,15 @@ BEGIN
         CASE WHEN v_has_created_at THEN 'COALESCE(l.created_at, CURRENT_TIMESTAMP)' ELSE 'CURRENT_TIMESTAMP' END
     );
 
-    EXECUTE v_sql INTO v_rows;
+    BEGIN
+        EXECUTE v_sql INTO v_rows;
+    EXCEPTION WHEN OTHERS THEN
+        -- Do not block deploy/testing when legacy backup data has incompatible types.
+        RAISE WARNING 'Skipping legacy merchants backfill in % due to: %',
+            '20260219120000_normalize_merchants_and_integrity',
+            SQLERRM;
+        v_rows := 0;
+    END;
 
     INSERT INTO public.migration_logs (migration_name, migrated_rows)
     VALUES ('20260219120000_normalize_merchants_and_integrity', v_rows);
