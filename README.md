@@ -1,3 +1,8 @@
+# eVoucher_Website2026
+eVoucher Website Repository
+
+---
+
 # Next.js
 
 A modern Next.js 14 application built with TypeScript and Tailwind CSS.
@@ -13,22 +18,21 @@ A modern Next.js 14 application built with TypeScript and Tailwind CSS.
 - Node.js (v14.x or higher)
 - npm or yarn
 
-
 ## 🛠️ Installation
 
 1. Install dependencies:
-  ```bash
-  npm install
-  # or
-  yarn install
-  ```
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
 2. Start the development server:
-  ```bash
-  npm run dev
-  # or
-  yarn dev
-  ```
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
 3. Open [http://localhost:4028](http://localhost:4028) with your browser to see the result.
 
 ## 📁 Project Structure
@@ -46,7 +50,6 @@ nextjs-js-tailwind/
 ├── package.json        # Project dependencies and scripts
 ├── postcss.config.js   # PostCSS configuration
 └── tailwind.config.js  # Tailwind CSS configuration
-
 ```
 
 ## 🧩 Page Editing
@@ -75,9 +78,9 @@ This project uses Tailwind CSS for styling with the following features:
 
 Build the application for production:
 
-  ```bash
-  npm run build
-  ```
+   ```bash
+   npm run build
+   ```
 
 ## 📚 Learn More
 
