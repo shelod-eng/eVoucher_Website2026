@@ -39,3 +39,7 @@ turbo/
 .env
 .env.*
 !.env.example
+
+# Local tooling artifacts
+postman/
+supabase/.temp/
