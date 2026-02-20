@@ -290,7 +290,59 @@ BEGIN
 
     v_sql := format(
         $f$
-        WITH migrated AS (
+        WITH source_rows_raw AS (
+            SELECT
+                %1$s AS user_id,
+                %2$s AS business_name,
+                %3$s AS contact_name,
+                %4$s AS email,
+                %5$s AS phone,
+                %6$s AS bank_name,
+                %7$s AS account_number,
+                %8$s AS branch_code,
+                %9$s AS status,
+                %10$s AS charity_donation_amount,
+                %11$s AS registration_number,
+                %12$s AS tax_number,
+                %13$s AS physical_address,
+                %14$s AS business_type,
+                %15$s AS account_holder_name,
+                %16$s AS onboarding_fee_paid,
+                %17$s AS approved_at,
+                %18$s AS created_at
+            FROM public.merchants_2025_11_10_12_00 l
+            WHERE %4$s IS NOT NULL
+        ),
+        source_rows AS (
+            SELECT DISTINCT ON (email) *
+            FROM source_rows_raw
+            ORDER BY email
+        ),
+        updated AS (
+            UPDATE public.merchants merchants
+            SET
+                user_id = COALESCE(source_rows.user_id, merchants.user_id),
+                business_name = source_rows.business_name,
+                contact_name = source_rows.contact_name,
+                phone = source_rows.phone,
+                bank_name = source_rows.bank_name,
+                account_number = source_rows.account_number,
+                branch_code = source_rows.branch_code,
+                status = source_rows.status,
+                charity_donation_amount = source_rows.charity_donation_amount,
+                registration_number = source_rows.registration_number,
+                tax_number = source_rows.tax_number,
+                physical_address = source_rows.physical_address,
+                business_type = source_rows.business_type,
+                account_holder_name = source_rows.account_holder_name,
+                onboarding_fee_paid = source_rows.onboarding_fee_paid,
+                approved_at = source_rows.approved_at,
+                updated_at = CURRENT_TIMESTAMP
+            FROM source_rows
+            WHERE merchants.email = source_rows.email
+            RETURNING 1
+        ),
+        inserted AS (
             INSERT INTO public.merchants (
                 user_id,
                 business_name,
@@ -313,47 +365,37 @@ BEGIN
                 updated_at
             )
             SELECT
-                %1$s,
-                %2$s,
-                %3$s,
-                %4$s,
-                %5$s,
-                %6$s,
-                %7$s,
-                %8$s,
-                %9$s,
-                %10$s,
-                %11$s,
-                %12$s,
-                %13$s,
-                %14$s,
-                %15$s,
-                %16$s,
-                %17$s,
-                %18$s,
+                source_rows.user_id,
+                source_rows.business_name,
+                source_rows.contact_name,
+                source_rows.email,
+                source_rows.phone,
+                source_rows.bank_name,
+                source_rows.account_number,
+                source_rows.branch_code,
+                source_rows.status,
+                source_rows.charity_donation_amount,
+                source_rows.registration_number,
+                source_rows.tax_number,
+                source_rows.physical_address,
+                source_rows.business_type,
+                source_rows.account_holder_name,
+                source_rows.onboarding_fee_paid,
+                source_rows.approved_at,
+                source_rows.created_at,
                 CURRENT_TIMESTAMP
-            FROM public.merchants_2025_11_10_12_00 l
-            WHERE %4$s IS NOT NULL
-            ON CONFLICT (email) DO UPDATE
-            SET
-                user_id = COALESCE(EXCLUDED.user_id, merchants.user_id),
-                business_name = EXCLUDED.business_name,
-                contact_name = EXCLUDED.contact_name,
-                phone = EXCLUDED.phone,
-                bank_name = EXCLUDED.bank_name,
-                account_number = EXCLUDED.account_number,
-                branch_code = EXCLUDED.branch_code,
-                status = EXCLUDED.status,
-                charity_donation_amount = EXCLUDED.charity_donation_amount,
-                registration_number = EXCLUDED.registration_number,
-                tax_number = EXCLUDED.tax_number,
-                physical_address = EXCLUDED.physical_address,
-                business_type = EXCLUDED.business_type,
-                account_holder_name = EXCLUDED.account_holder_name,
-                onboarding_fee_paid = EXCLUDED.onboarding_fee_paid,
-                approved_at = EXCLUDED.approved_at,
-                updated_at = CURRENT_TIMESTAMP
+            FROM source_rows
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM public.merchants merchants
+                WHERE merchants.email = source_rows.email
+            )
             RETURNING 1
+        ),
+        migrated AS (
+            SELECT 1 FROM updated
+            UNION ALL
+            SELECT 1 FROM inserted
         )
         SELECT COUNT(*) FROM migrated
         $f$,
