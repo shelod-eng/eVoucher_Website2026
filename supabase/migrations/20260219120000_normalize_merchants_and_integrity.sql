@@ -80,6 +80,10 @@ DO $$
 DECLARE
     v_rows INTEGER := 0;
     v_sql TEXT;
+    v_user_id_expr TEXT;
+    v_status_expr TEXT;
+    v_merchants_user_id_udt_name TEXT;
+    v_merchants_status_udt_name TEXT;
     v_has_user_id BOOLEAN;
     v_has_business_name BOOLEAN;
     v_has_name BOOLEAN;
@@ -233,6 +237,57 @@ BEGIN
         WHERE table_schema = 'public' AND table_name = 'merchants_2025_11_10_12_00' AND column_name = 'created_at'
     ) INTO v_has_created_at;
 
+    SELECT udt_name
+    INTO v_merchants_user_id_udt_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'merchants'
+      AND column_name = 'user_id'
+    LIMIT 1;
+
+    SELECT udt_name
+    INTO v_merchants_status_udt_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'merchants'
+      AND column_name = 'status'
+    LIMIT 1;
+
+    IF v_has_user_id THEN
+        IF v_merchants_user_id_udt_name = 'uuid' THEN
+            v_user_id_expr := 'CASE WHEN NULLIF(TRIM(l.user_id::text), '''') ~* ''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'' THEN NULLIF(TRIM(l.user_id::text), '''')::uuid ELSE NULL END';
+        ELSIF v_merchants_user_id_udt_name IN ('int4', 'int8') THEN
+            v_user_id_expr := format(
+                'CASE WHEN NULLIF(TRIM(l.user_id::text), '''') ~ ''^[0-9]+$'' THEN NULLIF(TRIM(l.user_id::text), '''')::%s ELSE NULL END',
+                v_merchants_user_id_udt_name
+            );
+        ELSE
+            v_user_id_expr := 'NULL';
+        END IF;
+    ELSE
+        v_user_id_expr := 'NULL';
+    END IF;
+
+    IF v_merchants_status_udt_name = 'merchant_status' THEN
+        v_status_expr := CASE
+            WHEN v_has_status THEN
+                'CASE WHEN l.status::text IN (''pending'', ''approved'', ''active'', ''suspended'') THEN l.status::public.merchant_status ELSE ''pending''::public.merchant_status END'
+            WHEN v_has_is_active THEN
+                'CASE WHEN COALESCE(l.is_active, false) THEN ''active''::public.merchant_status ELSE ''pending''::public.merchant_status END'
+            ELSE
+                '''pending''::public.merchant_status'
+        END;
+    ELSE
+        v_status_expr := CASE
+            WHEN v_has_status THEN
+                'CASE WHEN l.status::text IN (''pending'', ''approved'', ''active'', ''suspended'') THEN l.status::text ELSE ''pending'' END'
+            WHEN v_has_is_active THEN
+                'CASE WHEN COALESCE(l.is_active, false) THEN ''active'' ELSE ''pending'' END'
+            ELSE
+                '''pending'''
+        END;
+    END IF;
+
     v_sql := format(
         $f$
         WITH migrated AS (
@@ -302,7 +357,7 @@ BEGIN
         )
         SELECT COUNT(*) FROM migrated
         $f$,
-        CASE WHEN v_has_user_id THEN 'l.user_id::uuid' ELSE 'NULL::uuid' END,
+        v_user_id_expr,
         CASE
             WHEN v_has_business_name THEN 'COALESCE(NULLIF(TRIM(l.business_name), ''''), ''Legacy Merchant'')'
             WHEN v_has_name THEN 'COALESCE(NULLIF(TRIM(l.name), ''''), ''Legacy Merchant'')'
@@ -318,14 +373,7 @@ BEGIN
         CASE WHEN v_has_bank_name THEN 'NULLIF(TRIM(l.bank_name), '''')' ELSE 'NULL' END,
         CASE WHEN v_has_account_number THEN 'NULLIF(TRIM(l.account_number), '''')' ELSE 'NULL' END,
         CASE WHEN v_has_branch_code THEN 'NULLIF(TRIM(l.branch_code), '''')' ELSE 'NULL' END,
-        CASE
-            WHEN v_has_status THEN
-                'CASE WHEN l.status::text IN (''pending'', ''approved'', ''active'', ''suspended'') THEN l.status::public.merchant_status ELSE ''pending''::public.merchant_status END'
-            WHEN v_has_is_active THEN
-                'CASE WHEN COALESCE(l.is_active, false) THEN ''active''::public.merchant_status ELSE ''pending''::public.merchant_status END'
-            ELSE
-                '''pending''::public.merchant_status'
-        END,
+        v_status_expr,
         CASE WHEN v_has_charity_donation_amount THEN 'COALESCE(l.charity_donation_amount, 0)' ELSE '0' END,
         CASE WHEN v_has_registration_number THEN 'NULLIF(TRIM(l.registration_number), '''')' ELSE 'NULL' END,
         CASE
