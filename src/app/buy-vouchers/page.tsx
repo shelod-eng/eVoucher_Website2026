@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
@@ -18,7 +18,7 @@ interface MerchantOption {
 type PaymentMethod = 'visa' | 'payfast' | 'eft' | 'debit_credit';
 type PurchaseStatus = 'pending' | 'completed' | 'failed' | null;
 
-export default function BuyVouchers() {
+function BuyVouchersContent() {
   const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const [merchants, setMerchants] = useState<MerchantOption[]>([]);
@@ -548,5 +548,32 @@ export default function BuyVouchers() {
         </div>
       </div>
     </div>
+  );
+}
+
+function BuyVouchersPageFallback() {
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="pt-24 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="animate-pulse space-y-6">
+            <div className="h-32 bg-muted rounded-2xl" />
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="h-64 bg-muted rounded-2xl" />
+              <div className="h-64 bg-muted rounded-2xl" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function BuyVouchersPage() {
+  return (
+    <Suspense fallback={<BuyVouchersPageFallback />}>
+      <BuyVouchersContent />
+    </Suspense>
   );
 }
