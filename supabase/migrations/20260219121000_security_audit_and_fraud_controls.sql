@@ -36,6 +36,10 @@ CREATE TABLE IF NOT EXISTS public.fraud_alerts (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Harden for legacy schemas where fraud_alerts already exists without actor_id.
+ALTER TABLE public.fraud_alerts
+    ADD COLUMN IF NOT EXISTS actor_id UUID;
+
 CREATE INDEX IF NOT EXISTS idx_fraud_alerts_status ON public.fraud_alerts(status);
 CREATE INDEX IF NOT EXISTS idx_fraud_alerts_risk_score ON public.fraud_alerts(risk_score DESC);
 CREATE INDEX IF NOT EXISTS idx_fraud_alerts_actor_id ON public.fraud_alerts(actor_id);
