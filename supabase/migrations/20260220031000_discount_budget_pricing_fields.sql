@@ -41,10 +41,10 @@ ON public.merchant_products
 FOR ALL
 TO authenticated
 USING (
-    merchant_id IN (SELECT id FROM public.merchants WHERE user_id = auth.uid())
+    merchant_id IN (SELECT id FROM public.merchants WHERE user_id::text = auth.uid()::text)
 )
 WITH CHECK (
-    merchant_id IN (SELECT id FROM public.merchants WHERE user_id = auth.uid())
+    merchant_id IN (SELECT id FROM public.merchants WHERE user_id::text = auth.uid()::text)
 );
 
 DROP POLICY IF EXISTS "customers_view_active_merchant_products" ON public.merchant_products;

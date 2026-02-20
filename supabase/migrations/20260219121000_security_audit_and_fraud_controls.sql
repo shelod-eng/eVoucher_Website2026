@@ -191,7 +191,7 @@ USING (
         SELECT 1
         FROM public.merchants
         WHERE merchants.id = merchant_kyc_documents.merchant_id
-          AND merchants.user_id = auth.uid()
+          AND merchants.user_id::text = auth.uid()::text
     )
 )
 WITH CHECK (
@@ -199,7 +199,7 @@ WITH CHECK (
         SELECT 1
         FROM public.merchants
         WHERE merchants.id = merchant_kyc_documents.merchant_id
-          AND merchants.user_id = auth.uid()
+          AND merchants.user_id::text = auth.uid()::text
     )
 );
 
@@ -213,7 +213,7 @@ USING (
         SELECT 1
         FROM public.merchants
         WHERE merchants.id = merchant_kyc_reviews.merchant_id
-          AND merchants.user_id = auth.uid()
+          AND merchants.user_id::text = auth.uid()::text
     )
 );
 

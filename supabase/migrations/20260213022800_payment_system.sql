@@ -100,7 +100,7 @@ USING (
     EXISTS (
         SELECT 1 FROM public.merchants 
         WHERE merchants.id = fnb_distribution_schedule.merchant_id 
-        AND merchants.user_id = auth.uid()
+        AND merchants.user_id::text = auth.uid()::text
     )
 );
 

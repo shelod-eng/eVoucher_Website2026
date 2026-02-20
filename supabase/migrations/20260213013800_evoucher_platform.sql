@@ -11,6 +11,8 @@ CREATE TYPE public.merchant_status AS ENUM ('pending', 'approved', 'active', 'su
 DROP TYPE IF EXISTS public.transaction_type CASCADE;
 CREATE TYPE public.transaction_type AS ENUM ('purchase', 'redemption', 'refund');
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- 2. Core Tables
 CREATE TABLE IF NOT EXISTS public.user_profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -38,6 +40,38 @@ CREATE TABLE IF NOT EXISTS public.merchants (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     approved_at TIMESTAMPTZ
 );
+
+-- Normalize legacy merchants table shape if it already exists with incompatible columns.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'merchants'
+    ) THEN
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS id UUID;
+        UPDATE public.merchants SET id = gen_random_uuid() WHERE id IS NULL;
+        ALTER TABLE public.merchants ALTER COLUMN id SET DEFAULT gen_random_uuid();
+        ALTER TABLE public.merchants ALTER COLUMN id SET NOT NULL;
+
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_merchants_id_unique ON public.merchants(id);
+
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS user_id UUID;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS business_name TEXT;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS contact_name TEXT;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS email TEXT;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS phone TEXT;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS bank_name TEXT;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS account_number TEXT;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS branch_code TEXT;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS status public.merchant_status DEFAULT 'pending'::public.merchant_status;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS onboarding_fee_paid BOOLEAN DEFAULT false;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS charity_donation_amount NUMERIC(10,2) DEFAULT 0;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+        ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
+    END IF;
+END;
+$$;
 
 CREATE TABLE IF NOT EXISTS public.customer_vouchers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -130,15 +164,15 @@ CREATE POLICY "merchants_manage_own_data"
 ON public.merchants
 FOR ALL
 TO authenticated
-USING (user_id = auth.uid())
-WITH CHECK (user_id = auth.uid());
+USING (user_id::text = auth.uid()::text)
+WITH CHECK (user_id::text = auth.uid()::text);
 
 DROP POLICY IF EXISTS "merchants_insert_on_signup" ON public.merchants;
 CREATE POLICY "merchants_insert_on_signup"
 ON public.merchants
 FOR INSERT
 TO authenticated
-WITH CHECK (user_id = auth.uid());
+WITH CHECK (user_id::text = auth.uid()::text);
 
 DROP POLICY IF EXISTS "customers_view_own_vouchers" ON public.customer_vouchers;
 CREATE POLICY "customers_view_own_vouchers"
@@ -159,7 +193,7 @@ CREATE POLICY "merchants_view_own_payouts"
 ON public.merchant_payouts
 FOR SELECT
 TO authenticated
-USING (merchant_id IN (SELECT id FROM public.merchants WHERE user_id = auth.uid()));
+USING (merchant_id IN (SELECT id FROM public.merchants WHERE user_id::text = auth.uid()::text));
 
 -- 7. Triggers
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
