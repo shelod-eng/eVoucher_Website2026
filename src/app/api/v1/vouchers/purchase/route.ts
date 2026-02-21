@@ -137,7 +137,6 @@ export async function POST(request: Request) {
       .from('merchants')
       .select('id,business_name,status,default_total_discount_pct')
       .eq('id', body.merchantId)
-      .in('status', ['active', 'approved'])
       .single();
 
     if (merchantError || !merchant) {
@@ -169,22 +168,10 @@ export async function POST(request: Request) {
       }
 
       productId = product.id;
-      pricing = {
-        faceValue: Number(product.face_value),
-        totalDiscountPct: Number(product.total_discount_pct),
-        consumerBenefitPct: Number(product.consumer_benefit_pct),
-        evoucherBenefitPct: Number(product.evoucher_benefit_pct),
-        totalDiscountAmount: Number(product.total_discount_amount),
-        consumerBenefitAmount: Number(product.consumer_benefit_amount),
-        evoucherBenefitAmount: Number(product.evoucher_benefit_amount),
-        consumerPrice: Number(product.consumer_price),
-        merchantReceivableAfterTotalDiscount: Number(
-          product.merchant_receivable_after_total_discount
-        ),
-        merchantReceivableAfterEvoucherBenefit: Number(
-          product.merchant_receivable_after_evoucher_benefit
-        ),
-      };
+      pricing = calculateDiscountPricing(
+        Number(product.face_value),
+        Number(product.total_discount_pct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT)
+      );
     } else {
       if (body.faceValue === undefined) {
         return NextResponse.json(

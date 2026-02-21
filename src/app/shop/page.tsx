@@ -37,10 +37,12 @@ export default function ShopPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [error, setError] = useState('');
   const [merchants, setMerchants] = useState<MerchantSummary[]>([]);
   const [products, setProducts] = useState<CatalogProduct[]>([]);
-  const [selectedMerchantId, setSelectedMerchantId] = useState<string>('all');
+  const [selectedMerchantId, setSelectedMerchantId] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [ussdAccessCode, setUssdAccessCode] = useState('*120*384#');
   const [statusMessage, setStatusMessage] = useState('');
 
@@ -58,14 +60,17 @@ export default function ShopPage() {
       try {
         const parsed = JSON.parse(cachedCatalog) as {
           merchants: MerchantSummary[];
-          products: CatalogProduct[];
+          selectedMerchantId: string;
+          productsByMerchant: Record<string, CatalogProduct[]>;
           ussdAccessCode: string;
           fetchedAt: number;
         };
 
         if (Date.now() - parsed.fetchedAt < SHOP_CACHE_TTL_MS) {
           setMerchants(parsed.merchants ?? []);
-          setProducts(parsed.products ?? []);
+          const cachedSelectedMerchantId = parsed.selectedMerchantId ?? '';
+          setSelectedMerchantId(cachedSelectedMerchantId);
+          setProducts((parsed.productsByMerchant ?? {})[cachedSelectedMerchantId] ?? []);
           setUssdAccessCode(parsed.ussdAccessCode ?? '*120*384#');
           setLoading(false);
         }
@@ -74,7 +79,7 @@ export default function ShopPage() {
       }
     }
 
-    const fetchCatalog = async () => {
+    const fetchMerchantDirectory = async () => {
       try {
         setLoading(!cachedCatalog);
         setError('');
@@ -86,20 +91,18 @@ export default function ShopPage() {
         if (!response.ok) throw new Error(data.error || 'Failed to load shop catalog.');
 
         setMerchants(data.merchants ?? []);
-        setProducts(data.products ?? []);
-        setUssdAccessCode(data.ussdAccessCode ?? '*120*384#');
-
-        if (typeof window !== 'undefined') {
-          window.sessionStorage.setItem(
-            SHOP_CACHE_KEY,
-            JSON.stringify({
-              merchants: data.merchants ?? [],
-              products: data.products ?? [],
-              ussdAccessCode: data.ussdAccessCode ?? '*120*384#',
-              fetchedAt: Date.now(),
-            })
-          );
+        if ((data.merchants ?? []).length > 0) {
+          const initialMerchantId =
+            selectedMerchantId && (data.merchants ?? []).some((merchant: MerchantSummary) => merchant.id === selectedMerchantId)
+              ? selectedMerchantId
+              : data.merchants[0].id;
+          setSelectedMerchantId(initialMerchantId);
+          await fetchProductsForMerchant(initialMerchantId, data.merchants ?? []);
+        } else {
+          setSelectedMerchantId('');
+          setProducts([]);
         }
+        setUssdAccessCode(data.ussdAccessCode ?? '*120*384#');
       } catch (catalogError: any) {
         setError(catalogError?.message || 'Failed to load shop catalog.');
       } finally {
@@ -107,13 +110,106 @@ export default function ShopPage() {
       }
     };
 
-    void fetchCatalog();
+    const fetchProductsForMerchant = async (
+      merchantId: string,
+      merchantSnapshot: MerchantSummary[] = merchants
+    ) => {
+      try {
+        if (!merchantId) {
+          setProducts([]);
+          return;
+        }
+
+        setProductsLoading(true);
+        setError('');
+        const response = await fetch(`/api/v1/shop/catalog?merchantId=${encodeURIComponent(merchantId)}`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to load merchant products.');
+
+        const merchantProducts = data.products ?? [];
+        setProducts(merchantProducts);
+
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.setItem(
+            SHOP_CACHE_KEY,
+            JSON.stringify({
+              merchants: merchantSnapshot,
+              selectedMerchantId: merchantId,
+              productsByMerchant: {
+                [merchantId]: merchantProducts,
+              },
+              ussdAccessCode: data.ussdAccessCode ?? '*120*384#',
+              fetchedAt: Date.now(),
+            })
+          );
+        }
+      } catch (productsError: any) {
+        setError(productsError?.message || 'Failed to load merchant products.');
+        setProducts([]);
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    void fetchMerchantDirectory();
   }, [user]);
 
-  const visibleProducts = useMemo(() => {
-    if (selectedMerchantId === 'all') return products;
-    return products.filter((product) => product.merchant_id === selectedMerchantId);
-  }, [products, selectedMerchantId]);
+  useEffect(() => {
+    if (!user) return;
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        setError('');
+        const queryString = searchTerm.trim()
+          ? `?q=${encodeURIComponent(searchTerm.trim())}`
+          : '';
+        const response = await fetch(`/api/v1/shop/catalog${queryString}`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to search merchants.');
+
+        const merchantDirectory = data.merchants ?? [];
+        setMerchants(merchantDirectory);
+        setUssdAccessCode(data.ussdAccessCode ?? '*120*384#');
+
+        if (!merchantDirectory.some((merchant: MerchantSummary) => merchant.id === selectedMerchantId)) {
+          const fallbackId = merchantDirectory[0]?.id ?? '';
+          setSelectedMerchantId(fallbackId);
+
+          if (fallbackId) {
+            const productsResponse = await fetch(
+              `/api/v1/shop/catalog?merchantId=${encodeURIComponent(fallbackId)}`,
+              {
+                method: 'GET',
+                credentials: 'include',
+              }
+            );
+            const productsData = await productsResponse.json();
+            if (!productsResponse.ok) {
+              throw new Error(productsData.error || 'Failed to load merchant products.');
+            }
+            setProducts(productsData.products ?? []);
+          } else {
+            setProducts([]);
+          }
+        }
+      } catch (searchError: any) {
+        setError(searchError?.message || 'Failed to search merchants.');
+      }
+    }, 280);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchTerm, user]);
+
+  const selectedMerchant = useMemo(
+    () => merchants.find((merchant) => merchant.id === selectedMerchantId) ?? null,
+    [merchants, selectedMerchantId]
+  );
 
   const handleAddToCart = (product: CatalogProduct) => {
     addCartItem({
@@ -143,6 +239,30 @@ export default function ShopPage() {
     router.push(`/buy-vouchers?${params.toString()}`);
   };
 
+  const handleSelectMerchant = async (merchantId: string) => {
+    try {
+      if (!merchantId) return;
+      setSelectedMerchantId(merchantId);
+      setProductsLoading(true);
+      setError('');
+
+      const response = await fetch(`/api/v1/shop/catalog?merchantId=${encodeURIComponent(merchantId)}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to load merchant products.');
+
+      setProducts(data.products ?? []);
+      setUssdAccessCode(data.ussdAccessCode ?? '*120*384#');
+    } catch (merchantError: any) {
+      setError(merchantError?.message || 'Failed to load merchant products.');
+      setProducts([]);
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -167,12 +287,35 @@ export default function ShopPage() {
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="bg-card rounded-2xl border border-border p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
               <div>
                 <h1 className="font-headline font-bold text-3xl text-foreground">Shop</h1>
-                <p className="text-muted-foreground font-body">
-                  Browse merchant products, see instant discount impact, and add vouchers to your cart.
-                </p>
+                <p className="text-muted-foreground font-body">Browse merchants and buy discounted products</p>
+              </div>
+              <button
+                onClick={() => router.push('/cart')}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
+              >
+                <Icon name="ShoppingCartIcon" size={18} variant="outline" />
+                <span>Cart</span>
+              </button>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-3 md:items-center">
+              <div className="relative flex-1">
+                <Icon
+                  name="MagnifyingGlassIcon"
+                  size={18}
+                  variant="outline"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search products or merchants..."
+                  className="w-full pl-10 pr-4 py-3 border border-border rounded-lg bg-background font-body"
+                />
               </div>
               <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
                 <p className="text-sm text-foreground font-body">
@@ -195,140 +338,143 @@ export default function ShopPage() {
           )}
 
           <div className="bg-card rounded-2xl border border-border p-6">
-            <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
-              <div>
-                <h2 className="font-headline font-bold text-xl text-foreground">Merchant Filter</h2>
-                <p className="text-sm text-muted-foreground font-body">
-                  {merchants.length} merchants, {products.length} active discounted products
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <select
-                  value={selectedMerchantId}
-                  onChange={(event) => setSelectedMerchantId(event.target.value)}
-                  className="min-w-72 px-4 py-3 border border-border rounded-lg bg-background font-body"
-                >
-                  <option value="all">All merchants</option>
-                  {merchants.map((merchant) => (
-                    <option key={merchant.id} value={merchant.id}>
-                      {merchant.businessName} ({merchant.averageDiscountPct.toFixed(2)}% avg)
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => router.push('/cart')}
-                  className="px-5 py-3 rounded-lg bg-primary text-primary-foreground font-headline font-semibold"
-                >
-                  View Cart
-                </button>
-              </div>
+            <div className="mb-4">
+              <h2 className="font-headline font-bold text-xl text-foreground">Shopping At</h2>
+              <p className="text-sm text-muted-foreground font-body">
+                Select a merchant first, then choose products to add to cart.
+              </p>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedMerchantId('all')}
-                className={`px-3 py-2 rounded-lg border text-xs font-headline font-semibold ${
-                  selectedMerchantId === 'all'
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border hover:bg-muted'
-                }`}
-              >
-                All Merchants
-              </button>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
               {merchants.map((merchant) => (
                 <button
                   key={merchant.id}
-                  onClick={() => setSelectedMerchantId(merchant.id)}
-                  className={`px-3 py-2 rounded-lg border text-xs font-headline font-semibold ${
+                  onClick={() => void handleSelectMerchant(merchant.id)}
+                  className={`text-left rounded-xl border p-4 transition-all ${
                     selectedMerchantId === merchant.id
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border hover:bg-muted'
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-background hover:bg-muted'
                   }`}
                 >
-                  {merchant.businessName} ({merchant.productCount})
+                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center mb-3">
+                    <Icon name="BuildingStorefrontIcon" size={20} variant="outline" />
+                  </div>
+                  <p className="font-headline font-semibold text-sm text-foreground line-clamp-2">
+                    {merchant.businessName}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{merchant.productCount} products</p>
                 </button>
               ))}
+              {merchants.length === 0 && (
+                <div className="col-span-full rounded-xl border border-border p-6 text-center">
+                  <p className="text-sm text-muted-foreground font-body">
+                    No merchants found. Try another search term.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-6">
-            {visibleProducts.length === 0 ? (
-              <div className="col-span-full p-10 text-center bg-card rounded-2xl border border-border">
-                <Icon
-                  name="ShoppingBagIcon"
-                  size={48}
-                  variant="outline"
-                  className="text-muted-foreground mx-auto mb-4"
-                />
-                <p className="text-muted-foreground font-body">
-                  No products available for this merchant filter yet.
-                </p>
+          <div className="bg-card rounded-2xl border border-border p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-headline font-bold text-xl text-foreground">
+                Products {selectedMerchant ? `(${selectedMerchant.productCount} items)` : ''}
+              </h2>
+              {selectedMerchant && (
+                <span className="text-sm text-muted-foreground font-body">
+                  {selectedMerchant.businessName}
+                </span>
+              )}
+            </div>
+
+            {productsLoading ? (
+              <div className="grid lg:grid-cols-2 gap-6">
+                <div className="h-56 rounded-2xl bg-muted animate-pulse" />
+                <div className="h-56 rounded-2xl bg-muted animate-pulse" />
               </div>
             ) : (
-              visibleProducts.map((product) => (
-                <div key={product.id} className="bg-card rounded-2xl border border-border p-6 shadow-sm">
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-primary font-headline font-semibold">
-                        {product.merchant_name}
-                      </p>
-                      <h3 className="font-headline font-bold text-xl text-foreground">
-                        {product.product_name}
-                      </h3>
-                    </div>
-                    <span className="px-3 py-1 rounded-full text-xs bg-success/15 text-success font-headline font-semibold">
-                      Save {Number(product.consumer_benefit_pct).toFixed(2)}%
-                    </span>
-                  </div>
-                  {product.is_fallback && (
-                    <p className="mb-3 text-xs text-warning font-body">
-                      Starter catalog item (auto-generated until merchant publishes custom products).
+              <div className="grid lg:grid-cols-2 gap-6">
+                {products.length === 0 ? (
+                  <div className="col-span-full p-10 text-center bg-card rounded-2xl border border-border">
+                    <Icon
+                      name="ShoppingBagIcon"
+                      size={48}
+                      variant="outline"
+                      className="text-muted-foreground mx-auto mb-4"
+                    />
+                    <p className="text-muted-foreground font-body">
+                      {selectedMerchant
+                        ? 'No products available for this merchant yet.'
+                        : 'Select a merchant to view products.'}
                     </p>
-                  )}
-
-                  <div className="space-y-2 mb-5">
-                    <div className="flex items-center justify-between text-sm font-body">
-                      <span className="text-muted-foreground">Face value</span>
-                      <span className="font-headline font-semibold text-foreground">
-                        R{Number(product.face_value).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm font-body">
-                      <span className="text-muted-foreground">Total discount budget</span>
-                      <span className="font-headline font-semibold text-success">
-                        {Number(product.total_discount_pct).toFixed(2)}%
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm font-body">
-                      <span className="text-muted-foreground">Your savings</span>
-                      <span className="font-headline font-semibold text-success">
-                        -R{Number(product.consumer_benefit_amount).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="border-t border-border pt-2 flex items-center justify-between">
-                      <span className="font-headline font-semibold text-foreground">You pay</span>
-                      <span className="font-headline font-bold text-xl text-primary">
-                        R{Number(product.consumer_price).toFixed(2)}
-                      </span>
-                    </div>
                   </div>
+                ) : (
+                  products.map((product) => (
+                    <div key={product.id} className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-primary font-headline font-semibold">
+                            {product.merchant_name}
+                          </p>
+                          <h3 className="font-headline font-bold text-xl text-foreground">
+                            {product.product_name}
+                          </h3>
+                        </div>
+                        <span className="px-3 py-1 rounded-full text-xs bg-success/15 text-success font-headline font-semibold">
+                          Save {Number(product.consumer_benefit_pct).toFixed(2)}%
+                        </span>
+                      </div>
+                      {product.is_fallback && (
+                        <p className="mb-3 text-xs text-warning font-body">
+                          Starter catalog item (auto-generated until merchant publishes custom products).
+                        </p>
+                      )}
 
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleAddToCart(product)}
-                      className="flex-1 px-4 py-3 rounded-lg border border-border font-headline font-semibold hover:bg-muted"
-                    >
-                      Add to Cart
-                    </button>
-                    <button
-                      onClick={() => handleBuyNow(product)}
-                      className="flex-1 px-4 py-3 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
-                    >
-                      Buy Now
-                    </button>
-                  </div>
-                </div>
-              ))
+                      <div className="space-y-2 mb-5">
+                        <div className="flex items-center justify-between text-sm font-body">
+                          <span className="text-muted-foreground">Face value</span>
+                          <span className="font-headline font-semibold text-foreground">
+                            R{Number(product.face_value).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm font-body">
+                          <span className="text-muted-foreground">Discount</span>
+                          <span className="font-headline font-semibold text-success">
+                            {Number(product.total_discount_pct).toFixed(2)}%
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm font-body">
+                          <span className="text-muted-foreground">Your savings</span>
+                          <span className="font-headline font-semibold text-success">
+                            -R{Number(product.consumer_benefit_amount).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="border-t border-border pt-2 flex items-center justify-between">
+                          <span className="font-headline font-semibold text-foreground">You pay</span>
+                          <span className="font-headline font-bold text-xl text-primary">
+                            R{Number(product.consumer_price).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleAddToCart(product)}
+                          className="flex-1 px-4 py-3 rounded-lg border border-border font-headline font-semibold hover:bg-muted"
+                        >
+                          Add
+                        </button>
+                        <button
+                          onClick={() => handleBuyNow(product)}
+                          className="flex-1 px-4 py-3 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
+                        >
+                          Buy Now
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             )}
           </div>
         </div>

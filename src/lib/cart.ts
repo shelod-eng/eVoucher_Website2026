@@ -34,6 +34,7 @@ export function getCartItems(): CartItem[] {
 export function saveCartItems(items: CartItem[]) {
   if (!isBrowser()) return;
   window.localStorage.setItem(CART_KEY, JSON.stringify(items));
+  window.dispatchEvent(new Event('evoucher-cart-updated'));
 }
 
 export function addCartItem(item: CartItem) {
@@ -70,6 +71,7 @@ export function updateCartQuantity(productId: string, quantity: number) {
 export function clearCart() {
   if (!isBrowser()) return;
   window.localStorage.removeItem(CART_KEY);
+  window.dispatchEvent(new Event('evoucher-cart-updated'));
 }
 
 export function getCartSummary(items: CartItem[]) {

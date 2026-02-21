@@ -13,6 +13,7 @@ function toCurrency(value: number) {
 function buildMonthlySeries(
   transactions: Array<{
     created_at: string;
+    merchant_id?: string | null;
     amount?: number | null;
     consumer_benefit_amount?: number | null;
     evoucher_benefit_amount?: number | null;
@@ -39,6 +40,39 @@ function buildMonthlySeries(
     .sort((a, b) => a.month.localeCompare(b.month));
 }
 
+function buildMerchantSeries(
+  transactions: Array<{
+    merchant_id?: string | null;
+    amount?: number | null;
+    consumer_benefit_amount?: number | null;
+  }>,
+  merchantNames: Record<string, string>
+) {
+  const byMerchant = new Map<string, { merchantId: string; merchantName: string; spent: number; savings: number }>();
+  transactions.forEach((transaction) => {
+    const merchantId = String(transaction.merchant_id ?? 'unknown');
+    const existing = byMerchant.get(merchantId) ?? {
+      merchantId,
+      merchantName: merchantNames[merchantId] ?? 'Unknown Merchant',
+      spent: 0,
+      savings: 0,
+    };
+    existing.spent += Number(transaction.amount ?? 0);
+    existing.savings += Number(transaction.consumer_benefit_amount ?? 0);
+    byMerchant.set(merchantId, existing);
+  });
+
+  return Array.from(byMerchant.values())
+    .map((entry) => ({
+      merchantId: entry.merchantId,
+      merchantName: entry.merchantName,
+      spent: toCurrency(entry.spent),
+      savings: toCurrency(entry.savings),
+    }))
+    .sort((a, b) => b.spent - a.spent)
+    .slice(0, 12);
+}
+
 export async function GET() {
   try {
     const { user } = await getAuthenticatedUser();
@@ -57,7 +91,7 @@ export async function GET() {
     if (role === 'customer') {
       const { data: customerTransactions, error: customerTransactionsError } = await admin
         .from('payment_transactions')
-        .select('created_at,amount,consumer_benefit_amount,evoucher_benefit_amount,payment_status')
+        .select('created_at,merchant_id,amount,consumer_benefit_amount,evoucher_benefit_amount,payment_status')
         .eq('customer_id', user.id)
         .eq('payment_status', 'completed')
         .order('created_at', { ascending: false })
@@ -69,6 +103,21 @@ export async function GET() {
       const totalVolume = sumBy(completed, (row) => Number(row.amount ?? 0));
       const totalSavings = sumBy(completed, (row) => Number(row.consumer_benefit_amount ?? 0));
       const monthlySeries = buildMonthlySeries(completed);
+      const merchantIds = Array.from(
+        new Set(completed.map((row) => String(row.merchant_id ?? '')).filter(Boolean))
+      );
+      const merchantNames: Record<string, string> = {};
+      if (merchantIds.length > 0) {
+        const { data: merchantRows, error: merchantRowsError } = await admin
+          .from('merchants')
+          .select('id,business_name')
+          .in('id', merchantIds);
+        if (merchantRowsError) throw merchantRowsError;
+        (merchantRows ?? []).forEach((merchant) => {
+          merchantNames[merchant.id] = merchant.business_name;
+        });
+      }
+      const merchantSeries = buildMerchantSeries(completed, merchantNames);
 
       return NextResponse.json({
         role,
@@ -84,6 +133,13 @@ export async function GET() {
           roiPct: totalVolume > 0 ? Number(((totalSavings / totalVolume) * 100).toFixed(2)) : 0,
         },
         monthlySeries,
+        merchantSeries,
+        recentTransactions: completed.slice(0, 8).map((row) => ({
+          created_at: row.created_at,
+          merchant_name: merchantNames[String(row.merchant_id ?? '')] ?? 'Unknown Merchant',
+          amount: Number(row.amount ?? 0),
+          savings: Number(row.consumer_benefit_amount ?? 0),
+        })),
       });
     }
 
@@ -105,7 +161,7 @@ export async function GET() {
     let transactionsQuery = admin
       .from('payment_transactions')
       .select(
-        'created_at,amount,consumer_benefit_amount,evoucher_benefit_amount,total_discount_pct,payment_status'
+        'created_at,merchant_id,amount,consumer_benefit_amount,evoucher_benefit_amount,total_discount_pct,payment_status'
       )
       .eq('payment_status', 'completed')
       .order('created_at', { ascending: false })
@@ -140,6 +196,21 @@ export async function GET() {
       (payout) => Number(payout.amount ?? 0)
     );
     const monthlySeries = buildMonthlySeries(transactions);
+    const merchantIds = Array.from(
+      new Set(transactions.map((row) => String(row.merchant_id ?? '')).filter(Boolean))
+    );
+    const merchantNames: Record<string, string> = {};
+    if (merchantIds.length > 0) {
+      const { data: merchantRows, error: merchantRowsError } = await admin
+        .from('merchants')
+        .select('id,business_name')
+        .in('id', merchantIds);
+      if (merchantRowsError) throw merchantRowsError;
+      (merchantRows ?? []).forEach((merchant) => {
+        merchantNames[merchant.id] = merchant.business_name;
+      });
+    }
+    const merchantSeries = buildMerchantSeries(transactions, merchantNames);
     const avgDiscountPct = transactions.length
       ? sumBy(transactions, (row) => Number(row.total_discount_pct ?? 0)) / transactions.length
       : 0;
@@ -158,6 +229,13 @@ export async function GET() {
         roiPct: totalVolume > 0 ? Number(((totalSavings / totalVolume) * 100).toFixed(2)) : 0,
       },
       monthlySeries,
+      merchantSeries,
+      recentTransactions: transactions.slice(0, 8).map((row) => ({
+        created_at: row.created_at,
+        merchant_name: merchantNames[String(row.merchant_id ?? '')] ?? 'Unknown Merchant',
+        amount: Number(row.amount ?? 0),
+        savings: Number(row.consumer_benefit_amount ?? 0),
+      })),
     });
   } catch (error: any) {
     return NextResponse.json(

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/AppIcon';
+import { getCartItems } from '@/lib/cart';
 
 interface HeaderProps {
   className?: string;
@@ -21,6 +22,10 @@ const Header = ({ className = '' }: HeaderProps) => {
     pathname?.startsWith('/merchant') ||
     pathname?.startsWith('/merchants');
   const isSignedIn = Boolean(user);
+  const [cartCount, setCartCount] = useState(0);
+  const displayName = String(
+    user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'consumer'
+  ).trim();
 
   const publicNavItems = [
     { label: 'Home', href: '/', icon: 'HomeIcon' },
@@ -36,6 +41,7 @@ const Header = ({ className = '' }: HeaderProps) => {
     { label: 'Cart', href: '/cart', icon: 'ShoppingCartIcon' },
     { label: 'Rewards', href: '/rewards', icon: 'SparklesIcon' },
     { label: 'Analytics', href: '/analytics', icon: 'ChartBarIcon' },
+    { label: 'Profile', href: '/profile', icon: 'UserCircleIcon' },
   ];
 
   const merchantNavItems = [
@@ -47,20 +53,35 @@ const Header = ({ className = '' }: HeaderProps) => {
 
   const navItems = isSignedIn ? (isMerchant ? merchantNavItems : consumerNavItems) : publicNavItems;
 
-  const dashboardHref =
-    isMerchant ? '/merchant/dashboard' : '/customer/dashboard';
-
   useEffect(() => {
     if (!isSignedIn) return;
 
     const prefetchTargets = isMerchant
       ? ['/merchant/dashboard', '/analytics', '/support']
-      : ['/customer/dashboard', '/shop', '/wallet', '/cart', '/rewards', '/analytics', '/buy-vouchers'];
+      : ['/customer/dashboard', '/shop', '/wallet', '/cart', '/rewards', '/analytics', '/profile', '/buy-vouchers'];
 
     prefetchTargets.forEach((target) => {
       router.prefetch(target);
     });
   }, [isSignedIn, isMerchant, router]);
+
+  useEffect(() => {
+    if (!isSignedIn || isMerchant) return;
+
+    const refreshCartCount = () => {
+      const items = getCartItems();
+      const total = items.reduce((sum, item) => sum + item.quantity, 0);
+      setCartCount(total);
+    };
+
+    refreshCartCount();
+    window.addEventListener('evoucher-cart-updated', refreshCartCount);
+    window.addEventListener('storage', refreshCartCount);
+    return () => {
+      window.removeEventListener('evoucher-cart-updated', refreshCartCount);
+      window.removeEventListener('storage', refreshCartCount);
+    };
+  }, [isSignedIn, isMerchant]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -110,18 +131,21 @@ const Header = ({ className = '' }: HeaderProps) => {
               >
                 <Icon name={item.icon as any} size={18} variant="outline" />
                 <span>{item.label}</span>
+                {!isMerchant && isSignedIn && item.label === 'Cart' && cartCount > 0 && (
+                  <span className="inline-flex min-w-5 h-5 px-1 items-center justify-center text-xs rounded-full bg-primary text-primary-foreground font-headline">
+                    {cartCount}
+                  </span>
+                )}
               </Link>
             ))}
 
             {user ? (
               <>
-                <Link
-                  href={dashboardHref}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-all duration-300 ease-smooth"
-                >
-                  <Icon name="UserCircleIcon" size={18} variant="outline" />
-                  <span>Dashboard</span>
-                </Link>
+                {!isMerchant && (
+                  <span className="px-3 py-2 text-sm font-body text-muted-foreground">
+                    Hello, <span className="font-headline font-semibold text-foreground">{displayName}</span>
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => void handleSignOut()}
@@ -170,14 +194,11 @@ const Header = ({ className = '' }: HeaderProps) => {
 
               {user ? (
                 <>
-                  <Link
-                    href={dashboardHref}
-                    onClick={closeMobileMenu}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-md text-base font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-colors duration-200"
-                  >
-                    <Icon name="UserCircleIcon" size={20} variant="outline" />
-                    <span>Dashboard</span>
-                  </Link>
+                  {!isMerchant && (
+                    <div className="px-4 py-2 text-sm text-muted-foreground">
+                      Hello, <span className="font-headline font-semibold text-foreground">{displayName}</span>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => void handleSignOut()}

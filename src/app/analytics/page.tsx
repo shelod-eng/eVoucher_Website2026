@@ -3,17 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/common/Header';
-import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface OverviewMetrics {
   totalVolume: number;
   totalSavings: number;
   totalMargin: number;
-  pendingSettlements: number;
-  paidSettlements: number;
   transactionCount: number;
-  averageDiscountPct: number;
   roiPct: number;
 }
 
@@ -21,13 +17,28 @@ interface MonthlyRow {
   month: string;
   volume: number;
   savings: number;
-  margin: number;
+}
+
+interface MerchantRow {
+  merchantId: string;
+  merchantName: string;
+  spent: number;
+  savings: number;
+}
+
+interface RecentTransactionRow {
+  created_at: string;
+  merchant_name: string;
+  amount: number;
+  savings: number;
 }
 
 interface OverviewPayload {
   role: string;
   metrics: OverviewMetrics;
   monthlySeries: MonthlyRow[];
+  merchantSeries: MerchantRow[];
+  recentTransactions: RecentTransactionRow[];
 }
 
 export default function AnalyticsPage() {
@@ -80,29 +91,9 @@ export default function AnalyticsPage() {
       <Header />
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="bg-card rounded-2xl border border-border p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h1 className="font-headline font-bold text-3xl text-foreground">Analytics</h1>
-                <p className="text-muted-foreground font-body">
-                  Unified transaction, savings, and settlement insights across mobile and web activity.
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <a
-                  href="/api/v1/analytics/export?type=monthly"
-                  className="px-4 py-3 rounded-lg border border-border font-headline font-semibold hover:bg-muted"
-                >
-                  Export Monthly CSV
-                </a>
-                <a
-                  href="/api/v1/analytics/export?type=transactions"
-                  className="px-4 py-3 rounded-lg bg-primary text-primary-foreground font-headline font-semibold"
-                >
-                  Export Transactions CSV
-                </a>
-              </div>
-            </div>
+          <div>
+            <h1 className="font-headline font-bold text-5xl text-foreground">Analytics</h1>
+            <p className="text-muted-foreground">Track your spending and savings</p>
           </div>
 
           {error && (
@@ -113,58 +104,90 @@ export default function AnalyticsPage() {
 
           {payload && (
             <>
-              <div className="grid md:grid-cols-4 gap-6">
-                <div className="bg-card border border-border rounded-2xl p-6">
-                  <p className="text-sm text-muted-foreground">Volume</p>
-                  <p className="text-3xl font-headline font-bold text-foreground mt-2">
+              <div className="grid md:grid-cols-4 gap-4">
+                <div className="bg-card rounded-2xl border border-border p-5">
+                  <p className="text-4xl font-headline font-bold text-foreground">
                     R{Number(payload.metrics.totalVolume).toFixed(2)}
                   </p>
+                  <p className="text-sm text-muted-foreground">Total Spent</p>
                 </div>
-                <div className="bg-card border border-border rounded-2xl p-6">
-                  <p className="text-sm text-muted-foreground">Consumer Savings</p>
-                  <p className="text-3xl font-headline font-bold text-success mt-2">
+                <div className="bg-card rounded-2xl border border-border p-5">
+                  <p className="text-4xl font-headline font-bold text-foreground">
                     R{Number(payload.metrics.totalSavings).toFixed(2)}
                   </p>
+                  <p className="text-sm text-muted-foreground">Total Saved</p>
                 </div>
-                <div className="bg-card border border-border rounded-2xl p-6">
-                  <p className="text-sm text-muted-foreground">Platform Margin</p>
-                  <p className="text-3xl font-headline font-bold text-primary mt-2">
-                    R{Number(payload.metrics.totalMargin).toFixed(2)}
+                <div className="bg-card rounded-2xl border border-border p-5">
+                  <p className="text-4xl font-headline font-bold text-foreground">
+                    {Number(payload.metrics.roiPct).toFixed(0)}%
                   </p>
+                  <p className="text-sm text-muted-foreground">% Saved</p>
                 </div>
-                <div className="bg-card border border-border rounded-2xl p-6">
-                  <p className="text-sm text-muted-foreground">Transactions</p>
-                  <p className="text-3xl font-headline font-bold text-foreground mt-2">
+                <div className="bg-card rounded-2xl border border-border p-5">
+                  <p className="text-4xl font-headline font-bold text-foreground">
                     {payload.metrics.transactionCount}
                   </p>
+                  <p className="text-sm text-muted-foreground">Transactions</p>
                 </div>
               </div>
 
-              <div className="bg-card rounded-2xl border border-border p-6">
-                <h2 className="font-headline font-bold text-xl text-foreground mb-4">
-                  Monthly Performance
-                </h2>
-                {payload.monthlySeries.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Icon
-                      name="ChartBarIcon"
-                      size={44}
-                      variant="outline"
-                      className="text-muted-foreground mx-auto mb-3"
-                    />
-                    <p className="text-muted-foreground font-body">No completed transactions yet.</p>
-                  </div>
+              <div className="grid lg:grid-cols-2 gap-6">
+                <div className="bg-card rounded-2xl border border-border p-5">
+                  <h2 className="font-headline font-bold text-2xl text-foreground mb-4">Monthly Spending</h2>
+                  {payload.monthlySeries.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-12">No data yet</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {payload.monthlySeries.map((row) => (
+                        <div key={row.month} className="rounded-xl border border-border p-3">
+                          <div className="flex justify-between items-center">
+                            <p className="font-headline font-semibold text-foreground">{row.month}</p>
+                            <p className="text-sm text-muted-foreground">R{Number(row.volume).toFixed(2)}</p>
+                          </div>
+                          <p className="text-xs text-success mt-1">Saved: R{Number(row.savings).toFixed(2)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-card rounded-2xl border border-border p-5">
+                  <h2 className="font-headline font-bold text-2xl text-foreground mb-4">Spend by Merchant</h2>
+                  {payload.merchantSeries.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-12">No data yet</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {payload.merchantSeries.map((row) => (
+                        <div key={row.merchantId} className="rounded-xl border border-border p-3">
+                          <div className="flex justify-between items-center">
+                            <p className="font-headline font-semibold text-foreground">{row.merchantName}</p>
+                            <p className="text-sm text-muted-foreground">R{Number(row.spent).toFixed(2)}</p>
+                          </div>
+                          <p className="text-xs text-success mt-1">Saved: R{Number(row.savings).toFixed(2)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-card rounded-2xl border border-border p-5">
+                <h2 className="font-headline font-bold text-2xl text-foreground mb-4">Recent Transactions</h2>
+                {payload.recentTransactions.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No transactions yet</p>
                 ) : (
                   <div className="space-y-3">
-                    {payload.monthlySeries.map((row) => (
-                      <div key={row.month} className="rounded-xl border border-border p-4 bg-muted/30">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <p className="font-headline font-semibold text-foreground">{row.month}</p>
-                          <div className="text-sm text-muted-foreground font-body">
-                            Volume: R{Number(row.volume).toFixed(2)} | Savings: R
-                            {Number(row.savings).toFixed(2)} | Margin: R
-                            {Number(row.margin).toFixed(2)}
-                          </div>
+                    {payload.recentTransactions.map((row, idx) => (
+                      <div key={`${row.created_at}-${idx}`} className="rounded-xl border border-border p-3 flex justify-between items-center">
+                        <div>
+                          <p className="font-headline font-semibold text-foreground">{row.merchant_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(row.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-headline font-semibold text-foreground">R{Number(row.amount).toFixed(2)}</p>
+                          <p className="text-xs text-success">Saved: R{Number(row.savings).toFixed(2)}</p>
                         </div>
                       </div>
                     ))}
@@ -178,4 +201,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-

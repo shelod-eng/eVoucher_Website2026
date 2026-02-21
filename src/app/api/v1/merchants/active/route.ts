@@ -39,7 +39,6 @@ export async function GET() {
     const { data, error } = await admin
       .from('merchants')
       .select('id,business_name,email,status,default_total_discount_pct')
-      .in('status', ['active', 'approved'])
       .order('business_name', { ascending: true });
 
     if (error) throw error;

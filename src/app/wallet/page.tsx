@@ -6,15 +6,13 @@ import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
 
-const WALLET_CACHE_KEY = 'evoucher_wallet_cache_v1';
-const WALLET_CACHE_TTL_MS = 60 * 1000;
-
 interface Voucher {
   id: string;
   merchant_name: string;
   voucher_code: string;
   current_balance: number;
   face_value: number;
+  is_active: boolean;
   expires_at: string;
 }
 
@@ -37,9 +35,9 @@ interface ManagedPaymentMethod {
   provider: string;
   masked_reference: string;
   is_default: boolean;
-  is_active: boolean;
-  created_at: string;
 }
+
+type WalletTab = 'active' | 'used' | 'expired';
 
 export default function WalletPage() {
   const router = useRouter();
@@ -50,6 +48,7 @@ export default function WalletPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [legacyPaymentMethods, setLegacyPaymentMethods] = useState<LegacyPaymentMethod[]>([]);
   const [managedMethods, setManagedMethods] = useState<ManagedPaymentMethod[]>([]);
+  const [tab, setTab] = useState<WalletTab>('active');
   const [methodType, setMethodType] = useState<'card' | 'eft' | 'wallet' | 'other'>('card');
   const [provider, setProvider] = useState('');
   const [maskedReference, setMaskedReference] = useState('');
@@ -67,30 +66,9 @@ export default function WalletPage() {
 
     const fetchWalletData = async () => {
       try {
-        const cachedPayload =
-          typeof window !== 'undefined' ? window.sessionStorage.getItem(WALLET_CACHE_KEY) : null;
-        if (cachedPayload) {
-          try {
-            const parsed = JSON.parse(cachedPayload) as {
-              vouchers: Voucher[];
-              transactions: Transaction[];
-              paymentMethods: LegacyPaymentMethod[];
-              fetchedAt: number;
-            };
-
-            if (Date.now() - parsed.fetchedAt < WALLET_CACHE_TTL_MS) {
-              setVouchers(parsed.vouchers ?? []);
-              setTransactions(parsed.transactions ?? []);
-              setLegacyPaymentMethods(parsed.paymentMethods ?? []);
-              setLoading(false);
-            }
-          } catch {
-            // Ignore invalid cache payload
-          }
-        }
-
-        setLoading(!cachedPayload);
+        setLoading(true);
         setError('');
+
         const response = await fetch('/api/v1/customer/dashboard', {
           method: 'GET',
           credentials: 'include',
@@ -101,19 +79,6 @@ export default function WalletPage() {
         setVouchers(data.vouchers ?? []);
         setTransactions(data.transactions ?? []);
         setLegacyPaymentMethods(data.paymentMethods ?? []);
-
-        if (typeof window !== 'undefined') {
-          window.sessionStorage.setItem(
-            WALLET_CACHE_KEY,
-            JSON.stringify({
-              vouchers: data.vouchers ?? [],
-              transactions: data.transactions ?? [],
-              paymentMethods: data.paymentMethods ?? [],
-              fetchedAt: Date.now(),
-            })
-          );
-        }
-
         await fetchManagedPaymentMethods();
       } catch (walletError: any) {
         setError(walletError?.message || 'Failed to load wallet.');
@@ -207,11 +172,38 @@ export default function WalletPage() {
     }
   };
 
-  const walletBalance = useMemo(
-    () => vouchers.reduce((total, voucher) => total + Number(voucher.current_balance ?? 0), 0),
+  const activeVouchers = useMemo(
+    () =>
+      vouchers.filter(
+        (voucher) =>
+          voucher.is_active &&
+          Number(voucher.current_balance) > 0 &&
+          new Date(voucher.expires_at).getTime() > Date.now()
+      ),
     [vouchers]
   );
+  const usedVouchers = useMemo(
+    () => vouchers.filter((voucher) => Number(voucher.current_balance) <= 0),
+    [vouchers]
+  );
+  const expiredVouchers = useMemo(
+    () =>
+      vouchers.filter(
+        (voucher) =>
+          new Date(voucher.expires_at).getTime() <= Date.now() &&
+          Number(voucher.current_balance) > 0
+      ),
+    [vouchers]
+  );
+  const displayedVouchers =
+    tab === 'active' ? activeVouchers : tab === 'used' ? usedVouchers : expiredVouchers;
 
+  const walletBalance = activeVouchers.reduce((total, voucher) => total + Number(voucher.current_balance), 0);
+  const totalSaved = vouchers.reduce(
+    (total, voucher) =>
+      total + Math.max(0, Number(voucher.face_value) - Number(voucher.current_balance)),
+    0
+  );
   const savedMethodCount =
     managedMethods.length > 0 ? managedMethods.length : legacyPaymentMethods.length;
 
@@ -227,69 +219,101 @@ export default function WalletPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <Header />
       <div className="pt-24 pb-16 px-4">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="bg-card rounded-2xl border border-border p-6">
-            <h1 className="font-headline font-bold text-3xl text-foreground">Wallet</h1>
-            <p className="text-muted-foreground font-body">
-              Manage vouchers, payment methods, and transaction history synced with your mobile
-              profile.
-            </p>
-          </div>
-
+        <div className="max-w-6xl mx-auto space-y-6">
           {error && (
             <div className="p-4 rounded-lg border border-error/20 bg-error/10">
               <p className="text-sm text-error font-body">{error}</p>
             </div>
           )}
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-primary to-primary/80 text-white rounded-2xl p-6">
-              <p className="text-sm opacity-90">Current Wallet Balance</p>
-              <p className="text-4xl font-headline font-bold mt-2">R{walletBalance.toFixed(2)}</p>
+          <div className="rounded-2xl p-5 bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg">
+            <div className="flex items-start justify-between mb-4">
+              <h1 className="font-headline font-bold text-3xl">Wallet</h1>
+              <Icon name="QrCodeIcon" size={22} variant="outline" className="text-white" />
             </div>
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <p className="text-sm text-muted-foreground font-body">Active vouchers</p>
-              <p className="text-4xl font-headline font-bold text-foreground mt-2">{vouchers.length}</p>
+
+            <div className="grid md:grid-cols-2 gap-4 mb-4">
+              <div className="rounded-xl bg-white/15 p-4">
+                <p className="text-sm opacity-90">Total Balance</p>
+                <p className="font-headline font-bold text-4xl mt-1">R{walletBalance.toFixed(2)}</p>
+              </div>
+              <div className="rounded-xl bg-white/15 p-4">
+                <p className="text-sm opacity-90">Total Saved</p>
+                <p className="font-headline font-bold text-4xl mt-1">R{totalSaved.toFixed(2)}</p>
+              </div>
             </div>
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <p className="text-sm text-muted-foreground font-body">Saved payment methods</p>
-              <p className="text-4xl font-headline font-bold text-foreground mt-2">{savedMethodCount}</p>
+
+            <div className="grid md:grid-cols-2 gap-3">
+              <button
+                onClick={() => router.push('/buy-vouchers')}
+                className="rounded-lg bg-white text-primary font-headline font-semibold py-2"
+              >
+                + Add Voucher
+              </button>
+              <button className="rounded-lg bg-white/20 text-white font-headline font-semibold py-2">
+                🇿🇦
+              </button>
             </div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-2 rounded-xl border border-border bg-card p-2">
+            <button
+              onClick={() => setTab('active')}
+              className={`rounded-lg py-2 text-sm font-headline font-semibold ${
+                tab === 'active' ? 'bg-muted text-foreground' : 'text-muted-foreground'
+              }`}
+            >
+              Active ({activeVouchers.length})
+            </button>
+            <button
+              onClick={() => setTab('used')}
+              className={`rounded-lg py-2 text-sm font-headline font-semibold ${
+                tab === 'used' ? 'bg-muted text-foreground' : 'text-muted-foreground'
+              }`}
+            >
+              Used ({usedVouchers.length})
+            </button>
+            <button
+              onClick={() => setTab('expired')}
+              className={`rounded-lg py-2 text-sm font-headline font-semibold ${
+                tab === 'expired' ? 'bg-muted text-foreground' : 'text-muted-foreground'
+              }`}
+            >
+              Expired ({expiredVouchers.length})
+            </button>
+          </div>
+
+          <div className="bg-card rounded-2xl border border-border p-6">
+            {displayedVouchers.length === 0 ? (
+              <p className="text-muted-foreground text-center py-10">
+                {tab === 'active'
+                  ? 'No active vouchers found.'
+                  : tab === 'used'
+                    ? 'No used vouchers yet.'
+                    : 'No expired vouchers.'}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {displayedVouchers.map((voucher) => (
+                  <div key={voucher.id} className="rounded-xl border border-border p-4">
+                    <p className="font-headline font-semibold text-foreground">{voucher.merchant_name}</p>
+                    <p className="text-xs text-muted-foreground">{voucher.voucher_code}</p>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm text-primary">Balance: R{Number(voucher.current_balance).toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Expires: {new Date(voucher.expires_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid lg:grid-cols-2 gap-6">
             <div className="bg-card border border-border rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-headline font-bold text-xl text-foreground">My Vouchers</h2>
-                <Icon name="TicketIcon" size={22} variant="solid" className="text-primary" />
-              </div>
-              <div className="space-y-3">
-                {vouchers.length === 0 ? (
-                  <p className="text-muted-foreground font-body">No vouchers available.</p>
-                ) : (
-                  vouchers.map((voucher) => (
-                    <div key={voucher.id} className="rounded-xl border border-border p-4 bg-muted/30">
-                      <p className="font-headline font-semibold text-foreground">{voucher.merchant_name}</p>
-                      <p className="text-sm text-muted-foreground font-body">{voucher.voucher_code}</p>
-                      <div className="flex items-center justify-between mt-2 text-sm">
-                        <span className="text-muted-foreground">
-                          Balance: R{Number(voucher.current_balance).toFixed(2)}
-                        </span>
-                        <span className="text-muted-foreground">
-                          Expires: {new Date(voucher.expires_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-headline font-bold text-xl text-foreground">Payment Methods</h2>
-                <Icon name="CreditCardIcon" size={22} variant="solid" className="text-primary" />
-              </div>
+              <h2 className="font-headline font-bold text-xl text-foreground mb-4">Payment Methods</h2>
+              <p className="text-sm text-muted-foreground mb-3">Saved methods: {savedMethodCount}</p>
 
               <div className="space-y-3 mb-6">
                 {managedMethods.length > 0 ? (
@@ -297,15 +321,11 @@ export default function WalletPage() {
                     <div key={method.id} className="rounded-xl border border-border p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="font-headline font-semibold text-foreground uppercase">
-                            {method.provider}
-                          </p>
-                          <p className="text-sm text-muted-foreground font-body">
+                          <p className="font-headline font-semibold text-foreground uppercase">{method.provider}</p>
+                          <p className="text-sm text-muted-foreground">
                             {method.method_type} | {method.masked_reference}
                           </p>
-                          {method.is_default && (
-                            <p className="text-xs text-success font-body mt-1">Default</p>
-                          )}
+                          {method.is_default && <p className="text-xs text-success mt-1">Default</p>}
                         </div>
                         <div className="flex gap-2">
                           {!method.is_default && (
@@ -330,15 +350,15 @@ export default function WalletPage() {
                   legacyPaymentMethods.map((method) => (
                     <div key={`${method.brand}-${method.lastFour}`} className="rounded-xl border border-border p-4">
                       <p className="font-headline font-semibold text-foreground uppercase">{method.brand}</p>
-                      <p className="text-sm text-muted-foreground font-body">**** {method.lastFour}</p>
+                      <p className="text-sm text-muted-foreground">**** {method.lastFour}</p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-muted-foreground font-body">No saved methods yet.</p>
+                  <p className="text-muted-foreground">No saved methods yet.</p>
                 )}
               </div>
 
-              <div className="rounded-xl border border-border p-4 bg-muted/30 mb-6">
+              <div className="rounded-xl border border-border p-4 bg-muted/30">
                 <h3 className="font-headline font-bold text-lg text-foreground mb-3">Add Payment Method</h3>
                 <div className="grid md:grid-cols-2 gap-3 mb-3">
                   <select
@@ -346,7 +366,7 @@ export default function WalletPage() {
                     onChange={(event) =>
                       setMethodType(event.target.value as 'card' | 'eft' | 'wallet' | 'other')
                     }
-                    className="px-3 py-2 border border-border rounded-lg bg-background font-body"
+                    className="px-3 py-2 border border-border rounded-lg bg-background"
                   >
                     <option value="card">Card</option>
                     <option value="eft">EFT</option>
@@ -358,7 +378,7 @@ export default function WalletPage() {
                     value={provider}
                     onChange={(event) => setProvider(event.target.value)}
                     placeholder="Provider (e.g. Visa, FNB)"
-                    className="px-3 py-2 border border-border rounded-lg bg-background font-body"
+                    className="px-3 py-2 border border-border rounded-lg bg-background"
                   />
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 mb-3">
@@ -367,9 +387,9 @@ export default function WalletPage() {
                     value={maskedReference}
                     onChange={(event) => setMaskedReference(event.target.value)}
                     placeholder="Masked ref (e.g. **** 1234)"
-                    className="px-3 py-2 border border-border rounded-lg bg-background font-body"
+                    className="px-3 py-2 border border-border rounded-lg bg-background"
                   />
-                  <label className="flex items-center space-x-2 text-sm font-body text-foreground">
+                  <label className="flex items-center space-x-2 text-sm text-foreground">
                     <input
                       type="checkbox"
                       checked={makeDefault}
@@ -386,18 +406,18 @@ export default function WalletPage() {
                 </button>
                 {methodMessage && <p className="text-xs text-muted-foreground mt-2">{methodMessage}</p>}
               </div>
+            </div>
 
-              <h3 className="font-headline font-bold text-lg text-foreground mb-3">Recent Transactions</h3>
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h2 className="font-headline font-bold text-xl text-foreground mb-4">Recent Transactions</h2>
               <div className="space-y-3">
                 {transactions.length === 0 ? (
-                  <p className="text-muted-foreground font-body">No transactions yet.</p>
+                  <p className="text-muted-foreground">No transactions yet.</p>
                 ) : (
                   transactions.slice(0, 8).map((transaction) => (
                     <div key={transaction.id} className="rounded-xl border border-border p-3 bg-muted/30">
                       <div className="flex items-center justify-between">
-                        <p className="font-headline font-semibold text-foreground">
-                          {transaction.merchant_name}
-                        </p>
+                        <p className="font-headline font-semibold text-foreground">{transaction.merchant_name}</p>
                         <p className="font-headline font-semibold text-foreground">
                           R{Number(transaction.amount).toFixed(2)}
                         </p>

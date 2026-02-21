@@ -1,6 +1,6 @@
 export const DEFAULT_TOTAL_DISCOUNT_PCT = 5;
-export const CONSUMER_DISCOUNT_SHARE = 0.7;
-export const PLATFORM_DISCOUNT_SHARE = 0.3;
+export const CONSUMER_DISCOUNT_SHARE = 0.5;
+export const PLATFORM_DISCOUNT_SHARE = 0.5;
 
 export interface DiscountPricingBreakdown {
   faceValue: number;

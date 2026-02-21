@@ -43,7 +43,6 @@ export async function GET() {
           'id,merchant_id,merchant_name,voucher_code,face_value,discount_percent,current_balance,is_active,expires_at,issued_at'
         )
         .eq('customer_id', user.id)
-        .eq('is_active', true)
         .order('issued_at', { ascending: false }),
       admin
         .from('redemption_history')
@@ -76,8 +75,16 @@ export async function GET() {
       }
     });
 
+    const profile =
+      profileRes.data ?? {
+        full_name: String(user.user_metadata?.full_name ?? user.user_metadata?.name ?? ''),
+        email: user.email ?? '',
+        phone: user.phone ?? '',
+        role,
+      };
+
     return NextResponse.json({
-      profile: profileRes.data ?? null,
+      profile,
       vouchers: vouchersRes.data ?? [],
       transactions: transactionsRes.data ?? [],
       paymentMethods: Array.from(paymentMethodsMap.values()),

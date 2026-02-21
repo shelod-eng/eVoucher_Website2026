@@ -3,68 +3,57 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 
-const STARTER_FACE_VALUES = [100, 200, 500];
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { user } = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const merchantId = searchParams.get('merchantId')?.trim() || null;
+    const query = searchParams.get('q')?.trim() || '';
+
     const admin = createAdminClient();
-    const [merchantsRes, productsRes] = await Promise.all([
-      admin
+
+    if (merchantId) {
+      const { data: merchant, error: merchantError } = await admin
         .from('merchants')
         .select('id,business_name,email,status,default_total_discount_pct')
-        .in('status', ['active', 'approved', 'pending'])
-        .order('business_name', { ascending: true }),
-      admin
+        .eq('id', merchantId)
+        .maybeSingle();
+
+      if (merchantError) throw merchantError;
+      if (!merchant) {
+        return NextResponse.json({
+          merchants: [],
+          products: [],
+          ussdAccessCode: '*120*384#',
+          mode: 'merchant_products',
+        });
+      }
+
+      const { data: productRows, error: productsError } = await admin
         .from('merchant_products')
-        .select(
-          'id,merchant_id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,is_active,created_at'
-        )
+        .select('id,merchant_id,product_name,face_value,total_discount_pct,is_active,created_at')
+        .eq('merchant_id', merchant.id)
         .eq('is_active', true)
-        .order('created_at', { ascending: false }),
-    ]);
+        .order('created_at', { ascending: false })
+        .limit(120);
 
-    if (merchantsRes.error) throw merchantsRes.error;
-    if (productsRes.error) throw productsRes.error;
+      if (productsError) throw productsError;
 
-    const merchants = merchantsRes.data ?? [];
-    const products = productsRes.data ?? [];
-    const merchantsById = new Map(merchants.map((merchant) => [merchant.id, merchant]));
-
-    const catalogProducts = products
-      .filter((product) => merchantsById.has(product.merchant_id))
-      .map((product) => {
-        const merchant = merchantsById.get(product.merchant_id);
+      const products = (productRows ?? []).map((product) => {
+        const pricing = calculateDiscountPricing(
+          Number(product.face_value),
+          Number(product.total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT)
+        );
         return {
-          ...product,
-          merchant_name: merchant?.business_name ?? 'Unknown Merchant',
-          merchant_email: merchant?.email ?? '',
-          is_fallback: false,
-        };
-      });
-
-    const fallbackProducts = merchants.flatMap((merchant) => {
-      const merchantHasProducts = catalogProducts.some(
-        (product) => product.merchant_id === merchant.id
-      );
-      if (merchantHasProducts) return [];
-
-      const totalDiscountPct = Number(
-        merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
-      );
-
-      return STARTER_FACE_VALUES.map((faceValue) => {
-        const pricing = calculateDiscountPricing(faceValue, totalDiscountPct);
-        return {
-          id: `starter-${merchant.id}-${faceValue}`,
+          id: product.id,
           merchant_id: merchant.id,
           merchant_name: merchant.business_name,
           merchant_email: merchant.email,
-          product_name: `${merchant.business_name} Voucher R${faceValue}`,
+          product_name: product.product_name,
           face_value: pricing.faceValue,
           total_discount_pct: pricing.totalDiscountPct,
           consumer_benefit_pct: pricing.consumerBenefitPct,
@@ -76,39 +65,97 @@ export async function GET() {
           merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
           merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
           is_active: true,
-          created_at: new Date().toISOString(),
-          is_fallback: true,
+          created_at: product.created_at,
         };
       });
-    });
 
-    const allCatalogProducts = [...catalogProducts, ...fallbackProducts];
+      const averageDiscountPct =
+        products.length > 0
+          ? products.reduce((total, product) => total + Number(product.total_discount_pct), 0) / products.length
+          : Number(merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT);
 
-    const merchantSummaries = merchants.map((merchant) => {
-      const merchantProducts = allCatalogProducts.filter((product) => product.merchant_id === merchant.id);
-      const avgDiscount =
-        merchantProducts.length > 0
-          ? merchantProducts.reduce(
-              (total, product) => total + Number(product.total_discount_pct ?? 0),
-              0
-            ) / merchantProducts.length
-          : Number(merchant.default_total_discount_pct ?? 5);
+      return NextResponse.json({
+        merchants: [
+          {
+            id: merchant.id,
+            businessName: merchant.business_name,
+            email: merchant.email,
+            status: merchant.status,
+            defaultTotalDiscountPct: Number(
+              merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+            ),
+            productCount: products.length,
+            averageDiscountPct: Number(averageDiscountPct.toFixed(2)),
+          },
+        ],
+        products,
+        ussdAccessCode: '*120*384#',
+        mode: 'merchant_products',
+      });
+    }
 
+    const { data: activeProducts, error: activeProductsError } = await admin
+      .from('merchant_products')
+      .select('merchant_id,total_discount_pct')
+      .eq('is_active', true)
+      .limit(5000);
+
+    if (activeProductsError) throw activeProductsError;
+
+    const merchantStats = new Map<string, { count: number; totalDiscount: number }>();
+    for (const product of activeProducts ?? []) {
+      const current = merchantStats.get(product.merchant_id) ?? { count: 0, totalDiscount: 0 };
+      current.count += 1;
+      current.totalDiscount += Number(product.total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT);
+      merchantStats.set(product.merchant_id, current);
+    }
+
+    const activeMerchantIds = Array.from(merchantStats.keys());
+    if (activeMerchantIds.length === 0) {
+      return NextResponse.json({
+        merchants: [],
+        products: [],
+        ussdAccessCode: '*120*384#',
+        mode: 'merchant_directory',
+      });
+    }
+
+    let merchantsQuery = admin
+      .from('merchants')
+      .select('id,business_name,email,status,default_total_discount_pct')
+      .in('id', activeMerchantIds)
+      .order('business_name', { ascending: true })
+      .limit(120);
+
+    if (query) {
+      merchantsQuery = merchantsQuery.ilike('business_name', `%${query}%`);
+    }
+
+    const { data: merchants, error: merchantsError } = await merchantsQuery;
+    if (merchantsError) throw merchantsError;
+
+    const merchantSummaries = (merchants ?? []).map((merchant) => {
+      const stats = merchantStats.get(merchant.id) ?? { count: 0, totalDiscount: 0 };
+      const averageDiscountPct =
+        stats.count > 0
+          ? Number((stats.totalDiscount / stats.count).toFixed(2))
+          : Number(merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT);
       return {
         id: merchant.id,
         businessName: merchant.business_name,
         email: merchant.email,
         status: merchant.status,
-        defaultTotalDiscountPct: Number(merchant.default_total_discount_pct ?? 5),
-        productCount: merchantProducts.length,
-        averageDiscountPct: Number(avgDiscount.toFixed(2)),
+        defaultTotalDiscountPct: Number(merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT),
+        productCount: stats.count,
+        averageDiscountPct,
       };
     });
 
     return NextResponse.json({
       merchants: merchantSummaries,
-      products: allCatalogProducts,
+      products: [],
       ussdAccessCode: '*120*384#',
+      mode: 'merchant_directory',
     });
   } catch (error: any) {
     return NextResponse.json(
