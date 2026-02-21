@@ -3,8 +3,40 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 
+type RewardTxn = {
+  id: string;
+  merchant_id?: string | null;
+  voucher_code?: string | null;
+  amount?: number | null;
+  consumer_benefit_amount?: number | null;
+  evoucher_benefit_amount?: number | null;
+  total_discount_pct?: number | null;
+  consumer_benefit_pct?: number | null;
+  evoucher_benefit_pct?: number | null;
+  payment_status?: string | null;
+  created_at: string;
+};
+
+type VoucherRow = {
+  id: string;
+  is_active?: boolean | null;
+  current_balance?: number | null;
+};
+
 function round2(value: number) {
   return Number(value.toFixed(2));
+}
+
+function isMissingRelation(error: any, relationName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const relation = relationName.toLowerCase();
+  const bareRelation = relation.includes('.') ? relation.split('.').at(-1) ?? relation : relation;
+  return (
+    message.includes(`relation "${relation}" does not exist`) ||
+    message.includes(`relation "${bareRelation}" does not exist`) ||
+    message.includes(`could not find the table '${relation}' in the schema cache`) ||
+    message.includes(`could not find the table '${bareRelation}' in the schema cache`)
+  );
 }
 
 export async function GET() {
@@ -22,9 +54,8 @@ export async function GET() {
       );
     }
 
-    const admin = createAdminClient();
     const [transactionsRes, vouchersRes] = await Promise.all([
-      admin
+      supabase
         .from('payment_transactions')
         .select(
           'id,merchant_id,voucher_code,amount,consumer_benefit_amount,evoucher_benefit_amount,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,payment_status,created_at'
@@ -32,66 +63,78 @@ export async function GET() {
         .eq('customer_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1000),
-      admin
+      supabase
         .from('customer_vouchers')
         .select('id,is_active,current_balance')
         .eq('customer_id', user.id)
         .limit(1000),
     ]);
 
-    if (transactionsRes.error) throw transactionsRes.error;
-    if (vouchersRes.error) throw vouchersRes.error;
+    if (
+      transactionsRes.error &&
+      !isMissingRelation(transactionsRes.error, 'public.payment_transactions')
+    ) {
+      throw transactionsRes.error;
+    }
+    if (vouchersRes.error && !isMissingRelation(vouchersRes.error, 'public.customer_vouchers')) {
+      throw vouchersRes.error;
+    }
 
-    const allTransactions = transactionsRes.data ?? [];
+    const allTransactions = (transactionsRes.data ?? []) as RewardTxn[];
     const completedTransactions = allTransactions.filter(
-      (transaction) => transaction.payment_status === 'completed'
+      (transaction: RewardTxn) => transaction.payment_status === 'completed'
     );
 
     const merchantIds = Array.from(
-      new Set(completedTransactions.map((tx) => String(tx.merchant_id ?? '')).filter(Boolean))
+      new Set(completedTransactions.map((tx: RewardTxn) => String(tx.merchant_id ?? '')).filter(Boolean))
     );
     const merchantNames: Record<string, string> = {};
     if (merchantIds.length > 0) {
-      const { data: merchantRows, error: merchantError } = await admin
-        .from('merchants')
-        .select('id,business_name')
-        .in('id', merchantIds);
-      if (merchantError) throw merchantError;
-      (merchantRows ?? []).forEach((merchant) => {
-        merchantNames[merchant.id] = merchant.business_name;
-      });
+      try {
+        const admin = createAdminClient();
+        const { data: merchantRows, error: merchantError } = await admin
+          .from('merchants')
+          .select('id,business_name')
+          .in('id', merchantIds);
+        if (merchantError) throw merchantError;
+        (merchantRows ?? []).forEach((merchant) => {
+          merchantNames[merchant.id] = merchant.business_name;
+        });
+      } catch {
+        // Best-effort name resolution. Consumer cashback data remains available without admin env.
+      }
     }
 
     const now = new Date();
     const currentMonth = now.toISOString().slice(0, 7);
 
     const totalSpent = completedTransactions.reduce(
-      (sum, tx) => sum + Number(tx.amount ?? 0),
+      (sum: number, tx: RewardTxn) => sum + Number(tx.amount ?? 0),
       0
     );
     const totalCashSaved = completedTransactions.reduce(
-      (sum, tx) => sum + Number(tx.consumer_benefit_amount ?? 0),
+      (sum: number, tx: RewardTxn) => sum + Number(tx.consumer_benefit_amount ?? 0),
       0
     );
     const totalPlatformFeeAmount = completedTransactions.reduce(
-      (sum, tx) => sum + Number(tx.evoucher_benefit_amount ?? 0),
+      (sum: number, tx: RewardTxn) => sum + Number(tx.evoucher_benefit_amount ?? 0),
       0
     );
 
     const thisMonthTransactions = completedTransactions.filter(
-      (tx) => new Date(tx.created_at).toISOString().slice(0, 7) === currentMonth
+      (tx: RewardTxn) => new Date(tx.created_at).toISOString().slice(0, 7) === currentMonth
     );
     const thisMonthSpend = thisMonthTransactions.reduce(
-      (sum, tx) => sum + Number(tx.amount ?? 0),
+      (sum: number, tx: RewardTxn) => sum + Number(tx.amount ?? 0),
       0
     );
     const thisMonthSavings = thisMonthTransactions.reduce(
-      (sum, tx) => sum + Number(tx.consumer_benefit_amount ?? 0),
+      (sum: number, tx: RewardTxn) => sum + Number(tx.consumer_benefit_amount ?? 0),
       0
     );
 
     const monthMap = new Map<string, { month: string; spent: number; savings: number }>();
-    completedTransactions.forEach((tx) => {
+    completedTransactions.forEach((tx: RewardTxn) => {
       const month = new Date(tx.created_at).toISOString().slice(0, 7);
       const existing = monthMap.get(month) ?? { month, spent: 0, savings: 0 };
       existing.spent += Number(tx.amount ?? 0);
@@ -114,17 +157,17 @@ export async function GET() {
 
     const totalDiscountPctAvg =
       completedTransactions.length > 0
-        ? completedTransactions.reduce((sum, tx) => sum + Number(tx.total_discount_pct ?? 0), 0) /
+        ? completedTransactions.reduce((sum: number, tx: RewardTxn) => sum + Number(tx.total_discount_pct ?? 0), 0) /
           completedTransactions.length
         : 0;
     const consumerSavingsPctAvg =
       completedTransactions.length > 0
-        ? completedTransactions.reduce((sum, tx) => sum + Number(tx.consumer_benefit_pct ?? 0), 0) /
+        ? completedTransactions.reduce((sum: number, tx: RewardTxn) => sum + Number(tx.consumer_benefit_pct ?? 0), 0) /
           completedTransactions.length
         : 0;
     const platformFeePctAvg =
       completedTransactions.length > 0
-        ? completedTransactions.reduce((sum, tx) => sum + Number(tx.evoucher_benefit_pct ?? 0), 0) /
+        ? completedTransactions.reduce((sum: number, tx: RewardTxn) => sum + Number(tx.evoucher_benefit_pct ?? 0), 0) /
           completedTransactions.length
         : 0;
 
@@ -132,8 +175,8 @@ export async function GET() {
       totalSpent > 0 ? (totalCashSaved / totalSpent) * 100 : consumerSavingsPctAvg;
 
     const cashbackPer100 = round2((consumerSavingsPctAvg / 100) * 100);
-    const activeVouchers = (vouchersRes.data ?? []).filter(
-      (voucher) => voucher.is_active && Number(voucher.current_balance ?? 0) > 0
+    const activeVouchers = ((vouchersRes.data ?? []) as VoucherRow[]).filter(
+      (voucher: VoucherRow) => voucher.is_active && Number(voucher.current_balance ?? 0) > 0
     ).length;
 
     return NextResponse.json({
@@ -150,9 +193,9 @@ export async function GET() {
       cashbackPer100,
       activeVouchers,
       monthlySeries,
-      recentTransactions: completedTransactions.slice(0, 12).map((tx) => ({
+      recentTransactions: completedTransactions.slice(0, 12).map((tx: RewardTxn) => ({
         id: tx.id,
-        merchantName: merchantNames[String(tx.merchant_id ?? '')] ?? 'Unknown Merchant',
+        merchantName: merchantNames[String(tx.merchant_id ?? '')] ?? 'Partner Merchant',
         amountPaid: round2(Number(tx.amount ?? 0)),
         savingsRealized: round2(Number(tx.consumer_benefit_amount ?? 0)),
         voucherCode: tx.voucher_code ?? null,

@@ -24,6 +24,18 @@ function escapeCsv(value: string | number) {
   return stringValue;
 }
 
+function isMissingRelation(error: any, relationName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const relation = relationName.toLowerCase();
+  const bareRelation = relation.includes('.') ? relation.split('.').at(-1) ?? relation : relation;
+  return (
+    message.includes(`relation "${relation}" does not exist`) ||
+    message.includes(`relation "${bareRelation}" does not exist`) ||
+    message.includes(`could not find the table '${relation}' in the schema cache`) ||
+    message.includes(`could not find the table '${bareRelation}' in the schema cache`)
+  );
+}
+
 export async function GET(request: Request) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
@@ -32,12 +44,32 @@ export async function GET(request: Request) {
     }
 
     const { role } = await resolveUserRole(supabase, user);
-    const admin = createAdminClient();
     const { searchParams } = new URL(request.url);
     const exportType = searchParams.get('type') === 'transactions' ? 'transactions' : 'monthly';
+    const safeRole = role || 'customer';
 
+    let dataClient: any = supabase;
     let merchantId: string | null = null;
-    if (isMerchantRole(role)) {
+    if (isMerchantRole(safeRole)) {
+      let admin: any = null;
+      try {
+        admin = createAdminClient();
+      } catch {
+        admin = null;
+      }
+
+      if (!admin) {
+        return NextResponse.json(
+          {
+            error:
+              'SUPABASE_SERVICE_ROLE_KEY is required for merchant analytics export. Consumer export is available.',
+            code: 'missing_admin_env',
+          },
+          { status: 500 }
+        );
+      }
+
+      dataClient = admin;
       const { data: merchant, error: merchantError } = await admin
         .from('merchants')
         .select('id')
@@ -54,7 +86,7 @@ export async function GET(request: Request) {
       merchantId = merchant.id;
     }
 
-    let query = admin
+    let query = dataClient
       .from('payment_transactions')
       .select(
         'created_at,amount,consumer_benefit_amount,evoucher_benefit_amount,total_discount_pct,merchant_id'
@@ -63,18 +95,18 @@ export async function GET(request: Request) {
       .order('created_at', { ascending: false })
       .limit(5000);
 
-    if (role === 'customer') {
+    if (!isMerchantRole(safeRole)) {
       query = query.eq('customer_id', user.id);
     } else if (merchantId) {
       query = query.eq('merchant_id', merchantId);
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error && !isMissingRelation(error, 'public.payment_transactions')) throw error;
 
     const transactions = (data ?? []) as TxnRow[];
     const dateStamp = new Date().toISOString().slice(0, 10);
-    const fileName = `analytics_${role}_${exportType}_${dateStamp}.csv`;
+    const fileName = `analytics_${safeRole}_${exportType}_${dateStamp}.csv`;
 
     let csvRows: string[] = [];
     if (exportType === 'transactions') {
@@ -143,4 +175,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

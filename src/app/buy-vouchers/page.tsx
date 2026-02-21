@@ -40,7 +40,9 @@ function BuyVouchersContent() {
   const router = useRouter();
   const faceValueFromQuery = Number(searchParams.get('faceValue') ?? '');
   const merchantIdFromQuery = searchParams.get('merchantId');
+  const brandKeyFromQuery = searchParams.get('brandKey');
   const productIdFromQuery = searchParams.get('productId');
+  const merchantLocked = Boolean(merchantIdFromQuery);
   const selectedMerchantDetails = merchants.find((merchant) => merchant.id === selectedMerchant) ?? null;
   const amountOptions = useMemo(() => {
     const defaults = [100, 200, 300, 500, 1000];
@@ -78,25 +80,39 @@ function BuyVouchersContent() {
   useEffect(() => {
     if (!merchants.length) return;
 
-    if (merchantIdFromQuery && merchants.some((merchant) => merchant.id === merchantIdFromQuery)) {
+    if (merchantLocked) {
+      setSelectedMerchant(merchants[0]?.id ?? null);
+    } else if (merchantIdFromQuery && merchants.some((merchant) => merchant.id === merchantIdFromQuery)) {
       setSelectedMerchant(merchantIdFromQuery);
+    } else if (!selectedMerchant) {
+      setSelectedMerchant(merchants[0]?.id ?? null);
     }
 
     if (Number.isFinite(faceValueFromQuery) && faceValueFromQuery > 0) {
       setVoucherAmount(faceValueFromQuery);
     }
 
-    if (productIdFromQuery) {
+    if (productIdFromQuery && !productIdFromQuery.startsWith('fallback-')) {
       setSelectedProductId(productIdFromQuery);
     }
-  }, [merchants, merchantIdFromQuery, faceValueFromQuery, productIdFromQuery]);
+  }, [
+    merchants,
+    merchantIdFromQuery,
+    faceValueFromQuery,
+    productIdFromQuery,
+    selectedMerchant,
+    merchantLocked,
+  ]);
 
   const fetchMerchants = async () => {
     try {
       setLoading(true);
       setBlockingReason(null);
       setBlockingCode(null);
-      const response = await fetch('/api/v1/merchants/active', {
+      const query = merchantLocked
+        ? `?merchantId=${encodeURIComponent(String(merchantIdFromQuery))}`
+        : '';
+      const response = await fetch(`/api/v1/merchants/active${query}`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -107,6 +123,12 @@ function BuyVouchersContent() {
         throw new Error(data.error || 'Failed to fetch merchants');
       }
       setMerchants(data.merchants || []);
+      if (merchantLocked && (!data.merchants || data.merchants.length === 0)) {
+        setBlockingCode('merchant_context_unavailable');
+        setBlockingReason(
+          'The merchant selected from Shop is no longer available for voucher purchase.'
+        );
+      }
       if (data.blockReason === 'no_active_merchants') {
         setBlockingCode('no_active_merchants');
         setBlockingReason(
@@ -162,7 +184,10 @@ function BuyVouchersContent() {
         credentials: 'include',
         body: JSON.stringify({
           merchantId: selectedMerchant,
-          productId: selectedProductId ?? undefined,
+          productId:
+            selectedProductId && !selectedProductId.startsWith('fallback-')
+              ? selectedProductId
+              : undefined,
           faceValue: voucherAmount,
           paymentMethod: selectedPaymentMethod,
         }),
@@ -388,48 +413,78 @@ function BuyVouchersContent() {
                 <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-primary" />
                 <h2 className="font-headline font-bold text-2xl text-foreground">Select Merchant</h2>
               </div>
-
-              <div className="space-y-3">
-                {merchants.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Icon
-                      name="BuildingStorefrontIcon"
-                      size={48}
-                      variant="outline"
-                      className="text-muted-foreground mx-auto mb-4"
-                    />
-                    <p className="text-muted-foreground font-body">No active merchants available</p>
-                  </div>
-                ) : (
-                  merchants.map((merchant) => (
-                    <button
-                      key={merchant.id}
-                      onClick={() => setSelectedMerchant(merchant.id)}
-                      className={`w-full p-4 rounded-xl border-2 transition-all duration-300 text-left ${
-                        selectedMerchant === merchant.id
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10">
-                          <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-headline font-bold text-foreground">{merchant.businessName}</h3>
-                          <p className="text-sm text-muted-foreground font-body">{merchant.email}</p>
-                          <p className="text-xs text-primary font-body mt-1">
-                            Discount budget: {merchant.defaultTotalDiscountPct.toFixed(2)}%
+              {merchantLocked ? (
+                <div className="rounded-xl border-2 border-primary bg-primary/5 p-4">
+                  {selectedMerchantDetails ? (
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10">
+                        <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-headline font-bold text-foreground">
+                          {selectedMerchantDetails.businessName}
+                        </h3>
+                        <p className="text-sm text-muted-foreground font-body">{selectedMerchantDetails.email}</p>
+                        <p className="text-xs text-primary font-body mt-1">
+                          Discount budget: {selectedMerchantDetails.defaultTotalDiscountPct.toFixed(2)}%
+                        </p>
+                        {brandKeyFromQuery && (
+                          <p className="text-xs text-muted-foreground font-body mt-1">
+                            Source: Shop brand {brandKeyFromQuery}
                           </p>
-                        </div>
-                        {selectedMerchant === merchant.id && (
-                          <Icon name="CheckCircleIcon" size={24} variant="solid" className="text-primary" />
                         )}
                       </div>
-                    </button>
-                  ))
-                )}
-              </div>
+                      <Icon name="LockClosedIcon" size={20} variant="solid" className="text-primary" />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground font-body">
+                      Selected merchant context is locked from Shop.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {merchants.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Icon
+                        name="BuildingStorefrontIcon"
+                        size={48}
+                        variant="outline"
+                        className="text-muted-foreground mx-auto mb-4"
+                      />
+                      <p className="text-muted-foreground font-body">No active merchants available</p>
+                    </div>
+                  ) : (
+                    merchants.map((merchant) => (
+                      <button
+                        key={merchant.id}
+                        onClick={() => setSelectedMerchant(merchant.id)}
+                        className={`w-full p-4 rounded-xl border-2 transition-all duration-300 text-left ${
+                          selectedMerchant === merchant.id
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10">
+                            <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-headline font-bold text-foreground">{merchant.businessName}</h3>
+                            <p className="text-sm text-muted-foreground font-body">{merchant.email}</p>
+                            <p className="text-xs text-primary font-body mt-1">
+                              Discount budget: {merchant.defaultTotalDiscountPct.toFixed(2)}%
+                            </p>
+                          </div>
+                          {selectedMerchant === merchant.id && (
+                            <Icon name="CheckCircleIcon" size={24} variant="solid" className="text-primary" />
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
 
               <div className="mt-6">
                 <label

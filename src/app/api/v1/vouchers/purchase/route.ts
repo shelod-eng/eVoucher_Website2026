@@ -193,9 +193,12 @@ export async function POST(request: Request) {
       paymentMethod: body.paymentMethod,
       reference: transactionReference,
     });
+    const devForceSuccess = process.env.NODE_ENV === 'development';
+    const paymentStatus = devForceSuccess ? 'completed' : payment.status;
+    const checkoutUrl = devForceSuccess ? null : payment.checkoutUrl ?? null;
 
     let voucherCode: string | null = null;
-    if (payment.status === 'completed') {
+    if (paymentStatus === 'completed') {
       voucherCode = generateSecureVoucherCode();
     }
 
@@ -216,14 +219,14 @@ export async function POST(request: Request) {
       merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
       card_last_four: '0000',
       card_brand: body.paymentMethod,
-      payment_status: payment.status,
+      payment_status: paymentStatus,
       voucher_code: voucherCode,
       transaction_reference: transactionReference,
     });
 
     if (transactionError) throw transactionError;
 
-    if (payment.status === 'completed' && voucherCode) {
+    if (paymentStatus === 'completed' && voucherCode) {
       await voucherService.issueVoucher({
         customerId: user.id,
         merchantId: merchant.id,
@@ -242,7 +245,7 @@ export async function POST(request: Request) {
       actorRole: 'customer',
       entityType: 'payment_transaction',
       entityId: transactionReference,
-      action: payment.status === 'completed' ? 'voucher_purchase_completed' : 'voucher_purchase_pending',
+      action: paymentStatus === 'completed' ? 'voucher_purchase_completed' : 'voucher_purchase_pending',
       metadata: {
         merchantId: merchant.id,
         faceValue: pricing.faceValue,
@@ -258,8 +261,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       transactionReference,
-      status: payment.status,
-      checkoutUrl: payment.checkoutUrl ?? null,
+      status: paymentStatus,
+      checkoutUrl,
       voucherCode,
       pricing,
     });

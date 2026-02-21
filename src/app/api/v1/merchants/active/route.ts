@@ -3,13 +3,15 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 
-function isMissingAdminEnvError(error: any) {
-  return String(error?.message ?? '').includes(
-    'Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL'
-  );
+function resolveDataClient(supabase: any) {
+  try {
+    return { client: createAdminClient(), hasAdminEnv: true };
+  } catch {
+    return { client: supabase, hasAdminEnv: false };
+  }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
@@ -35,16 +37,40 @@ export async function GET() {
       );
     }
 
-    const admin = createAdminClient();
-    const { data, error } = await admin
+    const { client, hasAdminEnv } = resolveDataClient(supabase);
+    const { searchParams } = new URL(request.url);
+    const merchantId = searchParams.get('merchantId')?.trim() || null;
+    let activeQuery = client
       .from('merchants')
       .select('id,business_name,email,status,default_total_discount_pct')
+      .in('status', ['approved', 'active'])
       .order('business_name', { ascending: true });
+    if (merchantId) {
+      activeQuery = activeQuery.eq('id', merchantId);
+    }
+    const { data: activeRows, error: activeError } = await activeQuery;
 
-    if (error) throw error;
+    if (activeError) throw activeError;
+
+    let rows = activeRows ?? [];
+    let usedFallbackStatuses = false;
+    if (rows.length === 0) {
+      let fallbackQuery = client
+        .from('merchants')
+        .select('id,business_name,email,status,default_total_discount_pct')
+        .order('business_name', { ascending: true })
+        .limit(120);
+      if (merchantId) {
+        fallbackQuery = fallbackQuery.eq('id', merchantId);
+      }
+      const { data: fallbackRows, error: fallbackError } = await fallbackQuery;
+      if (fallbackError) throw fallbackError;
+      rows = fallbackRows ?? [];
+      usedFallbackStatuses = rows.length > 0;
+    }
 
     return NextResponse.json({
-      merchants: (data ?? []).map((merchant) => ({
+      merchants: rows.map((merchant: any) => ({
         id: merchant.id,
         businessName: merchant.business_name,
         email: merchant.email,
@@ -54,27 +80,14 @@ export async function GET() {
       diagnostics: {
         isAuthenticated: true,
         role,
-        hasAdminEnv: true,
-        activeMerchantCount: data?.length ?? 0,
+        hasAdminEnv,
+        activeMerchantCount: activeRows?.length ?? 0,
+        totalMerchantCount: rows.length,
+        usedFallbackStatuses,
       },
-      blockReason: (data?.length ?? 0) === 0 ? 'no_active_merchants' : null,
+      blockReason: rows.length === 0 ? 'no_active_merchants' : null,
     });
   } catch (error: any) {
-    if (isMissingAdminEnvError(error)) {
-      return NextResponse.json(
-        {
-          error:
-            'Server is missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL. Add them to load active merchants.',
-          code: 'missing_admin_env',
-          diagnostics: {
-            isAuthenticated: true,
-            hasAdminEnv: false,
-          },
-        },
-        { status: 500 }
-      );
-    }
-
     return NextResponse.json(
       {
         error: error?.message || 'Failed to fetch active merchants.',

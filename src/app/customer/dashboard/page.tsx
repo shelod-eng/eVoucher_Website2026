@@ -25,11 +25,19 @@ interface Voucher {
   expires_at: string;
 }
 
-interface Transaction {
+interface RedemptionTransaction {
   id: string;
   merchant_name: string;
   amount: number;
   transaction_type: string;
+  created_at: string;
+}
+
+interface PaymentTransaction {
+  id: string;
+  voucher_code: string | null;
+  amount: number | null;
+  payment_status: string | null;
   created_at: string;
 }
 
@@ -44,7 +52,8 @@ export default function CustomerDashboard() {
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<RedemptionTransaction[]>([]);
+  const [paymentTransactions, setPaymentTransactions] = useState<PaymentTransaction[]>([]);
   const [rewards, setRewards] = useState<RewardsSnapshot>({
     totalCashSaved: 0,
     thisMonthSavings: 0,
@@ -52,7 +61,6 @@ export default function CustomerDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [blockingReason, setBlockingReason] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -67,7 +75,6 @@ export default function CustomerDashboard() {
       try {
         setLoading(true);
         setError('');
-        setBlockingReason(null);
 
         const [dashboardRes, rewardsRes] = await Promise.all([
           fetch('/api/v1/customer/dashboard', { method: 'GET', credentials: 'include' }),
@@ -78,7 +85,6 @@ export default function CustomerDashboard() {
         const rewardsData = await rewardsRes.json();
 
         if (!dashboardRes.ok) {
-          setBlockingReason(dashboardData.error ?? 'Dashboard is currently unavailable.');
           throw new Error(dashboardData.error || 'Failed to load dashboard.');
         }
         if (!rewardsRes.ok) {
@@ -88,6 +94,7 @@ export default function CustomerDashboard() {
         setUserProfile(dashboardData.profile ?? null);
         setVouchers(dashboardData.vouchers ?? []);
         setTransactions(dashboardData.transactions ?? []);
+        setPaymentTransactions(dashboardData.paymentTransactions ?? []);
         setRewards({
           totalCashSaved: Number(rewardsData.totalCashSaved ?? 0),
           thisMonthSavings: Number(rewardsData.thisMonthSavings ?? 0),
@@ -124,7 +131,36 @@ export default function CustomerDashboard() {
       ),
     [vouchers]
   );
+
   const walletBalance = activeVouchers.reduce((sum, voucher) => sum + Number(voucher.current_balance), 0);
+
+  const recentActivity = useMemo(() => {
+    const purchaseRows = paymentTransactions
+      .filter((transaction) => String(transaction.payment_status ?? '').toLowerCase() === 'completed')
+      .map((transaction) => {
+        const matchedVoucher = vouchers.find((voucher) => voucher.voucher_code === transaction.voucher_code);
+        const savings = Number(matchedVoucher?.face_value ?? 0) - Number(transaction.amount ?? 0);
+        return {
+          id: `purchase-${transaction.id}`,
+          merchantName: matchedVoucher?.merchant_name ?? 'Voucher Purchase',
+          amount: Number(transaction.amount ?? 0),
+          savings: Math.max(0, Number.isFinite(savings) ? savings : 0),
+          createdAt: transaction.created_at,
+        };
+      });
+
+    const redemptionRows = transactions.map((transaction) => ({
+      id: `redemption-${transaction.id}`,
+      merchantName: transaction.merchant_name,
+      amount: Number(transaction.amount ?? 0),
+      savings: 0,
+      createdAt: transaction.created_at,
+    }));
+
+    return [...purchaseRows, ...redemptionRows]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 8);
+  }, [paymentTransactions, transactions, vouchers]);
 
   const quickActions = [
     {
@@ -177,13 +213,7 @@ export default function CustomerDashboard() {
             </div>
           </div>
 
-          {blockingReason && (
-            <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
-              <p className="text-sm text-warning font-body">{blockingReason}</p>
-            </div>
-          )}
-
-          {error && error !== blockingReason && (
+          {error && (
             <div className="p-4 bg-error/10 border border-error/20 rounded-lg">
               <p className="text-sm text-error font-body">{error}</p>
             </div>
@@ -235,7 +265,7 @@ export default function CustomerDashboard() {
                     <Icon name={action.icon as any} size={22} variant="outline" />
                   </div>
                   <p className="font-headline font-semibold text-foreground mt-4">{action.label}</p>
-                  <p className="text-muted-foreground">→</p>
+                  <p className="text-muted-foreground">&rarr;</p>
                 </button>
               ))}
             </div>
@@ -255,7 +285,9 @@ export default function CustomerDashboard() {
                     <div key={voucher.id} className="rounded-xl border border-border p-4">
                       <p className="font-headline font-semibold text-foreground">{voucher.merchant_name}</p>
                       <p className="text-xs text-muted-foreground">{voucher.voucher_code}</p>
-                      <p className="text-sm text-primary mt-1">Balance: R{Number(voucher.current_balance).toFixed(2)}</p>
+                      <p className="text-sm text-primary mt-1">
+                        Balance: R{Number(voucher.current_balance).toFixed(2)}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -265,21 +297,36 @@ export default function CustomerDashboard() {
             <div className="bg-card rounded-2xl border border-border p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-headline font-bold text-2xl text-foreground">Recent Activity</h3>
-                <button onClick={() => router.push('/analytics')} className="text-primary text-sm font-headline font-semibold">
+                <button
+                  onClick={() => router.push('/analytics')}
+                  className="text-primary text-sm font-headline font-semibold"
+                >
                   View All
                 </button>
               </div>
-              {transactions.length === 0 ? (
+              {recentActivity.length === 0 ? (
                 <p className="text-muted-foreground text-center py-10">No transactions yet</p>
               ) : (
                 <div className="space-y-3">
-                  {transactions.slice(0, 6).map((transaction) => (
-                    <div key={transaction.id} className="rounded-xl border border-border p-4 flex items-center justify-between">
+                  {recentActivity.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="rounded-xl border border-border p-4 flex items-center justify-between"
+                    >
                       <div>
-                        <p className="font-headline font-semibold text-foreground">{transaction.merchant_name}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(transaction.created_at).toLocaleDateString()}</p>
+                        <p className="font-headline font-semibold text-foreground">{transaction.merchantName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(transaction.createdAt).toLocaleDateString()}
+                        </p>
                       </div>
-                      <p className="font-headline font-semibold text-foreground">R{Number(transaction.amount).toFixed(2)}</p>
+                      <div className="text-right">
+                        <p className="font-headline font-semibold text-foreground">
+                          R{Number(transaction.amount).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-success">
+                          Saved R{Number(transaction.savings).toFixed(2)}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>

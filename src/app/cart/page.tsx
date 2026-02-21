@@ -44,9 +44,11 @@ export default function CartPage() {
     const first = items[0];
     const params = new URLSearchParams({
       merchantId: first.merchantId,
-      productId: first.productId,
       faceValue: String(first.faceValue),
     });
+    if (!first.productId.startsWith('fallback-')) {
+      params.set('productId', first.productId);
+    }
     router.push(`/buy-vouchers?${params.toString()}`);
   };
 
