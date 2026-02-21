@@ -134,6 +134,12 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
           Register Now
         </Link>
       </p>
+      <p className="text-center text-sm text-muted-foreground font-body mt-2">
+        Merchant account?{' '}
+        <Link href="/merchant/login" className="text-secondary font-headline font-semibold hover:underline">
+          Sign in here
+        </Link>
+      </p>
 
       <div className="text-center mt-5">
         <p className="text-sm text-foreground font-headline font-semibold">SSL/TLS enforced</p>
@@ -142,4 +148,3 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
     </div>
   );
 }
-

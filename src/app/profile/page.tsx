@@ -23,9 +23,9 @@ interface ProfilePayload {
 }
 
 interface RewardPayload {
-  tier: string;
-  totalSavings: number;
-  currentPoints: number;
+  totalCashSaved: number;
+  thisMonthSavings: number;
+  savingsRatePct: number;
 }
 
 export default function ProfilePage() {
@@ -71,9 +71,9 @@ export default function ProfilePage() {
           transactions: dashboardData.transactions ?? [],
         });
         setRewardData({
-          tier: rewardsData.tier ?? 'Bronze',
-          totalSavings: Number(rewardsData.totalSavings ?? 0),
-          currentPoints: Number(rewardsData.currentPoints ?? 0),
+          totalCashSaved: Number(rewardsData.totalCashSaved ?? 0),
+          thisMonthSavings: Number(rewardsData.thisMonthSavings ?? 0),
+          savingsRatePct: Number(rewardsData.savingsRatePct ?? 0),
         });
       } catch (profileError: any) {
         setError(profileError?.message || 'Failed to load profile.');
@@ -142,7 +142,9 @@ export default function ProfilePage() {
 
               <div className="grid md:grid-cols-3 gap-3 mt-6">
                 <div className="rounded-xl bg-muted/40 border border-border p-4 text-center">
-                  <p className="font-headline font-bold text-2xl text-foreground">R{Number(rewardData?.totalSavings ?? 0).toFixed(0)}</p>
+                  <p className="font-headline font-bold text-2xl text-foreground">
+                    R{Number(rewardData?.totalCashSaved ?? 0).toFixed(0)}
+                  </p>
                   <p className="text-xs text-muted-foreground">Saved</p>
                 </div>
                 <div className="rounded-xl bg-muted/40 border border-border p-4 text-center">
@@ -150,8 +152,10 @@ export default function ProfilePage() {
                   <p className="text-xs text-muted-foreground">Transactions</p>
                 </div>
                 <div className="rounded-xl bg-muted/40 border border-border p-4 text-center">
-                  <p className="font-headline font-bold text-2xl text-foreground">{rewardData?.tier ?? 'Bronze'}</p>
-                  <p className="text-xs text-muted-foreground">Tier</p>
+                  <p className="font-headline font-bold text-2xl text-foreground">
+                    {Number(rewardData?.savingsRatePct ?? 0).toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">Savings Rate</p>
                 </div>
               </div>
             </div>
@@ -235,7 +239,10 @@ export default function ProfilePage() {
 
               {activeTab === 'activity' && (
                 <div className="text-center py-10 text-muted-foreground">
-                  Rewards points: <span className="font-headline font-semibold text-foreground">{rewardData?.currentPoints ?? 0}</span>
+                  This month cashback:{' '}
+                  <span className="font-headline font-semibold text-foreground">
+                    R{Number(rewardData?.thisMonthSavings ?? 0).toFixed(2)}
+                  </span>
                 </div>
               )}
 

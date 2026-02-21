@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
@@ -15,13 +15,14 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const LOCALHOST_RESET_FLAG = 'evoucher.local.session.reset.v1';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const resolveUserRole = async (currentUser: User | null): Promise<string | null> => {
     if (!currentUser) return null;
@@ -49,17 +50,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event: AuthChangeEvent, session: Session | null) => {
-        setUser(session?.user ?? null);
-        const resolvedRole = await resolveUserRole(session?.user ?? null);
-        setRole(resolvedRole);
-        setLoading(false);
-      }
-    );
+    let isMounted = true;
 
-    return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+    const applySessionState = async (session: Session | null) => {
+      if (!isMounted) return;
+      setUser(session?.user ?? null);
+      const resolvedRole = await resolveUserRole(session?.user ?? null);
+      if (!isMounted) return;
+      setRole(resolvedRole);
+      setLoading(false);
+    };
+
+    const bootstrap = async () => {
+      if (typeof window !== 'undefined') {
+        const isLocalhost =
+          window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const hasReset = window.sessionStorage.getItem(LOCALHOST_RESET_FLAG) === '1';
+
+        // Ensure localhost starts from a clean unauthenticated state so landing page is always public first.
+        if (isLocalhost && !hasReset) {
+          try {
+            await supabase.auth.signOut({ scope: 'local' });
+          } catch (error) {
+            console.warn('AuthContext: failed to clear local session on localhost startup:', error);
+          }
+          window.sessionStorage.setItem(LOCALHOST_RESET_FLAG, '1');
+        }
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      await applySessionState(session);
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
+      await applySessionState(session);
+    });
+
+    void bootstrap();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   const signIn = async (email: string, password: string) => {
     console.log('AuthContext: Attempting signIn...');
@@ -96,7 +133,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
+    const isLocalhost =
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const { error } = await supabase.auth.signOut({ scope: isLocalhost ? 'local' : 'global' });
     if (error) throw error;
     setRole(null);
     router.refresh();

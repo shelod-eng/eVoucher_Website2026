@@ -291,7 +291,7 @@ function BuyVouchersContent() {
                       {pricingResult.consumerPrice.toFixed(2)}
                     </p>
                     <p className="text-sm font-body text-muted-foreground">
-                      <span className="font-semibold text-foreground">Consumer benefit:</span>{' '}
+                      <span className="font-semibold text-foreground">Your savings:</span>{' '}
                       {pricingResult.consumerBenefitPct.toFixed(2)}%
                     </p>
                   </>
@@ -504,7 +504,7 @@ function BuyVouchersContent() {
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground font-body">
-                    Consumer Benefit ({previewPricing.consumerBenefitPct.toFixed(2)}%)
+                    Your Savings ({previewPricing.consumerBenefitPct.toFixed(2)}%)
                   </span>
                   <span className="font-headline font-bold text-success">
                     -R{previewPricing.consumerBenefitAmount.toFixed(2)}
@@ -512,7 +512,7 @@ function BuyVouchersContent() {
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground font-body">
-                    eVoucher Benefit ({previewPricing.evoucherBenefitPct.toFixed(2)}%)
+                    Platform Fee ({previewPricing.evoucherBenefitPct.toFixed(2)}%)
                   </span>
                   <span className="font-headline font-bold text-primary">
                     R{previewPricing.evoucherBenefitAmount.toFixed(2)}

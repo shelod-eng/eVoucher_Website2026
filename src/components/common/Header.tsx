@@ -15,13 +15,13 @@ const Header = ({ className = '' }: HeaderProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, role, signOut } = useAuth();
+  const { user, role, loading, signOut } = useAuth();
   const userRole = String(role ?? user?.user_metadata?.role ?? '').toLowerCase();
   const isMerchant =
     userRole === 'merchant' ||
     pathname?.startsWith('/merchant') ||
     pathname?.startsWith('/merchants');
-  const isSignedIn = Boolean(user);
+  const isSignedIn = !loading && Boolean(user);
   const [cartCount, setCartCount] = useState(0);
   const displayName = String(
     user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'consumer'

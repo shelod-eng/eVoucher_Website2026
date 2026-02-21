@@ -34,9 +34,9 @@ interface Transaction {
 }
 
 interface RewardsSnapshot {
-  currentPoints: number;
-  tier: string;
-  totalSavings: number;
+  totalCashSaved: number;
+  thisMonthSavings: number;
+  savingsRatePct: number;
 }
 
 export default function CustomerDashboard() {
@@ -46,9 +46,9 @@ export default function CustomerDashboard() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [rewards, setRewards] = useState<RewardsSnapshot>({
-    currentPoints: 0,
-    tier: 'Bronze',
-    totalSavings: 0,
+    totalCashSaved: 0,
+    thisMonthSavings: 0,
+    savingsRatePct: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -89,9 +89,9 @@ export default function CustomerDashboard() {
         setVouchers(dashboardData.vouchers ?? []);
         setTransactions(dashboardData.transactions ?? []);
         setRewards({
-          currentPoints: Number(rewardsData.currentPoints ?? 0),
-          tier: String(rewardsData.tier ?? 'Bronze'),
-          totalSavings: Number(rewardsData.totalSavings ?? 0),
+          totalCashSaved: Number(rewardsData.totalCashSaved ?? 0),
+          thisMonthSavings: Number(rewardsData.thisMonthSavings ?? 0),
+          savingsRatePct: Number(rewardsData.savingsRatePct ?? 0),
         });
       } catch (dashboardError: any) {
         setError(dashboardError?.message || 'Failed to load customer dashboard.');
@@ -171,9 +171,9 @@ export default function CustomerDashboard() {
               <h1 className="font-headline font-bold text-4xl text-foreground">Hello, {displayName}</h1>
               <p className="text-muted-foreground mt-1">Welcome back to eVoucher</p>
             </div>
-            <div className="rounded-full bg-warning text-white px-5 py-3 min-w-40 text-center">
-              <p className="font-headline font-bold">{rewards.tier} Member</p>
-              <p className="text-xs">{rewards.currentPoints} points</p>
+            <div className="rounded-full bg-success text-white px-5 py-3 min-w-40 text-center">
+              <p className="font-headline font-bold">Cashback Rewards</p>
+              <p className="text-xs">{rewards.savingsRatePct.toFixed(1)}% savings rate</p>
             </div>
           </div>
 
@@ -201,15 +201,17 @@ export default function CustomerDashboard() {
               <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center mb-3">
                 <Icon name="ArrowTrendingUpIcon" size={20} variant="outline" className="text-success" />
               </div>
-              <p className="text-4xl font-headline font-bold text-foreground">R{rewards.totalSavings.toFixed(2)}</p>
-              <p className="text-sm text-muted-foreground">Total Savings</p>
+              <p className="text-4xl font-headline font-bold text-foreground">R{rewards.totalCashSaved.toFixed(2)}</p>
+              <p className="text-sm text-muted-foreground">Total Cash Saved</p>
             </div>
             <div className="bg-card rounded-2xl border border-border p-5">
               <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center mb-3">
                 <Icon name="StarIcon" size={20} variant="outline" className="text-warning" />
               </div>
-              <p className="text-4xl font-headline font-bold text-foreground">{rewards.currentPoints}</p>
-              <p className="text-sm text-muted-foreground">Loyalty Points</p>
+              <p className="text-4xl font-headline font-bold text-foreground">
+                R{rewards.thisMonthSavings.toFixed(2)}
+              </p>
+              <p className="text-sm text-muted-foreground">This Month Savings</p>
             </div>
             <div className="bg-card rounded-2xl border border-border p-5">
               <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center mb-3">
