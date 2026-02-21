@@ -17,7 +17,7 @@ type CookieToSet = {
 
 export async function createClient() {
   const cookieStore = await cookies();
-  
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -29,14 +29,7 @@ export async function createClient() {
         setAll(cookiesToSet: CookieToSet[]) {
           try {
             cookiesToSet?.forEach(({ name, value, options }) => {
-              const cookieOptions = {
-                ...options,
-                sameSite: 'none' as const,
-                secure: true,
-                httpOnly: options?.httpOnly,
-                path: options?.path || '/',
-              };
-              cookieStore.set(name, value, cookieOptions);
+              cookieStore.set(name, value, options);
             });
           } catch {
             // Handle server component context

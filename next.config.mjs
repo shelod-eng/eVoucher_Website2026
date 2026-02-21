@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   productionBrowserSourceMaps: true,
-  distDir: process.env.DIST_DIR || '.next',
+  distDir: process.env.DIST_DIR || '.next-local',
 
   typescript: {
     ignoreBuildErrors: false,
@@ -57,7 +57,16 @@ const nextConfig = {
         permanent: false,
       },
     ];
-  }
+  },
+
+  webpack: (config, { dev }) => {
+    // Windows + endpoint security can lock webpack cache artifacts during dev.
+    // Disable filesystem cache in dev to avoid intermittent UNKNOWN/ENOENT errors.
+    if (dev) {
+      config.cache = false;
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
