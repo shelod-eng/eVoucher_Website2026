@@ -1,10 +1,21 @@
 import { DiscountPricingBreakdown } from '@/lib/pricing';
 
+export type RedemptionScope =
+  | 'all_branches'
+  | 'specific_branch'
+  | 'province_wide'
+  | 'national';
+
 export interface IssueVoucherInput {
   customerId: string;
   merchantId?: string;
   productId?: string;
   merchantName: string;
+  parentBrand?: string | null;
+  redemptionScope?: RedemptionScope;
+  validProvinces?: string[];
+  validBranchIds?: string[];
+  qrCodeUrl?: string | null;
   faceValue: number;
   discountPercent: number;
   pricing: DiscountPricingBreakdown;
@@ -15,7 +26,11 @@ export interface IssueVoucherInput {
 export interface RedeemVoucherInput {
   voucherCode: string;
   customerId: string;
+  merchantId: string;
   merchantName: string;
+  merchantParentBrand?: string | null;
+  merchantBranchName?: string | null;
+  merchantProvince?: string | null;
   amount: number;
   idempotencyKey: string;
 }

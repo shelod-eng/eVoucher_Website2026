@@ -13,7 +13,7 @@ export async function GET() {
     const { data: merchant, error: merchantError } = await admin
       .from('merchants')
       .select(
-        'id,business_name,status,onboarding_fee_paid,charity_donation_amount,default_total_discount_pct,created_at,approved_at,email,phone,bank_name'
+        'id,business_name,parent_brand,branch_name,branch_code,city,province,status,onboarding_fee_paid,charity_donation_amount,default_total_discount_pct,created_at,approved_at,email,phone,bank_name'
       )
       .eq('user_id', user.id)
       .maybeSingle();

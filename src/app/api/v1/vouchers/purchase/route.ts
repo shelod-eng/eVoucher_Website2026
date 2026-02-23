@@ -8,6 +8,7 @@ import { writeAuditEvent } from '@/server/utils/audit';
 import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
+import { resolveBrandFromMerchantName, getBrandByKey } from '@/lib/merchant-brand-catalog';
 
 function validate(body: PurchaseVoucherRequest): string | null {
   if (!body.merchantId?.trim()) return 'Merchant is required.';
@@ -24,6 +25,10 @@ function isMissingAdminEnvError(error: any) {
   return String(error?.message ?? '').includes(
     'Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL'
   );
+}
+
+function buildQrCodeUrl(voucherCode: string) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(voucherCode)}`;
 }
 
 export async function GET(request: Request) {
@@ -135,7 +140,7 @@ export async function POST(request: Request) {
 
     const { data: merchant, error: merchantError } = await admin
       .from('merchants')
-      .select('id,business_name,status,default_total_discount_pct')
+      .select('id,business_name,status,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province')
       .eq('id', body.merchantId)
       .single();
 
@@ -147,13 +152,18 @@ export async function POST(request: Request) {
     }
 
     let productId: string | null = null;
+    let productParentBrand: string | null = null;
+    let productRedemptionScope: 'all_branches' | 'specific_branch' | 'province_wide' | 'national' =
+      'all_branches';
+    let productValidProvinces: string[] = [];
+    let productValidBranchIds: string[] = [];
     let pricing: ReturnType<typeof calculateDiscountPricing>;
 
     if (body.productId) {
       const { data: product, error: productError } = await admin
         .from('merchant_products')
         .select(
-          'id,merchant_id,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,is_active'
+          'id,merchant_id,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active'
         )
         .eq('id', body.productId)
         .eq('merchant_id', merchant.id)
@@ -168,6 +178,26 @@ export async function POST(request: Request) {
       }
 
       productId = product.id;
+      productParentBrand =
+        String(product.parent_brand ?? '').trim() ||
+        String(merchant.parent_brand ?? '').trim() ||
+        null;
+      const scope = String(product.redemption_scope ?? '').trim().toLowerCase();
+      if (
+        scope === 'all_branches' ||
+        scope === 'specific_branch' ||
+        scope === 'province_wide' ||
+        scope === 'national'
+      ) {
+        productRedemptionScope = scope;
+      }
+      productValidProvinces = Array.isArray(product.valid_provinces)
+        ? product.valid_provinces.map((province: unknown) => String(province))
+        : [];
+      productValidBranchIds = Array.isArray(product.valid_branch_ids)
+        ? product.valid_branch_ids.map((branchId: unknown) => String(branchId))
+        : [];
+
       pricing = calculateDiscountPricing(
         Number(product.face_value),
         Number(product.total_discount_pct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT)
@@ -202,6 +232,18 @@ export async function POST(request: Request) {
       voucherCode = generateSecureVoucherCode();
     }
 
+    const mappedBrand = resolveBrandFromMerchantName(merchant.business_name);
+    const mappedBrandDisplayName = mappedBrand ? getBrandByKey(mappedBrand)?.displayName : null;
+    const resolvedParentBrand =
+      productParentBrand ||
+      String(merchant.parent_brand ?? '').trim() ||
+      mappedBrandDisplayName ||
+      merchant.business_name;
+
+    if (productRedemptionScope === 'specific_branch' && productValidBranchIds.length === 0) {
+      productValidBranchIds = [String(merchant.id)];
+    }
+
     const { error: transactionError } = await admin.from('payment_transactions').insert({
       customer_id: user.id,
       merchant_id: merchant.id,
@@ -232,6 +274,11 @@ export async function POST(request: Request) {
         merchantId: merchant.id,
         productId: productId ?? undefined,
         merchantName: merchant.business_name,
+        parentBrand: resolvedParentBrand,
+        redemptionScope: productRedemptionScope,
+        validProvinces: productValidProvinces,
+        validBranchIds: productValidBranchIds,
+        qrCodeUrl: buildQrCodeUrl(voucherCode),
         faceValue: pricing.faceValue,
         discountPercent: pricing.consumerBenefitPct,
         pricing,

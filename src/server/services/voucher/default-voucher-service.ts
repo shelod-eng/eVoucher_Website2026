@@ -1,6 +1,86 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { RedeemVoucherInput, IssueVoucherInput, VoucherService } from '@/server/services/voucher-service';
+import {
+  RedeemVoucherInput,
+  IssueVoucherInput,
+  RedemptionScope,
+  VoucherService,
+} from '@/server/services/voucher-service';
 import { sha256 } from '@/server/utils/security';
+
+function normalizeText(value: unknown) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeTextArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => normalizeText(entry))
+    .filter((entry) => entry.length > 0);
+}
+
+function normalizeUuidArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => String(entry)).filter((entry) => entry.length > 0);
+}
+
+function resolveVoucherScope(voucher: any): RedemptionScope {
+  const scope = String(voucher?.redemption_scope ?? '').trim().toLowerCase();
+  if (
+    scope === 'all_branches' ||
+    scope === 'specific_branch' ||
+    scope === 'province_wide' ||
+    scope === 'national'
+  ) {
+    return scope;
+  }
+  return 'all_branches';
+}
+
+function validateVoucherScopeForMerchant(voucher: any, input: RedeemVoucherInput) {
+  const voucherBrand = normalizeText(voucher?.parent_brand || voucher?.merchant_name);
+  const merchantBrand = normalizeText(input.merchantParentBrand || input.merchantName);
+
+  if (voucherBrand && merchantBrand && voucherBrand !== merchantBrand) {
+    return { valid: false, message: 'Voucher is not valid for this brand.' };
+  }
+
+  const scope = resolveVoucherScope(voucher);
+  if (scope === 'all_branches' || scope === 'national') {
+    return { valid: true };
+  }
+
+  if (scope === 'specific_branch') {
+    const allowedBranchIds = normalizeUuidArray(voucher?.valid_branch_ids);
+    if (allowedBranchIds.length === 0) {
+      if (voucher?.merchant_id && String(voucher.merchant_id) !== input.merchantId) {
+        return { valid: false, message: 'Voucher is not valid for this branch.' };
+      }
+      return { valid: true };
+    }
+
+    if (!allowedBranchIds.includes(input.merchantId)) {
+      return { valid: false, message: 'Voucher is not valid for this branch.' };
+    }
+    return { valid: true };
+  }
+
+  if (scope === 'province_wide') {
+    const allowedProvinces = normalizeTextArray(voucher?.valid_provinces);
+    if (allowedProvinces.length === 0) {
+      return { valid: true };
+    }
+
+    const merchantProvince = normalizeText(input.merchantProvince);
+    if (!merchantProvince || !allowedProvinces.includes(merchantProvince)) {
+      return { valid: false, message: 'Voucher is not valid in this province.' };
+    }
+    return { valid: true };
+  }
+
+  return { valid: voucher?.merchant_name === input.merchantName, message: 'Voucher is not valid for this merchant.' };
+}
 
 export class DefaultVoucherService implements VoucherService {
   async issueVoucher(input: IssueVoucherInput): Promise<{ voucherId: string }> {
@@ -13,6 +93,11 @@ export class DefaultVoucherService implements VoucherService {
         merchant_id: input.merchantId ?? null,
         product_id: input.productId ?? null,
         merchant_name: input.merchantName,
+        parent_brand: input.parentBrand ?? input.merchantName,
+        redemption_scope: input.redemptionScope ?? 'all_branches',
+        valid_provinces: input.validProvinces ?? [],
+        valid_branch_ids: input.validBranchIds ?? [],
+        qr_code_url: input.qrCodeUrl ?? null,
         voucher_code: input.voucherCode,
         face_value: input.faceValue,
         discount_percent: input.discountPercent,
@@ -69,8 +154,9 @@ export class DefaultVoucherService implements VoucherService {
       throw new Error('Voucher not found or inactive.');
     }
 
-    if (voucher.merchant_name !== input.merchantName) {
-      throw new Error('Voucher is not valid for this merchant.');
+    const validation = validateVoucherScopeForMerchant(voucher, input);
+    if (!validation.valid) {
+      throw new Error(validation.message ?? 'Voucher is not valid for this merchant.');
     }
 
     if (voucher.expires_at && new Date(voucher.expires_at).getTime() < Date.now()) {
@@ -84,12 +170,16 @@ export class DefaultVoucherService implements VoucherService {
 
     const remainingBalance = Number((currentBalance - input.amount).toFixed(2));
     const shouldStayActive = remainingBalance > 0;
+    const redeemedAt = new Date().toISOString();
 
     const { error: updateError } = await admin
       .from('customer_vouchers')
       .update({
         current_balance: remainingBalance,
         is_active: shouldStayActive,
+        redeemed_at_merchant_id: input.merchantId,
+        redeemed_at_branch: input.merchantBranchName || input.merchantName,
+        redeemed_at: redeemedAt,
       })
       .eq('id', voucher.id);
 
@@ -100,7 +190,7 @@ export class DefaultVoucherService implements VoucherService {
       .insert({
         customer_id: input.customerId,
         voucher_id: voucher.id,
-        merchant_name: input.merchantName,
+        merchant_name: input.merchantName || voucher.merchant_name,
         amount: input.amount,
         transaction_type: 'redemption',
       })
@@ -121,6 +211,7 @@ export class DefaultVoucherService implements VoucherService {
       request_hash: sha256(
         JSON.stringify({
           voucherCode: input.voucherCode,
+          merchantId: input.merchantId,
           merchantName: input.merchantName,
           amount: input.amount,
         })

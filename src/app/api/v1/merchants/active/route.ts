@@ -42,7 +42,9 @@ export async function GET(request: Request) {
     const merchantId = searchParams.get('merchantId')?.trim() || null;
     let activeQuery = client
       .from('merchants')
-      .select('id,business_name,email,status,default_total_discount_pct')
+      .select(
+        'id,business_name,email,status,default_total_discount_pct,parent_brand,branch_name,city,province'
+      )
       .in('status', ['approved', 'active'])
       .order('business_name', { ascending: true });
     if (merchantId) {
@@ -57,7 +59,9 @@ export async function GET(request: Request) {
     if (rows.length === 0) {
       let fallbackQuery = client
         .from('merchants')
-        .select('id,business_name,email,status,default_total_discount_pct')
+        .select(
+          'id,business_name,email,status,default_total_discount_pct,parent_brand,branch_name,city,province'
+        )
         .order('business_name', { ascending: true })
         .limit(120);
       if (merchantId) {
@@ -76,6 +80,10 @@ export async function GET(request: Request) {
         email: merchant.email,
         status: merchant.status,
         defaultTotalDiscountPct: Number(merchant.default_total_discount_pct ?? 5),
+        parentBrand: merchant.parent_brand ?? merchant.business_name,
+        branchName: merchant.branch_name ?? merchant.business_name,
+        city: merchant.city ?? null,
+        province: merchant.province ?? null,
       })),
       diagnostics: {
         isAuthenticated: true,

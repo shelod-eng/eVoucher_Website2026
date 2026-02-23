@@ -8,6 +8,9 @@ interface CreateMerchantProductRequest {
   productName: string;
   faceValue: number;
   totalDiscountPct?: number;
+  redemptionScope?: 'all_branches' | 'specific_branch' | 'province_wide' | 'national';
+  validProvinces?: string[];
+  validBranchIds?: string[];
 }
 
 function validateCreate(body: CreateMerchantProductRequest): string | null {
@@ -20,13 +23,25 @@ function validateCreate(body: CreateMerchantProductRequest): string | null {
   ) {
     return 'Total discount percentage must be between 0 and 100.';
   }
+  if (
+    body.redemptionScope &&
+    !['all_branches', 'specific_branch', 'province_wide', 'national'].includes(body.redemptionScope)
+  ) {
+    return 'Redemption scope is invalid.';
+  }
+  if (body.validProvinces !== undefined && !Array.isArray(body.validProvinces)) {
+    return 'validProvinces must be an array.';
+  }
+  if (body.validBranchIds !== undefined && !Array.isArray(body.validBranchIds)) {
+    return 'validBranchIds must be an array.';
+  }
   return null;
 }
 
 async function resolveMerchantId(admin: ReturnType<typeof createAdminClient>, userId: string) {
   const { data: merchant, error } = await admin
     .from('merchants')
-    .select('id,default_total_discount_pct,status')
+    .select('id,business_name,parent_brand,default_total_discount_pct,status')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -56,7 +71,7 @@ export async function GET() {
     const { data: products, error: productsError } = await admin
       .from('merchant_products')
       .select(
-        'id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,is_active,created_at,updated_at'
+        'id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at,updated_at'
       )
       .eq('merchant_id', merchant.id)
       .order('created_at', { ascending: false });
@@ -112,6 +127,10 @@ export async function POST(request: Request) {
       .insert({
         merchant_id: merchant.id,
         product_name: body.productName.trim(),
+        parent_brand: merchant.parent_brand ?? merchant.business_name,
+        redemption_scope: body.redemptionScope ?? 'all_branches',
+        valid_provinces: body.validProvinces ?? [],
+        valid_branch_ids: body.validBranchIds ?? [],
         face_value: pricing.faceValue,
         total_discount_pct: pricing.totalDiscountPct,
         consumer_benefit_pct: pricing.consumerBenefitPct,
@@ -125,7 +144,7 @@ export async function POST(request: Request) {
         is_active: true,
       })
       .select(
-        'id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,is_active,created_at'
+        'id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at'
       )
       .single();
 

@@ -3,6 +3,12 @@ export interface MerchantOnboardingRequest {
   contactName: string;
   email: string;
   phone: string;
+  parentBrand?: string;
+  branchName?: string;
+  city?: string;
+  province?: string;
+  locationLat?: number;
+  locationLng?: number;
   registrationNumber?: string;
   taxNumber?: string;
   physicalAddress?: string;

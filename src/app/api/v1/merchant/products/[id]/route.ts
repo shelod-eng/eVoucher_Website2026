@@ -8,6 +8,9 @@ interface UpdateMerchantProductRequest {
   productName?: string;
   faceValue?: number;
   totalDiscountPct?: number;
+  redemptionScope?: 'all_branches' | 'specific_branch' | 'province_wide' | 'national';
+  validProvinces?: string[];
+  validBranchIds?: string[];
   isActive?: boolean;
 }
 
@@ -30,7 +33,7 @@ export async function PATCH(
     const admin = createAdminClient();
     const { data: merchant, error: merchantError } = await admin
       .from('merchants')
-      .select('id,default_total_discount_pct')
+      .select('id,business_name,parent_brand,default_total_discount_pct')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -41,7 +44,9 @@ export async function PATCH(
 
     const { data: existing, error: existingError } = await admin
       .from('merchant_products')
-      .select('id,merchant_id,product_name,face_value,total_discount_pct,is_active')
+      .select(
+        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active'
+      )
       .eq('id', params.id)
       .eq('merchant_id', merchant.id)
       .maybeSingle();
@@ -52,6 +57,19 @@ export async function PATCH(
     }
 
     const body = (await request.json()) as UpdateMerchantProductRequest;
+    if (
+      body.redemptionScope &&
+      !['all_branches', 'specific_branch', 'province_wide', 'national'].includes(body.redemptionScope)
+    ) {
+      return NextResponse.json({ error: 'Redemption scope is invalid.' }, { status: 400 });
+    }
+    if (body.validProvinces !== undefined && !Array.isArray(body.validProvinces)) {
+      return NextResponse.json({ error: 'validProvinces must be an array.' }, { status: 400 });
+    }
+    if (body.validBranchIds !== undefined && !Array.isArray(body.validBranchIds)) {
+      return NextResponse.json({ error: 'validBranchIds must be an array.' }, { status: 400 });
+    }
+
     const nextFaceValue = Number(body.faceValue ?? existing.face_value);
     const nextTotalDiscountPct = Number(
       body.totalDiscountPct ?? existing.total_discount_pct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
@@ -63,6 +81,10 @@ export async function PATCH(
       .from('merchant_products')
       .update({
         product_name: body.productName?.trim() || existing.product_name,
+        parent_brand: existing.parent_brand || merchant.parent_brand || merchant.business_name,
+        redemption_scope: body.redemptionScope ?? existing.redemption_scope ?? 'all_branches',
+        valid_provinces: body.validProvinces ?? existing.valid_provinces ?? [],
+        valid_branch_ids: body.validBranchIds ?? existing.valid_branch_ids ?? [],
         face_value: pricing.faceValue,
         total_discount_pct: pricing.totalDiscountPct,
         consumer_benefit_pct: pricing.consumerBenefitPct,
@@ -78,7 +100,7 @@ export async function PATCH(
       .eq('id', params.id)
       .eq('merchant_id', merchant.id)
       .select(
-        'id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,is_active,created_at,updated_at'
+        'id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at,updated_at'
       )
       .single();
 
@@ -140,4 +162,3 @@ export async function DELETE(
     );
   }
 }
-

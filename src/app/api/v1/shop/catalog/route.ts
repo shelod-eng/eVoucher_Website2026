@@ -21,7 +21,14 @@ type MerchantRow = {
   business_name: string;
   email: string;
   status: string;
+  business_type: string | null;
   default_total_discount_pct: number | null;
+  parent_brand: string | null;
+  branch_name: string | null;
+  branch_code: string | null;
+  city: string | null;
+  province: string | null;
+  physical_address: string | null;
 };
 
 type ProductRow = {
@@ -30,16 +37,44 @@ type ProductRow = {
   product_name: string;
   face_value: number;
   total_discount_pct: number | null;
+  parent_brand: string | null;
+  redemption_scope: string | null;
+  valid_provinces: string[] | null;
+  valid_branch_ids: string[] | null;
   is_active: boolean;
   created_at: string;
 };
 
+type BrandLocation = {
+  id: string;
+  business_name: string;
+  branch_name: string;
+  branch_code: string | null;
+  city: string | null;
+  province: string | null;
+  physical_address: string | null;
+};
+
+type BrandAggregation = {
+  brandKey: string;
+  mappedBrandKey: BrandKey | null;
+  displayName: string;
+  category: string;
+  assetPath: string;
+  merchantIds: string[];
+  locations: BrandLocation[];
+  provinces: Set<string>;
+  defaultTotalDiscountPct: number;
+  representativeMerchant: MerchantRow | null;
+};
+
 type CatalogProduct = {
   id: string;
-  brandKey: BrandKey;
+  brandKey: string;
   source: 'db' | 'starter';
   merchant_id: string | null;
   merchant_name: string;
+  parent_brand: string;
   product_name: string;
   face_value: number;
   total_discount_pct: number;
@@ -51,6 +86,10 @@ type CatalogProduct = {
   consumer_price: number;
   merchant_receivable_after_total_discount: number;
   merchant_receivable_after_evoucher_benefit: number;
+  redemption_scope: 'all_branches' | 'specific_branch' | 'province_wide' | 'national';
+  valid_provinces: string[];
+  valid_branch_ids: string[];
+  valid_location_count: number;
   is_active: boolean;
 };
 
@@ -79,6 +118,67 @@ function withSearchMatch(text: string, term: string) {
   return text.toLowerCase().includes(term);
 }
 
+function toSlug(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+}
+
+function normalizeScope(value: unknown): 'all_branches' | 'specific_branch' | 'province_wide' | 'national' {
+  const scope = String(value ?? '').trim().toLowerCase();
+  if (
+    scope === 'all_branches' ||
+    scope === 'specific_branch' ||
+    scope === 'province_wide' ||
+    scope === 'national'
+  ) {
+    return scope;
+  }
+  return 'all_branches';
+}
+
+function uniqueStrings(values: unknown) {
+  if (!Array.isArray(values)) return [];
+  return Array.from(new Set(values.map((value) => String(value)).filter((value) => value.length > 0)));
+}
+
+function resolveBrandMeta(rawBrandName: string, fallbackName: string, fallbackCategory: string | null) {
+  const mappedBrandKey =
+    resolveBrandFromMerchantName(rawBrandName) ?? resolveBrandFromMerchantName(fallbackName);
+  const mappedBrand = mappedBrandKey ? getBrandByKey(mappedBrandKey) : null;
+  const displayName = mappedBrand?.displayName ?? rawBrandName || fallbackName;
+  const brandKey = mappedBrand?.brandKey ?? toSlug(displayName || fallbackName || 'brand');
+
+  return {
+    brandKey,
+    mappedBrandKey: mappedBrand?.brandKey ?? null,
+    displayName: displayName || fallbackName,
+    category: mappedBrand?.category ?? fallbackCategory ?? 'Retail',
+    assetPath: mappedBrand?.assetPath ?? '',
+  };
+}
+
+function dedupeProducts(products: CatalogProduct[]) {
+  const map = new Map<string, CatalogProduct>();
+  products.forEach((product) => {
+    const signature = [
+      product.product_name.toLowerCase(),
+      product.face_value.toFixed(2),
+      product.total_discount_pct.toFixed(2),
+      product.redemption_scope,
+      [...product.valid_provinces].sort().join('|'),
+      [...product.valid_branch_ids].sort().join('|'),
+    ].join('::');
+
+    if (!map.has(signature)) {
+      map.set(signature, product);
+    }
+  });
+  return Array.from(map.values());
+}
+
 export async function GET(request: Request) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
@@ -97,13 +197,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const requestedBrandRaw = searchParams.get('brandKey')?.trim() ?? '';
     const searchTerm = searchParams.get('q')?.trim().toLowerCase() ?? '';
-    const requestedBrandKey = isBrandKey(requestedBrandRaw) ? requestedBrandRaw : null;
     const dataClient = resolveDataClient(supabase);
-    const brandCatalog = listMerchantBrands();
 
     const { data: activeRows, error: activeError } = await dataClient
       .from('merchants')
-      .select('id,business_name,email,status,default_total_discount_pct')
+      .select(
+        'id,business_name,email,status,business_type,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province,physical_address'
+      )
       .in('status', ['approved', 'active'])
       .order('business_name', { ascending: true })
       .limit(4000);
@@ -114,57 +214,94 @@ export async function GET(request: Request) {
     if (merchants.length === 0) {
       const { data: fallbackRows, error: fallbackError } = await dataClient
         .from('merchants')
-        .select('id,business_name,email,status,default_total_discount_pct')
+        .select(
+          'id,business_name,email,status,business_type,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province,physical_address'
+        )
         .order('business_name', { ascending: true })
         .limit(4000);
       if (fallbackError) throw fallbackError;
       merchants = (fallbackRows ?? []) as MerchantRow[];
     }
 
-    const merchantsByBrand = new Map<BrandKey, MerchantRow[]>();
-    const representativeByBrand = new Map<BrandKey, MerchantRow | null>();
     const merchantById = new Map<string, MerchantRow>();
-    const unassignedMerchants: MerchantRow[] = [];
-
-    brandCatalog.forEach((brand) => {
-      merchantsByBrand.set(brand.brandKey, []);
-      representativeByBrand.set(brand.brandKey, null);
-    });
+    const brandMap = new Map<string, BrandAggregation>();
 
     merchants.forEach((merchant) => {
       merchantById.set(merchant.id, merchant);
-      const mappedBrand = resolveBrandFromMerchantName(merchant.business_name);
-      if (!mappedBrand) {
-        unassignedMerchants.push(merchant);
-        return;
+      const merchantBrandName =
+        String(merchant.parent_brand ?? '').trim() || String(merchant.business_name ?? '').trim();
+      const brandMeta = resolveBrandMeta(
+        merchantBrandName,
+        merchant.business_name,
+        merchant.business_type
+      );
+
+      if (!brandMap.has(brandMeta.brandKey)) {
+        brandMap.set(brandMeta.brandKey, {
+          brandKey: brandMeta.brandKey,
+          mappedBrandKey: brandMeta.mappedBrandKey,
+          displayName: brandMeta.displayName,
+          category: brandMeta.category,
+          assetPath: brandMeta.assetPath,
+          merchantIds: [],
+          locations: [],
+          provinces: new Set<string>(),
+          defaultTotalDiscountPct: Number(
+            merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+          ),
+          representativeMerchant: merchant,
+        });
       }
-      merchantsByBrand.get(mappedBrand)?.push(merchant);
+
+      const current = brandMap.get(brandMeta.brandKey)!;
+      current.merchantIds.push(merchant.id);
+      current.locations.push({
+        id: merchant.id,
+        business_name: merchant.business_name,
+        branch_name: merchant.branch_name || merchant.business_name,
+        branch_code: merchant.branch_code,
+        city: merchant.city,
+        province: merchant.province,
+        physical_address: merchant.physical_address,
+      });
+      if (merchant.province) {
+        current.provinces.add(merchant.province);
+      }
+      if (
+        current.representativeMerchant?.default_total_discount_pct === null &&
+        merchant.default_total_discount_pct !== null
+      ) {
+        current.representativeMerchant = merchant;
+      }
     });
 
-    const unassignedQueue = [...unassignedMerchants];
-    brandCatalog.forEach((brand) => {
-      const mapped = merchantsByBrand.get(brand.brandKey) ?? [];
-      if (mapped.length > 0) {
-        representativeByBrand.set(brand.brandKey, mapped[0]);
-      } else {
-        representativeByBrand.set(brand.brandKey, unassignedQueue.shift() ?? null);
-      }
-    });
+    if (brandMap.size === 0) {
+      listMerchantBrands().forEach((brand) => {
+        brandMap.set(brand.brandKey, {
+          brandKey: brand.brandKey,
+          mappedBrandKey: brand.brandKey,
+          displayName: brand.displayName,
+          category: brand.category,
+          assetPath: brand.assetPath,
+          merchantIds: [],
+          locations: [],
+          provinces: new Set<string>(),
+          defaultTotalDiscountPct: DEFAULT_TOTAL_DISCOUNT_PCT,
+          representativeMerchant: null,
+        });
+      });
+    }
 
-    const brandedMerchantIds = Array.from(
-      new Set(
-        brandCatalog.flatMap((brand) =>
-          (merchantsByBrand.get(brand.brandKey) ?? []).map((merchant) => merchant.id)
-        )
-      )
-    );
+    const merchantIds = Array.from(new Set(Array.from(brandMap.values()).flatMap((brand) => brand.merchantIds)));
 
     let productRows: ProductRow[] = [];
-    if (brandedMerchantIds.length > 0) {
+    if (merchantIds.length > 0) {
       const { data, error } = await dataClient
         .from('merchant_products')
-        .select('id,merchant_id,product_name,face_value,total_discount_pct,is_active,created_at')
-        .in('merchant_id', brandedMerchantIds)
+        .select(
+          'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at'
+        )
+        .in('merchant_id', merchantIds)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(6000);
@@ -175,26 +312,35 @@ export async function GET(request: Request) {
       productRows = (data ?? []) as ProductRow[];
     }
 
-    const dbProductsByBrand = new Map<BrandKey, CatalogProduct[]>();
-    brandCatalog.forEach((brand) => dbProductsByBrand.set(brand.brandKey, []));
+    const dbProductsByBrand = new Map<string, CatalogProduct[]>();
+    Array.from(brandMap.keys()).forEach((brandKey) => dbProductsByBrand.set(brandKey, []));
 
     productRows.forEach((row) => {
       const merchant = merchantById.get(row.merchant_id);
       if (!merchant) return;
-      const mappedBrand = resolveBrandFromMerchantName(merchant.business_name);
-      if (!mappedBrand) return;
-      const brand = getBrandByKey(mappedBrand);
+
+      const productBrandName =
+        String(row.parent_brand ?? '').trim() ||
+        String(merchant.parent_brand ?? '').trim() ||
+        merchant.business_name;
+      const brandMeta = resolveBrandMeta(productBrandName, merchant.business_name, merchant.business_type);
+      if (!dbProductsByBrand.has(brandMeta.brandKey)) {
+        dbProductsByBrand.set(brandMeta.brandKey, []);
+      }
+
+      const brand = brandMap.get(brandMeta.brandKey);
       const pricing = calculateDiscountPricing(
         Number(row.face_value),
         Number(row.total_discount_pct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT)
       );
 
-      dbProductsByBrand.get(mappedBrand)?.push({
+      dbProductsByBrand.get(brandMeta.brandKey)?.push({
         id: row.id,
-        brandKey: mappedBrand,
+        brandKey: brandMeta.brandKey,
         source: 'db',
         merchant_id: merchant.id,
-        merchant_name: brand?.displayName ?? merchant.business_name,
+        merchant_name: brand?.displayName ?? brandMeta.displayName,
+        parent_brand: brand?.displayName ?? brandMeta.displayName,
         product_name: row.product_name,
         face_value: pricing.faceValue,
         total_discount_pct: pricing.totalDiscountPct,
@@ -206,72 +352,111 @@ export async function GET(request: Request) {
         consumer_price: pricing.consumerPrice,
         merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
         merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
+        redemption_scope: normalizeScope(row.redemption_scope),
+        valid_provinces: uniqueStrings(row.valid_provinces),
+        valid_branch_ids: uniqueStrings(row.valid_branch_ids),
+        valid_location_count: brand?.locations.length ?? 0,
         is_active: true,
       });
     });
 
+    const dedupedProductsByBrand = new Map<string, CatalogProduct[]>();
+    dbProductsByBrand.forEach((products, brandKey) => {
+      dedupedProductsByBrand.set(brandKey, dedupeProducts(products));
+    });
+
+    const brandSummaries = Array.from(brandMap.values())
+      .map((brand) => {
+        const dbProducts = dedupedProductsByBrand.get(brand.brandKey) ?? [];
+        const starterProducts =
+          brand.mappedBrandKey && dbProducts.length === 0
+            ? getStarterProductsForBrand(brand.mappedBrandKey)
+            : [];
+        const matchesSearch =
+          !searchTerm ||
+          withSearchMatch(brand.displayName, searchTerm) ||
+          withSearchMatch(brand.category, searchTerm) ||
+          brand.locations.some(
+            (location) =>
+              withSearchMatch(location.branch_name, searchTerm) ||
+              withSearchMatch(location.city ?? '', searchTerm) ||
+              withSearchMatch(location.province ?? '', searchTerm)
+          ) ||
+          dbProducts.some(
+            (product) =>
+              withSearchMatch(product.product_name, searchTerm) ||
+              withSearchMatch(product.merchant_name, searchTerm)
+          ) ||
+          starterProducts.some((product) => withSearchMatch(product.name, searchTerm));
+
+        return {
+          brandKey: brand.brandKey,
+          displayName: brand.displayName,
+          category: brand.category,
+          assetPath: brand.assetPath,
+          merchantCount: brand.locations.length,
+          productCount:
+            dbProducts.length > 0
+              ? dbProducts.length
+              : brand.mappedBrandKey
+                ? getStarterProductCountForBrand(brand.mappedBrandKey)
+                : 0,
+          merchantId: brand.representativeMerchant?.id ?? null,
+          merchantName: brand.representativeMerchant?.business_name ?? null,
+          defaultTotalDiscountPct: Number(
+            brand.representativeMerchant?.default_total_discount_pct ?? brand.defaultTotalDiscountPct
+          ),
+          matchesSearch,
+          provinceCount: brand.provinces.size,
+          locations: brand.locations,
+        };
+      })
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+    const validRequestedBrand = requestedBrandRaw
+      ? brandSummaries.find((brand) => brand.brandKey === requestedBrandRaw)
+      : null;
     const defaultBrandKey =
-      requestedBrandKey ?? brandCatalog.find((brand) => (representativeByBrand.get(brand.brandKey) ?? null) !== null)?.brandKey ?? brandCatalog[0].brandKey;
+      validRequestedBrand?.brandKey ??
+      brandSummaries.find((brand) => brand.matchesSearch)?.brandKey ??
+      brandSummaries[0]?.brandKey ??
+      '';
 
-    const selectedBrand = getBrandByKey(defaultBrandKey);
-    const representativeMerchant = representativeByBrand.get(defaultBrandKey) ?? null;
-    const dbSelectedProducts = dbProductsByBrand.get(defaultBrandKey) ?? [];
+    const selectedBrand = brandMap.get(defaultBrandKey);
+    const selectedDbProducts = dedupedProductsByBrand.get(defaultBrandKey) ?? [];
 
-    let selectedProducts: CatalogProduct[] =
-      dbSelectedProducts.length > 0
-        ? dbSelectedProducts
-        : buildStarterProductsForBrand({
-            brandKey: defaultBrandKey,
-            merchantId: representativeMerchant?.id ?? null,
-            merchantName: selectedBrand?.displayName ?? representativeMerchant?.business_name ?? null,
-            defaultTotalDiscountPct:
-              representativeMerchant?.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT,
-          }).map((product) => ({ ...product, source: 'starter' as const }));
+    let selectedProducts: CatalogProduct[] = selectedDbProducts;
+    if (selectedProducts.length === 0 && selectedBrand?.mappedBrandKey) {
+      selectedProducts = buildStarterProductsForBrand({
+        brandKey: selectedBrand.mappedBrandKey,
+        merchantId: selectedBrand.representativeMerchant?.id ?? null,
+        merchantName: selectedBrand.displayName,
+        defaultTotalDiscountPct:
+          selectedBrand.representativeMerchant?.default_total_discount_pct ??
+          selectedBrand.defaultTotalDiscountPct,
+      }).map((product) => ({
+        ...product,
+        brandKey: defaultBrandKey,
+        parent_brand: selectedBrand.displayName,
+        redemption_scope: 'all_branches' as const,
+        valid_provinces: [],
+        valid_branch_ids: [],
+        valid_location_count: selectedBrand.locations.length,
+        source: 'starter' as const,
+      }));
+    }
 
     if (searchTerm) {
       selectedProducts = selectedProducts.filter(
         (product) =>
           withSearchMatch(product.product_name, searchTerm) ||
-          withSearchMatch(product.merchant_name, searchTerm)
+          withSearchMatch(product.merchant_name, searchTerm) ||
+          withSearchMatch(product.parent_brand, searchTerm)
       );
     }
 
-    const brands = brandCatalog.map((brand) => {
-      const representative = representativeByBrand.get(brand.brandKey) ?? null;
-      const brandDbProducts = dbProductsByBrand.get(brand.brandKey) ?? [];
-      const starterTemplates = getStarterProductsForBrand(brand.brandKey);
-      const searchMatches =
-        !searchTerm ||
-        withSearchMatch(brand.displayName, searchTerm) ||
-        withSearchMatch(brand.category, searchTerm) ||
-        brandDbProducts.some(
-          (product) =>
-            withSearchMatch(product.product_name, searchTerm) ||
-            withSearchMatch(product.merchant_name, searchTerm)
-        ) ||
-        starterTemplates.some((product) => withSearchMatch(product.name, searchTerm));
-
-      return {
-        brandKey: brand.brandKey,
-        displayName: brand.displayName,
-        category: brand.category,
-        assetPath: brand.assetPath,
-        merchantCount: (merchantsByBrand.get(brand.brandKey) ?? []).length,
-        productCount:
-          brandDbProducts.length > 0
-            ? brandDbProducts.length
-            : getStarterProductCountForBrand(brand.brandKey),
-        merchantId: representative?.id ?? null,
-        merchantName: representative?.business_name ?? null,
-        defaultTotalDiscountPct: Number(
-          representative?.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
-        ),
-        matchesSearch: searchMatches,
-      };
-    });
-
     return NextResponse.json({
-      brands,
+      brands: brandSummaries,
       products: selectedProducts,
       selectedBrandKey: defaultBrandKey,
       ussdAccessCode: '*120*384#',

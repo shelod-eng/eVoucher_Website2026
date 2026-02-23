@@ -44,7 +44,7 @@ export async function GET() {
       supabase
         .from('customer_vouchers')
         .select(
-          'id,merchant_id,product_id,merchant_name,voucher_code,face_value,discount_percent,current_balance,is_active,expires_at,issued_at,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit'
+          'id,merchant_id,product_id,merchant_name,parent_brand,voucher_code,face_value,discount_percent,current_balance,is_active,expires_at,issued_at,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,redemption_scope,valid_provinces,valid_branch_ids,qr_code_url,redeemed_at_merchant_id,redeemed_at_branch,redeemed_at'
         )
         .eq('customer_id', user.id)
         .order('issued_at', { ascending: false }),

@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     const { data: merchant, error: merchantError } = await admin
       .from('merchants')
-      .select('id,business_name,status')
+      .select('id,business_name,parent_brand,branch_name,province,status')
       .eq('id', body.merchantId)
       .in('status', ['active', 'approved'])
       .single();
@@ -44,7 +44,11 @@ export async function POST(request: Request) {
     const redemption = await voucherService.redeemVoucher({
       voucherCode: body.voucherCode.trim(),
       customerId: user.id,
+      merchantId: merchant.id,
       merchantName: merchant.business_name,
+      merchantParentBrand: merchant.parent_brand,
+      merchantBranchName: merchant.branch_name,
+      merchantProvince: merchant.province,
       amount: Number(body.amount),
       idempotencyKey: body.idempotencyKey.trim(),
     });
@@ -76,6 +80,8 @@ export async function POST(request: Request) {
       action: 'voucher_redeemed',
       metadata: {
         merchantId: merchant.id,
+        merchantBrand: merchant.parent_brand,
+        merchantBranchName: merchant.branch_name,
         amount: body.amount,
         idempotencyKey: body.idempotencyKey,
       },
