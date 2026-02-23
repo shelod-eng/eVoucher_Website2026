@@ -9,6 +9,11 @@ import Header from '@/components/common/Header';
 interface Merchant {
   id: string;
   business_name: string;
+  parent_brand?: string | null;
+  branch_name?: string | null;
+  branch_code?: string | null;
+  city?: string | null;
+  province?: string | null;
   status: string;
   onboarding_fee_paid: boolean;
   charity_donation_amount: number;
@@ -31,6 +36,10 @@ interface Payout {
 interface MerchantProduct {
   id: string;
   product_name: string;
+  parent_brand?: string | null;
+  redemption_scope?: 'all_branches' | 'specific_branch' | 'province_wide' | 'national';
+  valid_provinces?: string[] | null;
+  valid_branch_ids?: string[] | null;
   face_value: number;
   total_discount_pct: number;
   consumer_benefit_pct: number;
@@ -74,6 +83,7 @@ export default function MerchantDashboard() {
     productName: '',
     faceValue: 100,
     totalDiscountPct: 4,
+    redemptionScope: 'all_branches' as 'all_branches' | 'specific_branch' | 'province_wide' | 'national',
   });
   const router = useRouter();
 
@@ -177,6 +187,7 @@ export default function MerchantDashboard() {
       productName: preset.productName,
       faceValue: preset.faceValue,
       totalDiscountPct: preset.totalDiscountPct,
+      redemptionScope: 'all_branches',
     });
     setProductMessage(`Applied preset: ${preset.label}`);
   };
@@ -193,6 +204,13 @@ export default function MerchantDashboard() {
           productName: productForm.productName,
           faceValue: Number(productForm.faceValue),
           totalDiscountPct: Number(productForm.totalDiscountPct),
+          redemptionScope: productForm.redemptionScope,
+          validProvinces:
+            productForm.redemptionScope === 'province_wide' && merchant?.province
+              ? [merchant.province]
+              : [],
+          validBranchIds:
+            productForm.redemptionScope === 'specific_branch' && merchant?.id ? [merchant.id] : [],
         }),
       });
 
@@ -206,6 +224,7 @@ export default function MerchantDashboard() {
         productName: '',
         faceValue: 100,
         totalDiscountPct: 4,
+        redemptionScope: 'all_branches',
       });
       await fetchDashboardData();
     } catch (productError: any) {
@@ -227,6 +246,9 @@ export default function MerchantDashboard() {
           productName: product.product_name,
           faceValue: Number(product.face_value),
           totalDiscountPct: Number(product.total_discount_pct),
+          redemptionScope: product.redemption_scope ?? 'all_branches',
+          validProvinces: product.valid_provinces ?? [],
+          validBranchIds: product.valid_branch_ids ?? [],
         }),
       });
 
@@ -437,6 +459,25 @@ export default function MerchantDashboard() {
                   placeholder="Total discount %"
                   className="px-4 py-3 border border-border rounded-lg bg-background font-body"
                 />
+                <select
+                  value={productForm.redemptionScope}
+                  onChange={(event) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      redemptionScope: event.target.value as
+                        | 'all_branches'
+                        | 'specific_branch'
+                        | 'province_wide'
+                        | 'national',
+                    }))
+                  }
+                  className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                >
+                  <option value="all_branches">All brand branches</option>
+                  <option value="specific_branch">This branch only</option>
+                  <option value="province_wide">Province-wide</option>
+                  <option value="national">National</option>
+                </select>
               </div>
 
               <button
@@ -467,6 +508,9 @@ export default function MerchantDashboard() {
                             {Number(product.total_discount_pct).toFixed(2)}% | Consumer pays R
                             {Number(product.consumer_price).toFixed(2)} | Merchant receives R
                             {Number(product.merchant_receivable_after_total_discount).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-primary font-body mt-1">
+                            Scope: {String(product.redemption_scope ?? 'all_branches').replace('_', ' ')}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -502,6 +546,12 @@ export default function MerchantDashboard() {
                   <p className="text-sm font-headline font-semibold text-foreground">Merchant Account</p>
                   <p className="text-xs text-muted-foreground font-body mt-1">
                     Business Name: {merchant?.business_name || 'N/A'}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Parent Brand: {merchant?.parent_brand || merchant?.business_name || 'N/A'}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Branch: {merchant?.branch_name || merchant?.business_name || 'N/A'}
                   </p>
                   <p className="text-xs text-muted-foreground font-body">
                     Email: {merchant?.email || 'N/A'}
