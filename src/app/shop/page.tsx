@@ -369,6 +369,11 @@ export default function ShopPage() {
                   <p className="text-xs text-muted-foreground">
                     {selectedBrand.merchantCount} locations across {selectedBrand.provinceCount} provinces
                   </p>
+                  {selectedBrand.merchantCount > selectedBrand.locations.length && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Showing key coverage nodes. Additional locations are available nationwide.
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={() => setLocationsModalOpen(true)}

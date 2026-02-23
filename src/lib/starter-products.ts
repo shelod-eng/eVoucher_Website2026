@@ -27,10 +27,18 @@ const STARTER_PRODUCTS: Record<BrandKey, StarterProductTemplate[]> = {
     { name: 'Seasonal Wear Voucher R300', faceValue: 300 },
   ],
   shoprite: [
+    { name: 'Shoprite Grocery Voucher R100', faceValue: 100 },
+    { name: 'Shoprite Grocery Voucher R200', faceValue: 200 },
+    { name: 'Shoprite Grocery Voucher R500', faceValue: 500 },
+    { name: 'Shoprite Grocery Voucher R1000', faceValue: 1000 },
     { name: 'White Bread 700g', faceValue: 18.99 },
+    { name: 'Brown Bread 700g', faceValue: 16.99 },
     { name: 'Full Cream Milk 2L', faceValue: 32.99 },
+    { name: 'Maize Meal 5kg', faceValue: 74.99 },
     { name: 'Large Eggs 6-Pack', faceValue: 42.99 },
     { name: 'Chicken Portions 2kg', faceValue: 89.99 },
+    { name: 'Sunflower Oil 2L', faceValue: 69.99 },
+    { name: 'Sugar 2.5kg', faceValue: 54.99 },
     { name: 'Rice 2kg', faceValue: 39.99 },
   ],
   usave: [

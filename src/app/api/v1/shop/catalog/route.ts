@@ -14,6 +14,7 @@ import {
   getStarterProductCountForBrand,
   getStarterProductsForBrand,
 } from '@/lib/starter-products';
+import { ensureDemoMerchantsSeeded } from '@/server/utils/demo-merchant-seed';
 
 type MerchantRow = {
   id: string;
@@ -61,6 +62,8 @@ type BrandAggregation = {
   displayName: string;
   category: string;
   assetPath: string;
+  estimatedLocationCount: number;
+  estimatedProvinceCount: number;
   merchantIds: string[];
   locations: BrandLocation[];
   provinces: Set<string>;
@@ -316,7 +319,19 @@ function resolveBrandMeta(rawBrandName: string, fallbackName: string, fallbackCa
     displayName: mappedBrand.displayName,
     category: mappedBrand.category ?? fallbackCategory ?? 'Retail',
     assetPath: mappedBrand.assetPath ?? '',
+    estimatedLocationCount: Number(mappedBrand.estimatedLocationCount ?? 0),
+    estimatedProvinceCount: Number(mappedBrand.estimatedProvinceCount ?? 0),
   };
+}
+
+function getResolvedLocationCount(brand: BrandAggregation | null | undefined) {
+  if (!brand) return 0;
+  return Math.max(brand.locations.length, Number(brand.estimatedLocationCount ?? 0));
+}
+
+function getResolvedProvinceCount(brand: BrandAggregation | null | undefined) {
+  if (!brand) return 0;
+  return Math.max(brand.provinces.size, Number(brand.estimatedProvinceCount ?? 0));
 }
 
 function dedupeProducts(products: CatalogProduct[]) {
@@ -358,6 +373,14 @@ export async function GET(request: Request) {
     const searchTerm = searchParams.get('q')?.trim().toLowerCase() ?? '';
     const dataClient = resolveDataClient(supabase);
 
+    // Keep local demo data usable even when only a subset of merchants has been onboarded.
+    try {
+      const admin = createAdminClient();
+      await ensureDemoMerchantsSeeded(admin);
+    } catch {
+      // Ignore seeding failures when admin env is not configured; catalog still falls back safely.
+    }
+
     let merchants = await fetchMerchants(dataClient, true);
     if (merchants.length === 0) {
       merchants = await fetchMerchants(dataClient, false);
@@ -391,6 +414,8 @@ export async function GET(request: Request) {
           displayName: brandMeta.displayName,
           category: brandMeta.category,
           assetPath: brandMeta.assetPath,
+          estimatedLocationCount: brandMeta.estimatedLocationCount,
+          estimatedProvinceCount: brandMeta.estimatedProvinceCount,
           merchantIds: [],
           locations: [],
           provinces: new Set<string>(),
@@ -434,6 +459,8 @@ export async function GET(request: Request) {
           displayName: brand.displayName,
           category: brand.category,
           assetPath: brand.assetPath,
+          estimatedLocationCount: Number(brand.estimatedLocationCount ?? 0),
+          estimatedProvinceCount: Number(brand.estimatedProvinceCount ?? 0),
           merchantIds: [],
           locations: [
             {
@@ -511,7 +538,7 @@ export async function GET(request: Request) {
         redemption_scope: normalizeScope(row.redemption_scope),
         valid_provinces: uniqueStrings(row.valid_provinces),
         valid_branch_ids: uniqueStrings(row.valid_branch_ids),
-        valid_location_count: brand?.locations.length ?? 0,
+        valid_location_count: getResolvedLocationCount(brand),
         is_active: true,
       });
     });
@@ -550,7 +577,7 @@ export async function GET(request: Request) {
           displayName: brand.displayName,
           category: brand.category,
           assetPath: brand.assetPath,
-          merchantCount: brand.locations.length,
+          merchantCount: getResolvedLocationCount(brand),
           productCount:
             dbProducts.length > 0
               ? dbProducts.length
@@ -563,7 +590,7 @@ export async function GET(request: Request) {
             brand.representativeMerchant?.default_total_discount_pct ?? brand.defaultTotalDiscountPct
           ),
           matchesSearch,
-          provinceCount: brand.provinces.size,
+          provinceCount: getResolvedProvinceCount(brand),
           locations: brand.locations,
         };
       })
@@ -573,9 +600,12 @@ export async function GET(request: Request) {
     const validRequestedBrand = requestedBrandRaw
       ? brandSummaries.find((brand) => brand.brandKey === requestedBrandRaw)
       : null;
+    const shouldUseRequestedBrand =
+      Boolean(validRequestedBrand) && (!searchTerm || Boolean(validRequestedBrand?.matchesSearch));
     const defaultBrandKey =
-      validRequestedBrand?.brandKey ??
+      (shouldUseRequestedBrand ? validRequestedBrand?.brandKey : null) ??
       brandSummaries.find((brand) => brand.matchesSearch)?.brandKey ??
+      validRequestedBrand?.brandKey ??
       brandSummaries[0]?.brandKey ??
       '';
 
@@ -598,7 +628,7 @@ export async function GET(request: Request) {
         redemption_scope: 'all_branches' as const,
         valid_provinces: [],
         valid_branch_ids: [],
-        valid_location_count: selectedBrand.locations.length,
+        valid_location_count: getResolvedLocationCount(selectedBrand),
         source: 'starter' as const,
       }));
     }

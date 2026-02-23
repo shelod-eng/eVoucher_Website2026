@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
+import { ensureDemoMerchantsSeeded } from '@/server/utils/demo-merchant-seed';
 
 function resolveDataClient(supabase: any) {
   try {
@@ -35,6 +36,13 @@ export async function GET(request: Request) {
         },
         { status: 403 }
       );
+    }
+
+    try {
+      const admin = createAdminClient();
+      await ensureDemoMerchantsSeeded(admin);
+    } catch {
+      // Continue without demo seeding when admin env is not available.
     }
 
     const { client, hasAdminEnv } = resolveDataClient(supabase);

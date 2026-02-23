@@ -19,6 +19,8 @@ export interface MerchantBrandDefinition {
   category: 'Groceries' | 'Healthcare' | 'Clothing' | 'Fuel';
   assetPath: string;
   aliases: string[];
+  estimatedLocationCount?: number;
+  estimatedProvinceCount?: number;
 }
 
 const BRAND_CATALOG: MerchantBrandDefinition[] = [
@@ -28,6 +30,8 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     category: 'Groceries',
     assetPath: '/assets/images/merchants/picknpay.png',
     aliases: ['pick n pay', 'picknpay', 'pnp'],
+    estimatedLocationCount: 1200,
+    estimatedProvinceCount: 9,
   },
   {
     brandKey: 'clicks',
@@ -42,6 +46,8 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     category: 'Clothing',
     assetPath: '/assets/images/merchants/pep.png',
     aliases: ['pep', 'pep stores'],
+    estimatedLocationCount: 2200,
+    estimatedProvinceCount: 9,
   },
   {
     brandKey: 'shoprite',
@@ -49,6 +55,8 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     category: 'Groceries',
     assetPath: '/assets/images/merchants/shoprite.png',
     aliases: ['shoprite'],
+    estimatedLocationCount: 560,
+    estimatedProvinceCount: 9,
   },
   {
     brandKey: 'usave',
@@ -56,6 +64,8 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     category: 'Groceries',
     assetPath: '/assets/images/merchants/usave.png',
     aliases: ['usave', 'u save', 'u-save'],
+    estimatedLocationCount: 340,
+    estimatedProvinceCount: 9,
   },
   {
     brandKey: 'boxer',
@@ -63,6 +73,8 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     category: 'Groceries',
     assetPath: '/assets/images/merchants/boxer.png',
     aliases: ['boxer'],
+    estimatedLocationCount: 470,
+    estimatedProvinceCount: 9,
   },
   {
     brandKey: 'checkers',
@@ -77,6 +89,8 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     category: 'Clothing',
     assetPath: '/assets/images/merchants/mr-price.png',
     aliases: ['mr price', 'mrprice', 'mrp'],
+    estimatedLocationCount: 1900,
+    estimatedProvinceCount: 9,
   },
   {
     brandKey: 'engen',
@@ -91,6 +105,8 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     category: 'Groceries',
     assetPath: '/assets/images/merchants/game.png',
     aliases: ['game'],
+    estimatedLocationCount: 150,
+    estimatedProvinceCount: 9,
   },
   {
     brandKey: 'woolworths',
@@ -98,6 +114,8 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     category: 'Groceries',
     assetPath: '/assets/images/merchants/woolworths.png',
     aliases: ['woolworths', 'woolies'],
+    estimatedLocationCount: 490,
+    estimatedProvinceCount: 9,
   },
   {
     brandKey: 'dischem',
