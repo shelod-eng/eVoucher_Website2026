@@ -6,6 +6,7 @@ import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pric
 import {
   BrandKey,
   getBrandByKey,
+  listMerchantBrands,
   resolveBrandFromMerchantName,
 } from '@/lib/merchant-brand-catalog';
 import {
@@ -101,6 +102,9 @@ const DEMO_BRAND_KEYS = new Set<BrandKey>([
   'boxer',
   'usave',
   'picknpay',
+  'game',
+  'woolworths',
+  'mrprice',
 ]);
 
 function resolveDataClient(supabase: any) {
@@ -418,6 +422,35 @@ export async function GET(request: Request) {
         current.representativeMerchant = merchant;
       }
     });
+
+    // Ensure required demo brands always appear with seeded products even if no merchant rows exist yet.
+    listMerchantBrands()
+      .filter((brand) => DEMO_BRAND_KEYS.has(brand.brandKey))
+      .forEach((brand) => {
+        if (brandMap.has(brand.brandKey)) return;
+        brandMap.set(brand.brandKey, {
+          brandKey: brand.brandKey,
+          mappedBrandKey: brand.brandKey,
+          displayName: brand.displayName,
+          category: brand.category,
+          assetPath: brand.assetPath,
+          merchantIds: [],
+          locations: [
+            {
+              id: `demo-${brand.brandKey}`,
+              business_name: brand.displayName,
+              branch_name: 'National Coverage',
+              branch_code: `${brand.brandKey.toUpperCase()}-NAT-001`,
+              city: 'South Africa',
+              province: 'National',
+              physical_address: 'Redeem at participating locations nationwide',
+            },
+          ],
+          provinces: new Set<string>(['National']),
+          defaultTotalDiscountPct: DEFAULT_TOTAL_DISCOUNT_PCT,
+          representativeMerchant: null,
+        });
+      });
 
     const merchantIds = Array.from(new Set(Array.from(brandMap.values()).flatMap((brand) => brand.merchantIds)));
 
