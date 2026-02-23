@@ -196,17 +196,18 @@ async function fetchMerchants(dataClient: any, activeOnly: boolean): Promise<Mer
 
   let lastError: any = null;
   for (const fields of fieldSets) {
-    let query = dataClient
+    const query = dataClient
       .from('merchants')
       .select(fields)
       .order('business_name', { ascending: true })
       .limit(4000);
-    if (activeOnly) {
-      query = query.in('status', ['approved', 'active']);
-    }
     const result = await query;
     if (!result.error) {
-      return ((result.data ?? []) as MerchantRow[]).map((row) => toMerchantRow(row));
+      const mapped = ((result.data ?? []) as MerchantRow[]).map((row) => toMerchantRow(row));
+      if (!activeOnly) return mapped;
+      return mapped.filter((merchant) =>
+        ['approved', 'active'].includes(String(merchant.status ?? '').toLowerCase())
+      );
     }
     lastError = result.error;
   }
@@ -216,6 +217,7 @@ async function fetchMerchants(dataClient: any, activeOnly: boolean): Promise<Mer
 
 async function fetchProductsForMerchantIds(dataClient: any, merchantIds: string[]): Promise<ProductRow[]> {
   if (merchantIds.length === 0) return [];
+  const merchantIdSet = new Set(merchantIds.map((id) => String(id)));
   const fieldSets = [
     'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at',
     'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,is_active,created_at',
@@ -228,13 +230,14 @@ async function fetchProductsForMerchantIds(dataClient: any, merchantIds: string[
     const result = await dataClient
       .from('merchant_products')
       .select(fields)
-      .in('merchant_id', merchantIds)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
-      .limit(6000);
+      .limit(12000);
 
     if (!result.error) {
-      return ((result.data ?? []) as ProductRow[]).map((row) => toProductRow(row));
+      return ((result.data ?? []) as ProductRow[])
+        .map((row) => toProductRow(row))
+        .filter((row) => merchantIdSet.has(String(row.merchant_id)));
     }
 
     if (isMissingRelation(result.error, 'public.merchant_products')) {
