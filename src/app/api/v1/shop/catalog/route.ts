@@ -6,8 +6,6 @@ import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pric
 import {
   BrandKey,
   getBrandByKey,
-  isBrandKey,
-  listMerchantBrands,
   resolveBrandFromMerchantName,
 } from '@/lib/merchant-brand-catalog';
 import {
@@ -41,7 +39,8 @@ type ProductRow = {
   redemption_scope: string | null;
   valid_provinces: string[] | null;
   valid_branch_ids: string[] | null;
-  is_active: boolean;
+  is_active: boolean | null;
+  status: string | null;
   created_at: string;
 };
 
@@ -93,6 +92,17 @@ type CatalogProduct = {
   is_active: boolean;
 };
 
+const DEMO_BRAND_KEYS = new Set<BrandKey>([
+  'shoprite',
+  'checkers',
+  'clicks',
+  'pep',
+  'engen',
+  'boxer',
+  'usave',
+  'picknpay',
+]);
+
 function resolveDataClient(supabase: any) {
   try {
     return createAdminClient();
@@ -118,12 +128,21 @@ function withSearchMatch(text: string, term: string) {
   return text.toLowerCase().includes(term);
 }
 
-function toSlug(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48);
+function isBankMerchantLabel(value: string) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (!normalized) return false;
+  const bankTerms = [
+    'absa',
+    'fnb',
+    'first national bank',
+    'standard bank',
+    'nedbank',
+    'capitec',
+    'investec',
+    'tymebank',
+    'bank',
+  ];
+  return bankTerms.some((term) => normalized.includes(term));
 }
 
 function normalizeScope(value: unknown): 'all_branches' | 'specific_branch' | 'province_wide' | 'national' {
@@ -152,7 +171,7 @@ function toMerchantRow(row: Partial<MerchantRow> & { id: string; business_name: 
     status: row.status,
     business_type: row.business_type ?? null,
     default_total_discount_pct: row.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT,
-    parent_brand: row.parent_brand ?? row.business_name,
+    parent_brand: row.parent_brand ?? null,
     branch_name: row.branch_name ?? row.business_name,
     branch_code: row.branch_code ?? null,
     city: row.city ?? null,
@@ -167,7 +186,6 @@ function toProductRow(
     merchant_id: string;
     product_name: string;
     face_value: number;
-    is_active: boolean;
     created_at: string;
   }
 ) {
@@ -181,7 +199,8 @@ function toProductRow(
     redemption_scope: row.redemption_scope ?? 'all_branches',
     valid_provinces: row.valid_provinces ?? [],
     valid_branch_ids: row.valid_branch_ids ?? [],
-    is_active: row.is_active,
+    is_active: row.is_active ?? null,
+    status: row.status ?? null,
     created_at: row.created_at,
   } as ProductRow;
 }
@@ -218,26 +237,51 @@ async function fetchMerchants(dataClient: any, activeOnly: boolean): Promise<Mer
 async function fetchProductsForMerchantIds(dataClient: any, merchantIds: string[]): Promise<ProductRow[]> {
   if (merchantIds.length === 0) return [];
   const merchantIdSet = new Set(merchantIds.map((id) => String(id)));
-  const fieldSets = [
-    'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at',
-    'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,is_active,created_at',
-    'id,merchant_id,product_name,face_value,total_discount_pct,is_active,created_at',
-    'id,merchant_id,product_name,face_value,is_active,created_at',
+  const queryPlans: Array<{
+    fields: string;
+    applyActiveFilter: (query: any) => any;
+    isRowActive: (row: any) => boolean;
+  }> = [
+    {
+      fields:
+        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at',
+      applyActiveFilter: (query: any) => query.eq('is_active', true),
+      isRowActive: (row: any) => Boolean(row?.is_active),
+    },
+    {
+      fields:
+        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,status,created_at',
+      applyActiveFilter: (query: any) => query.eq('status', 'active'),
+      isRowActive: (row: any) => String(row?.status ?? '').toLowerCase() === 'active',
+    },
+    {
+      fields:
+        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,status,created_at',
+      applyActiveFilter: (query: any) => query,
+      isRowActive: (row: any) => {
+        if (typeof row?.is_active === 'boolean') return row.is_active;
+        const status = String(row?.status ?? '').toLowerCase();
+        if (!status) return true;
+        return !['inactive', 'disabled', 'archived'].includes(status);
+      },
+    },
   ];
 
   let lastError: any = null;
-  for (const fields of fieldSets) {
-    const result = await dataClient
+  for (const plan of queryPlans) {
+    const query = dataClient
       .from('merchant_products')
-      .select(fields)
-      .eq('is_active', true)
+      .select(plan.fields)
       .order('created_at', { ascending: false })
       .limit(12000);
 
+    const result = await plan.applyActiveFilter(query);
+
     if (!result.error) {
-      return ((result.data ?? []) as ProductRow[])
-        .map((row) => toProductRow(row))
-        .filter((row) => merchantIdSet.has(String(row.merchant_id)));
+      return (result.data ?? [])
+        .filter((row: any) => plan.isRowActive(row))
+        .map((row: any) => toProductRow(row))
+        .filter((row: ProductRow) => merchantIdSet.has(String(row.merchant_id)));
     }
 
     if (isMissingRelation(result.error, 'public.merchant_products')) {
@@ -251,18 +295,23 @@ async function fetchProductsForMerchantIds(dataClient: any, merchantIds: string[
 }
 
 function resolveBrandMeta(rawBrandName: string, fallbackName: string, fallbackCategory: string | null) {
+  const explicitParentBrand = String(rawBrandName ?? '').trim();
   const mappedBrandKey =
-    resolveBrandFromMerchantName(rawBrandName) ?? resolveBrandFromMerchantName(fallbackName);
+    resolveBrandFromMerchantName(explicitParentBrand) ?? resolveBrandFromMerchantName(fallbackName);
   const mappedBrand = mappedBrandKey ? getBrandByKey(mappedBrandKey) : null;
-  const displayName = mappedBrand?.displayName ?? (rawBrandName || fallbackName);
-  const brandKey = mappedBrand?.brandKey ?? toSlug(displayName || fallbackName || 'brand');
+  if (!mappedBrand) {
+    return null;
+  }
+  if (!DEMO_BRAND_KEYS.has(mappedBrand.brandKey)) {
+    return null;
+  }
 
   return {
-    brandKey,
-    mappedBrandKey: mappedBrand?.brandKey ?? null,
-    displayName: displayName || fallbackName,
-    category: mappedBrand?.category ?? fallbackCategory ?? 'Retail',
-    assetPath: mappedBrand?.assetPath ?? '',
+    brandKey: mappedBrand.brandKey,
+    mappedBrandKey: mappedBrand.brandKey,
+    displayName: mappedBrand.displayName,
+    category: mappedBrand.category ?? fallbackCategory ?? 'Retail',
+    assetPath: mappedBrand.assetPath ?? '',
   };
 }
 
@@ -314,14 +363,22 @@ export async function GET(request: Request) {
     const brandMap = new Map<string, BrandAggregation>();
 
     merchants.forEach((merchant) => {
+      if (
+        isBankMerchantLabel(merchant.business_name) ||
+        isBankMerchantLabel(String(merchant.parent_brand ?? ''))
+      ) {
+        return;
+      }
+
       merchantById.set(merchant.id, merchant);
       const merchantBrandName =
-        String(merchant.parent_brand ?? '').trim() || String(merchant.business_name ?? '').trim();
+        String(merchant.parent_brand ?? '').trim();
       const brandMeta = resolveBrandMeta(
         merchantBrandName,
         merchant.business_name,
         merchant.business_type
       );
+      if (!brandMeta) return;
 
       if (!brandMap.has(brandMeta.brandKey)) {
         brandMap.set(brandMeta.brandKey, {
@@ -362,23 +419,6 @@ export async function GET(request: Request) {
       }
     });
 
-    if (brandMap.size === 0) {
-      listMerchantBrands().forEach((brand) => {
-        brandMap.set(brand.brandKey, {
-          brandKey: brand.brandKey,
-          mappedBrandKey: brand.brandKey,
-          displayName: brand.displayName,
-          category: brand.category,
-          assetPath: brand.assetPath,
-          merchantIds: [],
-          locations: [],
-          provinces: new Set<string>(),
-          defaultTotalDiscountPct: DEFAULT_TOTAL_DISCOUNT_PCT,
-          representativeMerchant: null,
-        });
-      });
-    }
-
     const merchantIds = Array.from(new Set(Array.from(brandMap.values()).flatMap((brand) => brand.merchantIds)));
 
     const productRows = await fetchProductsForMerchantIds(dataClient, merchantIds);
@@ -395,15 +435,27 @@ export async function GET(request: Request) {
         String(merchant.parent_brand ?? '').trim() ||
         merchant.business_name;
       const brandMeta = resolveBrandMeta(productBrandName, merchant.business_name, merchant.business_type);
+      if (!brandMeta) return;
       if (!dbProductsByBrand.has(brandMeta.brandKey)) {
         dbProductsByBrand.set(brandMeta.brandKey, []);
       }
 
       const brand = brandMap.get(brandMeta.brandKey);
-      const pricing = calculateDiscountPricing(
-        Number(row.face_value),
-        Number(row.total_discount_pct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT)
+      const faceValue = Number(row.face_value);
+      const totalDiscountPct = Number(
+        row.total_discount_pct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
       );
+
+      if (!Number.isFinite(faceValue) || faceValue <= 0) {
+        return;
+      }
+
+      let pricing;
+      try {
+        pricing = calculateDiscountPricing(faceValue, totalDiscountPct);
+      } catch {
+        return;
+      }
 
       dbProductsByBrand.get(brandMeta.brandKey)?.push({
         id: row.id,
@@ -482,6 +534,7 @@ export async function GET(request: Request) {
           locations: brand.locations,
         };
       })
+      .filter((brand) => brand.productCount > 0)
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
     const validRequestedBrand = requestedBrandRaw

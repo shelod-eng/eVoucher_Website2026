@@ -382,7 +382,7 @@ export default function ShopPage() {
 
           <section className="bg-card rounded-2xl border border-border p-6">
             <h2 className="font-headline font-bold text-3xl text-foreground mb-4">
-              Products ({products.length} items)
+              Vouchers ({products.length} available)
             </h2>
 
             {productsLoading ? (
@@ -402,7 +402,7 @@ export default function ShopPage() {
                 />
                 <p className="text-muted-foreground font-body">
                   {selectedBrand
-                    ? 'No products available for this brand yet. Try another brand or clear search.'
+                    ? 'No vouchers available for this brand yet. Try another brand or clear search.'
                     : 'Select a brand to view products.'}
                 </p>
               </div>

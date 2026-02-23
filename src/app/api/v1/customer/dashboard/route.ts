@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
+import { BrandKey, listMerchantBrands } from '@/lib/merchant-brand-catalog';
+import { buildStarterProductsForBrand } from '@/lib/starter-products';
+import { DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '').toLowerCase();
@@ -12,6 +15,83 @@ function isMissingRelation(error: any, relationName: string) {
     message.includes(`could not find the table '${relation}' in the schema cache`) ||
     message.includes(`could not find the table '${bareRelation}' in the schema cache`)
   );
+}
+
+const DEMO_BRANDS: BrandKey[] = [
+  'shoprite',
+  'checkers',
+  'picknpay',
+  'usave',
+  'boxer',
+  'clicks',
+  'pep',
+  'engen',
+];
+
+function generateDemoVouchers() {
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const expiresAt = new Date(now + 90 * dayMs).toISOString();
+  const catalog = listMerchantBrands();
+
+  return DEMO_BRANDS.map((brandKey, index) => {
+    const brand = catalog.find((entry) => entry.brandKey === brandKey)!;
+    const starterProduct = buildStarterProductsForBrand({
+      brandKey,
+      merchantId: null,
+      merchantName: brand.displayName,
+      defaultTotalDiscountPct: DEFAULT_TOTAL_DISCOUNT_PCT,
+    })[0];
+
+    const prefix = brand.displayName.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 4) || 'DEMO';
+    const voucherCode = `${prefix}-${(index + 1).toString().padStart(2, '0')}EH4`;
+    const issuedAt = new Date(now - index * dayMs).toISOString();
+
+    return {
+      id: `demo-voucher-${brandKey}-${index + 1}`,
+      merchant_id: null,
+      product_id: null,
+      merchant_name: brand.displayName,
+      parent_brand: brand.displayName,
+      voucher_code: voucherCode,
+      face_value: starterProduct.face_value,
+      discount_percent: starterProduct.total_discount_pct,
+      current_balance: starterProduct.face_value,
+      is_active: true,
+      expires_at: expiresAt,
+      issued_at: issuedAt,
+      total_discount_pct: starterProduct.total_discount_pct,
+      consumer_benefit_pct: starterProduct.consumer_benefit_pct,
+      evoucher_benefit_pct: starterProduct.evoucher_benefit_pct,
+      total_discount_amount: starterProduct.total_discount_amount,
+      consumer_benefit_amount: starterProduct.consumer_benefit_amount,
+      evoucher_benefit_amount: starterProduct.evoucher_benefit_amount,
+      consumer_price: starterProduct.consumer_price,
+      merchant_receivable_after_total_discount: starterProduct.merchant_receivable_after_total_discount,
+      merchant_receivable_after_evoucher_benefit: starterProduct.merchant_receivable_after_evoucher_benefit,
+      redemption_scope: 'all_branches',
+      valid_provinces: [],
+      valid_branch_ids: [],
+      qr_code_url: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(voucherCode)}`,
+      redeemed_at_merchant_id: null,
+      redeemed_at_branch: null,
+      redeemed_at: null,
+    };
+  });
+}
+
+function generateDemoPaymentTransactions(vouchers: Array<{ voucher_code: string; consumer_price: number }>) {
+  const now = Date.now();
+  const hourMs = 60 * 60 * 1000;
+  return vouchers.map((voucher, index) => ({
+    id: `demo-payment-${index + 1}`,
+    voucher_code: voucher.voucher_code,
+    amount: voucher.consumer_price,
+    card_brand: 'Visa',
+    card_last_four: `10${index}${index}`,
+    payment_status: 'completed',
+    created_at: new Date(now - index * hourMs).toISOString(),
+  }));
 }
 
 export async function GET() {
@@ -123,18 +203,33 @@ export async function GET() {
         role,
       };
 
+    const liveVouchers = vouchersRes.data ?? [];
+    const livePaymentTransactions = paymentsRes.data ?? [];
+
+    const vouchersPayload = liveVouchers.length > 0 ? liveVouchers : generateDemoVouchers();
+    const paymentTransactionsPayload =
+      livePaymentTransactions.length > 0
+        ? livePaymentTransactions
+        : generateDemoPaymentTransactions(
+            vouchersPayload.map((voucher: any) => ({
+              voucher_code: String(voucher.voucher_code ?? ''),
+              consumer_price: Number(voucher.consumer_price ?? 0),
+            }))
+          );
+
     return NextResponse.json({
       profile,
-      vouchers: vouchersRes.data ?? [],
+      vouchers: vouchersPayload,
       transactions: transactionsRes.data ?? [],
       paymentMethods: Array.from(paymentMethodsMap.values()),
       customerPaymentMethods,
-      paymentTransactions: paymentsRes.data ?? [],
+      paymentTransactions: paymentTransactionsPayload,
       diagnostics: {
         role,
         hasAdminEnv: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
-        voucherCount: vouchersRes.data?.length ?? 0,
+        voucherCount: vouchersPayload.length,
         transactionCount: transactionsRes.data?.length ?? 0,
+        demoSeededVouchers: liveVouchers.length === 0,
       },
     });
   } catch (error: any) {
