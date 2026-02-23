@@ -46,7 +46,7 @@ export default function CartPage() {
       merchantId: first.merchantId,
       faceValue: String(first.faceValue),
     });
-    if (!first.productId.startsWith('fallback-')) {
+    if (!first.productId.startsWith('fallback-') && !first.productId.startsWith('starter-')) {
       params.set('productId', first.productId);
     }
     router.push(`/buy-vouchers?${params.toString()}`);

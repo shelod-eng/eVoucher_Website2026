@@ -483,6 +483,30 @@ export async function GET(request: Request) {
 
     const productRows = await fetchProductsForMerchantIds(dataClient, merchantIds);
 
+    const representativeByCategory = new Map<string, MerchantRow>();
+    let globalRepresentative: MerchantRow | null = null;
+    Array.from(brandMap.values()).forEach((brand) => {
+      if (!brand.representativeMerchant) return;
+      const categoryKey = String(brand.category || '').trim().toLowerCase();
+      if (categoryKey && !representativeByCategory.has(categoryKey)) {
+        representativeByCategory.set(categoryKey, brand.representativeMerchant);
+      }
+      if (!globalRepresentative) {
+        globalRepresentative = brand.representativeMerchant;
+      }
+    });
+
+    const checkoutRepresentativeByBrandKey = new Map<string, MerchantRow | null>();
+    Array.from(brandMap.values()).forEach((brand) => {
+      const categoryKey = String(brand.category || '').trim().toLowerCase();
+      const categoryRepresentative =
+        (categoryKey ? representativeByCategory.get(categoryKey) : null) ?? null;
+      checkoutRepresentativeByBrandKey.set(
+        brand.brandKey,
+        brand.representativeMerchant ?? categoryRepresentative ?? globalRepresentative ?? null
+      );
+    });
+
     const dbProductsByBrand = new Map<string, CatalogProduct[]>();
     Array.from(brandMap.keys()).forEach((brandKey) => dbProductsByBrand.set(brandKey, []));
 
@@ -550,6 +574,7 @@ export async function GET(request: Request) {
 
     const brandSummaries = Array.from(brandMap.values())
       .map((brand) => {
+        const checkoutMerchant = checkoutRepresentativeByBrandKey.get(brand.brandKey) ?? null;
         const dbProducts = dedupedProductsByBrand.get(brand.brandKey) ?? [];
         const starterProducts =
           brand.mappedBrandKey && dbProducts.length === 0
@@ -584,10 +609,10 @@ export async function GET(request: Request) {
               : brand.mappedBrandKey
                 ? getStarterProductCountForBrand(brand.mappedBrandKey)
                 : 0,
-          merchantId: brand.representativeMerchant?.id ?? null,
-          merchantName: brand.representativeMerchant?.business_name ?? null,
+          merchantId: checkoutMerchant?.id ?? null,
+          merchantName: checkoutMerchant?.business_name ?? null,
           defaultTotalDiscountPct: Number(
-            brand.representativeMerchant?.default_total_discount_pct ?? brand.defaultTotalDiscountPct
+            checkoutMerchant?.default_total_discount_pct ?? brand.defaultTotalDiscountPct
           ),
           matchesSearch,
           provinceCount: getResolvedProvinceCount(brand),
@@ -610,16 +635,18 @@ export async function GET(request: Request) {
       '';
 
     const selectedBrand = brandMap.get(defaultBrandKey);
+    const selectedCheckoutMerchant =
+      (selectedBrand ? checkoutRepresentativeByBrandKey.get(selectedBrand.brandKey) : null) ?? null;
     const selectedDbProducts = dedupedProductsByBrand.get(defaultBrandKey) ?? [];
 
     let selectedProducts: CatalogProduct[] = selectedDbProducts;
     if (selectedProducts.length === 0 && selectedBrand?.mappedBrandKey) {
       selectedProducts = buildStarterProductsForBrand({
         brandKey: selectedBrand.mappedBrandKey,
-        merchantId: selectedBrand.representativeMerchant?.id ?? null,
+        merchantId: selectedCheckoutMerchant?.id ?? null,
         merchantName: selectedBrand.displayName,
         defaultTotalDiscountPct:
-          selectedBrand.representativeMerchant?.default_total_discount_pct ??
+          selectedCheckoutMerchant?.default_total_discount_pct ??
           selectedBrand.defaultTotalDiscountPct,
       }).map((product) => ({
         ...product,
