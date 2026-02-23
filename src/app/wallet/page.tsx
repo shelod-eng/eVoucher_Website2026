@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface Voucher {
   id: string;
   merchant_name: string;
+  parent_brand: string | null;
   voucher_code: string;
   current_balance: number;
   face_value: number;
@@ -16,6 +17,12 @@ interface Voucher {
   consumer_benefit_amount?: number | null;
   is_active: boolean;
   expires_at: string;
+  redemption_scope?: 'all_branches' | 'specific_branch' | 'province_wide' | 'national' | null;
+  valid_provinces?: string[] | null;
+  valid_branch_ids?: string[] | null;
+  qr_code_url?: string | null;
+  redeemed_at_branch?: string | null;
+  redeemed_at?: string | null;
 }
 
 interface WalletTransaction {
@@ -68,6 +75,32 @@ function formatPaymentMethod(tx?: PaymentTransaction) {
   return 'Not captured';
 }
 
+function getScopeLabel(voucher: Voucher) {
+  const scope = String(voucher.redemption_scope ?? 'all_branches').toLowerCase();
+  const brand = voucher.parent_brand || voucher.merchant_name;
+  if (scope === 'national') return 'Valid nationwide';
+  if (scope === 'province_wide') {
+    const provinces = Array.isArray(voucher.valid_provinces) ? voucher.valid_provinces : [];
+    return provinces.length > 0
+      ? `Valid in ${provinces.join(', ')}`
+      : `Valid province-wide for ${brand}`;
+  }
+  if (scope === 'specific_branch') {
+    const branches = Array.isArray(voucher.valid_branch_ids) ? voucher.valid_branch_ids : [];
+    return branches.length > 0
+      ? `Valid at ${branches.length} selected branch${branches.length === 1 ? '' : 'es'}`
+      : 'Valid at selected branches';
+  }
+  return `Valid at all ${brand} locations`;
+}
+
+function getVoucherQrUrl(voucher: Voucher) {
+  if (voucher.qr_code_url) return voucher.qr_code_url;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(
+    voucher.voucher_code
+  )}`;
+}
+
 export default function WalletPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -77,6 +110,8 @@ export default function WalletPage() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [paymentTransactions, setPaymentTransactions] = useState<PaymentTransaction[]>([]);
+  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
+  const [copyMessage, setCopyMessage] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -180,7 +215,7 @@ export default function WalletPage() {
   const savingsByMerchant = useMemo(() => {
     const buckets = new Map<string, number>();
     vouchers.forEach((voucher) => {
-      const merchant = voucher.merchant_name || 'Partner Merchant';
+      const merchant = voucher.parent_brand || voucher.merchant_name || 'Partner Merchant';
       const face = Number(voucher.face_value ?? 0);
       const paid = Number(voucher.consumer_price ?? face);
       const saved = Number(voucher.consumer_benefit_amount ?? Math.max(0, face - paid));
@@ -216,6 +251,17 @@ export default function WalletPage() {
     ];
   }, [paymentTransactions.length, totalSaved]);
 
+  const handleCopyVoucherCode = async (voucherCode: string) => {
+    try {
+      await navigator.clipboard.writeText(voucherCode);
+      setCopyMessage(`Copied ${voucherCode}`);
+      window.setTimeout(() => setCopyMessage(''), 1400);
+    } catch {
+      setCopyMessage('Clipboard copy failed');
+      window.setTimeout(() => setCopyMessage(''), 1400);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -232,6 +278,12 @@ export default function WalletPage() {
           {error && (
             <div className="p-4 rounded-lg border border-error/20 bg-error/10">
               <p className="text-sm text-error font-body">{error}</p>
+            </div>
+          )}
+
+          {copyMessage && (
+            <div className="p-3 rounded-lg border border-success/20 bg-success/10">
+              <p className="text-xs text-success font-body">{copyMessage}</p>
             </div>
           )}
 
@@ -263,10 +315,10 @@ export default function WalletPage() {
                 Add Voucher
               </button>
               <button
-                onClick={() => router.push('/buy-vouchers')}
+                onClick={() => router.push('/shop')}
                 className="rounded-lg bg-white text-primary font-headline font-semibold py-2 hover:bg-white/90"
               >
-                Redeem
+                Buy More
               </button>
               <button
                 onClick={() => router.push('/shop')}
@@ -275,10 +327,10 @@ export default function WalletPage() {
                 Find Stores
               </button>
               <button
-                onClick={() => router.push('/rewards')}
+                onClick={() => router.push('/benefits')}
                 className="rounded-lg bg-white/20 text-white font-headline font-semibold py-2"
               >
-                Rewards
+                Benefits
               </button>
             </div>
           </section>
@@ -308,16 +360,19 @@ export default function WalletPage() {
                 const paid = Number(voucher.consumer_price ?? face);
                 const saved = Number(voucher.consumer_benefit_amount ?? Math.max(0, face - paid));
                 const paymentMethod = formatPaymentMethod(voucherPaymentMap.get(voucher.voucher_code));
+                const status = classifyVoucher(voucher);
 
                 return (
                   <article key={voucher.id} className="rounded-2xl border border-border bg-card p-5">
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="font-headline font-bold text-3xl text-foreground">{voucher.voucher_code}</h3>
-                        <p className="text-primary font-headline font-semibold">{voucher.merchant_name}</p>
+                        <p className="text-primary font-headline font-semibold">
+                          {voucher.parent_brand || voucher.merchant_name}
+                        </p>
                       </div>
                       <span className="px-3 py-1 rounded-full text-xs bg-success/15 text-success font-headline font-semibold capitalize">
-                        {classifyVoucher(voucher)}
+                        {status}
                       </span>
                     </div>
 
@@ -345,17 +400,39 @@ export default function WalletPage() {
                       <p className="text-sm text-muted-foreground">
                         Expires: {new Date(voucher.expires_at).toLocaleDateString()}
                       </p>
-                      <p className="text-sm text-muted-foreground">Status: {classifyVoucher(voucher)}</p>
+                      <p className="text-sm text-muted-foreground">Status: {status}</p>
                       <p className="text-sm text-muted-foreground">Payment Method: {paymentMethod}</p>
+                      <p className="text-sm text-muted-foreground md:col-span-2">
+                        Redemption: {getScopeLabel(voucher)}
+                      </p>
+                      {voucher.redeemed_at_branch && (
+                        <p className="text-sm text-muted-foreground md:col-span-2">
+                          Last redeemed at: {voucher.redeemed_at_branch}
+                        </p>
+                      )}
                     </div>
 
-                    {(tab === 'active' || tab === 'partial') && (
-                      <button
-                        onClick={() => router.push('/buy-vouchers')}
-                        className="mt-3 w-full py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
-                      >
-                        Tap to Redeem
-                      </button>
+                    {(status === 'active' || status === 'partial') && (
+                      <div className="mt-3 grid sm:grid-cols-3 gap-2">
+                        <button
+                          onClick={() => setSelectedVoucher(voucher)}
+                          className="py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
+                        >
+                          Show QR
+                        </button>
+                        <button
+                          onClick={() => void handleCopyVoucherCode(voucher.voucher_code)}
+                          className="py-2 rounded-lg border border-border text-foreground font-headline font-semibold hover:bg-muted"
+                        >
+                          Copy Code
+                        </button>
+                        <button
+                          onClick={() => router.push('/shop')}
+                          className="py-2 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
+                        >
+                          Redeem in Store
+                        </button>
+                      </div>
                     )}
                   </article>
                 );
@@ -398,7 +475,7 @@ export default function WalletPage() {
               <div>
                 <h2 className="font-headline font-bold text-2xl text-foreground mb-2">Savings Insights</h2>
                 <p className="text-sm text-muted-foreground">
-                  Every R100 spent = R5.60 back instantly.
+                  Every R100 spent = instant savings on voucher checkout.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
                   This month saved: <span className="font-headline text-success">{toCurrency(thisMonthSavings)}</span>
@@ -410,7 +487,10 @@ export default function WalletPage() {
                   <p className="text-muted-foreground">No merchant savings yet.</p>
                 ) : (
                   savingsByMerchant.map((entry) => (
-                    <div key={entry.merchant} className="rounded-lg border border-border px-3 py-2 flex items-center justify-between">
+                    <div
+                      key={entry.merchant}
+                      className="rounded-lg border border-border px-3 py-2 flex items-center justify-between"
+                    >
                       <span className="font-headline font-semibold text-foreground">{entry.merchant}</span>
                       <span className="font-headline font-bold text-success">{toCurrency(entry.savings)}</span>
                     </div>
@@ -440,6 +520,37 @@ export default function WalletPage() {
           </section>
         </div>
       </div>
+
+      {selectedVoucher && (
+        <div className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-headline font-bold text-2xl text-foreground">Voucher QR</h3>
+              <button
+                onClick={() => setSelectedVoucher(null)}
+                className="px-3 py-2 rounded-lg border border-border hover:bg-muted"
+              >
+                Close
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">{selectedVoucher.voucher_code}</p>
+            <div className="rounded-xl border border-border bg-background p-4">
+              <img
+                src={getVoucherQrUrl(selectedVoucher)}
+                alt={`QR for ${selectedVoucher.voucher_code}`}
+                className="w-full h-auto rounded-lg"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">{getScopeLabel(selectedVoucher)}</p>
+            <button
+              onClick={() => void handleCopyVoucherCode(selectedVoucher.voucher_code)}
+              className="mt-3 w-full py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
+            >
+              Copy Voucher Code
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

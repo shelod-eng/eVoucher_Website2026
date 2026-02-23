@@ -4,6 +4,8 @@ export interface CartItem {
   merchantName: string;
   productId: string;
   productName: string;
+  parentBrand?: string;
+  redemptionScope?: 'all_branches' | 'specific_branch' | 'province_wide' | 'national';
   faceValue: number;
   consumerPrice: number;
   consumerBenefitAmount: number;

@@ -6,10 +6,19 @@ import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { addCartItem, getCartItems } from '@/lib/cart';
-import { BrandKey } from '@/lib/merchant-brand-catalog';
+
+interface BrandLocation {
+  id: string;
+  business_name: string;
+  branch_name: string;
+  branch_code: string | null;
+  city: string | null;
+  province: string | null;
+  physical_address: string | null;
+}
 
 interface BrandSummary {
-  brandKey: BrandKey;
+  brandKey: string;
   displayName: string;
   category: string;
   assetPath: string;
@@ -19,20 +28,27 @@ interface BrandSummary {
   merchantName: string | null;
   defaultTotalDiscountPct: number;
   matchesSearch: boolean;
+  provinceCount: number;
+  locations: BrandLocation[];
 }
 
 interface CatalogProduct {
   id: string;
-  brandKey: BrandKey;
+  brandKey: string;
   source: 'db' | 'starter';
   merchant_id: string | null;
   merchant_name: string;
+  parent_brand: string;
   product_name: string;
   face_value: number;
   total_discount_pct: number;
   consumer_benefit_pct: number;
   consumer_benefit_amount: number;
   consumer_price: number;
+  redemption_scope: 'all_branches' | 'specific_branch' | 'province_wide' | 'national';
+  valid_provinces: string[];
+  valid_branch_ids: string[];
+  valid_location_count: number;
 }
 
 function getCategoryIcon(category: string) {
@@ -41,6 +57,27 @@ function getCategoryIcon(category: string) {
   if (normalized.includes('fuel')) return 'TruckIcon';
   if (normalized.includes('cloth')) return 'ShoppingBagIcon';
   return 'ShoppingCartIcon';
+}
+
+function getRedemptionScopeLabel(product: CatalogProduct, selectedBrand: BrandSummary | null) {
+  if (product.redemption_scope === 'national') return 'Valid nationwide';
+  if (product.redemption_scope === 'province_wide') {
+    return product.valid_provinces.length > 0
+      ? `Valid in ${product.valid_provinces.join(', ')}`
+      : 'Valid province-wide';
+  }
+  if (product.redemption_scope === 'specific_branch') {
+    const branchCount = product.valid_branch_ids.length;
+    return branchCount > 0
+      ? `Valid at ${branchCount} selected branch${branchCount === 1 ? '' : 'es'}`
+      : 'Valid at selected branches';
+  }
+
+  const locationCount = product.valid_location_count || selectedBrand?.merchantCount || 0;
+  if (locationCount > 0) {
+    return `Valid at all ${locationCount} location${locationCount === 1 ? '' : 's'}`;
+  }
+  return `Valid at all ${product.parent_brand} locations`;
 }
 
 export default function ShopPage() {
@@ -52,12 +89,13 @@ export default function ShopPage() {
   const [statusMessage, setStatusMessage] = useState('');
   const [brands, setBrands] = useState<BrandSummary[]>([]);
   const [products, setProducts] = useState<CatalogProduct[]>([]);
-  const [selectedBrandKey, setSelectedBrandKey] = useState<BrandKey | ''>('');
+  const [selectedBrandKey, setSelectedBrandKey] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [cartCount, setCartCount] = useState(0);
   const [ussdAccessCode, setUssdAccessCode] = useState('*120*384#');
-  const [failedLogos, setFailedLogos] = useState<Set<BrandKey>>(new Set());
+  const [failedLogos, setFailedLogos] = useState<Set<string>>(new Set());
+  const [locationsModalOpen, setLocationsModalOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -120,7 +158,7 @@ export default function ShopPage() {
         setProducts((data.products ?? []) as CatalogProduct[]);
         setUssdAccessCode(String(data.ussdAccessCode ?? '*120*384#'));
 
-        const resolvedBrandKey = (data.selectedBrandKey ?? '') as BrandKey | '';
+        const resolvedBrandKey = String(data.selectedBrandKey ?? '');
         if (resolvedBrandKey && resolvedBrandKey !== selectedBrandKey) {
           setSelectedBrandKey(resolvedBrandKey);
         }
@@ -145,7 +183,7 @@ export default function ShopPage() {
     [brands, selectedBrandKey]
   );
 
-  const handleSelectBrand = (brandKey: BrandKey) => {
+  const handleSelectBrand = (brandKey: string) => {
     if (brandKey === selectedBrandKey) return;
     setSelectedBrandKey(brandKey);
   };
@@ -168,6 +206,8 @@ export default function ShopPage() {
       consumerBenefitAmount: Number(product.consumer_benefit_amount),
       totalDiscountPct: Number(product.total_discount_pct),
       quantity: 1,
+      parentBrand: product.parent_brand,
+      redemptionScope: product.redemption_scope,
     });
     setStatusMessage(`${product.product_name} added to cart.`);
     window.setTimeout(() => setStatusMessage(''), 1600);
@@ -193,7 +233,7 @@ export default function ShopPage() {
     router.push(`/buy-vouchers?${params.toString()}`);
   };
 
-  const markLogoFailed = (brandKey: BrandKey) => {
+  const markLogoFailed = (brandKey: string) => {
     setFailedLogos((current) => {
       const next = new Set(current);
       next.add(brandKey);
@@ -230,7 +270,7 @@ export default function ShopPage() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
               <div>
                 <h1 className="font-headline font-bold text-5xl text-foreground">Shop</h1>
-                <p className="text-muted-foreground">Browse merchants and buy discounted products</p>
+                <p className="text-muted-foreground">Browse brand vouchers and buy instantly</p>
               </div>
               <button
                 onClick={() => router.push('/cart')}
@@ -258,7 +298,7 @@ export default function ShopPage() {
                   type="text"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search products or merchants..."
+                  placeholder="Search products, brands, or locations..."
                   className="w-full pl-10 pr-4 py-3 border border-border rounded-lg bg-background font-body"
                 />
               </div>
@@ -283,7 +323,7 @@ export default function ShopPage() {
           <section className="bg-card rounded-2xl border border-border p-6">
             <h2 className="font-headline font-bold text-3xl text-foreground mb-1">Shopping at</h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Select a merchant brand first, then choose products to add to cart.
+              Select one brand, then browse products valid across multiple branches.
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-3">
@@ -300,7 +340,7 @@ export default function ShopPage() {
                   }`}
                 >
                   <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center mb-2 overflow-hidden">
-                    {failedLogos.has(brand.brandKey) ? (
+                    {failedLogos.has(brand.brandKey) || !brand.assetPath ? (
                       <Icon name={getCategoryIcon(brand.category) as any} size={24} variant="outline" />
                     ) : (
                       <img
@@ -315,9 +355,29 @@ export default function ShopPage() {
                     {brand.displayName}
                   </p>
                   <p className="text-xs text-muted-foreground">{brand.category}</p>
+                  <p className="text-xs text-primary font-headline">
+                    {brand.merchantCount} location{brand.merchantCount === 1 ? '' : 's'}
+                  </p>
                 </button>
               ))}
             </div>
+
+            {selectedBrand && selectedBrand.locations.length > 0 && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4 bg-background">
+                <div>
+                  <p className="font-headline font-semibold text-foreground">{selectedBrand.displayName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedBrand.merchantCount} locations across {selectedBrand.provinceCount} provinces
+                  </p>
+                </div>
+                <button
+                  onClick={() => setLocationsModalOpen(true)}
+                  className="px-4 py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
+                >
+                  View Locations
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="bg-card rounded-2xl border border-border p-6">
@@ -349,10 +409,13 @@ export default function ShopPage() {
             ) : (
               <div className="grid lg:grid-cols-2 xl:grid-cols-4 gap-4">
                 {products.map((product) => (
-                  <article key={product.id} className="rounded-2xl border border-success/20 bg-success/5 overflow-hidden">
+                  <article
+                    key={product.id}
+                    className="rounded-2xl border border-success/20 bg-success/5 overflow-hidden"
+                  >
                     <div className="p-4 border-b border-success/20 flex items-center justify-between">
                       <p className="text-xs uppercase tracking-wide text-primary font-headline font-semibold">
-                        {product.merchant_name}
+                        {product.parent_brand}
                       </p>
                       <span className="px-2 py-1 rounded-full text-xs bg-success/20 text-success font-headline font-semibold">
                         Save {Number(product.consumer_benefit_pct).toFixed(1)}%
@@ -381,6 +444,11 @@ export default function ShopPage() {
                           <span className="font-headline font-semibold text-success">
                             -R{Number(product.consumer_benefit_amount).toFixed(2)}
                           </span>
+                        </div>
+                        <div className="rounded-lg bg-background border border-border px-2 py-1">
+                          <p className="text-xs text-muted-foreground">
+                            {getRedemptionScopeLabel(product, selectedBrand)}
+                          </p>
                         </div>
                       </div>
 
@@ -415,6 +483,48 @@ export default function ShopPage() {
           </section>
         </div>
       </div>
+
+      {locationsModalOpen && selectedBrand && (
+        <div className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center">
+          <div className="w-full max-w-3xl max-h-[80vh] overflow-y-auto rounded-2xl border border-border bg-card p-6">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h3 className="font-headline font-bold text-2xl text-foreground">
+                  {selectedBrand.displayName} Locations
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {selectedBrand.merchantCount} locations available for redemption
+                </p>
+              </div>
+              <button
+                onClick={() => setLocationsModalOpen(false)}
+                className="px-3 py-2 rounded-lg border border-border hover:bg-muted"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {selectedBrand.locations.map((location) => (
+                <div key={location.id} className="rounded-xl border border-border p-4 bg-background">
+                  <p className="font-headline font-semibold text-foreground">
+                    {location.branch_name || location.business_name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {location.city || 'Unknown City'} {location.province ? `, ${location.province}` : ''}
+                  </p>
+                  {location.physical_address && (
+                    <p className="text-xs text-muted-foreground mt-1">{location.physical_address}</p>
+                  )}
+                  {location.branch_code && (
+                    <p className="text-xs text-primary mt-1">Branch Code: {location.branch_code}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
