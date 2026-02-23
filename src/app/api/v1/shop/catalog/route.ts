@@ -144,6 +144,109 @@ function uniqueStrings(values: unknown) {
   return Array.from(new Set(values.map((value) => String(value)).filter((value) => value.length > 0)));
 }
 
+function toMerchantRow(row: Partial<MerchantRow> & { id: string; business_name: string; email: string; status: string }) {
+  return {
+    id: row.id,
+    business_name: row.business_name,
+    email: row.email,
+    status: row.status,
+    business_type: row.business_type ?? null,
+    default_total_discount_pct: row.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT,
+    parent_brand: row.parent_brand ?? row.business_name,
+    branch_name: row.branch_name ?? row.business_name,
+    branch_code: row.branch_code ?? null,
+    city: row.city ?? null,
+    province: row.province ?? null,
+    physical_address: row.physical_address ?? null,
+  } as MerchantRow;
+}
+
+function toProductRow(
+  row: Partial<ProductRow> & {
+    id: string;
+    merchant_id: string;
+    product_name: string;
+    face_value: number;
+    is_active: boolean;
+    created_at: string;
+  }
+) {
+  return {
+    id: row.id,
+    merchant_id: row.merchant_id,
+    product_name: row.product_name,
+    face_value: row.face_value,
+    total_discount_pct: row.total_discount_pct ?? null,
+    parent_brand: row.parent_brand ?? null,
+    redemption_scope: row.redemption_scope ?? 'all_branches',
+    valid_provinces: row.valid_provinces ?? [],
+    valid_branch_ids: row.valid_branch_ids ?? [],
+    is_active: row.is_active,
+    created_at: row.created_at,
+  } as ProductRow;
+}
+
+async function fetchMerchants(dataClient: any, activeOnly: boolean): Promise<MerchantRow[]> {
+  const fieldSets = [
+    'id,business_name,email,status,business_type,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province,physical_address',
+    'id,business_name,email,status,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province,physical_address',
+    'id,business_name,email,status,default_total_discount_pct',
+    'id,business_name,email,status',
+  ];
+
+  let lastError: any = null;
+  for (const fields of fieldSets) {
+    let query = dataClient
+      .from('merchants')
+      .select(fields)
+      .order('business_name', { ascending: true })
+      .limit(4000);
+    if (activeOnly) {
+      query = query.in('status', ['approved', 'active']);
+    }
+    const result = await query;
+    if (!result.error) {
+      return ((result.data ?? []) as MerchantRow[]).map((row) => toMerchantRow(row));
+    }
+    lastError = result.error;
+  }
+
+  throw lastError ?? new Error('Failed to load merchants');
+}
+
+async function fetchProductsForMerchantIds(dataClient: any, merchantIds: string[]): Promise<ProductRow[]> {
+  if (merchantIds.length === 0) return [];
+  const fieldSets = [
+    'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at',
+    'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,is_active,created_at',
+    'id,merchant_id,product_name,face_value,total_discount_pct,is_active,created_at',
+    'id,merchant_id,product_name,face_value,is_active,created_at',
+  ];
+
+  let lastError: any = null;
+  for (const fields of fieldSets) {
+    const result = await dataClient
+      .from('merchant_products')
+      .select(fields)
+      .in('merchant_id', merchantIds)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(6000);
+
+    if (!result.error) {
+      return ((result.data ?? []) as ProductRow[]).map((row) => toProductRow(row));
+    }
+
+    if (isMissingRelation(result.error, 'public.merchant_products')) {
+      return [];
+    }
+
+    lastError = result.error;
+  }
+
+  throw lastError ?? new Error('Failed to load products');
+}
+
 function resolveBrandMeta(rawBrandName: string, fallbackName: string, fallbackCategory: string | null) {
   const mappedBrandKey =
     resolveBrandFromMerchantName(rawBrandName) ?? resolveBrandFromMerchantName(fallbackName);
@@ -199,28 +302,9 @@ export async function GET(request: Request) {
     const searchTerm = searchParams.get('q')?.trim().toLowerCase() ?? '';
     const dataClient = resolveDataClient(supabase);
 
-    const { data: activeRows, error: activeError } = await dataClient
-      .from('merchants')
-      .select(
-        'id,business_name,email,status,business_type,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province,physical_address'
-      )
-      .in('status', ['approved', 'active'])
-      .order('business_name', { ascending: true })
-      .limit(4000);
-
-    if (activeError) throw activeError;
-
-    let merchants = (activeRows ?? []) as MerchantRow[];
+    let merchants = await fetchMerchants(dataClient, true);
     if (merchants.length === 0) {
-      const { data: fallbackRows, error: fallbackError } = await dataClient
-        .from('merchants')
-        .select(
-          'id,business_name,email,status,business_type,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province,physical_address'
-        )
-        .order('business_name', { ascending: true })
-        .limit(4000);
-      if (fallbackError) throw fallbackError;
-      merchants = (fallbackRows ?? []) as MerchantRow[];
+      merchants = await fetchMerchants(dataClient, false);
     }
 
     const merchantById = new Map<string, MerchantRow>();
@@ -294,23 +378,7 @@ export async function GET(request: Request) {
 
     const merchantIds = Array.from(new Set(Array.from(brandMap.values()).flatMap((brand) => brand.merchantIds)));
 
-    let productRows: ProductRow[] = [];
-    if (merchantIds.length > 0) {
-      const { data, error } = await dataClient
-        .from('merchant_products')
-        .select(
-          'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at'
-        )
-        .in('merchant_id', merchantIds)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(6000);
-
-      if (error && !isMissingRelation(error, 'public.merchant_products')) {
-        throw error;
-      }
-      productRows = (data ?? []) as ProductRow[];
-    }
+    const productRows = await fetchProductsForMerchantIds(dataClient, merchantIds);
 
     const dbProductsByBrand = new Map<string, CatalogProduct[]>();
     Array.from(brandMap.keys()).forEach((brandKey) => dbProductsByBrand.set(brandKey, []));

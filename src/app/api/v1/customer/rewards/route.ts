@@ -23,6 +23,10 @@ type VoucherRow = {
   current_balance?: number | null;
 };
 
+const OFFER_CONSUMER_SAVINGS_PCT = 5.6;
+const OFFER_PLATFORM_FEE_PCT = 2.4;
+const OFFER_TOTAL_DISCOUNT_PCT = 8;
+
 function round2(value: number) {
   return Number(value.toFixed(2));
 }
@@ -155,26 +159,8 @@ export async function GET() {
         : 0;
     const averageAnnualSavings = averageMonthlySavings * 12;
 
-    const totalDiscountPctAvg =
-      completedTransactions.length > 0
-        ? completedTransactions.reduce((sum: number, tx: RewardTxn) => sum + Number(tx.total_discount_pct ?? 0), 0) /
-          completedTransactions.length
-        : 0;
-    const consumerSavingsPctAvg =
-      completedTransactions.length > 0
-        ? completedTransactions.reduce((sum: number, tx: RewardTxn) => sum + Number(tx.consumer_benefit_pct ?? 0), 0) /
-          completedTransactions.length
-        : 0;
-    const platformFeePctAvg =
-      completedTransactions.length > 0
-        ? completedTransactions.reduce((sum: number, tx: RewardTxn) => sum + Number(tx.evoucher_benefit_pct ?? 0), 0) /
-          completedTransactions.length
-        : 0;
-
-    const savingsRatePct =
-      totalSpent > 0 ? (totalCashSaved / totalSpent) * 100 : consumerSavingsPctAvg;
-
-    const cashbackPer100 = round2((consumerSavingsPctAvg / 100) * 100);
+    const savingsRatePct = OFFER_CONSUMER_SAVINGS_PCT;
+    const cashbackPer100 = OFFER_CONSUMER_SAVINGS_PCT;
     const activeVouchers = ((vouchersRes.data ?? []) as VoucherRow[]).filter(
       (voucher: VoucherRow) => voucher.is_active && Number(voucher.current_balance ?? 0) > 0
     ).length;
@@ -187,9 +173,9 @@ export async function GET() {
       totalSpent: round2(totalSpent),
       thisMonthSpend: round2(thisMonthSpend),
       totalPlatformFeeAmount: round2(totalPlatformFeeAmount),
-      merchantDiscountPct: round2(totalDiscountPctAvg),
-      consumerSavingsPct: round2(consumerSavingsPctAvg),
-      platformFeePct: round2(platformFeePctAvg),
+      merchantDiscountPct: OFFER_TOTAL_DISCOUNT_PCT,
+      consumerSavingsPct: OFFER_CONSUMER_SAVINGS_PCT,
+      platformFeePct: OFFER_PLATFORM_FEE_PCT,
       cashbackPer100,
       activeVouchers,
       monthlySeries,
