@@ -69,6 +69,24 @@ const STARTER_PRODUCTS: Record<BrandKey, StarterProductTemplate[]> = {
     { name: 'Essentials Voucher R500', faceValue: 500 },
     { name: 'Essentials Voucher R1000', faceValue: 1000 },
   ],
+  woolworths: [
+    { name: 'Woolworths Grocery Voucher R100', faceValue: 100 },
+    { name: 'Woolworths Grocery Voucher R200', faceValue: 200 },
+    { name: 'Woolworths Grocery Voucher R500', faceValue: 500 },
+    { name: 'Woolworths Grocery Voucher R1000', faceValue: 1000 },
+  ],
+  dischem: [
+    { name: 'Dischem Health Voucher R100', faceValue: 100 },
+    { name: 'Dischem Health Voucher R200', faceValue: 200 },
+    { name: 'Dischem Health Voucher R500', faceValue: 500 },
+    { name: 'Dischem Health Voucher R1000', faceValue: 1000 },
+  ],
+  superstore: [
+    { name: 'Super Store Voucher R100', faceValue: 100 },
+    { name: 'Super Store Voucher R200', faceValue: 200 },
+    { name: 'Super Store Voucher R500', faceValue: 500 },
+    { name: 'Super Store Voucher R1000', faceValue: 1000 },
+  ],
 };
 
 interface BuildStarterProductsInput {

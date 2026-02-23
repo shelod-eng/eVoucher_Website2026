@@ -8,7 +8,10 @@ export type BrandKey =
   | 'checkers'
   | 'mrprice'
   | 'engen'
-  | 'game';
+  | 'game'
+  | 'woolworths'
+  | 'dischem'
+  | 'superstore';
 
 export interface MerchantBrandDefinition {
   brandKey: BrandKey;
@@ -88,6 +91,27 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     category: 'Groceries',
     assetPath: '/assets/images/merchants/game.png',
     aliases: ['game'],
+  },
+  {
+    brandKey: 'woolworths',
+    displayName: 'Woolworths',
+    category: 'Groceries',
+    assetPath: '/assets/images/merchants/woolworths.png',
+    aliases: ['woolworths', 'woolies'],
+  },
+  {
+    brandKey: 'dischem',
+    displayName: 'Dischem',
+    category: 'Healthcare',
+    assetPath: '/assets/images/merchants/dischem.png',
+    aliases: ['dischem', 'dis-chem'],
+  },
+  {
+    brandKey: 'superstore',
+    displayName: 'Super Store',
+    category: 'Groceries',
+    assetPath: '/assets/images/merchants/superstore.png',
+    aliases: ['super store', 'superstore', 'super-store'],
   },
 ];
 

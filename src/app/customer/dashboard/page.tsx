@@ -182,8 +182,8 @@ export default function CustomerDashboard() {
       color: 'bg-blue-500/15 text-blue-600',
     },
     {
-      label: 'Rewards',
-      href: '/rewards',
+      label: 'Benefits',
+      href: '/benefits',
       icon: 'StarIcon',
       color: 'bg-warning/15 text-warning',
     },
@@ -208,7 +208,7 @@ export default function CustomerDashboard() {
               <p className="text-muted-foreground mt-1">Welcome back to eVoucher</p>
             </div>
             <div className="rounded-full bg-success text-white px-5 py-3 min-w-40 text-center">
-              <p className="font-headline font-bold">Cashback Rewards</p>
+              <p className="font-headline font-bold">Cashback Benefits</p>
               <p className="text-xs">{rewards.savingsRatePct.toFixed(1)}% savings rate</p>
             </div>
           </div>

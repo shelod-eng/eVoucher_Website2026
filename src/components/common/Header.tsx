@@ -39,7 +39,7 @@ const Header = ({ className = '' }: HeaderProps) => {
     { label: 'Shop', href: '/shop', icon: 'BuildingStorefrontIcon' },
     { label: 'Wallet', href: '/wallet', icon: 'WalletIcon' },
     { label: 'Cart', href: '/cart', icon: 'ShoppingCartIcon' },
-    { label: 'Rewards', href: '/rewards', icon: 'SparklesIcon' },
+    { label: 'Benefits', href: '/benefits', icon: 'SparklesIcon' },
     { label: 'Analytics', href: '/analytics', icon: 'ChartBarIcon' },
     { label: 'Profile', href: '/profile', icon: 'UserCircleIcon' },
   ];
@@ -58,7 +58,7 @@ const Header = ({ className = '' }: HeaderProps) => {
 
     const prefetchTargets = isMerchant
       ? ['/merchant/dashboard', '/analytics', '/support']
-      : ['/customer/dashboard', '/shop', '/wallet', '/cart', '/rewards', '/analytics', '/profile', '/buy-vouchers'];
+      : ['/customer/dashboard', '/shop', '/wallet', '/cart', '/benefits', '/analytics', '/profile', '/buy-vouchers'];
 
     prefetchTargets.forEach((target) => {
       router.prefetch(target);
