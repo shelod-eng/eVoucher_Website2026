@@ -148,7 +148,7 @@ function resolveBrandMeta(rawBrandName: string, fallbackName: string, fallbackCa
   const mappedBrandKey =
     resolveBrandFromMerchantName(rawBrandName) ?? resolveBrandFromMerchantName(fallbackName);
   const mappedBrand = mappedBrandKey ? getBrandByKey(mappedBrandKey) : null;
-  const displayName = mappedBrand?.displayName ?? rawBrandName || fallbackName;
+  const displayName = mappedBrand?.displayName ?? (rawBrandName || fallbackName);
   const brandKey = mappedBrand?.brandKey ?? toSlug(displayName || fallbackName || 'brand');
 
   return {
@@ -469,3 +469,4 @@ export async function GET(request: Request) {
     );
   }
 }
+
