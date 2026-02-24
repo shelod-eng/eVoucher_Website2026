@@ -321,10 +321,10 @@ export default function WalletPage() {
                 Buy More
               </button>
               <button
-                onClick={() => router.push('/shop')}
+                onClick={() => router.push('/redeem')}
                 className="rounded-lg bg-white/20 text-white font-headline font-semibold py-2"
               >
-                Find Stores
+                Redeem
               </button>
               <button
                 onClick={() => router.push('/benefits')}
@@ -427,7 +427,9 @@ export default function WalletPage() {
                           Copy Code
                         </button>
                         <button
-                          onClick={() => router.push('/shop')}
+                          onClick={() =>
+                            router.push(`/redeem?code=${encodeURIComponent(voucher.voucher_code)}`)
+                          }
                           className="py-2 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
                         >
                           Redeem in Store
