@@ -133,12 +133,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    const isLocalhost =
-      typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    const { error } = await supabase.auth.signOut({ scope: isLocalhost ? 'local' : 'global' });
-    if (error) throw error;
+    // Optimistic local clear so role-switch login feels immediate.
+    setUser(null);
     setRole(null);
+    setLoading(false);
+
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    if (error) {
+      console.warn('AuthContext: local signOut warning:', error.message);
+    }
+
     router.refresh();
   };
 

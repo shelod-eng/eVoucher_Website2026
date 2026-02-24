@@ -51,7 +51,12 @@ function isMissingRelation(error: any, relationName: string) {
 function isMissingColumn(error: any, columnName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const column = columnName.toLowerCase();
-  return message.includes(`column "${column}" does not exist`) || message.includes(`column ${column} does not exist`);
+  return (
+    message.includes(`column "${column}" does not exist`) ||
+    message.includes(`column ${column} does not exist`) ||
+    message.includes(`could not find the '${column}' column`) ||
+    message.includes(`could not find the "${column}" column`)
+  );
 }
 
 function toUpperCode(value: string) {

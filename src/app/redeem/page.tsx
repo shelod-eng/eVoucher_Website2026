@@ -88,6 +88,7 @@ function RedeemPageContent() {
     () => voucher && (voucher.status === 'active' || voucher.status === 'partial'),
     [voucher]
   );
+  const showVoucherCard = Boolean(voucher) && !Boolean(result?.success);
 
   const searchVoucherByCode = async (voucherCode: string) => {
     const formattedCode = normalizeCode(voucherCode);
@@ -306,7 +307,7 @@ function RedeemPageContent() {
             {searchError && <p className="text-sm text-error mt-3">{searchError}</p>}
           </section>
 
-          {voucher && (
+          {showVoucherCard && voucher && (
             <section className="rounded-2xl border border-border bg-card p-5">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
@@ -372,33 +373,43 @@ function RedeemPageContent() {
           )}
 
           {result && (
-            <section
-              className={`rounded-2xl border p-4 ${
-                result.success ? 'border-success/20 bg-success/10' : 'border-error/20 bg-error/10'
-              }`}
-            >
-              <p className={`font-headline font-semibold ${result.success ? 'text-success' : 'text-error'}`}>
-                {result.message}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                New balance: {toCurrency(result.newBalance)}
-              </p>
+            result.success ? (
+              <section className="rounded-2xl border border-success/20 bg-success/10 p-10 text-center">
+                <div className="w-16 h-16 rounded-full bg-success/20 text-success mx-auto mb-4 flex items-center justify-center">
+                  <Icon name="CheckCircleIcon" size={34} variant="outline" />
+                </div>
+                <h3 className="font-headline font-bold text-5xl text-success mb-2">
+                  {result.status === 'used' ? 'Redeemed!' : 'Partial Redeem Complete!'}
+                </h3>
+                <p className="text-success/90 mb-5">
+                  {result.status === 'used'
+                    ? 'Voucher fully redeemed successfully!'
+                    : `Voucher redeemed successfully. Remaining balance: ${toCurrency(result.newBalance)}.`}
+                </p>
 
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                <button
-                  onClick={() => router.push('/wallet')}
-                  className="py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
-                >
-                  View Wallet
-                </button>
-                <button
-                  onClick={handleRedeemAnother}
-                  className="py-2 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
-                >
-                  Redeem Another
-                </button>
-              </div>
-            </section>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => router.push('/wallet')}
+                    className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
+                  >
+                    View Wallet
+                  </button>
+                  <button
+                    onClick={handleRedeemAnother}
+                    className="px-6 py-3 rounded-lg border border-border bg-card text-foreground font-headline font-semibold hover:bg-muted"
+                  >
+                    Redeem Another
+                  </button>
+                </div>
+              </section>
+            ) : (
+              <section className="rounded-2xl border border-error/20 bg-error/10 p-4">
+                <p className="font-headline font-semibold text-error">{result.message}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  New balance: {toCurrency(result.newBalance)}
+                </p>
+              </section>
+            )
           )}
         </div>
       </div>
