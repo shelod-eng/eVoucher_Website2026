@@ -94,6 +94,10 @@ export default function MerchantDashboard() {
     }
 
     if (!authLoading && user) {
+      if (Boolean(user.user_metadata?.must_change_password)) {
+        router.push('/merchant/change-password');
+        return;
+      }
       const resolvedRole = String(role ?? user.user_metadata?.role ?? '').toLowerCase();
       if (resolvedRole && resolvedRole !== 'merchant') {
         router.push('/shop');

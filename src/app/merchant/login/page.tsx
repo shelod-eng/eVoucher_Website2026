@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
+import { createClient } from '@/lib/supabase/client';
 
 export default function MerchantLogin() {
   const [email, setEmail] = useState('');
@@ -14,12 +15,13 @@ export default function MerchantLogin() {
   const [loading, setLoading] = useState(false);
   const { user, role, signIn } = useAuth();
   const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
     if (!user) return;
     const resolvedRole = String(role ?? user.user_metadata?.role ?? '').toLowerCase();
     if (resolvedRole === 'merchant') {
-      router.replace('/merchant/dashboard');
+      router.replace(Boolean(user.user_metadata?.must_change_password) ? '/merchant/change-password' : '/merchant/dashboard');
     } else if (resolvedRole) {
       router.replace('/shop');
     }
@@ -32,7 +34,11 @@ export default function MerchantLogin() {
 
     try {
       await signIn(email, password);
-      router.push('/merchant/dashboard');
+      const {
+        data: { user: signedInUser },
+      } = await supabase.auth.getUser();
+      const mustChangePassword = Boolean(signedInUser?.user_metadata?.must_change_password);
+      router.push(mustChangePassword ? '/merchant/change-password' : '/merchant/dashboard');
     } catch (err: any) {
       setError(err.message || 'Invalid email or password');
     } finally {

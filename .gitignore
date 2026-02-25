@@ -44,3 +44,4 @@ turbo/
 # Local tooling artifacts
 postman/
 supabase/.temp/
+eVoucher.session.sql

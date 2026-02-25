@@ -3,6 +3,7 @@ export interface MerchantOnboardingRequest {
   contactName: string;
   email: string;
   phone: string;
+  merchantType?: 'chain' | 'private';
   parentBrand?: string;
   branchName?: string;
   city?: string;
@@ -18,6 +19,10 @@ export interface MerchantOnboardingRequest {
   branchCode?: string;
   accountHolderName?: string;
   discountPercentage?: number;
+  pharmacyLicenseNumber?: string;
+  responsiblePharmacistName?: string;
+  ownerIdNumber?: string;
+  proofOfPremises?: string;
 }
 
 export interface PurchaseVoucherRequest {

@@ -23,6 +23,26 @@ type NotificationResult = {
   error?: string;
 };
 
+type MerchantVerificationEmailPayload = {
+  businessName: string;
+  email: string;
+  verificationUrl: string;
+  emailToken: string;
+};
+
+type MerchantOtpPayload = {
+  businessName: string;
+  phone: string;
+  otpCode: string;
+};
+
+type MerchantCredentialsPayload = {
+  businessName: string;
+  email: string;
+  temporaryPassword: string;
+  loginUrl: string;
+};
+
 function resolveRecipients() {
   const configured = String(process.env.MERCHANT_NOTIFICATION_RECIPIENTS ?? '')
     .split(',')
@@ -126,6 +146,150 @@ async function sendViaResend(
   }
 
   return true;
+}
+
+function resolveAppBaseUrl() {
+  return (
+    String(process.env.NEXT_PUBLIC_APP_URL ?? '').trim() ||
+    String(process.env.APP_URL ?? '').trim() ||
+    'http://localhost:4028'
+  );
+}
+
+async function sendEmailToMerchant(
+  email: string,
+  subject: string,
+  text: string,
+  html: string
+): Promise<{ sent: boolean; provider: 'resend' | 'console'; error?: string }> {
+  try {
+    const resendSent = await sendViaResend([email], subject, text, html);
+    if (resendSent) {
+      return { sent: true, provider: 'resend' };
+    }
+
+    console.info('[merchant-email][dev]', { email, subject, text });
+    return { sent: true, provider: 'console' };
+  } catch (error: any) {
+    return {
+      sent: false,
+      provider: 'resend',
+      error: error?.message || 'Failed to send merchant email.',
+    };
+  }
+}
+
+async function sendSmsViaTwilio(phone: string, message: string) {
+  const accountSid = String(process.env.TWILIO_ACCOUNT_SID ?? '').trim();
+  const authToken = String(process.env.TWILIO_AUTH_TOKEN ?? '').trim();
+  const fromNumber = String(process.env.TWILIO_FROM_PHONE ?? '').trim();
+  if (!accountSid || !authToken || !fromNumber) return null;
+
+  const body = new URLSearchParams({
+    To: phone,
+    From: fromNumber,
+    Body: message,
+  });
+
+  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    const responseText = await response.text();
+    throw new Error(`Twilio SMS failed (${response.status}): ${responseText}`);
+  }
+  return true;
+}
+
+export async function sendMerchantVerificationEmail(payload: MerchantVerificationEmailPayload) {
+  const subject = `Confirm your eVoucher merchant registration - ${payload.businessName}`;
+  const text = [
+    `Hi,`,
+    ``,
+    `Welcome to eVoucher Merchant Onboarding for ${payload.businessName}.`,
+    `Please confirm your email address by opening this secure link:`,
+    payload.verificationUrl,
+    ``,
+    `If needed, your confirmation token is: ${payload.emailToken}`,
+    ``,
+    `If you did not request this registration, ignore this email.`,
+  ].join('\n');
+
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;line-height:1.5;">
+      <h2 style="margin-bottom:12px;">Confirm your eVoucher merchant registration</h2>
+      <p>Welcome to onboarding for <strong>${payload.businessName}</strong>.</p>
+      <p style="margin-bottom:16px;">Click the button below to confirm your email address.</p>
+      <p>
+        <a href="${payload.verificationUrl}" style="display:inline-block;background:#0f766e;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600;">
+          Confirm Email
+        </a>
+      </p>
+      <p style="margin-top:16px;">Token (manual fallback): <strong>${payload.emailToken}</strong></p>
+      <p style="color:#64748b;">If you did not request this registration, ignore this email.</p>
+    </div>
+  `.trim();
+
+  return sendEmailToMerchant(payload.email, subject, text, html);
+}
+
+export async function sendMerchantOtpSms(payload: MerchantOtpPayload) {
+  const message = `eVoucher OTP for ${payload.businessName}: ${payload.otpCode}. This code expires in 10 minutes.`;
+  try {
+    const twilioSent = await sendSmsViaTwilio(payload.phone, message);
+    if (twilioSent) {
+      return { sent: true, provider: 'twilio' as const };
+    }
+
+    console.info('[merchant-otp][dev]', { phone: payload.phone, message });
+    return { sent: true, provider: 'console' as const };
+  } catch (error: any) {
+    return {
+      sent: false,
+      provider: 'twilio' as const,
+      error: error?.message || 'Failed to send merchant OTP SMS.',
+    };
+  }
+}
+
+export async function sendMerchantCredentialsEmail(payload: MerchantCredentialsPayload) {
+  const subject = `Your eVoucher merchant account is approved - ${payload.businessName}`;
+  const text = [
+    `Hi,`,
+    ``,
+    `Your merchant account for ${payload.businessName} has been approved.`,
+    `Login email: ${payload.email}`,
+    `Temporary password: ${payload.temporaryPassword}`,
+    `Merchant login: ${payload.loginUrl}`,
+    ``,
+    `For security, you must change this password on first login.`,
+  ].join('\n');
+
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;line-height:1.5;">
+      <h2 style="margin-bottom:12px;">Merchant account approved</h2>
+      <p>Your merchant account for <strong>${payload.businessName}</strong> is now approved.</p>
+      <div style="border:1px solid #dbe3ec;border-radius:10px;padding:14px;margin:14px 0;background:#f8fafc;">
+        <p style="margin:0 0 8px;"><strong>Login email:</strong> ${payload.email}</p>
+        <p style="margin:0 0 8px;"><strong>Temporary password:</strong> ${payload.temporaryPassword}</p>
+        <p style="margin:0;"><strong>Merchant login:</strong> <a href="${payload.loginUrl}">${payload.loginUrl}</a></p>
+      </div>
+      <p style="color:#b45309;"><strong>Action required:</strong> You must change your password at first login.</p>
+    </div>
+  `.trim();
+
+  return sendEmailToMerchant(payload.email, subject, text, html);
+}
+
+export function getMerchantLoginUrl() {
+  return `${resolveAppBaseUrl().replace(/\/+$/, '')}/merchant/login`;
 }
 
 export async function sendMerchantStatusNotifications(
