@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT, DiscountPricingBreakdown } from '@/lib/pricing';
+import { clearCart } from '@/lib/cart';
 
 interface MerchantOption {
   id: string;
@@ -15,7 +16,7 @@ interface MerchantOption {
   defaultTotalDiscountPct: number;
 }
 
-type PaymentMethod = 'visa' | 'payfast' | 'eft' | 'debit_credit';
+type PaymentMethod = 'visa_secure' | 'debit_credit' | 'payfast' | 'eft' | 'wallet';
 type PurchaseStatus = 'pending' | 'completed' | 'failed' | null;
 
 function BuyVouchersContent() {
@@ -31,12 +32,26 @@ function BuyVouchersContent() {
   const [refreshingStatus, setRefreshingStatus] = useState(false);
   const [purchaseStatus, setPurchaseStatus] = useState<PurchaseStatus>(null);
   const [voucherCode, setVoucherCode] = useState<string | null>(null);
+  const [issuedVouchers, setIssuedVouchers] = useState<
+    { code: string; faceValue: number; expiresAt?: string | null }[]
+  >([]);
   const [transactionReference, setTransactionReference] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [pricingResult, setPricingResult] = useState<DiscountPricingBreakdown | null>(null);
   const [blockingReason, setBlockingReason] = useState<string | null>(null);
   const [blockingCode, setBlockingCode] = useState<string | null>(null);
   const [error, setError] = useState('');
+  // Payment form state
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [billingAddress, setBillingAddress] = useState('');
+  const [payfastEmail, setPayfastEmail] = useState('');
+  const [eftReference, setEftReference] = useState('');
+  const [eftProofName, setEftProofName] = useState<string | null>(null);
+  const [walletBalanceMock, setWalletBalanceMock] = useState<number>(0);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const router = useRouter();
   const faceValueFromQuery = Number(searchParams.get('faceValue') ?? '');
   const merchantIdFromQuery = searchParams.get('merchantId');
@@ -74,6 +89,7 @@ function BuyVouchersContent() {
   useEffect(() => {
     if (user) {
       void fetchMerchants();
+      void fetchWalletBalance();
     }
   }, [user]);
 
@@ -142,32 +158,89 @@ function BuyVouchersContent() {
     }
   };
 
+  const fetchWalletBalance = async () => {
+    try {
+      const response = await fetch('/api/v1/customer/dashboard', {
+        method: 'GET',
+        credentials: 'include',
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      const vouchers = Array.isArray(data?.vouchers) ? data.vouchers : [];
+      const balance = vouchers.reduce((sum: number, voucher: any) => {
+        const isActive = Boolean(voucher?.is_active);
+        const currentBalance = Number(voucher?.current_balance ?? 0);
+        return isActive && Number.isFinite(currentBalance) ? sum + currentBalance : sum;
+      }, 0);
+      setWalletBalanceMock(Number(balance.toFixed(2)));
+    } catch {
+      setWalletBalanceMock(0);
+    }
+  };
+
   const paymentMethods = [
     {
-      id: 'visa' as PaymentMethod,
-      name: 'VISA',
+      id: 'visa_secure' as PaymentMethod,
+      name: 'VISA Secure (3DS2)',
       icon: 'CreditCardIcon',
-      description: 'Pay securely with VISA card',
+      description: 'Card + 3D Secure badge and OTP challenge',
+    },
+    {
+      id: 'debit_credit' as PaymentMethod,
+      name: 'Debit / Credit Card',
+      icon: 'CreditCardIcon',
+      description: 'Standard card payment (mocked gateway)',
     },
     {
       id: 'payfast' as PaymentMethod,
       name: 'PayFast',
       icon: 'BanknotesIcon',
-      description: 'Fast and secure payment gateway',
+      description: 'Redirect to PayFast checkout',
     },
     {
       id: 'eft' as PaymentMethod,
       name: 'EFT',
       icon: 'BuildingLibraryIcon',
-      description: 'Electronic Funds Transfer',
+      description: 'Pay by bank transfer (upload proof)',
     },
     {
-      id: 'debit_credit' as PaymentMethod,
-      name: 'Debit/Credit Card',
-      icon: 'CreditCardIcon',
-      description: 'Pay with any debit or credit card',
+      id: 'wallet' as PaymentMethod,
+      name: 'eVoucher Wallet',
+      icon: 'WalletIcon',
+      description: 'Use wallet balance (mocked for demo)',
     },
   ];
+
+  const resetErrors = () => setFormErrors({});
+
+  const validateForm = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (!selectedPaymentMethod) {
+      errs.paymentMethod = 'Select a payment method.';
+    }
+    if (selectedPaymentMethod === 'visa_secure' || selectedPaymentMethod === 'debit_credit') {
+      const digits = cardNumber.replace(/\s+/g, '');
+      if (digits.length < 13) errs.cardNumber = 'Enter a valid card number.';
+      if (!cardName.trim()) errs.cardName = 'Cardholder name required.';
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(cardExpiry)) errs.cardExpiry = 'Use MM/YY.';
+      if (!/^\d{3,4}$/.test(cardCvv)) errs.cardCvv = 'CVV must be 3-4 digits.';
+      if (!billingAddress.trim()) errs.billingAddress = 'Billing address required.';
+    }
+    if (selectedPaymentMethod === 'payfast') {
+      if (!payfastEmail.trim() || !payfastEmail.includes('@')) errs.payfastEmail = 'Valid email required.';
+    }
+    if (selectedPaymentMethod === 'eft') {
+      if (!eftReference.trim()) errs.eftReference = 'Reference required.';
+      if (!eftProofName) errs.eftProofName = 'Proof of payment is required.';
+    }
+    if (selectedPaymentMethod === 'wallet') {
+      if (previewPricing.consumerPrice > walletBalanceMock) {
+        errs.wallet = 'Insufficient wallet balance for this payment.';
+      }
+    }
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handlePurchase = async () => {
     if (!selectedMerchant || !selectedPaymentMethod || blockingReason) return;
@@ -175,7 +248,14 @@ function BuyVouchersContent() {
     setProcessing(true);
     setError('');
     setPurchaseStatus(null);
+    setIssuedVouchers([]);
     setPricingResult(null);
+    resetErrors();
+
+    if (!validateForm()) {
+      setProcessing(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/v1/vouchers/purchase', {
@@ -190,6 +270,12 @@ function BuyVouchersContent() {
               : undefined,
           faceValue: voucherAmount,
           paymentMethod: selectedPaymentMethod,
+          cardLastFour: cardNumber.slice(-4),
+          cardBrand: selectedPaymentMethod === 'visa_secure' ? 'VISA' : 'CARD',
+          eftReference,
+          payfastEmail,
+          billingAddress,
+          eftProofName,
         }),
       });
       const data = await response.json();
@@ -207,9 +293,13 @@ function BuyVouchersContent() {
 
       setPurchaseStatus(data.status);
       setVoucherCode(data.voucherCode || null);
+      if (Array.isArray(data.issuedVouchers)) setIssuedVouchers(data.issuedVouchers);
       setTransactionReference(data.transactionReference || null);
       setCheckoutUrl(data.checkoutUrl || null);
       setPricingResult(data.pricing ?? previewPricing);
+      if (data.status === 'completed') {
+        clearCart();
+      }
     } catch (purchaseError: any) {
       setPurchaseStatus('failed');
       setError(purchaseError?.message || 'Failed to process payment. Please try again.');
@@ -284,6 +374,8 @@ function BuyVouchersContent() {
         : purchaseStatus === 'pending'
           ? 'Payment Pending'
           : 'Payment Failed';
+    const paymentMethodLabel =
+      paymentMethods.find((method) => method.id === selectedPaymentMethod)?.name ?? 'N/A';
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -304,6 +396,9 @@ function BuyVouchersContent() {
               <div className="bg-muted/50 rounded-xl p-4 mb-6 text-left space-y-2">
                 <p className="text-sm font-body text-muted-foreground">
                   <span className="font-semibold text-foreground">Payment status:</span> {purchaseStatus}
+                </p>
+                <p className="text-sm font-body text-muted-foreground">
+                  <span className="font-semibold text-foreground">Payment method:</span> {paymentMethodLabel}
                 </p>
                 {pricingResult && (
                   <>
@@ -330,6 +425,27 @@ function BuyVouchersContent() {
                   <p className="text-sm font-body text-muted-foreground">
                     <span className="font-semibold text-foreground">Voucher issued:</span> {voucherCode}
                   </p>
+                )}
+                {issuedVouchers.length > 0 && (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-sm font-semibold text-foreground mb-2">Issued voucher(s)</p>
+                    <div className="space-y-2">
+                      {issuedVouchers.map((voucher) => (
+                        <div key={voucher.code} className="rounded-lg border border-border p-2">
+                          <p className="text-xs text-muted-foreground font-body">
+                            Code: <span className="font-semibold text-foreground">{voucher.code}</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground font-body">
+                            Face value: R{Number(voucher.faceValue ?? 0).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-body">
+                            Expiry:{' '}
+                            {voucher.expiresAt ? new Date(voucher.expiresAt).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
                 {checkoutUrl && (
                   <p className="text-sm font-body text-muted-foreground">
@@ -523,7 +639,10 @@ function BuyVouchersContent() {
                 {paymentMethods.map((method) => (
                   <button
                     key={method.id}
-                    onClick={() => setSelectedPaymentMethod(method.id)}
+                    onClick={() => {
+                      setSelectedPaymentMethod(method.id);
+                      resetErrors();
+                    }}
                     className={`w-full p-4 rounded-xl border-2 transition-all duration-300 text-left ${
                       selectedPaymentMethod === method.id
                         ? 'border-primary bg-primary/5'
@@ -545,6 +664,167 @@ function BuyVouchersContent() {
                   </button>
                 ))}
               </div>
+
+              {formErrors.paymentMethod && (
+                <p className="text-xs text-error font-body mb-4">{formErrors.paymentMethod}</p>
+              )}
+
+              {(selectedPaymentMethod === 'visa_secure' || selectedPaymentMethod === 'debit_credit') && (
+                <div className="rounded-xl border border-border p-4 mb-6 space-y-3">
+                  {selectedPaymentMethod === 'visa_secure' && (
+                    <div className="flex items-center justify-between rounded-lg bg-primary/5 border border-primary/20 px-3 py-2">
+                      <p className="text-xs font-semibold text-primary">VISA Secure 3DS2</p>
+                      <p className="text-xs text-muted-foreground">OTP challenge simulated</p>
+                    </div>
+                  )}
+                  <div>
+                    <label htmlFor="card-number" className="block text-xs text-muted-foreground mb-1">
+                      Card Number
+                    </label>
+                    <input
+                      id="card-number"
+                      type="text"
+                      inputMode="numeric"
+                      value={cardNumber}
+                      onChange={(event) => setCardNumber(event.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="4111 1111 1111 1111"
+                    />
+                    {formErrors.cardNumber && <p className="text-xs text-error mt-1">{formErrors.cardNumber}</p>}
+                  </div>
+                  <div>
+                    <label htmlFor="card-name" className="block text-xs text-muted-foreground mb-1">
+                      Cardholder Name
+                    </label>
+                    <input
+                      id="card-name"
+                      type="text"
+                      value={cardName}
+                      onChange={(event) => setCardName(event.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="Name on card"
+                    />
+                    {formErrors.cardName && <p className="text-xs text-error mt-1">{formErrors.cardName}</p>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="card-expiry" className="block text-xs text-muted-foreground mb-1">
+                        Expiry (MM/YY)
+                      </label>
+                      <input
+                        id="card-expiry"
+                        type="text"
+                        value={cardExpiry}
+                        onChange={(event) => setCardExpiry(event.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                        placeholder="12/29"
+                      />
+                      {formErrors.cardExpiry && <p className="text-xs text-error mt-1">{formErrors.cardExpiry}</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="card-cvv" className="block text-xs text-muted-foreground mb-1">
+                        CVV
+                      </label>
+                      <input
+                        id="card-cvv"
+                        type="password"
+                        inputMode="numeric"
+                        value={cardCvv}
+                        onChange={(event) => setCardCvv(event.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-lg"
+                        placeholder="123"
+                      />
+                      {formErrors.cardCvv && <p className="text-xs text-error mt-1">{formErrors.cardCvv}</p>}
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="billing-address" className="block text-xs text-muted-foreground mb-1">
+                      Billing Address
+                    </label>
+                    <input
+                      id="billing-address"
+                      type="text"
+                      value={billingAddress}
+                      onChange={(event) => setBillingAddress(event.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="Street, City, Postal Code"
+                    />
+                    {formErrors.billingAddress && (
+                      <p className="text-xs text-error mt-1">{formErrors.billingAddress}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === 'payfast' && (
+                <div className="rounded-xl border border-border p-4 mb-6 space-y-3">
+                  <p className="text-xs text-muted-foreground">PayFast redirect checkout (simulated)</p>
+                  <div>
+                    <label htmlFor="payfast-email" className="block text-xs text-muted-foreground mb-1">
+                      Receipt Email
+                    </label>
+                    <input
+                      id="payfast-email"
+                      type="email"
+                      value={payfastEmail}
+                      onChange={(event) => setPayfastEmail(event.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="you@example.com"
+                    />
+                    {formErrors.payfastEmail && (
+                      <p className="text-xs text-error mt-1">{formErrors.payfastEmail}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === 'eft' && (
+                <div className="rounded-xl border border-border p-4 mb-6 space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    EFT Details: FNB Business Account | Acc: 62834910251 | Branch: 250655
+                  </p>
+                  <div>
+                    <label htmlFor="eft-reference" className="block text-xs text-muted-foreground mb-1">
+                      EFT Reference
+                    </label>
+                    <input
+                      id="eft-reference"
+                      type="text"
+                      value={eftReference}
+                      onChange={(event) => setEftReference(event.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="Your bank transfer reference"
+                    />
+                    {formErrors.eftReference && (
+                      <p className="text-xs text-error mt-1">{formErrors.eftReference}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="eft-proof" className="block text-xs text-muted-foreground mb-1">
+                      Proof of Payment Upload
+                    </label>
+                    <input
+                      id="eft-proof"
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(event) => setEftProofName(event.target.files?.[0]?.name ?? null)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                    />
+                    {eftProofName && <p className="text-xs text-muted-foreground mt-1">Selected: {eftProofName}</p>}
+                    {formErrors.eftProofName && (
+                      <p className="text-xs text-error mt-1">{formErrors.eftProofName}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === 'wallet' && (
+                <div className="rounded-xl border border-border p-4 mb-6 space-y-2">
+                  <p className="text-sm text-muted-foreground">Available eVoucher Wallet Balance</p>
+                  <p className="text-2xl font-headline font-bold text-foreground">R{walletBalanceMock.toFixed(2)}</p>
+                  {formErrors.wallet && <p className="text-xs text-error mt-1">{formErrors.wallet}</p>}
+                </div>
+              )}
 
               <div className="bg-muted/50 rounded-xl p-4 mb-6">
                 <div className="flex items-center justify-between mb-2">
@@ -598,6 +878,21 @@ function BuyVouchersContent() {
               >
                 {processing ? 'Processing...' : 'Complete Purchase'}
               </button>
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center text-xs">
+                  SSL Secure
+                </div>
+                <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center text-xs">
+                  PCI-DSS
+                </div>
+                <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center text-xs">
+                  VISA Secure
+                </div>
+                <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center text-xs">
+                  FNB Acquiring
+                </div>
+              </div>
 
               <p className="text-xs text-muted-foreground font-body text-center mt-4">
                 Billing internals and provider secrets are processed server-side only.

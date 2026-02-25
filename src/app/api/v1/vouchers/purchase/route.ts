@@ -10,6 +10,14 @@ import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pric
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { resolveBrandFromMerchantName, getBrandByKey } from '@/lib/merchant-brand-catalog';
 
+const SUPPORTED_PAYMENT_METHODS = new Set([
+  'visa_secure',
+  'debit_credit',
+  'payfast',
+  'eft',
+  'wallet',
+]);
+
 function validate(body: PurchaseVoucherRequest): string | null {
   if (!body.merchantId?.trim()) return 'Merchant is required.';
   if (body.faceValue !== undefined && (!Number.isFinite(body.faceValue) || body.faceValue <= 0)) {
@@ -18,6 +26,19 @@ function validate(body: PurchaseVoucherRequest): string | null {
   if (body.faceValue !== undefined && body.faceValue > 10000) return 'Face value exceeds the allowed limit.';
   if (!body.productId && body.faceValue === undefined) return 'Either product or face value is required.';
   if (!body.paymentMethod) return 'Payment method is required.';
+  if (!SUPPORTED_PAYMENT_METHODS.has(body.paymentMethod)) return 'Unsupported payment method selected.';
+  if (body.paymentMethod === 'payfast') {
+    if (!String(body.payfastEmail ?? '').includes('@')) return 'PayFast email is required.';
+  }
+  if (body.paymentMethod === 'eft') {
+    if (!String(body.eftReference ?? '').trim()) return 'EFT reference is required.';
+    if (!String(body.eftProofName ?? '').trim()) return 'EFT proof of payment is required.';
+  }
+  if (body.paymentMethod === 'visa_secure' || body.paymentMethod === 'debit_credit') {
+    if (!String(body.billingAddress ?? '').trim()) return 'Billing address is required for card payments.';
+    const lastFour = String(body.cardLastFour ?? '').trim();
+    if (lastFour && !/^\d{4}$/.test(lastFour)) return 'Card last four must be 4 digits.';
+  }
   return null;
 }
 
@@ -29,6 +50,75 @@ function isMissingAdminEnvError(error: any) {
 
 function buildQrCodeUrl(voucherCode: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(voucherCode)}`;
+}
+
+async function sendPurchaseReceiptEmail(payload: {
+  to: string;
+  merchantName: string;
+  voucherCode: string;
+  faceValue: number;
+  amountPaid: number;
+  savings: number;
+  expiry: string | null;
+  paymentMethod: string;
+}) {
+  const resendApiKey = String(process.env.RESEND_API_KEY ?? '').trim();
+  const fromAddress = String(process.env.RESEND_FROM ?? 'eVoucher Receipts <receipts@evoucher.co.za>').trim();
+  const subject = `eVoucher purchase receipt - ${payload.merchantName}`;
+  const text = [
+    'eVoucher Purchase Receipt',
+    '',
+    `Merchant: ${payload.merchantName}`,
+    `Voucher Code: ${payload.voucherCode}`,
+    `Face Value: R${payload.faceValue.toFixed(2)}`,
+    `Amount Paid: R${payload.amountPaid.toFixed(2)}`,
+    `Savings: R${payload.savings.toFixed(2)}`,
+    `Expiry: ${payload.expiry ?? 'N/A'}`,
+    `Payment Method: ${payload.paymentMethod}`,
+  ].join('\n');
+
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;line-height:1.5;">
+      <h2 style="margin-bottom:10px;">Purchase Receipt</h2>
+      <p>Your voucher purchase completed successfully.</p>
+      <table style="border-collapse:collapse;width:100%;max-width:680px;">
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Merchant</td><td style="padding:8px;border:1px solid #dbe3ec;">${payload.merchantName}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Voucher Code</td><td style="padding:8px;border:1px solid #dbe3ec;">${payload.voucherCode}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Face Value</td><td style="padding:8px;border:1px solid #dbe3ec;">R${payload.faceValue.toFixed(2)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Amount Paid</td><td style="padding:8px;border:1px solid #dbe3ec;">R${payload.amountPaid.toFixed(2)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Savings</td><td style="padding:8px;border:1px solid #dbe3ec;">R${payload.savings.toFixed(2)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Expiry</td><td style="padding:8px;border:1px solid #dbe3ec;">${payload.expiry ?? 'N/A'}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Payment Method</td><td style="padding:8px;border:1px solid #dbe3ec;">${payload.paymentMethod}</td></tr>
+      </table>
+    </div>
+  `.trim();
+
+  try {
+    if (!resendApiKey) {
+      console.info('[purchase-receipt][console-fallback]', { to: payload.to, subject, text });
+      return;
+    }
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [payload.to],
+        subject,
+        text,
+        html,
+      }),
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      console.error('[purchase-receipt][resend-error]', response.status, body);
+    }
+  } catch (error: any) {
+    console.error('[purchase-receipt][send-failed]', error?.message || error);
+  }
 }
 
 export async function GET(request: Request) {
@@ -78,10 +168,30 @@ export async function GET(request: Request) {
     }
 
     const status = String(transaction.payment_status || 'pending').toLowerCase();
+    let issuedVouchers: Array<{ code: string; faceValue: number; expiresAt?: string | null }> = [];
+    if (transaction.voucher_code) {
+      const { data: voucherRow } = await admin
+        .from('customer_vouchers')
+        .select('voucher_code,face_value,expires_at')
+        .eq('voucher_code', transaction.voucher_code)
+        .eq('customer_id', user.id)
+        .maybeSingle();
+      if (voucherRow) {
+        issuedVouchers = [
+          {
+            code: String(voucherRow.voucher_code),
+            faceValue: Number(voucherRow.face_value ?? 0),
+            expiresAt: voucherRow.expires_at ?? null,
+          },
+        ];
+      }
+    }
+
     return NextResponse.json({
       transactionReference: transaction.transaction_reference,
       status,
       voucherCode: transaction.voucher_code ?? null,
+      issuedVouchers,
       checkoutUrl:
         status === 'pending'
           ? `https://payments.local/checkout/${encodeURIComponent(transaction.transaction_reference)}`
@@ -244,6 +354,35 @@ export async function POST(request: Request) {
       productValidBranchIds = [String(merchant.id)];
     }
 
+    if (body.paymentMethod === 'wallet') {
+      const { data: walletVoucherRows, error: walletBalanceError } = await admin
+        .from('customer_vouchers')
+        .select('current_balance,is_active')
+        .eq('customer_id', user.id);
+      if (walletBalanceError) throw walletBalanceError;
+      const walletBalance = (walletVoucherRows ?? []).reduce((sum: number, voucher: any) => {
+        const balance = Number(voucher.current_balance ?? 0);
+        return voucher.is_active && Number.isFinite(balance) ? sum + balance : sum;
+      }, 0);
+      if (pricing.consumerPrice > walletBalance) {
+        return NextResponse.json(
+          { error: 'Insufficient wallet balance.', code: 'insufficient_wallet_balance' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const cardBrand =
+      body.paymentMethod === 'visa_secure'
+        ? 'VISA'
+        : body.paymentMethod === 'debit_credit'
+          ? String(body.cardBrand ?? 'CARD').slice(0, 20)
+          : body.paymentMethod.toUpperCase();
+    const cardLastFour =
+      body.paymentMethod === 'visa_secure' || body.paymentMethod === 'debit_credit'
+        ? String(body.cardLastFour ?? '0000').slice(-4).padStart(4, '0')
+        : '0000';
+
     const { error: transactionError } = await admin.from('payment_transactions').insert({
       customer_id: user.id,
       merchant_id: merchant.id,
@@ -259,8 +398,8 @@ export async function POST(request: Request) {
       consumer_price: pricing.consumerPrice,
       merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
       merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
-      card_last_four: '0000',
-      card_brand: body.paymentMethod,
+      card_last_four: cardLastFour,
+      card_brand: cardBrand,
       payment_status: paymentStatus,
       voucher_code: voucherCode,
       transaction_reference: transactionReference,
@@ -268,8 +407,9 @@ export async function POST(request: Request) {
 
     if (transactionError) throw transactionError;
 
+    let issuedVouchers: Array<{ code: string; faceValue: number; expiresAt?: string | null }> = [];
     if (paymentStatus === 'completed' && voucherCode) {
-      await voucherService.issueVoucher({
+      const issued = await voucherService.issueVoucher({
         customerId: user.id,
         merchantId: merchant.id,
         productId: productId ?? undefined,
@@ -285,6 +425,38 @@ export async function POST(request: Request) {
         voucherCode,
         expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
       });
+
+      const { data: voucherRow } = await admin
+        .from('customer_vouchers')
+        .select('voucher_code,face_value,expires_at')
+        .eq('id', issued.voucherId)
+        .maybeSingle();
+
+      if (voucherRow) {
+        issuedVouchers = [
+          {
+            code: String(voucherRow.voucher_code),
+            faceValue: Number(voucherRow.face_value ?? pricing.faceValue),
+            expiresAt: voucherRow.expires_at ?? null,
+          },
+        ];
+      } else {
+        issuedVouchers = [{ code: voucherCode, faceValue: pricing.faceValue, expiresAt: null }];
+      }
+
+      const receiptEmail = String(body.payfastEmail ?? user.email ?? '').trim();
+      if (receiptEmail) {
+        await sendPurchaseReceiptEmail({
+          to: receiptEmail,
+          merchantName: String(merchant.business_name),
+          voucherCode,
+          faceValue: pricing.faceValue,
+          amountPaid: pricing.consumerPrice,
+          savings: pricing.consumerBenefitAmount,
+          expiry: issuedVouchers[0]?.expiresAt ?? null,
+          paymentMethod: body.paymentMethod,
+        });
+      }
     }
 
     await writeAuditEvent(admin, {
@@ -302,6 +474,7 @@ export async function POST(request: Request) {
         evoucherBenefitPct: pricing.evoucherBenefitPct,
         paymentMethod: body.paymentMethod,
         voucherCode,
+        issuedVouchers,
       },
       requestId: transactionReference,
     });
@@ -311,6 +484,7 @@ export async function POST(request: Request) {
       status: paymentStatus,
       checkoutUrl,
       voucherCode,
+      issuedVouchers,
       pricing,
     });
   } catch (error: any) {

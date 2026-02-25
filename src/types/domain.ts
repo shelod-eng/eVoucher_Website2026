@@ -29,7 +29,13 @@ export interface PurchaseVoucherRequest {
   merchantId: string;
   productId?: string;
   faceValue?: number;
-  paymentMethod: 'visa' | 'payfast' | 'eft' | 'debit_credit';
+  paymentMethod: 'visa_secure' | 'debit_credit' | 'payfast' | 'eft' | 'wallet';
+  cardLastFour?: string;
+  cardBrand?: string;
+  payfastEmail?: string;
+  eftReference?: string;
+  eftProofName?: string;
+  billingAddress?: string;
 }
 
 export interface VoucherPricingBreakdown {
@@ -50,6 +56,11 @@ export interface PurchaseVoucherResponse {
   status: 'pending' | 'completed' | 'failed';
   checkoutUrl?: string | null;
   voucherCode?: string;
+  issuedVouchers?: Array<{
+    code: string;
+    faceValue: number;
+    expiresAt?: string | null;
+  }>;
   pricing?: VoucherPricingBreakdown;
 }
 
