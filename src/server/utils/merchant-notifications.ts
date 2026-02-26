@@ -191,6 +191,16 @@ async function sendEmailToMerchant(
       return { sent: true, provider: 'resend', recipient };
     }
 
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      return {
+        sent: false,
+        provider: 'resend',
+        recipient,
+        error: 'RESEND_API_KEY is not configured in production.',
+      };
+    }
+
     console.info('[merchant-email][dev]', { intendedEmail: email, recipient, subject, text });
     return { sent: true, provider: 'console', recipient };
   } catch (error: any) {

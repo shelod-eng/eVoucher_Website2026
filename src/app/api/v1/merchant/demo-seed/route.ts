@@ -3,7 +3,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { ensureDemoMerchantsSeeded } from '@/server/utils/demo-merchant-seed';
 
 function isDemoSeedingEnabled() {
-  return process.env.NODE_ENV === 'development' || String(process.env.SEED_DEMO_MERCHANTS ?? '').toLowerCase() === 'true';
+  const vercelEnv = String(process.env.VERCEL_ENV ?? '').toLowerCase();
+  return (
+    process.env.NODE_ENV === 'development' ||
+    vercelEnv === 'preview' ||
+    String(process.env.SEED_DEMO_MERCHANTS ?? '').toLowerCase() === 'true'
+  );
 }
 
 export async function POST() {
