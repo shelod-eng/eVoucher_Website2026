@@ -164,14 +164,14 @@ function resolveAppBaseUrl() {
 }
 
 function resolveMerchantEmailRecipient(targetEmail: string) {
-  const configuredOverride = String(
-    process.env.MERCHANT_EMAIL_TEST_RECIPIENT ?? 'shelod@gmail.com'
-  )
+  const configuredOverride = String(process.env.MERCHANT_EMAIL_TEST_RECIPIENT ?? '')
     .trim()
     .toLowerCase();
-  const forceOverride = String(process.env.MERCHANT_EMAIL_FORCE_TEST_RECIPIENT ?? 'true')
+  const forceOverrideRaw = String(process.env.MERCHANT_EMAIL_FORCE_TEST_RECIPIENT ?? '')
     .trim()
-    .toLowerCase() !== 'false';
+    .toLowerCase();
+  const forceOverride =
+    forceOverrideRaw.length > 0 ? forceOverrideRaw !== 'false' : process.env.NODE_ENV !== 'production';
   if (forceOverride && configuredOverride) {
     return configuredOverride;
   }
