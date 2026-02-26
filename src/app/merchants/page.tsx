@@ -56,6 +56,9 @@ export default function MerchantsPage() {
   const [loading, setLoading] = useState(false);
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [approvingMerchant, setApprovingMerchant] = useState(false);
+  const [resendingCredentials, setResendingCredentials] = useState(false);
+  const [approvalKey, setApprovalKey] = useState('');
   const [error, setError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [debugData, setDebugData] = useState<Record<string, string> | null>(null);
@@ -76,6 +79,19 @@ export default function MerchantsPage() {
     () => (merchantType === 'private' ? 'Private Merchant (Kalapeng-style)' : 'Chain Merchant'),
     [merchantType]
   );
+
+  const vettingHelpText = useMemo(() => {
+    if (!statusData) return null;
+    const mapping: Record<string, string> = {
+      pending_chain_approval: 'Chain merchant is verified and waiting for manual approval.',
+      pending_private_approval: 'Private merchant is awaiting auto-vetting completion.',
+      manual_review: 'Private merchant requires manual compliance review.',
+      pending_manual_review: 'Pending manual review due to approval fallback.',
+      auto_approved: 'Merchant auto-vetting approved.',
+      approved: 'Merchant has been approved and can access portal after credentials are issued.',
+    };
+    return mapping[statusData.vettingStatus] ?? `Current vetting state: ${statusData.vettingStatus}`;
+  }, [statusData]);
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -219,6 +235,58 @@ export default function MerchantsPage() {
       setError(verifyError?.message || 'Failed to verify SMS OTP.');
     } finally {
       setVerifyingOtp(false);
+    }
+  };
+
+  const handleApproveMerchant = async () => {
+    if (!merchantId) return;
+    setApprovingMerchant(true);
+    setError('');
+    setStatusMessage('');
+    try {
+      const response = await fetch('/api/v1/merchant/onboarding/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(approvalKey.trim() ? { 'x-merchant-approval-key': approvalKey.trim() } : {}),
+        },
+        body: JSON.stringify({ merchantId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to approve merchant.');
+      setStatusMessage(result.message || 'Merchant approved.');
+      if (result?.statusData) setStatusData(result.statusData as OnboardingStatus);
+      await loadStatus();
+    } catch (approveError: any) {
+      setError(approveError?.message || 'Failed to approve merchant.');
+    } finally {
+      setApprovingMerchant(false);
+    }
+  };
+
+  const handleResendCredentials = async () => {
+    if (!merchantId) return;
+    setResendingCredentials(true);
+    setError('');
+    setStatusMessage('');
+    try {
+      const response = await fetch('/api/v1/merchant/onboarding/resend-credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(approvalKey.trim() ? { 'x-merchant-approval-key': approvalKey.trim() } : {}),
+        },
+        body: JSON.stringify({ merchantId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to resend credentials.');
+      setStatusMessage(result.message || 'Credentials resend attempted.');
+      if (result?.statusData) setStatusData(result.statusData as OnboardingStatus);
+      await loadStatus();
+    } catch (resendError: any) {
+      setError(resendError?.message || 'Failed to resend credentials.');
+    } finally {
+      setResendingCredentials(false);
     }
   };
 
@@ -564,10 +632,60 @@ export default function MerchantsPage() {
                           <p>Credentials Issued: {statusData.credentialsIssued ? 'Yes' : 'No'}</p>
                           <p>Login Ready: {statusData.loginReady ? 'Yes' : 'No'}</p>
                         </div>
+                        {vettingHelpText && (
+                          <p className="mt-3 text-xs text-muted-foreground font-body">{vettingHelpText}</p>
+                        )}
+
+                        <div className="mt-3 flex flex-col gap-2">
+                          <label className="text-xs text-muted-foreground font-body">
+                            Approval Key (required for manual approve/resend in demo)
+                          </label>
+                          <input
+                            value={approvalKey}
+                            onChange={(event) => setApprovalKey(event.target.value)}
+                            className="w-full px-3 py-2 border border-border rounded-lg text-sm font-body bg-background"
+                            placeholder="Enter x-merchant-approval-key"
+                          />
+                        </div>
+
+                        {statusData.status === 'pending' && statusData.emailVerified && statusData.phoneVerified && (
+                          <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <p className="text-sm text-amber-800 font-headline font-semibold">
+                              Pending approval. Approve to issue login credentials.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => void handleApproveMerchant()}
+                              disabled={approvingMerchant}
+                              className="mt-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-headline font-semibold disabled:opacity-50"
+                            >
+                              {approvingMerchant ? 'Approving...' : 'Approve Merchant'}
+                            </button>
+                          </div>
+                        )}
+
+                        {statusData.status === 'approved' && !statusData.credentialsIssued && (
+                          <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <p className="text-sm text-amber-800 font-headline font-semibold">
+                              Merchant is approved, but credentials email is not marked as delivered yet.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => void handleResendCredentials()}
+                              disabled={resendingCredentials}
+                              className="mt-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-headline font-semibold disabled:opacity-50"
+                            >
+                              {resendingCredentials ? 'Resending...' : 'Resend Credentials Email'}
+                            </button>
+                          </div>
+                        )}
+
                         {statusData.status === 'approved' && (
                           <div className="mt-3 p-3 rounded-lg bg-success/10 border border-success/20">
                             <p className="text-sm text-success font-headline font-semibold">
-                              Approved. Login credentials were sent to your email.
+                              {statusData.credentialsIssued
+                                ? 'Approved. Login credentials were sent to your email.'
+                                : 'Approved. Complete credential email resend if login details were not received.'}
                             </p>
                             <Link
                               href="/merchant/login"

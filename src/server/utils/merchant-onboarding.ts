@@ -736,21 +736,18 @@ export async function verifyMerchantEmailToken(args: {
       .eq('id', merchantId);
     if (merchantUpdateError) throw merchantUpdateError;
 
-    const { error: verificationUpdateError } = await admin
-      .from('merchant_onboarding_verifications')
-      .update({ credentials_sent_at: approvedAt })
-      .eq('merchant_id', merchant.id);
-    if (verificationUpdateError) throw verificationUpdateError;
-
-    try {
-      await sendMerchantCredentialsEmail({
-        businessName: merchant.business_name,
-        email: merchant.email,
-        temporaryPassword,
-        loginUrl: getMerchantLoginUrl(),
-      });
-    } catch (emailErr) {
-      console.warn('[merchant-credentials-email][warn]', (emailErr as any)?.message || emailErr);
+    const credentialsEmailResult = await sendMerchantCredentialsEmail({
+      businessName: merchant.business_name,
+      email: merchant.email,
+      temporaryPassword,
+      loginUrl: getMerchantLoginUrl(),
+    });
+    if (credentialsEmailResult.sent) {
+      const { error: verificationUpdateError } = await admin
+        .from('merchant_onboarding_verifications')
+        .update({ credentials_sent_at: approvedAt })
+        .eq('merchant_id', merchant.id);
+      if (verificationUpdateError) throw verificationUpdateError;
     }
 
     return {
@@ -761,9 +758,13 @@ export async function verifyMerchantEmailToken(args: {
       vettingStatus: 'auto_approved',
       emailVerified: true,
       phoneVerified: true,
-      message: 'Email verified. Merchant approved and credentials issued.',
+      message: credentialsEmailResult.sent
+        ? 'Email verified. Merchant approved and credentials issued.'
+        : `Email verified. Merchant approved, but credentials email failed: ${credentialsEmailResult.error ?? 'unknown error'}`,
       statusData: await getMerchantOnboardingStatus(merchantId),
-      ...(shouldExposeDebugSecrets() ? { debug: { temporaryPassword } } : {}),
+      ...(shouldExposeDebugSecrets()
+        ? { debug: { temporaryPassword, credentialsEmailError: credentialsEmailResult.error ?? null } }
+        : {}),
     };
   } catch (fallbackErr) {
     console.warn('[merchant-email-verify][fatal-fallback]', (fallbackErr as any)?.message || fallbackErr);
@@ -887,6 +888,83 @@ export async function approveMerchantManually(args: {
     ok: true as const,
     httpStatus: 200,
     ...finalizeResult,
+    statusData: await getMerchantOnboardingStatus(args.merchantId),
+  };
+}
+
+export async function resendMerchantCredentials(args: {
+  merchantId: string;
+  actorId?: string | null;
+  actorRole?: string | null;
+}) {
+  const admin = createAdminClient();
+  const merchantId = String(args.merchantId ?? '').trim();
+  if (!merchantId) {
+    return { ok: false as const, status: 400, error: 'merchantId is required.' };
+  }
+  if (!isUuid(merchantId)) {
+    return { ok: false as const, status: 400, error: 'Invalid merchantId format.' };
+  }
+
+  const merchant = await getMerchantById(admin, merchantId);
+  if (merchant.status !== 'approved' || !merchant.user_id) {
+    return {
+      ok: false as const,
+      status: 409,
+      error: 'Merchant must be approved with a linked auth account before credentials can be resent.',
+    };
+  }
+
+  const temporaryPassword = generateTemporaryPassword();
+  const issuedAt = new Date().toISOString();
+  const { error: authUpdateError } = await admin.auth.admin.updateUserById(merchant.user_id, {
+    password: temporaryPassword,
+    email_confirm: true,
+    user_metadata: {
+      role: 'merchant',
+      full_name: merchant.contact_name,
+      phone: merchant.phone,
+      must_change_password: true,
+    },
+  });
+  if (authUpdateError) throw authUpdateError;
+
+  const { error: merchantUpdateError } = await admin
+    .from('merchants')
+    .update({
+      must_reset_password: true,
+      temporary_password_issued_at: issuedAt,
+    })
+    .eq('id', merchant.id);
+  if (merchantUpdateError) throw merchantUpdateError;
+
+  const credentialsEmailResult = await sendMerchantCredentialsEmail({
+    businessName: merchant.business_name,
+    email: merchant.email,
+    temporaryPassword,
+    loginUrl: getMerchantLoginUrl(),
+  });
+
+  if (credentialsEmailResult.sent) {
+    const { error: verificationUpdateError } = await admin
+      .from('merchant_onboarding_verifications')
+      .update({ credentials_sent_at: issuedAt })
+      .eq('merchant_id', merchant.id);
+    if (verificationUpdateError) throw verificationUpdateError;
+  }
+
+  return {
+    ok: true as const,
+    status: 200,
+    sent: credentialsEmailResult.sent,
+    message: credentialsEmailResult.sent
+      ? 'Credentials resent successfully.'
+      : `Merchant approved, but credentials email failed: ${credentialsEmailResult.error ?? 'unknown error'}`,
+    error: credentialsEmailResult.sent ? undefined : credentialsEmailResult.error ?? 'Failed to send credentials email.',
+    statusData: await getMerchantOnboardingStatus(merchantId),
+    ...(shouldExposeDebugSecrets()
+      ? { debug: { temporaryPassword, credentialsEmailError: credentialsEmailResult.error ?? null } }
+      : {}),
   };
 }
 
@@ -985,20 +1063,17 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
     .eq('id', merchant.id);
   if (merchantUpdateError) throw merchantUpdateError;
 
-  await admin
-    .from('merchant_onboarding_verifications')
-    .update({ credentials_sent_at: approvedAt })
-    .eq('merchant_id', merchant.id);
-
-  try {
-    await sendMerchantCredentialsEmail({
-      businessName: merchant.business_name,
-      email: merchant.email,
-      temporaryPassword,
-      loginUrl: getMerchantLoginUrl(),
-    });
-  } catch (emailErr: any) {
-    console.warn('[merchant-credentials-email][warn]', emailErr?.message || emailErr);
+  const credentialsEmailResult = await sendMerchantCredentialsEmail({
+    businessName: merchant.business_name,
+    email: merchant.email,
+    temporaryPassword,
+    loginUrl: getMerchantLoginUrl(),
+  });
+  if (credentialsEmailResult.sent) {
+    await admin
+      .from('merchant_onboarding_verifications')
+      .update({ credentials_sent_at: approvedAt })
+      .eq('merchant_id', merchant.id);
   }
 
   try {
@@ -1037,8 +1112,12 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
     vettingStatus: nextVettingStatus,
     emailVerified: true,
     phoneVerified: true,
-    message: 'Merchant approved and login credentials sent by email.',
-    ...(shouldExposeDebugSecrets() ? { debug: { temporaryPassword } } : {}),
+    message: credentialsEmailResult.sent
+      ? 'Merchant approved and login credentials sent by email.'
+      : `Merchant approved, but credentials email failed: ${credentialsEmailResult.error ?? 'unknown error'}`,
+    ...(shouldExposeDebugSecrets()
+      ? { debug: { temporaryPassword, credentialsEmailError: credentialsEmailResult.error ?? null } }
+      : {}),
   };
 }
 

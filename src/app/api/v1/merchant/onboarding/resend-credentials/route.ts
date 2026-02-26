@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/server/utils/auth';
-import { approveMerchantManually } from '@/server/utils/merchant-onboarding';
 import { resolveUserRole } from '@/server/utils/role';
+import { resendMerchantCredentials } from '@/server/utils/merchant-onboarding';
 
-function isApprovalAuthorized(request: Request, role: string | null) {
+function isAuthorized(request: Request, role: string | null) {
   if (role === 'admin') return true;
   const headerKey = String(request.headers.get('x-merchant-approval-key') ?? '').trim();
   const envKey = String(process.env.MERCHANT_APPROVAL_KEY ?? '').trim();
@@ -28,35 +28,35 @@ export async function POST(request: Request) {
         actorRole = roleResult.role;
       }
     } catch {
-      // Header-based approval key flow is supported for controlled demos.
+      // Header key flow supported for controlled demos.
     }
 
-    if (!isApprovalAuthorized(request, actorRole)) {
-      return NextResponse.json({ error: 'Unauthorized merchant approval attempt.' }, { status: 401 });
+    if (!isAuthorized(request, actorRole)) {
+      return NextResponse.json({ error: 'Unauthorized credentials resend attempt.' }, { status: 401 });
     }
 
-    const result = await approveMerchantManually({
+    const result = await resendMerchantCredentials({
       merchantId,
       actorId,
       actorRole: actorRole ?? 'admin',
     });
 
     if (!result.ok) {
-      return NextResponse.json({ error: 'Merchant approval failed.' }, { status: result.httpStatus });
+      return NextResponse.json({ error: result.error }, { status: result.status });
     }
 
     return NextResponse.json({
-      approved: result.approved,
-      status: result.status,
-      vettingStatus: result.vettingStatus,
+      sent: result.sent,
       message: result.message,
-      statusData: 'statusData' in result ? result.statusData : undefined,
+      error: result.error,
+      statusData: result.statusData,
       debug: 'debug' in result ? result.debug : undefined,
     });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || 'Failed to approve merchant.' },
+      { error: error?.message || 'Failed to resend merchant credentials.' },
       { status: 500 }
     );
   }
 }
+
