@@ -7,6 +7,7 @@ type DemoMerchantSeed = {
   email: string;
   phone: string;
   businessType: string;
+  seedPortalAuth?: boolean;
 };
 
 const DEMO_MERCHANTS: DemoMerchantSeed[] = [
@@ -23,6 +24,7 @@ const DEMO_MERCHANTS: DemoMerchantSeed[] = [
     email: 'demo-shoprite@evoucher.co.za',
     phone: '0101000002',
     businessType: 'Supermarket',
+    seedPortalAuth: true,
   },
   {
     brandKey: 'pep',
@@ -65,6 +67,7 @@ const DEMO_MERCHANTS: DemoMerchantSeed[] = [
     email: 'demo-picknpay@evoucher.co.za',
     phone: '0101000008',
     businessType: 'Supermarket',
+    seedPortalAuth: true,
   },
   {
     brandKey: 'woolworths',
@@ -193,6 +196,61 @@ function buildProductUniqKey(name: string, faceValue: number) {
   return `${String(name).trim().toLowerCase()}::${Number(faceValue).toFixed(2)}`;
 }
 
+function resolveDemoMerchantPassword() {
+  return String(process.env.DEMO_CHAIN_MERCHANT_PASSWORD ?? 'demo123').trim();
+}
+
+async function findAuthUserByEmail(admin: any, email: string) {
+  let page = 1;
+  const perPage = 200;
+  while (page <= 8) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    const users = data?.users ?? [];
+    const match = users.find((user: any) => String(user.email ?? '').toLowerCase() === email);
+    if (match) return match;
+    if (users.length < perPage) break;
+    page += 1;
+  }
+  return null;
+}
+
+async function ensureDemoMerchantAuthUser(admin: any, seed: DemoMerchantSeed) {
+  const email = String(seed.email ?? '').trim().toLowerCase();
+  const password = resolveDemoMerchantPassword();
+  const metadata = {
+    role: 'merchant',
+    full_name: `${seed.businessName} Demo Manager`,
+    phone: seed.phone,
+    must_change_password: false,
+  };
+
+  const existing = await findAuthUserByEmail(admin, email);
+  if (existing?.id) {
+    const { error: updateError } = await admin.auth.admin.updateUserById(existing.id, {
+      password,
+      email_confirm: true,
+      user_metadata: {
+        ...(existing.user_metadata ?? {}),
+        ...metadata,
+      },
+    });
+    if (updateError) throw updateError;
+    return existing.id as string;
+  }
+
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: metadata,
+  });
+  if (error) throw error;
+  const createdId = data?.user?.id;
+  if (!createdId) throw new Error(`Failed to create auth user for ${seed.businessName}.`);
+  return createdId as string;
+}
+
 export async function ensureDemoMerchantsSeeded(admin: any) {
   if (!shouldSeedDemoData()) return;
 
@@ -249,6 +307,67 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
   (seededMerchants ?? []).forEach((merchant: any) => {
     merchantByEmail.set(String(merchant.email).toLowerCase(), merchant);
   });
+
+  const nowIso = new Date().toISOString();
+  const portalSeeds = DEMO_MERCHANTS.filter((seed) => Boolean(seed.seedPortalAuth));
+  for (const seed of portalSeeds) {
+    const merchant = merchantByEmail.get(seed.email.toLowerCase());
+    if (!merchant?.id) continue;
+
+    const userId = await ensureDemoMerchantAuthUser(admin, seed);
+    const { error: profileError } = await admin.from('user_profiles').upsert(
+      {
+        id: userId,
+        email: seed.email.toLowerCase(),
+        full_name: `${seed.businessName} Demo Manager`,
+        phone: seed.phone,
+        role: 'merchant',
+      },
+      { onConflict: 'id' }
+    );
+    if (profileError) throw profileError;
+
+    const promotedFields = {
+      user_id: userId,
+      status: 'approved',
+      approved_at: nowIso,
+      onboarding_fee_paid: true,
+      merchant_type: 'chain',
+      vetting_status: 'approved',
+      email_verified: true,
+      phone_verified: true,
+      must_reset_password: false,
+      onboarding_completed_at: nowIso,
+    };
+
+    const promotionResult = await admin.from('merchants').update(promotedFields).eq('id', merchant.id);
+    if (promotionResult.error) {
+      const fallbackResult = await admin
+        .from('merchants')
+        .update({
+          user_id: userId,
+          status: 'approved',
+          approved_at: nowIso,
+          onboarding_fee_paid: true,
+        })
+        .eq('id', merchant.id);
+      if (fallbackResult.error) throw fallbackResult.error;
+    }
+
+    const verificationUpsert = await admin.from('merchant_onboarding_verifications').upsert(
+      {
+        merchant_id: merchant.id,
+        email_verified_at: nowIso,
+        sms_verified_at: nowIso,
+        credentials_sent_at: nowIso,
+        otp_attempts: 0,
+      },
+      { onConflict: 'merchant_id' }
+    );
+    if (verificationUpsert.error && !isMissingRelation(verificationUpsert.error, 'public.merchant_onboarding_verifications')) {
+      throw verificationUpsert.error;
+    }
+  }
 
   const merchantIds = Array.from(merchantByEmail.values()).map((merchant) => merchant.id);
   if (merchantIds.length === 0) return;

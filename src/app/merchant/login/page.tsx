@@ -27,6 +27,23 @@ export default function MerchantLogin() {
     }
   }, [user, role, router]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const seedDemoMerchants = async () => {
+      try {
+        const response = await fetch('/api/v1/merchant/demo-seed', { method: 'POST' });
+        if (!response.ok) return;
+        if (cancelled) return;
+      } catch {
+        // Demo seeding is best-effort and should never block merchant login.
+      }
+    };
+    void seedDemoMerchants();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -118,9 +135,10 @@ export default function MerchantLogin() {
             </div>
 
             <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground font-body mb-2 font-semibold">Demo Credentials:</p>
-              <p className="text-xs text-foreground font-body">Email: merchant@evoucher.co.za</p>
-              <p className="text-xs text-foreground font-body">Password: demo123</p>
+              <p className="text-xs text-muted-foreground font-body mb-2 font-semibold">Demo Chain Merchant Credentials:</p>
+              <p className="text-xs text-foreground font-body">Shoprite: demo-shoprite@evoucher.co.za</p>
+              <p className="text-xs text-foreground font-body">Pick n Pay: demo-picknpay@evoucher.co.za</p>
+              <p className="text-xs text-foreground font-body mt-1">Password: demo123</p>
             </div>
           </div>
         </div>

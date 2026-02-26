@@ -146,6 +146,14 @@ function isUuid(value: string) {
   return UUID_V4_OR_V1_REGEX.test(String(value ?? '').trim());
 }
 
+function extractDeliveryError(result: unknown) {
+  if (result && typeof result === 'object' && 'error' in result) {
+    const errorValue = (result as { error?: unknown }).error;
+    return errorValue ? String(errorValue) : null;
+  }
+  return null;
+}
+
 function normalizeText(value: unknown) {
   const text = String(value ?? '').trim();
   return text || null;
@@ -593,12 +601,18 @@ export async function submitMerchantOnboarding(args: {
     vettingStatus: insert.vetting_status,
     emailSent: emailResult.sent,
     smsSent: smsResult.sent,
+    verificationEmailTo: emailResult.recipient ?? insert.email,
+    emailDeliveryError: extractDeliveryError(emailResult),
+    smsDeliveryError: extractDeliveryError(smsResult),
     ...(shouldExposeDebugSecrets()
       ? {
           debug: {
             emailToken,
             otpCode: smsEnabled ? otpCode : 'sms-disabled',
             verificationUrl,
+            verificationEmailTo: emailResult.recipient ?? insert.email,
+            emailDeliveryError: extractDeliveryError(emailResult),
+            smsDeliveryError: extractDeliveryError(smsResult),
           },
         }
       : {}),

@@ -137,9 +137,16 @@ export default function MerchantsPage() {
       }
 
       setMerchantId(result.merchantId);
-      setStatusMessage(
-        'Onboarding submitted. Check your email for a verification link and your phone for the SMS OTP.'
-      );
+      const verificationRecipient = String(result.verificationEmailTo ?? formData.email ?? '').trim();
+      if (result.emailSent) {
+        setStatusMessage(
+          `Onboarding submitted. Verification email sent to ${verificationRecipient}. Check your inbox for the link/token and verify SMS OTP to continue.`
+        );
+      } else {
+        setStatusMessage(
+          `Onboarding submitted. Email delivery failed (${result.emailDeliveryError ?? 'unknown error'}). You can still use the token from debug to continue in non-production mode.`
+        );
+      }
       if (result.debug) {
         setDebugData(result.debug);
       }

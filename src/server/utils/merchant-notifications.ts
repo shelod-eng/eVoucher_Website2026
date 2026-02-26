@@ -43,6 +43,13 @@ type MerchantCredentialsPayload = {
   loginUrl: string;
 };
 
+type MerchantEmailDispatchResult = {
+  sent: boolean;
+  provider: 'resend' | 'console';
+  error?: string;
+  recipient: string;
+};
+
 function resolveRecipients() {
   const configured = String(process.env.MERCHANT_NOTIFICATION_RECIPIENTS ?? '')
     .split(',')
@@ -156,24 +163,41 @@ function resolveAppBaseUrl() {
   );
 }
 
+function resolveMerchantEmailRecipient(targetEmail: string) {
+  const configuredOverride = String(
+    process.env.MERCHANT_EMAIL_TEST_RECIPIENT ?? 'shelod@gmail.com'
+  )
+    .trim()
+    .toLowerCase();
+  const forceOverride = String(process.env.MERCHANT_EMAIL_FORCE_TEST_RECIPIENT ?? 'true')
+    .trim()
+    .toLowerCase() !== 'false';
+  if (forceOverride && configuredOverride) {
+    return configuredOverride;
+  }
+  return String(targetEmail ?? '').trim().toLowerCase();
+}
+
 async function sendEmailToMerchant(
   email: string,
   subject: string,
   text: string,
   html: string
-): Promise<{ sent: boolean; provider: 'resend' | 'console'; error?: string }> {
+): Promise<MerchantEmailDispatchResult> {
+  const recipient = resolveMerchantEmailRecipient(email);
   try {
-    const resendSent = await sendViaResend([email], subject, text, html);
+    const resendSent = await sendViaResend([recipient], subject, text, html);
     if (resendSent) {
-      return { sent: true, provider: 'resend' };
+      return { sent: true, provider: 'resend', recipient };
     }
 
-    console.info('[merchant-email][dev]', { email, subject, text });
-    return { sent: true, provider: 'console' };
+    console.info('[merchant-email][dev]', { intendedEmail: email, recipient, subject, text });
+    return { sent: true, provider: 'console', recipient };
   } catch (error: any) {
     return {
       sent: false,
       provider: 'resend',
+      recipient,
       error: error?.message || 'Failed to send merchant email.',
     };
   }

@@ -37,6 +37,9 @@ export async function POST(request: Request) {
       merchantType: result.merchantType,
       emailSent: result.emailSent,
       smsSent: result.smsSent,
+      verificationEmailTo: result.verificationEmailTo,
+      emailDeliveryError: result.emailDeliveryError,
+      smsDeliveryError: result.smsDeliveryError,
       debug: result.debug,
       message:
         'Onboarding submitted. Confirm your email token and SMS OTP to continue merchant vetting and approval.',
