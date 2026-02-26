@@ -19,7 +19,9 @@ type OnboardingStatus = {
   emailVerified: boolean;
   phoneVerified: boolean;
   credentialsIssued: boolean;
-  mustResetPassword?: boolean;
+  mustResetPassword: boolean;
+  loginReady: boolean;
+  merchantUserId: string | null;
 };
 
 const businessTypes = ['Spaza Shop', 'Supermarket', 'Pharmacy', 'Restaurant', 'Transport', 'Other'];
@@ -169,6 +171,9 @@ export default function MerchantsPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to verify email token.');
       setStatusMessage(result.message || 'Email verified.');
+      if (result?.statusData) {
+        setStatusData(result.statusData as OnboardingStatus);
+      }
       if (result.debug) setDebugData((prev) => ({ ...(prev ?? {}), ...result.debug }));
       await loadStatus();
     } catch (verifyError: any) {
@@ -198,6 +203,9 @@ export default function MerchantsPage() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to verify SMS OTP.');
       setStatusMessage(result.message || 'OTP verified.');
+      if (result?.statusData) {
+        setStatusData(result.statusData as OnboardingStatus);
+      }
       if (result.debug) setDebugData((prev) => ({ ...(prev ?? {}), ...result.debug }));
       await loadStatus();
     } catch (verifyError: any) {
@@ -546,6 +554,8 @@ export default function MerchantsPage() {
                           <p>Phone Verified: {statusData.phoneVerified ? 'Yes' : 'No'}</p>
                           <p>Workflow Status: {statusData.status}</p>
                           <p>Vetting Status: {statusData.vettingStatus}</p>
+                          <p>Credentials Issued: {statusData.credentialsIssued ? 'Yes' : 'No'}</p>
+                          <p>Login Ready: {statusData.loginReady ? 'Yes' : 'No'}</p>
                         </div>
                         {statusData.status === 'approved' && (
                           <div className="mt-3 p-3 rounded-lg bg-success/10 border border-success/20">

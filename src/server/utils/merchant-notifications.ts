@@ -124,7 +124,7 @@ async function sendViaResend(
   const resendApiKey = String(process.env.RESEND_API_KEY ?? '').trim();
   if (!resendApiKey) return null;
 
-  const fromAddress = String(process.env.RESEND_FROM ?? 'eVoucher Dev <onboarding@evoucher.co.za>').trim();
+  const fromAddress = String(process.env.RESEND_FROM ?? 'eVoucher Onboarding <onboarding@resend.dev>').trim();
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {

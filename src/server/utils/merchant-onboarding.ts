@@ -114,6 +114,21 @@ type VerificationRecord = {
   credentials_sent_at: string | null;
 };
 
+type MerchantOnboardingStatusSnapshot = {
+  merchantId: string;
+  businessName: string;
+  email: string;
+  merchantType: MerchantType;
+  status: string;
+  vettingStatus: string;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  credentialsIssued: boolean;
+  mustResetPassword: boolean;
+  loginReady: boolean;
+  merchantUserId: string | null;
+};
+
 type FinalizeOptions = {
   forceApproveChain?: boolean;
   actorId?: string | null;
@@ -124,6 +139,12 @@ type FinalizeOptions = {
 const EMAIL_TOKEN_TTL_HOURS = 24;
 const SMS_OTP_TTL_MINUTES = 10;
 const OTP_MAX_ATTEMPTS = 5;
+const UUID_V4_OR_V1_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string) {
+  return UUID_V4_OR_V1_REGEX.test(String(value ?? '').trim());
+}
 
 function normalizeText(value: unknown) {
   const text = String(value ?? '').trim();
@@ -297,12 +318,13 @@ async function getVerificationByMerchantId(
   admin: any,
   merchantId: string
 ): Promise<VerificationRecord | null> {
+  if (!isUuid(merchantId)) return null;
   const { data, error } = await admin
     .from('merchant_onboarding_verifications')
     .select(
       'merchant_id,email_token_hash,email_token_expires_at,email_verified_at,sms_otp_hash,sms_otp_expires_at,sms_verified_at,otp_attempts,credentials_sent_at'
     )
-    .filter('merchant_id::text', 'eq', merchantId)
+    .eq('merchant_id', merchantId)
     .maybeSingle();
 
   if (error) throw error;
@@ -336,6 +358,31 @@ async function upsertUserProfileRole(admin: any, userId: string, merchant: Merch
     { onConflict: 'id' }
   );
   if (error) throw error;
+}
+
+async function enforceMerchantLoginReadiness(admin: any, merchant: MerchantRecord, userId: string) {
+  const {
+    data: { user },
+    error: authLookupError,
+  } = await admin.auth.admin.getUserById(userId);
+  if (authLookupError) throw authLookupError;
+  if (!user) throw new Error('Merchant auth user was not found after provisioning.');
+
+  const mergedMetadata = {
+    ...(user.user_metadata ?? {}),
+    role: 'merchant',
+    full_name: merchant.contact_name,
+    phone: merchant.phone,
+    must_change_password: true,
+  };
+
+  const { error: authUpdateError } = await admin.auth.admin.updateUserById(userId, {
+    user_metadata: mergedMetadata,
+    email: merchant.email,
+  });
+  if (authUpdateError) throw authUpdateError;
+
+  await upsertUserProfileRole(admin, userId, merchant);
 }
 
 async function provisionAuthUserForMerchant(
@@ -559,9 +606,24 @@ export async function submitMerchantOnboarding(args: {
 }
 
 export async function getMerchantOnboardingStatus(merchantId: string) {
+  if (!isUuid(merchantId)) {
+    throw new Error('Invalid merchantId format.');
+  }
   const admin = createAdminClient();
   const merchant = await getMerchantById(admin, merchantId);
   const verification = await getVerificationByMerchantId(admin, merchantId);
+  const emailVerified = Boolean(merchant.email_verified) || Boolean(verification?.email_verified_at);
+  const phoneVerified = Boolean(merchant.phone_verified) || Boolean(verification?.sms_verified_at);
+  const credentialsIssued = Boolean(verification?.credentials_sent_at);
+  const mustResetPassword = Boolean(merchant.must_reset_password);
+  const loginReady =
+    merchant.status === 'approved' &&
+    Boolean(merchant.user_id) &&
+    mustResetPassword &&
+    credentialsIssued &&
+    emailVerified &&
+    phoneVerified;
+
   return {
     merchantId: merchant.id,
     businessName: merchant.business_name,
@@ -569,11 +631,13 @@ export async function getMerchantOnboardingStatus(merchantId: string) {
     merchantType: merchant.merchant_type ?? 'chain',
     status: merchant.status,
     vettingStatus: merchant.vetting_status ?? resolveInitialVettingStatus(merchant.merchant_type ?? 'chain'),
-    emailVerified: Boolean(merchant.email_verified) || Boolean(verification?.email_verified_at),
-    phoneVerified: Boolean(merchant.phone_verified) || Boolean(verification?.sms_verified_at),
-    credentialsIssued: Boolean(verification?.credentials_sent_at),
-    mustResetPassword: Boolean(merchant.must_reset_password),
-  };
+    emailVerified,
+    phoneVerified,
+    credentialsIssued,
+    mustResetPassword,
+    loginReady,
+    merchantUserId: merchant.user_id ?? null,
+  } as MerchantOnboardingStatusSnapshot;
 }
 
 export async function verifyMerchantEmailToken(args: {
@@ -586,6 +650,9 @@ export async function verifyMerchantEmailToken(args: {
   const token = String(args.token ?? '').trim();
   if (!merchantId || !token) {
     return { ok: false as const, status: 400, error: 'merchantId and token are required.' };
+  }
+  if (!isUuid(merchantId)) {
+    return { ok: false as const, status: 400, error: 'Invalid merchantId format.' };
   }
 
   // Validate token against stored hash/expiry
@@ -604,10 +671,17 @@ export async function verifyMerchantEmailToken(args: {
 
   // Mark verification record
   const nowIso = new Date().toISOString();
-  await admin
+  const { error: verificationUpdateError } = await admin
     .from('merchant_onboarding_verifications')
     .update({ email_verified_at: nowIso })
-    .filter('merchant_id::text', 'eq', merchantId);
+    .eq('merchant_id', merchantId);
+  if (verificationUpdateError) throw verificationUpdateError;
+
+  const { error: merchantEmailUpdateError } = await admin
+    .from('merchants')
+    .update({ email_verified: true })
+    .eq('id', merchantId);
+  if (merchantEmailUpdateError) throw merchantEmailUpdateError;
 
   // Try full approval path first
   try {
@@ -617,7 +691,8 @@ export async function verifyMerchantEmailToken(args: {
       actorRole: 'merchant',
       requestId: null,
     });
-    return { ok: true as const, httpStatus: 200, ...finalizeResult };
+    const statusData = await getMerchantOnboardingStatus(merchantId);
+    return { ok: true as const, httpStatus: 200, ...finalizeResult, statusData };
   } catch (err) {
     console.warn('[merchant-email-verify][warn-fallback]', (err as any)?.message || err);
   }
@@ -627,9 +702,10 @@ export async function verifyMerchantEmailToken(args: {
     const merchant = await getMerchantById(admin, merchantId);
     const temporaryPassword = generateTemporaryPassword();
     const userId = await provisionAuthUserForMerchant(admin, merchant, temporaryPassword);
+    await enforceMerchantLoginReadiness(admin, merchant, userId);
 
     const approvedAt = new Date().toISOString();
-    await admin
+    const { error: merchantUpdateError } = await admin
       .from('merchants')
       .update({
         user_id: userId,
@@ -644,6 +720,13 @@ export async function verifyMerchantEmailToken(args: {
         onboarding_completed_at: approvedAt,
       })
       .eq('id', merchantId);
+    if (merchantUpdateError) throw merchantUpdateError;
+
+    const { error: verificationUpdateError } = await admin
+      .from('merchant_onboarding_verifications')
+      .update({ credentials_sent_at: approvedAt })
+      .eq('merchant_id', merchant.id);
+    if (verificationUpdateError) throw verificationUpdateError;
 
     try {
       await sendMerchantCredentialsEmail({
@@ -665,6 +748,7 @@ export async function verifyMerchantEmailToken(args: {
       emailVerified: true,
       phoneVerified: true,
       message: 'Email verified. Merchant approved and credentials issued.',
+      statusData: await getMerchantOnboardingStatus(merchantId),
       ...(shouldExposeDebugSecrets() ? { debug: { temporaryPassword } } : {}),
     };
   } catch (fallbackErr) {
@@ -678,6 +762,7 @@ export async function verifyMerchantEmailToken(args: {
       emailVerified: true,
       phoneVerified: true,
       message: 'Email verified. Pending manual approval.',
+      statusData: await getMerchantOnboardingStatus(merchantId),
     };
   }
 }
@@ -704,6 +789,9 @@ export async function verifyMerchantOtp(args: {
   const otpCode = String(args.otpCode ?? '').trim();
   if (!merchantId || !otpCode) {
     return { ok: false as const, status: 400, error: 'merchantId and otpCode are required.' };
+  }
+  if (!isUuid(merchantId)) {
+    return { ok: false as const, status: 400, error: 'Invalid merchantId format.' };
   }
 
   const verification = await getVerificationByMerchantId(admin, merchantId);
@@ -734,7 +822,7 @@ export async function verifyMerchantOtp(args: {
   const { error: updateVerificationError } = await admin
     .from('merchant_onboarding_verifications')
     .update({ sms_verified_at: nowIso, otp_attempts: attempts + 1 })
-    .filter('merchant_id::text', 'eq', merchantId);
+    .eq('merchant_id', merchantId);
   if (updateVerificationError) throw updateVerificationError;
 
   const { error: updateMerchantError } = await admin
@@ -764,6 +852,7 @@ export async function verifyMerchantOtp(args: {
     ok: true as const,
     httpStatus: 200,
     ...finalizeResult,
+    statusData: await getMerchantOnboardingStatus(merchantId),
   };
 }
 
@@ -793,6 +882,17 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
   const verification = await getVerificationByMerchantId(admin, options.merchantId);
   const emailVerified = Boolean(merchant.email_verified) || Boolean(verification?.email_verified_at);
   const phoneVerified = Boolean(merchant.phone_verified) || Boolean(verification?.sms_verified_at);
+
+  if (merchant.status === 'approved' && Boolean(verification?.credentials_sent_at) && Boolean(merchant.user_id)) {
+    return {
+      approved: true,
+      status: 'approved',
+      vettingStatus: merchant.vetting_status ?? 'approved',
+      emailVerified,
+      phoneVerified,
+      message: 'Merchant is already approved. Use merchant login.',
+    };
+  }
 
   if (!emailVerified || !phoneVerified) {
     return {
@@ -850,7 +950,7 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
 
   const temporaryPassword = generateTemporaryPassword();
   const userId = await provisionAuthUserForMerchant(admin, merchant, temporaryPassword);
-  await upsertUserProfileRole(admin, userId, merchant);
+  await enforceMerchantLoginReadiness(admin, merchant, userId);
 
   const approvedAt = new Date().toISOString();
   const nextVettingStatus = options.forceApproveChain ? 'approved' : 'auto_approved';

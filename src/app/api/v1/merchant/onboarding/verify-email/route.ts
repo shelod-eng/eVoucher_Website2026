@@ -23,13 +23,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.error }, { status: result.status });
     }
 
+    const statusData = 'statusData' in result ? result.statusData : undefined;
+
     return NextResponse.json({
       approved: result.approved,
       status: result.status,
       vettingStatus: result.vettingStatus,
       emailVerified: result.emailVerified,
       phoneVerified: result.phoneVerified,
+      credentialsIssued: statusData?.credentialsIssued ?? false,
+      mustResetPassword: statusData?.mustResetPassword ?? false,
+      loginReady: statusData?.loginReady ?? false,
+      merchantId: statusData?.merchantId ?? String(body?.merchantId ?? ''),
       message: result.message,
+      statusData,
       debug: 'debug' in result ? result.debug : undefined,
     });
   } catch (error: any) {
