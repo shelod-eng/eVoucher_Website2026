@@ -17,11 +17,11 @@ const Header = ({ className = '' }: HeaderProps) => {
   const router = useRouter();
   const { user, role, loading, signOut } = useAuth();
   const userRole = String(role ?? user?.user_metadata?.role ?? '').toLowerCase();
-  const isMerchant =
-    userRole === 'merchant' ||
-    pathname?.startsWith('/merchant') ||
-    pathname?.startsWith('/merchants');
   const isSignedIn = !loading && Boolean(user);
+  const isMerchantRoute = pathname?.startsWith('/merchant') || pathname?.startsWith('/merchants');
+  const isMerchantUser = userRole === 'merchant';
+  const publicSignInHref = isMerchantRoute ? '/merchant/login' : '/signin';
+  const signOutRedirect = isMerchantUser || isMerchantRoute ? '/merchant/login' : '/signin';
   const [cartCount, setCartCount] = useState(0);
   const displayName = String(
     user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'consumer'
@@ -52,12 +52,12 @@ const Header = ({ className = '' }: HeaderProps) => {
     { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
   ];
 
-  const navItems = isSignedIn ? (isMerchant ? merchantNavItems : consumerNavItems) : publicNavItems;
+  const navItems = isSignedIn ? (isMerchantUser ? merchantNavItems : consumerNavItems) : publicNavItems;
 
   useEffect(() => {
     if (!isSignedIn) return;
 
-    const prefetchTargets = isMerchant
+    const prefetchTargets = isMerchantUser
       ? ['/merchant/dashboard', '/analytics', '/support']
       : [
           '/customer/dashboard',
@@ -74,10 +74,10 @@ const Header = ({ className = '' }: HeaderProps) => {
     prefetchTargets.forEach((target) => {
       router.prefetch(target);
     });
-  }, [isSignedIn, isMerchant, router]);
+  }, [isSignedIn, isMerchantUser, router]);
 
   useEffect(() => {
-    if (!isSignedIn || isMerchant) return;
+    if (!isSignedIn || isMerchantUser) return;
 
     const refreshCartCount = () => {
       const items = getCartItems();
@@ -92,7 +92,7 @@ const Header = ({ className = '' }: HeaderProps) => {
       window.removeEventListener('evoucher-cart-updated', refreshCartCount);
       window.removeEventListener('storage', refreshCartCount);
     };
-  }, [isSignedIn, isMerchant]);
+  }, [isSignedIn, isMerchantUser]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -106,7 +106,7 @@ const Header = ({ className = '' }: HeaderProps) => {
     try {
       await signOut();
       closeMobileMenu();
-      router.push('/signin');
+      router.push(signOutRedirect);
     } catch (error) {
       console.error('Sign out failed:', error);
     }
@@ -142,7 +142,7 @@ const Header = ({ className = '' }: HeaderProps) => {
               >
                 <Icon name={item.icon as any} size={18} variant="outline" />
                 <span>{item.label}</span>
-                {!isMerchant && isSignedIn && item.label === 'Cart' && cartCount > 0 && (
+                {!isMerchantUser && isSignedIn && item.label === 'Cart' && cartCount > 0 && (
                   <span className="inline-flex min-w-5 h-5 px-1 items-center justify-center text-xs rounded-full bg-primary text-primary-foreground font-headline">
                     {cartCount}
                   </span>
@@ -152,7 +152,7 @@ const Header = ({ className = '' }: HeaderProps) => {
 
             {user ? (
               <>
-                {!isMerchant && (
+                {!isMerchantUser && (
                   <span className="px-3 py-2 text-sm font-body text-muted-foreground">
                     Hello, <span className="font-headline font-semibold text-foreground">{displayName}</span>
                   </span>
@@ -168,7 +168,7 @@ const Header = ({ className = '' }: HeaderProps) => {
               </>
             ) : (
               <Link
-                href="/signin"
+                href={publicSignInHref}
                 className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-all duration-300 ease-smooth"
               >
                 <Icon name="ArrowRightOnRectangleIcon" size={18} variant="outline" />
@@ -205,7 +205,7 @@ const Header = ({ className = '' }: HeaderProps) => {
 
               {user ? (
                 <>
-                  {!isMerchant && (
+                  {!isMerchantUser && (
                     <div className="px-4 py-2 text-sm text-muted-foreground">
                       Hello, <span className="font-headline font-semibold text-foreground">{displayName}</span>
                     </div>
@@ -221,7 +221,7 @@ const Header = ({ className = '' }: HeaderProps) => {
                 </>
               ) : (
                 <Link
-                  href="/signin"
+                  href={publicSignInHref}
                   onClick={closeMobileMenu}
                   className="flex items-center space-x-3 px-4 py-3 rounded-md text-base font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-colors duration-200"
                 >

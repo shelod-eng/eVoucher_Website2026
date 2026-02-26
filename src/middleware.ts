@@ -54,12 +54,8 @@ export async function middleware(request: NextRequest) {
   const merchantProtectedArea =
     path.startsWith('/merchant/dashboard') ||
     path.startsWith('/merchant/payouts') ||
-    path.startsWith('/merchant/onboarding') ||
     path.startsWith('/merchant/create-product') ||
-    path.startsWith('/merchant/login') ||
-    path.startsWith('/merchant/register');
-
-  const merchantRoleArea = merchantProtectedArea || path.startsWith('/merchants');
+    path.startsWith('/merchant/change-password');
 
   // Redirect to login if accessing protected routes without auth
   if (!user && (customerArea || merchantProtectedArea)) {
@@ -80,7 +76,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (merchantRoleArea && role && role !== 'merchant') {
+    if (merchantProtectedArea && role && role !== 'merchant') {
       const url = request.nextUrl.clone();
       url.pathname = '/shop';
       return NextResponse.redirect(url);
