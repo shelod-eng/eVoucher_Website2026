@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isMerchantRole, resolveUserRole } from '@/server/utils/role';
+import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
 
 type TxnRow = {
   created_at: string;
@@ -70,13 +71,7 @@ export async function GET(request: Request) {
       }
 
       dataClient = admin;
-      const { data: merchant, error: merchantError } = await admin
-        .from('merchants')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (merchantError) throw merchantError;
+      const merchant = await resolveMerchantForUser<any>(admin, user, 'id');
       if (!merchant?.id) {
         return NextResponse.json(
           { error: 'Merchant profile not found.', code: 'merchant_profile_missing' },

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isMerchantRole, resolveUserRole } from '@/server/utils/role';
+import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
 
 type TxnRecord = {
   created_at: string;
@@ -186,12 +187,7 @@ export async function GET() {
 
     let merchantId: string | null = null;
     if (safeRole === 'merchant') {
-      const { data: merchant, error: merchantError } = await admin
-        .from('merchants')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if (merchantError) throw merchantError;
+      const merchant = await resolveMerchantForUser<any>(admin, user, 'id');
       merchantId = merchant?.id ?? null;
 
       if (!merchantId) {

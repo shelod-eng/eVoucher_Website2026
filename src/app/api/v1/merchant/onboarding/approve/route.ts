@@ -50,6 +50,12 @@ export async function POST(request: Request) {
       status: result.status,
       vettingStatus: result.vettingStatus,
       message: result.message,
+      approvalConfirmationSent:
+        'approvalConfirmationSent' in result ? result.approvalConfirmationSent : undefined,
+      approvalConfirmationError:
+        'approvalConfirmationError' in result ? result.approvalConfirmationError : undefined,
+      credentialsEmailSent: 'credentialsEmailSent' in result ? result.credentialsEmailSent : undefined,
+      credentialsEmailError: 'credentialsEmailError' in result ? result.credentialsEmailError : undefined,
       statusData: 'statusData' in result ? result.statusData : undefined,
       debug: 'debug' in result ? result.debug : undefined,
     });

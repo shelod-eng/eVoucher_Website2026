@@ -43,6 +43,15 @@ type MerchantCredentialsPayload = {
   loginUrl: string;
 };
 
+type MerchantApprovalConfirmationPayload = {
+  merchantId: string;
+  businessName: string;
+  merchantEmail: string;
+  contactName: string;
+  approvedAt: string;
+  loginUrl: string;
+};
+
 type MerchantEmailDispatchResult = {
   sent: boolean;
   provider: 'resend' | 'console';
@@ -56,6 +65,14 @@ function resolveRecipients() {
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean);
   return configured.length > 0 ? configured : DEFAULT_DEV_RECIPIENTS;
+}
+
+function resolveApprovalConfirmationRecipients() {
+  const configured = String(process.env.MERCHANT_APPROVAL_CONFIRMATION_RECIPIENTS ?? '')
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  return configured.length > 0 ? configured : ['shelod@gmail.com'];
 }
 
 function resolveMaskedAccountNumber(accountNumber?: string | null) {
@@ -320,6 +337,67 @@ export async function sendMerchantCredentialsEmail(payload: MerchantCredentialsP
   `.trim();
 
   return sendEmailToMerchant(payload.email, subject, text, html);
+}
+
+export async function sendMerchantApprovalConfirmationEmail(
+  payload: MerchantApprovalConfirmationPayload
+): Promise<NotificationResult> {
+  const recipients = resolveApprovalConfirmationRecipients();
+  const subject = `Merchant approved confirmation - ${payload.businessName}`;
+  const text = [
+    'Merchant Approval Confirmation',
+    '',
+    `Merchant ID: ${payload.merchantId}`,
+    `Business Name: ${payload.businessName}`,
+    `Contact Name: ${payload.contactName}`,
+    `Merchant Email: ${payload.merchantEmail}`,
+    `Approved At: ${payload.approvedAt}`,
+    `Merchant Login: ${payload.loginUrl}`,
+    '',
+    'This confirms merchant onboarding approval was completed.',
+  ].join('\n');
+
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;line-height:1.5;">
+      <h2 style="margin-bottom:10px;">Merchant Approval Confirmation</h2>
+      <p>The following merchant has been approved successfully.</p>
+      <table style="border-collapse:collapse;width:100%;max-width:700px;">
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Merchant ID</td><td style="padding:8px;border:1px solid #dbe3ec;">${payload.merchantId}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Business Name</td><td style="padding:8px;border:1px solid #dbe3ec;">${payload.businessName}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Contact Name</td><td style="padding:8px;border:1px solid #dbe3ec;">${payload.contactName}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Merchant Email</td><td style="padding:8px;border:1px solid #dbe3ec;">${payload.merchantEmail}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Approved At</td><td style="padding:8px;border:1px solid #dbe3ec;">${payload.approvedAt}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #dbe3ec;font-weight:600;">Merchant Login</td><td style="padding:8px;border:1px solid #dbe3ec;"><a href="${payload.loginUrl}">${payload.loginUrl}</a></td></tr>
+      </table>
+    </div>
+  `.trim();
+
+  try {
+    const resendSent = await sendViaResend(recipients, subject, text, html);
+    if (resendSent) {
+      return { sent: true, provider: 'resend', recipients };
+    }
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      return {
+        sent: false,
+        provider: 'resend',
+        recipients,
+        error: 'RESEND_API_KEY is not configured in production.',
+      };
+    }
+
+    console.info('[merchant-approval-confirmation][dev]', { recipients, subject, details: payload });
+    return { sent: true, provider: 'console', recipients };
+  } catch (error: any) {
+    return {
+      sent: false,
+      provider: 'resend',
+      recipients,
+      error: error?.message || 'Failed to send merchant approval confirmation email.',
+    };
+  }
 }
 
 export function getMerchantLoginUrl() {

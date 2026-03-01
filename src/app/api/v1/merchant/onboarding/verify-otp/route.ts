@@ -31,6 +31,12 @@ export async function POST(request: Request) {
       vettingStatus: result.vettingStatus,
       emailVerified: result.emailVerified,
       phoneVerified: result.phoneVerified,
+      approvalConfirmationSent:
+        'approvalConfirmationSent' in result ? result.approvalConfirmationSent : undefined,
+      approvalConfirmationError:
+        'approvalConfirmationError' in result ? result.approvalConfirmationError : undefined,
+      credentialsEmailSent: 'credentialsEmailSent' in result ? result.credentialsEmailSent : undefined,
+      credentialsEmailError: 'credentialsEmailError' in result ? result.credentialsEmailError : undefined,
       credentialsIssued: statusData?.credentialsIssued ?? false,
       mustResetPassword: statusData?.mustResetPassword ?? false,
       loginReady: statusData?.loginReady ?? false,

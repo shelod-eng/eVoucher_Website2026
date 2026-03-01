@@ -57,6 +57,7 @@ export default function MerchantsPage() {
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [approvingMerchant, setApprovingMerchant] = useState(false);
+  const [resendingVerificationEmail, setResendingVerificationEmail] = useState(false);
   const [resendingCredentials, setResendingCredentials] = useState(false);
   const [approvalKey, setApprovalKey] = useState('');
   const [error, setError] = useState('');
@@ -92,6 +93,27 @@ export default function MerchantsPage() {
     };
     return mapping[statusData.vettingStatus] ?? `Current vetting state: ${statusData.vettingStatus}`;
   }, [statusData]);
+  const hasApprovalKey = approvalKey.trim().length > 0;
+
+  const approvalConfirmationNote = (result: any) => {
+    if (result?.approvalConfirmationSent === true) {
+      return ' Approval confirmation copy: sent.';
+    }
+    if (result?.approvalConfirmationError) {
+      return ` Approval confirmation copy failed: ${String(result.approvalConfirmationError)}`;
+    }
+    return '';
+  };
+
+  const credentialsEmailNote = (result: any) => {
+    if (result?.credentialsEmailSent === true) {
+      return ' Login details email: sent.';
+    }
+    if (result?.credentialsEmailError) {
+      return ` Login details email failed: ${String(result.credentialsEmailError)}`;
+    }
+    return '';
+  };
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -182,10 +204,13 @@ export default function MerchantsPage() {
     setVerifyingEmail(true);
     setError('');
     setStatusMessage('');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch('/api/v1/merchant/onboarding/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           merchantId,
           token: emailToken.trim(),
@@ -193,15 +218,22 @@ export default function MerchantsPage() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to verify email token.');
-      setStatusMessage(result.message || 'Email verified.');
+      setStatusMessage(
+        `${result.message || 'Email verified.'}${credentialsEmailNote(result)}${approvalConfirmationNote(result)}`
+      );
       if (result?.statusData) {
         setStatusData(result.statusData as OnboardingStatus);
       }
       if (result.debug) setDebugData((prev) => ({ ...(prev ?? {}), ...result.debug }));
       await loadStatus();
     } catch (verifyError: any) {
-      setError(verifyError?.message || 'Failed to verify email token.');
+      if (verifyError?.name === 'AbortError') {
+        setError('Verify email timed out. Please try again.');
+      } else {
+        setError(verifyError?.message || 'Failed to verify email token.');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setVerifyingEmail(false);
     }
   };
@@ -225,7 +257,9 @@ export default function MerchantsPage() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to verify SMS OTP.');
-      setStatusMessage(result.message || 'OTP verified.');
+      setStatusMessage(
+        `${result.message || 'OTP verified.'}${credentialsEmailNote(result)}${approvalConfirmationNote(result)}`
+      );
       if (result?.statusData) {
         setStatusData(result.statusData as OnboardingStatus);
       }
@@ -254,7 +288,9 @@ export default function MerchantsPage() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to approve merchant.');
-      setStatusMessage(result.message || 'Merchant approved.');
+      setStatusMessage(
+        `${result.message || 'Merchant approved.'}${credentialsEmailNote(result)}${approvalConfirmationNote(result)}`
+      );
       if (result?.statusData) setStatusData(result.statusData as OnboardingStatus);
       await loadStatus();
     } catch (approveError: any) {
@@ -287,6 +323,36 @@ export default function MerchantsPage() {
       setError(resendError?.message || 'Failed to resend credentials.');
     } finally {
       setResendingCredentials(false);
+    }
+  };
+
+  const handleResendVerificationEmail = async () => {
+    if (!merchantId) return;
+    const targetEmail = String(statusData?.email ?? formData.email ?? '').trim();
+    if (!targetEmail) {
+      setError('Email address is required to resend verification email.');
+      return;
+    }
+
+    setResendingVerificationEmail(true);
+    setError('');
+    setStatusMessage('');
+    try {
+      const response = await fetch('/api/v1/merchant/onboarding/resend-verification-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchantId, email: targetEmail }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to resend verification email.');
+      setStatusMessage(result.message || 'Verification email resend attempted.');
+      if (result?.statusData) setStatusData(result.statusData as OnboardingStatus);
+      if (result.debug) setDebugData((prev) => ({ ...(prev ?? {}), ...result.debug }));
+      await loadStatus();
+    } catch (resendError: any) {
+      setError(resendError?.message || 'Failed to resend verification email.');
+    } finally {
+      setResendingVerificationEmail(false);
     }
   };
 
@@ -582,8 +648,10 @@ export default function MerchantsPage() {
                       </p>
                       <div className="mt-3 flex gap-2">
                         <input
+                          name="emailVerificationToken"
                           value={emailToken}
                           onChange={(event) => setEmailToken(event.target.value)}
+                          autoComplete="one-time-code"
                           className="flex-1 px-4 py-2.5 border border-border rounded-lg text-sm font-body bg-background"
                           placeholder="Paste email token (optional)"
                         />
@@ -596,6 +664,14 @@ export default function MerchantsPage() {
                           {verifyingEmail ? 'Verifying...' : 'Verify Email'}
                         </button>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleResendVerificationEmail()}
+                        disabled={resendingVerificationEmail}
+                        className="mt-3 text-xs font-headline font-semibold text-primary hover:text-primary/80 disabled:opacity-50"
+                      >
+                        {resendingVerificationEmail ? 'Resending verification email...' : 'Resend verification email'}
+                      </button>
                     </div>
 
                     <div className="rounded-xl border border-border bg-muted/30 p-4">
@@ -605,8 +681,13 @@ export default function MerchantsPage() {
                       </p>
                       <div className="mt-3 flex gap-2">
                         <input
+                          name="smsOtpCode"
                           value={otpCode}
                           onChange={(event) => setOtpCode(event.target.value)}
+                          autoComplete="one-time-code"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
                           className="flex-1 px-4 py-2.5 border border-border rounded-lg text-sm font-body bg-background"
                           placeholder="Enter OTP code"
                         />
@@ -641,22 +722,32 @@ export default function MerchantsPage() {
                             Approval Key (required for manual approve/resend in demo)
                           </label>
                           <input
+                            type="password"
+                            name="merchantApprovalKey"
                             value={approvalKey}
                             onChange={(event) => setApprovalKey(event.target.value)}
+                            autoComplete="current-password"
                             className="w-full px-3 py-2 border border-border rounded-lg text-sm font-body bg-background"
                             placeholder="Enter x-merchant-approval-key"
                           />
+                          {!hasApprovalKey && (
+                            <p className="mt-1 text-xs text-amber-700 font-body">
+                              Enter approval key to enable manual approve and credential resend actions.
+                            </p>
+                          )}
                         </div>
 
                         {statusData.status === 'pending' && statusData.emailVerified && statusData.phoneVerified && (
                           <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
                             <p className="text-sm text-amber-800 font-headline font-semibold">
-                              Pending approval. Approve to issue login credentials.
+                              {statusData.vettingStatus === 'pending_private_approval'
+                                ? 'Private merchant verified. Auto-vetting is pending; use manual approve if needed.'
+                                : 'Pending approval. Approve to issue login credentials.'}
                             </p>
                             <button
                               type="button"
                               onClick={() => void handleApproveMerchant()}
-                              disabled={approvingMerchant}
+                              disabled={approvingMerchant || !hasApprovalKey}
                               className="mt-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-headline font-semibold disabled:opacity-50"
                             >
                               {approvingMerchant ? 'Approving...' : 'Approve Merchant'}
@@ -672,7 +763,7 @@ export default function MerchantsPage() {
                             <button
                               type="button"
                               onClick={() => void handleResendCredentials()}
-                              disabled={resendingCredentials}
+                              disabled={resendingCredentials || !hasApprovalKey}
                               className="mt-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-headline font-semibold disabled:opacity-50"
                             >
                               {resendingCredentials ? 'Resending...' : 'Resend Credentials Email'}

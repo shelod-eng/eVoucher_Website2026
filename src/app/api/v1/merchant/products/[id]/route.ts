@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { isMerchantRole, resolveUserRole } from '@/server/utils/role';
+import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
 
 interface UpdateMerchantProductRequest {
   productName?: string;
@@ -31,13 +32,11 @@ export async function PATCH(
     }
 
     const admin = createAdminClient();
-    const { data: merchant, error: merchantError } = await admin
-      .from('merchants')
-      .select('id,business_name,parent_brand,default_total_discount_pct')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (merchantError) throw merchantError;
+    const merchant = await resolveMerchantForUser<any>(
+      admin,
+      user,
+      'id,business_name,parent_brand,default_total_discount_pct'
+    );
     if (!merchant) {
       return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
     }
@@ -135,13 +134,7 @@ export async function DELETE(
     }
 
     const admin = createAdminClient();
-    const { data: merchant, error: merchantError } = await admin
-      .from('merchants')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (merchantError) throw merchantError;
+    const merchant = await resolveMerchantForUser<any>(admin, user, 'id');
     if (!merchant) {
       return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
     }

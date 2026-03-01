@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
+import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
 
 export async function GET() {
   try {
@@ -10,15 +11,11 @@ export async function GET() {
     }
 
     const admin = createAdminClient();
-    const { data: merchant, error: merchantError } = await admin
-      .from('merchants')
-      .select(
-        'id,business_name,parent_brand,branch_name,branch_code,city,province,status,onboarding_fee_paid,charity_donation_amount,default_total_discount_pct,created_at,approved_at,email,phone,bank_name'
-      )
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (merchantError) throw merchantError;
+    const merchant = await resolveMerchantForUser<any>(
+      admin,
+      user,
+      'id,business_name,parent_brand,branch_name,branch_code,city,province,status,onboarding_fee_paid,charity_donation_amount,default_total_discount_pct,created_at,approved_at,email,phone,bank_name'
+    );
     if (!merchant) {
       return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
     }

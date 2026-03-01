@@ -69,6 +69,17 @@ const GROCERY_PRESETS = [
   { label: 'R1000 Monthly Shop', productName: 'R1000 Grocery Voucher', faceValue: 1000, totalDiscountPct: 5 },
 ] as const;
 
+function toFriendlyDashboardError(message: string) {
+  const normalized = String(message ?? '').toLowerCase();
+  if (normalized.includes('invalid input syntax for type integer')) {
+    return 'Merchant profile mapping is out of sync. Please refresh, then complete onboarding again if this persists.';
+  }
+  if (normalized.includes('merchant profile not found')) {
+    return 'Merchant profile not found. Complete onboarding first, then sign in again.';
+  }
+  return message || 'Failed to load merchant dashboard.';
+}
+
 export default function MerchantDashboard() {
   const { user, role, loading: authLoading, signOut } = useAuth();
   const [merchant, setMerchant] = useState<Merchant | null>(null);
@@ -150,7 +161,7 @@ export default function MerchantDashboard() {
         setProductMessage(productsData.error || 'Unable to load products.');
       }
     } catch (dashboardError: any) {
-      setError(dashboardError?.message || 'Failed to load merchant dashboard.');
+      setError(toFriendlyDashboardError(String(dashboardError?.message || '')));
     } finally {
       setLoading(false);
     }
@@ -317,6 +328,22 @@ export default function MerchantDashboard() {
           {error && (
             <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg">
               <p className="text-sm text-error font-body">{error}</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void fetchDashboardData()}
+                  className="px-3 py-1.5 rounded-lg bg-error text-white text-xs font-headline font-semibold"
+                >
+                  Retry
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push('/merchants')}
+                  className="px-3 py-1.5 rounded-lg border border-error/40 text-error text-xs font-headline font-semibold"
+                >
+                  Open Onboarding
+                </button>
+              </div>
             </div>
           )}
 

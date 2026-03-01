@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { writeAuditEvent } from '@/server/utils/audit';
 import {
   getMerchantLoginUrl,
+  sendMerchantApprovalConfirmationEmail,
   sendMerchantCredentialsEmail,
   sendMerchantOtpSms,
   sendMerchantStatusNotifications,
@@ -141,9 +142,15 @@ const SMS_OTP_TTL_MINUTES = 10;
 const OTP_MAX_ATTEMPTS = 5;
 const UUID_V4_OR_V1_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const BASIC_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function isUuid(value: string) {
   return UUID_V4_OR_V1_REGEX.test(String(value ?? '').trim());
+}
+
+function isUserIdTypeMismatch(error: any) {
+  const message = String(error?.message ?? '').toLowerCase();
+  return message.includes('invalid input syntax for type integer') && message.includes('user_id');
 }
 
 function extractDeliveryError(result: unknown) {
@@ -226,7 +233,9 @@ function coerceNumber(value: unknown): number | null {
 function validatePayload(payload: OnboardingPayload): string | null {
   if (!normalizeText(payload.businessName)) return 'Business name is required.';
   if (!normalizeText(payload.contactName)) return 'Contact name is required.';
-  if (!normalizeEmail(payload.email)) return 'Email is required.';
+  const email = normalizeEmail(payload.email);
+  if (!email) return 'Email is required.';
+  if (!BASIC_EMAIL_REGEX.test(email)) return 'Enter a valid email address.';
   if (!normalizeText(payload.phone)) return 'Phone is required.';
 
   const merchantType = normalizeMerchantType(payload.merchantType);
@@ -405,15 +414,16 @@ async function provisionAuthUserForMerchant(
     must_change_password: true,
   };
 
-  if (merchant.user_id) {
-    const { error } = await admin.auth.admin.updateUserById(merchant.user_id, {
+  const merchantUserId = String(merchant.user_id ?? '').trim();
+  if (merchantUserId && isUuid(merchantUserId)) {
+    const { error } = await admin.auth.admin.updateUserById(merchantUserId, {
       email: merchant.email,
       password: temporaryPassword,
       email_confirm: true,
       user_metadata: metadata,
     });
     if (error) throw error;
-    return merchant.user_id;
+    return merchantUserId;
   }
 
   const existingAuthUser = await findAuthUserByEmail(admin, merchant.email);
@@ -442,6 +452,46 @@ async function provisionAuthUserForMerchant(
     throw new Error('Unable to create merchant auth user.');
   }
   return data.user.id as string;
+}
+
+async function updateMerchantApprovalState(
+  admin: any,
+  args: {
+    merchantId: string;
+    userId: string;
+    vettingStatus: string;
+    approvedAt: string;
+  }
+) {
+  const baseUpdate = {
+    status: 'approved',
+    vetting_status: args.vettingStatus,
+    approved_at: args.approvedAt,
+    onboarding_fee_paid: true,
+    email_verified: true,
+    phone_verified: true,
+    must_reset_password: true,
+    temporary_password_issued_at: args.approvedAt,
+    onboarding_completed_at: args.approvedAt,
+  };
+
+  const withUserId = {
+    ...baseUpdate,
+    user_id: args.userId,
+  };
+
+  const { error: primaryError } = await admin.from('merchants').update(withUserId).eq('id', args.merchantId);
+  if (!primaryError) {
+    return { userIdPersisted: true as const };
+  }
+
+  if (!isUserIdTypeMismatch(primaryError)) {
+    throw primaryError;
+  }
+
+  const { error: fallbackError } = await admin.from('merchants').update(baseUpdate).eq('id', args.merchantId);
+  if (fallbackError) throw fallbackError;
+  return { userIdPersisted: false as const };
 }
 
 function evaluatePrivateMerchantAutoApproval(merchant: MerchantRecord) {
@@ -630,9 +680,19 @@ export async function getMerchantOnboardingStatus(merchantId: string) {
   const phoneVerified = Boolean(merchant.phone_verified) || Boolean(verification?.sms_verified_at);
   const credentialsIssued = Boolean(verification?.credentials_sent_at);
   const mustResetPassword = Boolean(merchant.must_reset_password);
+  const linkedUserId = String(merchant.user_id ?? '').trim();
+  let hasAuthLink = Boolean(linkedUserId);
+  let resolvedUserId = linkedUserId || null;
+  if (!hasAuthLink) {
+    const authUser = await findAuthUserByEmail(admin, normalizeEmail(merchant.email));
+    if (authUser?.id) {
+      hasAuthLink = true;
+      resolvedUserId = String(authUser.id);
+    }
+  }
   const loginReady =
     merchant.status === 'approved' &&
-    Boolean(merchant.user_id) &&
+    hasAuthLink &&
     mustResetPassword &&
     credentialsIssued &&
     emailVerified &&
@@ -650,7 +710,7 @@ export async function getMerchantOnboardingStatus(merchantId: string) {
     credentialsIssued,
     mustResetPassword,
     loginReady,
-    merchantUserId: merchant.user_id ?? null,
+    merchantUserId: resolvedUserId,
   } as MerchantOnboardingStatusSnapshot;
 }
 
@@ -719,22 +779,12 @@ export async function verifyMerchantEmailToken(args: {
     await enforceMerchantLoginReadiness(admin, merchant, userId);
 
     const approvedAt = new Date().toISOString();
-    const { error: merchantUpdateError } = await admin
-      .from('merchants')
-      .update({
-        user_id: userId,
-        status: 'approved',
-        vetting_status: 'auto_approved',
-        approved_at: approvedAt,
-        onboarding_fee_paid: true,
-        email_verified: true,
-        phone_verified: true,
-        must_reset_password: true,
-        temporary_password_issued_at: approvedAt,
-        onboarding_completed_at: approvedAt,
-      })
-      .eq('id', merchantId);
-    if (merchantUpdateError) throw merchantUpdateError;
+    await updateMerchantApprovalState(admin, {
+      merchantId,
+      userId,
+      vettingStatus: 'auto_approved',
+      approvedAt,
+    });
 
     const credentialsEmailResult = await sendMerchantCredentialsEmail({
       businessName: merchant.business_name,
@@ -750,6 +800,24 @@ export async function verifyMerchantEmailToken(args: {
       if (verificationUpdateError) throw verificationUpdateError;
     }
 
+    let approvalConfirmationSent = false;
+    let approvalConfirmationError: string | null = null;
+    try {
+      const confirmationResult = await sendMerchantApprovalConfirmationEmail({
+        merchantId: merchant.id,
+        businessName: merchant.business_name,
+        merchantEmail: merchant.email,
+        contactName: merchant.contact_name,
+        approvedAt,
+        loginUrl: getMerchantLoginUrl(),
+      });
+      approvalConfirmationSent = confirmationResult.sent;
+      approvalConfirmationError = confirmationResult.error ?? null;
+    } catch (confirmError) {
+      approvalConfirmationError = (confirmError as any)?.message || 'Approval confirmation email failed.';
+      console.warn('[merchant-email-verify][approval-confirmation][warn]', approvalConfirmationError);
+    }
+
     return {
       ok: true as const,
       httpStatus: 200,
@@ -758,9 +826,13 @@ export async function verifyMerchantEmailToken(args: {
       vettingStatus: 'auto_approved',
       emailVerified: true,
       phoneVerified: true,
+      credentialsEmailSent: credentialsEmailResult.sent,
+      credentialsEmailError: credentialsEmailResult.error ?? null,
       message: credentialsEmailResult.sent
         ? 'Email verified. Merchant approved and credentials issued.'
         : `Email verified. Merchant approved, but credentials email failed: ${credentialsEmailResult.error ?? 'unknown error'}`,
+      approvalConfirmationSent,
+      approvalConfirmationError,
       statusData: await getMerchantOnboardingStatus(merchantId),
       ...(shouldExposeDebugSecrets()
         ? { debug: { temporaryPassword, credentialsEmailError: credentialsEmailResult.error ?? null } }
@@ -892,6 +964,108 @@ export async function approveMerchantManually(args: {
   };
 }
 
+export async function resendMerchantVerificationEmail(args: {
+  merchantId: string;
+  email: string;
+  actorId?: string | null;
+  actorRole?: string | null;
+}) {
+  const admin = createAdminClient();
+  const merchantId = String(args.merchantId ?? '').trim();
+  const email = normalizeEmail(args.email);
+  if (!merchantId) {
+    return { ok: false as const, status: 400, error: 'merchantId is required.' };
+  }
+  if (!isUuid(merchantId)) {
+    return { ok: false as const, status: 400, error: 'Invalid merchantId format.' };
+  }
+  if (!email) {
+    return { ok: false as const, status: 400, error: 'email is required.' };
+  }
+  if (!BASIC_EMAIL_REGEX.test(email)) {
+    return { ok: false as const, status: 400, error: 'Enter a valid email address.' };
+  }
+
+  const merchant = await getMerchantById(admin, merchantId);
+  if (normalizeEmail(merchant.email) !== email) {
+    return { ok: false as const, status: 403, error: 'Merchant email does not match onboarding record.' };
+  }
+
+  const verification = await getVerificationByMerchantId(admin, merchantId);
+  if (!verification) {
+    return { ok: false as const, status: 404, error: 'Merchant verification record not found.' };
+  }
+
+  const alreadyVerified = Boolean(merchant.email_verified) || Boolean(verification.email_verified_at);
+  if (alreadyVerified) {
+    return {
+      ok: true as const,
+      status: 200,
+      sent: false,
+      message: 'Email is already verified. Continue with OTP verification or approval steps.',
+      statusData: await getMerchantOnboardingStatus(merchantId),
+    };
+  }
+
+  const now = new Date();
+  const emailToken = generateEmailToken();
+  const emailTokenHash = hashSecret(emailToken);
+  const emailExpiry = new Date(now.getTime() + EMAIL_TOKEN_TTL_HOURS * 60 * 60 * 1000).toISOString();
+  const { error: verificationUpdateError } = await admin
+    .from('merchant_onboarding_verifications')
+    .update({
+      email_token_hash: emailTokenHash,
+      email_token_expires_at: emailExpiry,
+      email_verified_at: null,
+    })
+    .eq('merchant_id', merchantId);
+  if (verificationUpdateError) throw verificationUpdateError;
+
+  const verificationUrl = `${resolveAppBaseUrl()}/merchant/onboarding/verify-email?merchantId=${merchantId}&token=${emailToken}`;
+  const emailResult = await sendMerchantVerificationEmail({
+    businessName: merchant.business_name,
+    email: merchant.email,
+    verificationUrl,
+    emailToken,
+  });
+
+  await safeAudit(admin, {
+    actorId: args.actorId ?? null,
+    actorRole: args.actorRole ?? 'merchant',
+    entityType: 'merchant',
+    entityId: null,
+    action: 'merchant_verification_email_resent',
+    metadata: {
+      emailSent: emailResult.sent,
+      recipient: emailResult.recipient,
+    },
+    requestId: null,
+  });
+
+  const emailDeliveryError = extractDeliveryError(emailResult);
+  return {
+    ok: true as const,
+    status: 200,
+    sent: emailResult.sent,
+    recipient: emailResult.recipient,
+    message: emailResult.sent
+      ? `Verification email resent to ${emailResult.recipient}.`
+      : `Verification email resend failed: ${emailDeliveryError ?? 'unknown error'}`,
+    error: emailResult.sent ? undefined : emailDeliveryError ?? 'Failed to resend verification email.',
+    statusData: await getMerchantOnboardingStatus(merchantId),
+    ...(shouldExposeDebugSecrets()
+      ? {
+          debug: {
+            emailToken,
+            verificationUrl,
+            verificationEmailTo: emailResult.recipient ?? merchant.email,
+            emailDeliveryError,
+          },
+        }
+      : {}),
+  };
+}
+
 export async function resendMerchantCredentials(args: {
   merchantId: string;
   actorId?: string | null;
@@ -907,7 +1081,13 @@ export async function resendMerchantCredentials(args: {
   }
 
   const merchant = await getMerchantById(admin, merchantId);
-  if (merchant.status !== 'approved' || !merchant.user_id) {
+  let targetUserId = String(merchant.user_id ?? '').trim();
+  if (!targetUserId || !isUuid(targetUserId)) {
+    const authUser = await findAuthUserByEmail(admin, normalizeEmail(merchant.email));
+    targetUserId = String(authUser?.id ?? '').trim();
+  }
+
+  if (merchant.status !== 'approved' || !targetUserId) {
     return {
       ok: false as const,
       status: 409,
@@ -917,7 +1097,7 @@ export async function resendMerchantCredentials(args: {
 
   const temporaryPassword = generateTemporaryPassword();
   const issuedAt = new Date().toISOString();
-  const { error: authUpdateError } = await admin.auth.admin.updateUserById(merchant.user_id, {
+  const { error: authUpdateError } = await admin.auth.admin.updateUserById(targetUserId, {
     password: temporaryPassword,
     email_confirm: true,
     user_metadata: {
@@ -1046,22 +1226,12 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
 
   const approvedAt = new Date().toISOString();
   const nextVettingStatus = options.forceApproveChain ? 'approved' : 'auto_approved';
-  const { error: merchantUpdateError } = await admin
-    .from('merchants')
-    .update({
-      user_id: userId,
-      status: 'approved',
-      vetting_status: nextVettingStatus,
-      approved_at: approvedAt,
-      onboarding_fee_paid: true,
-      email_verified: true,
-      phone_verified: true,
-      must_reset_password: true,
-      temporary_password_issued_at: approvedAt,
-      onboarding_completed_at: approvedAt,
-    })
-    .eq('id', merchant.id);
-  if (merchantUpdateError) throw merchantUpdateError;
+  const updateResult = await updateMerchantApprovalState(admin, {
+    merchantId: merchant.id,
+    userId,
+    vettingStatus: nextVettingStatus,
+    approvedAt,
+  });
 
   const credentialsEmailResult = await sendMerchantCredentialsEmail({
     businessName: merchant.business_name,
@@ -1096,6 +1266,24 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
     console.warn('[merchant-approval][notify][warn]', (notifyError as any)?.message || notifyError);
   }
 
+  let approvalConfirmationSent = false;
+  let approvalConfirmationError: string | null = null;
+  try {
+    const confirmationResult = await sendMerchantApprovalConfirmationEmail({
+      merchantId: merchant.id,
+      businessName: merchant.business_name,
+      merchantEmail: merchant.email,
+      contactName: merchant.contact_name,
+      approvedAt,
+      loginUrl: getMerchantLoginUrl(),
+    });
+    approvalConfirmationSent = confirmationResult.sent;
+    approvalConfirmationError = confirmationResult.error ?? null;
+  } catch (confirmError) {
+    approvalConfirmationError = (confirmError as any)?.message || 'Approval confirmation email failed.';
+    console.warn('[merchant-approval][confirmation-email][warn]', approvalConfirmationError);
+  }
+
   await safeAudit(admin, {
     actorId: options.actorId ?? null,
     actorRole: options.actorRole ?? 'system',
@@ -1112,11 +1300,21 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
     vettingStatus: nextVettingStatus,
     emailVerified: true,
     phoneVerified: true,
+    credentialsEmailSent: credentialsEmailResult.sent,
+    credentialsEmailError: credentialsEmailResult.error ?? null,
     message: credentialsEmailResult.sent
       ? 'Merchant approved and login credentials sent by email.'
       : `Merchant approved, but credentials email failed: ${credentialsEmailResult.error ?? 'unknown error'}`,
+    approvalConfirmationSent,
+    approvalConfirmationError,
     ...(shouldExposeDebugSecrets()
-      ? { debug: { temporaryPassword, credentialsEmailError: credentialsEmailResult.error ?? null } }
+      ? {
+          debug: {
+            temporaryPassword,
+            credentialsEmailError: credentialsEmailResult.error ?? null,
+            merchantUserIdPersisted: updateResult.userIdPersisted,
+          },
+        }
       : {}),
   };
 }
