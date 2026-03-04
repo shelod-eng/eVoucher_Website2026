@@ -75,7 +75,11 @@ export default function MerchantChangePasswordPage() {
         15000,
         'Password update timed out. Please try again.'
       );
-      const { error: updateError } = updateResult;
+      // Type guard for updateResult
+      let updateError;
+      if (typeof updateResult === 'object' && updateResult !== null && 'error' in updateResult) {
+        updateError = (updateResult as any).error;
+      }
       if (updateError) throw updateError;
 
       const resetResponse = await withTimeout(
