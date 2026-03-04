@@ -33,6 +33,7 @@ export default function MerchantChangePasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const passwordUpdateTimeoutMs = 90000;
 
   useEffect(() => {
     if (loading) return;
@@ -72,7 +73,7 @@ export default function MerchantChangePasswordPage() {
             must_change_password: false,
           },
         }),
-        15000,
+        passwordUpdateTimeoutMs,
         'Password update timed out. Please try again.'
       );
       // Type guard for updateResult
@@ -87,7 +88,7 @@ export default function MerchantChangePasswordPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         }),
-        15000,
+        passwordUpdateTimeoutMs,
         'Password reset sync timed out. Please try again.'
       );
       if (!resetResponse.ok) {

@@ -16,6 +16,7 @@ export default function MerchantLogin() {
   const { user, role, signIn } = useAuth();
   const router = useRouter();
   const supabase = createClient();
+  const allowDemoSeed = String(process.env.NEXT_PUBLIC_ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase() === 'true';
 
   useEffect(() => {
     if (!user) return;
@@ -28,6 +29,7 @@ export default function MerchantLogin() {
   }, [user, role, router]);
 
   useEffect(() => {
+    if (!allowDemoSeed) return;
     let cancelled = false;
     const seedDemoMerchants = async () => {
       try {
@@ -42,7 +44,7 @@ export default function MerchantLogin() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [allowDemoSeed]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,12 +136,14 @@ export default function MerchantLogin() {
               </p>
             </div>
 
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground font-body mb-2 font-semibold">Demo Chain Merchant Credentials:</p>
-              <p className="text-xs text-foreground font-body">Shoprite: demo-shoprite@evoucher.co.za</p>
-              <p className="text-xs text-foreground font-body">Pick n Pay: demo-picknpay@evoucher.co.za</p>
-              <p className="text-xs text-foreground font-body mt-1">Password: demo123</p>
-            </div>
+            {allowDemoSeed && (
+              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground font-body mb-2 font-semibold">Demo Chain Merchant Credentials:</p>
+                <p className="text-xs text-foreground font-body">Shoprite: demo-shoprite@evoucher.co.za</p>
+                <p className="text-xs text-foreground font-body">Pick n Pay: demo-picknpay@evoucher.co.za</p>
+                <p className="text-xs text-foreground font-body mt-1">Password: demo123</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

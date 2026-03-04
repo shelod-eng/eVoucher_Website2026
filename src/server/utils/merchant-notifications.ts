@@ -173,11 +173,21 @@ async function sendViaResend(
 }
 
 function resolveAppBaseUrl() {
-  return (
+  const explicitUrl =
     String(process.env.NEXT_PUBLIC_APP_URL ?? '').trim() ||
-    String(process.env.APP_URL ?? '').trim() ||
-    'http://localhost:4028'
-  );
+    String(process.env.APP_URL ?? '').trim();
+  if (explicitUrl) return explicitUrl;
+
+  const vercelUrl = String(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL ?? ''
+  ).trim();
+  if (vercelUrl) {
+    return vercelUrl.startsWith('http://') || vercelUrl.startsWith('https://')
+      ? vercelUrl
+      : `https://${vercelUrl}`;
+  }
+
+  return 'http://localhost:4028';
 }
 
 function resolveMerchantEmailRecipient(targetEmail: string) {

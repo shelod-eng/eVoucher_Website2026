@@ -225,11 +225,23 @@ function isOtpVerificationRequired() {
 }
 
 function resolveAppBaseUrl() {
-  return (
+  const explicitUrl =
     String(process.env.NEXT_PUBLIC_APP_URL ?? '').trim() ||
-    String(process.env.APP_URL ?? '').trim() ||
-    'http://localhost:4028'
-  ).replace(/\/+$/, '');
+    String(process.env.APP_URL ?? '').trim();
+  if (explicitUrl) return explicitUrl.replace(/\/+$/, '');
+
+  const vercelUrl = String(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL ?? ''
+  ).trim();
+  if (vercelUrl) {
+    const normalized =
+      vercelUrl.startsWith('http://') || vercelUrl.startsWith('https://')
+        ? vercelUrl
+        : `https://${vercelUrl}`;
+    return normalized.replace(/\/+$/, '');
+  }
+
+  return 'http://localhost:4028';
 }
 
 function resolveInitialVettingStatus(merchantType: MerchantType) {
