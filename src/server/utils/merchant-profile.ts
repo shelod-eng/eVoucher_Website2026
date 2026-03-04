@@ -8,10 +8,14 @@ function normalizeEmail(value: unknown) {
 }
 
 function isUserIdTypeMismatch(error: any) {
+  const code = String(error?.code ?? '').trim().toLowerCase();
   const message = String(error?.message ?? '').toLowerCase();
   return (
-    message.includes('invalid input syntax for type integer') &&
-    message.includes('user_id')
+    code === '22p02' ||
+    message.includes('invalid input syntax for type integer') ||
+    message.includes('invalid input syntax for type bigint') ||
+    message.includes('operator does not exist: integer =') ||
+    message.includes('operator does not exist: bigint =')
   );
 }
 

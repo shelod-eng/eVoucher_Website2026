@@ -50,7 +50,7 @@ export default function MerchantEmailVerificationPage() {
         setState('success');
         setMessage(
           result.message ||
-            'Email verified successfully. Return to onboarding to complete SMS OTP verification.'
+            'Email verified successfully. Return to onboarding to continue approval and login.'
         );
       } catch (error: any) {
         if (cancelled) return;

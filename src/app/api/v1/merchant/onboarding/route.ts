@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       smsDeliveryError: result.smsDeliveryError,
       debug: result.debug,
       message:
-        'Onboarding submitted. Confirm your email token and SMS OTP to continue merchant vetting and approval.',
+        'Onboarding submitted. Confirm your email token to complete verification.',
     });
   } catch (error: any) {
     console.error('[api][merchant-onboarding][error]', {

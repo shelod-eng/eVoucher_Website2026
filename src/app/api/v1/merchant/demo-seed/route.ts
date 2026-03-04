@@ -29,6 +29,17 @@ export async function POST() {
       password: 'demo123',
     });
   } catch (error: any) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (!isProduction) {
+      console.warn('[merchant-demo-seed][warn]', error?.message || error);
+      // Demo seeding is best-effort in local/preview and should never block login flows.
+      return NextResponse.json({
+        ok: false,
+        seeded: false,
+        warning: error?.message || 'Failed to seed demo merchants.',
+      });
+    }
+
     return NextResponse.json(
       { error: error?.message || 'Failed to seed demo merchants.' },
       { status: 500 }

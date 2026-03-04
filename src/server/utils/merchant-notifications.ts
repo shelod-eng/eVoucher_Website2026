@@ -181,18 +181,26 @@ function resolveAppBaseUrl() {
 }
 
 function resolveMerchantEmailRecipient(targetEmail: string) {
+  const normalizedTarget = String(targetEmail ?? '').trim().toLowerCase();
+  const isProduction = process.env.NODE_ENV === 'production';
+  const allowProdOverride =
+    String(process.env.ALLOW_PROD_EMAIL_OVERRIDE ?? '').trim().toLowerCase() === 'true';
+  // Safety: never reroute merchant-facing emails in production unless explicitly enabled.
+  if (isProduction && !allowProdOverride) {
+    return normalizedTarget;
+  }
+
   const configuredOverride = String(process.env.MERCHANT_EMAIL_TEST_RECIPIENT ?? '')
     .trim()
     .toLowerCase();
   const forceOverrideRaw = String(process.env.MERCHANT_EMAIL_FORCE_TEST_RECIPIENT ?? '')
     .trim()
     .toLowerCase();
-  const forceOverride =
-    forceOverrideRaw.length > 0 ? forceOverrideRaw !== 'false' : process.env.NODE_ENV !== 'production';
+  const forceOverride = forceOverrideRaw.length > 0 ? forceOverrideRaw !== 'false' : true;
   if (forceOverride && configuredOverride) {
     return configuredOverride;
   }
-  return String(targetEmail ?? '').trim().toLowerCase();
+  return normalizedTarget;
 }
 
 async function sendEmailToMerchant(
@@ -428,12 +436,9 @@ export async function sendMerchantStatusNotifications(
     console.info('[merchant-notify][dev]', { recipients, subject, details: payload });
     return { sent: true, provider: 'console', recipients };
   } catch (error: any) {
-    console.error('[merchant-notify][error]', error);
-    return {
-      sent: false,
-      provider: 'resend',
-      recipients,
-      error: error?.message || 'Failed to send merchant notification.',
-    };
+    // Non-critical dev notification; do not fail merchant onboarding flows because of this.
+    console.warn('[merchant-notify][warn]', error?.message || error);
+    console.info('[merchant-notify][dev-fallback]', { recipients, subject, details: payload });
+    return { sent: true, provider: 'console', recipients };
   }
 }

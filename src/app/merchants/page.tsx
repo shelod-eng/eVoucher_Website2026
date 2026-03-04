@@ -107,10 +107,17 @@ export default function MerchantsPage() {
 
   const credentialsEmailNote = (result: any) => {
     if (result?.credentialsEmailSent === true) {
+      const recipient = String(result?.credentialsEmailRecipient ?? '').trim();
+      const provider = String(result?.credentialsEmailProvider ?? '').trim();
+      if (recipient || provider) {
+        return ` Login details email: sent${recipient ? ` to ${recipient}` : ''}${provider ? ` via ${provider}` : ''}.`;
+      }
       return ' Login details email: sent.';
     }
     if (result?.credentialsEmailError) {
-      return ` Login details email failed: ${String(result.credentialsEmailError)}`;
+      const recipient = String(result?.credentialsEmailRecipient ?? '').trim();
+      const provider = String(result?.credentialsEmailProvider ?? '').trim();
+      return ` Login details email failed${recipient ? ` for ${recipient}` : ''}${provider ? ` via ${provider}` : ''}: ${String(result.credentialsEmailError)}`;
     }
     return '';
   };
@@ -178,7 +185,7 @@ export default function MerchantsPage() {
       const verificationRecipient = String(result.verificationEmailTo ?? formData.email ?? '').trim();
       if (result.emailSent) {
         setStatusMessage(
-          `Onboarding submitted. Verification email sent to ${verificationRecipient}. Check your inbox for the link/token and verify SMS OTP to continue.`
+          `Onboarding submitted. Verification email sent to ${verificationRecipient}. Verify email to continue.`
         );
       } else {
         setStatusMessage(
@@ -379,7 +386,7 @@ export default function MerchantsPage() {
               <p className="text-sm font-headline font-semibold text-foreground">Selected flow: {modeLabel}</p>
               <ul className="mt-2 space-y-1 text-xs text-muted-foreground font-body">
                 <li>1. Submit registration + compliance details.</li>
-                <li>2. Confirm email token and SMS OTP.</li>
+                <li>2. Confirm your email token.</li>
                 <li>3. Auto-vetting applies merchant-type rules.</li>
                 <li>4. Approved merchants receive email + temporary password.</li>
               </ul>
@@ -677,7 +684,7 @@ export default function MerchantsPage() {
                     <div className="rounded-xl border border-border bg-muted/30 p-4">
                       <p className="text-sm font-headline font-semibold text-foreground">SMS OTP</p>
                       <p className="mt-1 text-xs text-muted-foreground font-body">
-                        Enter the 6-digit OTP sent to your registered phone.
+                        Not required in the current flow. Email verification is sufficient.
                       </p>
                       <div className="mt-3 flex gap-2">
                         <input
@@ -688,16 +695,17 @@ export default function MerchantsPage() {
                           inputMode="numeric"
                           pattern="[0-9]*"
                           maxLength={6}
+                          disabled
                           className="flex-1 px-4 py-2.5 border border-border rounded-lg text-sm font-body bg-background"
                           placeholder="Enter OTP code"
                         />
                         <button
                           type="button"
                           onClick={() => void handleVerifyOtp()}
-                          disabled={verifyingOtp}
+                          disabled
                           className="px-4 py-2.5 rounded-lg bg-secondary text-secondary-foreground text-sm font-headline font-semibold disabled:opacity-50"
                         >
-                          {verifyingOtp ? 'Verifying...' : 'Verify OTP'}
+                          OTP Not Required
                         </button>
                       </div>
                     </div>

@@ -7,6 +7,15 @@ import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    }),
+  ]);
+}
+
 function validatePassword(password: string): string | null {
   if (password.length < 8) return 'Password must be at least 8 characters.';
   if (!/[A-Z]/.test(password)) return 'Password must include at least one uppercase letter.';
@@ -55,21 +64,39 @@ export default function MerchantChangePasswordPage() {
     setSubmitting(true);
     try {
       const currentMetadata = user?.user_metadata ?? {};
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-        data: {
-          ...currentMetadata,
-          must_change_password: false,
-        },
-      });
+      const updateResult = await withTimeout(
+        supabase.auth.updateUser({
+          password,
+          data: {
+            ...currentMetadata,
+            must_change_password: false,
+          },
+        }),
+        15000,
+        'Password update timed out. Please try again.'
+      );
+      const { error: updateError } = updateResult;
       if (updateError) throw updateError;
 
-      await fetch('/api/v1/merchant/onboarding/complete-password-reset', {
-        method: 'POST',
-      });
+      const resetResponse = await withTimeout(
+        fetch('/api/v1/merchant/onboarding/complete-password-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+        15000,
+        'Password reset sync timed out. Please try again.'
+      );
+      if (!resetResponse.ok) {
+        const payload = await resetResponse.json().catch(() => ({} as any));
+        throw new Error(payload?.error || 'Failed to finalize password reset.');
+      }
+
+      // Ensure client auth/session state is refreshed before navigation checks run.
+      await supabase.auth.refreshSession();
+      await supabase.auth.getUser();
 
       setSuccess('Password updated successfully. Redirecting to dashboard...');
-      setTimeout(() => router.push('/merchant/dashboard'), 900);
+      setTimeout(() => router.replace('/merchant/dashboard'), 900);
     } catch (submitError: any) {
       setError(submitError?.message || 'Failed to update password.');
     } finally {

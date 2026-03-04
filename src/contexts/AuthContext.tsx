@@ -15,7 +15,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const LOCALHOST_RESET_FLAG = 'evoucher.local.session.reset.v1';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -54,30 +53,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const applySessionState = async (session: Session | null) => {
       if (!isMounted) return;
-      setUser(session?.user ?? null);
-      const resolvedRole = await resolveUserRole(session?.user ?? null);
+      const sessionUser = session?.user ?? null;
+      let resolvedUser = sessionUser;
+
+      if (sessionUser) {
+        try {
+          const {
+            data: { user: latestUser },
+            error: latestUserError,
+          } = await supabase.auth.getUser();
+          if (!latestUserError && latestUser) {
+            resolvedUser = latestUser;
+          }
+        } catch (latestUserLookupError) {
+          console.warn('AuthContext: failed to fetch latest auth user:', latestUserLookupError);
+        }
+      }
+
+      setUser(resolvedUser);
+      const resolvedRole = await resolveUserRole(resolvedUser);
       if (!isMounted) return;
       setRole(resolvedRole);
       setLoading(false);
     };
 
     const bootstrap = async () => {
-      if (typeof window !== 'undefined') {
-        const isLocalhost =
-          window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const hasReset = window.sessionStorage.getItem(LOCALHOST_RESET_FLAG) === '1';
-
-        // Ensure localhost starts from a clean unauthenticated state so landing page is always public first.
-        if (isLocalhost && !hasReset) {
-          try {
-            await supabase.auth.signOut({ scope: 'local' });
-          } catch (error) {
-            console.warn('AuthContext: failed to clear local session on localhost startup:', error);
-          }
-          window.sessionStorage.setItem(LOCALHOST_RESET_FLAG, '1');
-        }
-      }
-
       const {
         data: { session },
       } = await supabase.auth.getSession();

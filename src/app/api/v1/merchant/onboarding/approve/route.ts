@@ -55,6 +55,10 @@ export async function POST(request: Request) {
       approvalConfirmationError:
         'approvalConfirmationError' in result ? result.approvalConfirmationError : undefined,
       credentialsEmailSent: 'credentialsEmailSent' in result ? result.credentialsEmailSent : undefined,
+      credentialsEmailRecipient:
+        'credentialsEmailRecipient' in result ? result.credentialsEmailRecipient : undefined,
+      credentialsEmailProvider:
+        'credentialsEmailProvider' in result ? result.credentialsEmailProvider : undefined,
       credentialsEmailError: 'credentialsEmailError' in result ? result.credentialsEmailError : undefined,
       statusData: 'statusData' in result ? result.statusData : undefined,
       debug: 'debug' in result ? result.debug : undefined,

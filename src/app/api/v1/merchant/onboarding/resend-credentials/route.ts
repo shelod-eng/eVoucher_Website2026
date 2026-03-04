@@ -47,6 +47,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       sent: result.sent,
+      credentialsEmailRecipient: 'credentialsEmailRecipient' in result ? result.credentialsEmailRecipient : undefined,
+      credentialsEmailProvider: 'credentialsEmailProvider' in result ? result.credentialsEmailProvider : undefined,
       message: result.message,
       error: result.error,
       statusData: result.statusData,
@@ -59,4 +61,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
