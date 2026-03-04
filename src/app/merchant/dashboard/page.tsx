@@ -435,12 +435,12 @@ export default function MerchantDashboard() {
               </div>
 
               <p className="text-sm text-muted-foreground font-body mb-4">
-                Grocery recommendation: use a total discount between 4% and 5%. For 4% total discount, consumer
-                benefit is 2.8% and platform fee is 1.2%.
+                Grocery recommendation: use a total discount between 3% and 15%. The 50/50 split is enforced:
+                consumer benefit and platform margin each receive half of total discount.
               </p>
               <p className="text-sm text-muted-foreground font-body mb-4">
-                Example (R100 voucher @ 4%): consumer pays R97.20, platform retains R1.20, merchant settlement is
-                R96.00.
+                Example (R100 voucher @ 5%): consumer pays R97.50, platform retains R2.50, merchant settlement is
+                R95.00.
               </p>
 
               <div className="flex flex-wrap gap-2 mb-5">
@@ -477,8 +477,8 @@ export default function MerchantDashboard() {
                 />
                 <input
                   type="number"
-                  min={0}
-                  max={100}
+                  min={3}
+                  max={15}
                   step={0.1}
                   value={productForm.totalDiscountPct}
                   onChange={(event) =>

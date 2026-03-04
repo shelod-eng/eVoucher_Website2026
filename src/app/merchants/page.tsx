@@ -190,8 +190,8 @@ export default function MerchantsPage() {
     setMerchantId('');
 
     const discount = Number(formData.discountPercentage);
-    if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
-      setError('Discount percentage must be between 0 and 100.');
+    if (!Number.isFinite(discount) || discount < 3 || discount > 15) {
+      setError('Discount percentage must be between 3 and 15.');
       setLoading(false);
       return;
     }
@@ -533,8 +533,8 @@ export default function MerchantsPage() {
                     <input
                       name="discountPercentage"
                       type="number"
-                      min={0}
-                      max={100}
+                      min={3}
+                      max={15}
                       step={0.5}
                       value={formData.discountPercentage}
                       onChange={handleChange}

@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
-import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
+import {
+  calculateDiscountPricing,
+  DEFAULT_TOTAL_DISCOUNT_PCT,
+  MAX_TOTAL_DISCOUNT_PCT,
+  MIN_TOTAL_DISCOUNT_PCT,
+} from '@/lib/pricing';
 import { isMerchantRole, resolveUserRole } from '@/server/utils/role';
 import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
 
@@ -20,9 +25,11 @@ function validateCreate(body: CreateMerchantProductRequest): string | null {
   if (body.faceValue > 100000) return 'Face value exceeds the allowed limit.';
   if (
     body.totalDiscountPct !== undefined &&
-    (!Number.isFinite(body.totalDiscountPct) || body.totalDiscountPct < 0 || body.totalDiscountPct > 100)
+    (!Number.isFinite(body.totalDiscountPct) ||
+      body.totalDiscountPct < MIN_TOTAL_DISCOUNT_PCT ||
+      body.totalDiscountPct > MAX_TOTAL_DISCOUNT_PCT)
   ) {
-    return 'Total discount percentage must be between 0 and 100.';
+    return `Total discount percentage must be between ${MIN_TOTAL_DISCOUNT_PCT} and ${MAX_TOTAL_DISCOUNT_PCT}.`;
   }
   if (
     body.redemptionScope &&

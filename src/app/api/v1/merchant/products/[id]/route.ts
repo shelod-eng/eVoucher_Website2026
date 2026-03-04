@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
-import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
+import {
+  calculateDiscountPricing,
+  DEFAULT_TOTAL_DISCOUNT_PCT,
+  MAX_TOTAL_DISCOUNT_PCT,
+  MIN_TOTAL_DISCOUNT_PCT,
+} from '@/lib/pricing';
 import { isMerchantRole, resolveUserRole } from '@/server/utils/role';
 import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
 
@@ -67,6 +72,17 @@ export async function PATCH(
     }
     if (body.validBranchIds !== undefined && !Array.isArray(body.validBranchIds)) {
       return NextResponse.json({ error: 'validBranchIds must be an array.' }, { status: 400 });
+    }
+    if (
+      body.totalDiscountPct !== undefined &&
+      (!Number.isFinite(body.totalDiscountPct) ||
+        body.totalDiscountPct < MIN_TOTAL_DISCOUNT_PCT ||
+        body.totalDiscountPct > MAX_TOTAL_DISCOUNT_PCT)
+    ) {
+      return NextResponse.json(
+        { error: `Total discount percentage must be between ${MIN_TOTAL_DISCOUNT_PCT} and ${MAX_TOTAL_DISCOUNT_PCT}.` },
+        { status: 400 }
+      );
     }
 
     const nextFaceValue = Number(body.faceValue ?? existing.face_value);

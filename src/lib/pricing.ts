@@ -1,4 +1,6 @@
 export const DEFAULT_TOTAL_DISCOUNT_PCT = 5;
+export const MIN_TOTAL_DISCOUNT_PCT = 3;
+export const MAX_TOTAL_DISCOUNT_PCT = 15;
 export const CONSUMER_DISCOUNT_SHARE = 0.5;
 export const PLATFORM_DISCOUNT_SHARE = 0.5;
 
@@ -27,8 +29,14 @@ export function calculateDiscountPricing(
     throw new Error('Face value must be greater than 0.');
   }
 
-  if (!Number.isFinite(totalDiscountPct) || totalDiscountPct < 0 || totalDiscountPct > 100) {
-    throw new Error('Total discount percentage must be between 0 and 100.');
+  if (
+    !Number.isFinite(totalDiscountPct) ||
+    totalDiscountPct < MIN_TOTAL_DISCOUNT_PCT ||
+    totalDiscountPct > MAX_TOTAL_DISCOUNT_PCT
+  ) {
+    throw new Error(
+      `Total discount percentage must be between ${MIN_TOTAL_DISCOUNT_PCT} and ${MAX_TOTAL_DISCOUNT_PCT}.`
+    );
   }
 
   const consumerBenefitPct = roundCurrency(totalDiscountPct * CONSUMER_DISCOUNT_SHARE);

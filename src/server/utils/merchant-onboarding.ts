@@ -286,8 +286,8 @@ function validatePayload(payload: OnboardingPayload): string | null {
   }
 
   const discount = payload.discountPercentage ?? 5;
-  if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
-    return 'Discount percentage must be between 0 and 100.';
+  if (!Number.isFinite(discount) || discount < 3 || discount > 15) {
+    return 'Discount percentage must be between 3 and 15.';
   }
   return null;
 }
