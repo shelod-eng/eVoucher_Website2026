@@ -627,6 +627,7 @@ export default function MerchantsPage() {
                       value={formData.bankName}
                       onChange={handleChange}
                       required
+                      aria-label="Select Bank"
                       className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
                     >
                       <option value="" disabled>
