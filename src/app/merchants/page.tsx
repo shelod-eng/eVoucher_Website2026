@@ -80,6 +80,8 @@ export default function MerchantsPage() {
     () => (merchantType === 'private' ? 'Private Merchant (Kalapeng-style)' : 'Chain Merchant'),
     [merchantType]
   );
+  const isPrivateMerchant = merchantType === 'private';
+  const isPrivatePharmacy = isPrivateMerchant && formData.businessType === 'Pharmacy';
 
   const vettingHelpText = useMemo(() => {
     if (!statusData) return null;
@@ -517,22 +519,64 @@ export default function MerchantsPage() {
                 <div>
                   <h3 className="font-headline text-lg font-semibold text-foreground">2. Compliance details</h3>
                   <div className="mt-4 grid md:grid-cols-2 gap-4">
-                    <input
-                      name="registrationNumber"
-                      value={formData.registrationNumber}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="Company Registration Number *"
-                    />
-                    <input
-                      name="taxNumber"
-                      value={formData.taxNumber}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="VAT / Tax Number *"
-                    />
+                    {merchantType === 'chain' ? (
+                      <>
+                        <input
+                          name="registrationNumber"
+                          value={formData.registrationNumber}
+                          onChange={handleChange}
+                          required
+                          className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                          placeholder="Company Registration Number *"
+                        />
+                        <input
+                          name="taxNumber"
+                          value={formData.taxNumber}
+                          onChange={handleChange}
+                          required
+                          className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                          placeholder="VAT / Tax Number *"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        {isPrivatePharmacy && (
+                          <>
+                            <input
+                              name="pharmacyLicenseNumber"
+                              value={formData.pharmacyLicenseNumber}
+                              onChange={handleChange}
+                              required
+                              className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                              placeholder="Pharmacy License Number *"
+                            />
+                            <input
+                              name="responsiblePharmacistName"
+                              value={formData.responsiblePharmacistName}
+                              onChange={handleChange}
+                              required
+                              className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                              placeholder="Responsible Pharmacist Name *"
+                            />
+                          </>
+                        )}
+                        <input
+                          name="ownerIdNumber"
+                          value={formData.ownerIdNumber}
+                          onChange={handleChange}
+                          required={isPrivateMerchant}
+                          className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                          placeholder="Owner ID Number *"
+                        />
+                        <input
+                          name="proofOfPremises"
+                          value={formData.proofOfPremises}
+                          onChange={handleChange}
+                          className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                          placeholder="Proof of Premises / Website (optional)"
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
 

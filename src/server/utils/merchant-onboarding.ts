@@ -253,14 +253,16 @@ function validatePayload(payload: OnboardingPayload): string | null {
 
   const merchantType = normalizeMerchantType(payload.merchantType);
   if (merchantType === 'private') {
-    if (!normalizeText(payload.pharmacyLicenseNumber)) {
-      return 'Pharmacy license number is required for private merchants.';
-    }
-    if (!normalizeText(payload.responsiblePharmacistName)) {
-      return 'Responsible pharmacist details are required for private merchants.';
-    }
     if (!normalizeText(payload.ownerIdNumber)) {
       return 'Owner ID verification is required for private merchants.';
+    }
+    const businessType = String(normalizeText(payload.businessType) ?? '').toLowerCase();
+    const isPharmacy = businessType === 'pharmacy';
+    if (isPharmacy && !normalizeText(payload.pharmacyLicenseNumber)) {
+      return 'Pharmacy license number is required for private pharmacy merchants.';
+    }
+    if (isPharmacy && !normalizeText(payload.responsiblePharmacistName)) {
+      return 'Responsible pharmacist details are required for private pharmacy merchants.';
     }
   } else {
     if (!normalizeText(payload.registrationNumber)) {
