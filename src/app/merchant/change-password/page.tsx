@@ -83,24 +83,33 @@ export default function MerchantChangePasswordPage() {
       }
       if (updateError) throw updateError;
 
-      const resetResponse = await withTimeout(
-        fetch('/api/v1/merchant/onboarding/complete-password-reset', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        }),
-        passwordUpdateTimeoutMs,
-        'Password reset sync timed out. Please try again.'
-      );
-      if (!resetResponse.ok) {
-        const payload = await resetResponse.json().catch(() => ({} as any));
-        throw new Error(payload?.error || 'Failed to finalize password reset.');
+      let syncWarning = '';
+      try {
+        const resetResponse = await withTimeout(
+          fetch('/api/v1/merchant/onboarding/complete-password-reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          }),
+          20000,
+          'Password reset sync timed out.'
+        );
+        if (!resetResponse.ok) {
+          const payload = await resetResponse.json().catch(() => ({} as any));
+          syncWarning = payload?.error || 'Password reset sync is pending.';
+        }
+      } catch (syncError: any) {
+        syncWarning = syncError?.message || 'Password reset sync is pending.';
       }
 
       // Ensure client auth/session state is refreshed before navigation checks run.
       await supabase.auth.refreshSession();
       await supabase.auth.getUser();
 
-      setSuccess('Password updated successfully. Redirecting to dashboard...');
+      setSuccess(
+        syncWarning
+          ? `Password updated. Redirecting to dashboard while sync completes in background. (${syncWarning})`
+          : 'Password updated successfully. Redirecting to dashboard...'
+      );
       setTimeout(() => router.replace('/merchant/dashboard'), 900);
     } catch (submitError: any) {
       setError(submitError?.message || 'Failed to update password.');

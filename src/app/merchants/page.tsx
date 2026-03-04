@@ -25,6 +25,25 @@ type OnboardingStatus = {
 };
 
 const businessTypes = ['Spaza Shop', 'Supermarket', 'Pharmacy', 'Restaurant', 'Transport', 'Other'];
+const BANK_BRANCH_CODES: Record<string, string> = {
+  'FNB': '250655',
+  'Standard Bank': '051001',
+  'Capitec': '470010',
+  'Nedbank': '198765',
+  'ABSA': '632005',
+  'Discovery Bank': '679000',
+  'Investec Bank': '580105',
+};
+const BANK_OPTIONS = [
+  'FNB',
+  'Standard Bank',
+  'Capitec',
+  'Nedbank',
+  'ABSA',
+  'Discovery Bank',
+  'Investec Bank',
+  'Other',
+];
 
 export const dynamic = 'force-dynamic';
 
@@ -127,7 +146,17 @@ export default function MerchantsPage() {
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    setFormData((prev) => ({ ...prev, [event.target.name]: event.target.value }));
+    const { name, value } = event.target;
+    if (name === 'bankName') {
+      const autoBranchCode = BANK_BRANCH_CODES[value];
+      setFormData((prev) => ({
+        ...prev,
+        bankName: value,
+        branchCode: value === 'Other' ? '' : autoBranchCode ?? prev.branchCode,
+      }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const loadStatus = async (targetMerchantId?: string) => {
@@ -593,14 +622,22 @@ export default function MerchantsPage() {
                       className="md:col-span-2 w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
                       placeholder="Physical Address *"
                     />
-                    <input
+                    <select
                       name="bankName"
                       value={formData.bankName}
                       onChange={handleChange}
                       required
                       className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="Bank Name *"
-                    />
+                    >
+                      <option value="" disabled>
+                        Select Bank *
+                      </option>
+                      {BANK_OPTIONS.map((bank) => (
+                        <option key={bank} value={bank}>
+                          {bank}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       name="accountHolderName"
                       value={formData.accountHolderName}

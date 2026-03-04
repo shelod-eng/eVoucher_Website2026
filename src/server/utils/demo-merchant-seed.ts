@@ -207,13 +207,13 @@ function buildProductUniqKey(name: string, faceValue: number) {
 }
 
 function resolveDemoMerchantPassword() {
-  return String(process.env.DEMO_CHAIN_MERCHANT_PASSWORD ?? 'demo123').trim();
+  return 'demo123';
 }
 
 async function findAuthUserByEmail(admin: any, email: string) {
   let page = 1;
   const perPage = 200;
-  while (page <= 8) {
+  while (page <= 100) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
     if (error) throw error;
     const users = data?.users ?? [];
