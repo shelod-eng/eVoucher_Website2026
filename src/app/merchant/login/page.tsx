@@ -138,9 +138,10 @@ export default function MerchantLogin() {
 
             {allowDemoSeed && (
               <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                <p className="text-xs text-muted-foreground font-body mb-2 font-semibold">Demo Chain Merchant Credentials:</p>
+                <p className="text-xs text-muted-foreground font-body mb-2 font-semibold">Demo Merchant Credentials:</p>
                 <p className="text-xs text-foreground font-body">Shoprite: demo-shoprite@evoucher.co.za</p>
                 <p className="text-xs text-foreground font-body">Pick n Pay: demo-picknpay@evoucher.co.za</p>
+                <p className="text-xs text-foreground font-body">Kalapeng Private: demo-kalapeng@evoucher.co.za</p>
                 <p className="text-xs text-foreground font-body mt-1">Password: demo123</p>
               </div>
             )}

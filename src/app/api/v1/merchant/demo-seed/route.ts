@@ -25,6 +25,7 @@ export async function POST() {
       merchantLogins: [
         { merchant: 'Shoprite', email: 'demo-shoprite@evoucher.co.za' },
         { merchant: 'Pick n Pay', email: 'demo-picknpay@evoucher.co.za' },
+        { merchant: 'Kalapeng (Private)', email: 'demo-kalapeng@evoucher.co.za' },
       ],
       password: 'demo123',
     });

@@ -7,6 +7,7 @@ type DemoMerchantSeed = {
   email: string;
   phone: string;
   businessType: string;
+  merchantType?: 'chain' | 'private';
   seedPortalAuth?: boolean;
 };
 
@@ -67,6 +68,15 @@ const DEMO_MERCHANTS: DemoMerchantSeed[] = [
     email: 'demo-picknpay@evoucher.co.za',
     phone: '0101000008',
     businessType: 'Supermarket',
+    seedPortalAuth: true,
+  },
+  {
+    brandKey: 'superstore',
+    businessName: 'Kalapeng Demo Store',
+    email: 'demo-kalapeng@evoucher.co.za',
+    phone: '0101000099',
+    businessType: 'Supermarket',
+    merchantType: 'private',
     seedPortalAuth: true,
   },
   {
@@ -332,7 +342,7 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
       status: 'approved',
       approved_at: nowIso,
       onboarding_fee_paid: true,
-      merchant_type: 'chain',
+      merchant_type: seed.merchantType ?? 'chain',
       vetting_status: 'approved',
       email_verified: true,
       phone_verified: true,
