@@ -30,6 +30,11 @@ export default function MerchantLogin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { user, role, signIn } = useAuth();
+  useEffect(() => {
+    if (typeof user === 'undefined') {
+      setError('Authentication context failed to load. Please refresh or contact support.');
+    }
+  }, [user]);
   const router = useRouter();
   const allowDemoSeed = String(process.env.NEXT_PUBLIC_ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase() === 'true';
   const autoSeedOnLogin =
@@ -90,11 +95,29 @@ export default function MerchantLogin() {
     try {
       const normalizedEmail = String(email ?? '').trim().toLowerCase();
       const normalizedPassword = String(password ?? '').trim();
+      if (!normalizedEmail || !normalizedPassword) {
+        setError('Email and password are required.');
+        setLoading(false);
+        return;
+      }
       await signIn(normalizedEmail, normalizedPassword);
-      const state = await fetchMerchantAuthState();
+      let state;
+      try {
+        state = await fetchMerchantAuthState();
+      } catch (apiErr: any) {
+        setError('Failed to fetch merchant authentication state. Please try again or contact support.');
+        setLoading(false);
+        return;
+      }
+      if (!state || typeof state.mustResetPassword === 'undefined') {
+        setError('Merchant authentication state is invalid.');
+        setLoading(false);
+        return;
+      }
       router.replace(state.mustResetPassword ? '/merchant/change-password' : '/merchant/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
+      setError(err?.message || 'Invalid email or password');
+      console.error('[MerchantLogin][handleSubmit][error]', err);
     } finally {
       setLoading(false);
     }

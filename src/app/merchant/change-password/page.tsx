@@ -41,6 +41,11 @@ export default function MerchantChangePasswordPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const { user, loading } = useAuth();
+  useEffect(() => {
+    if (typeof user === 'undefined') {
+      setError('Authentication context failed to load. Please refresh or contact support.');
+    }
+  }, [user]);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -93,27 +98,45 @@ export default function MerchantChangePasswordPage() {
       setError('Passwords do not match.');
       return;
     }
+    if (!user || typeof user.id === 'undefined') {
+      setError('User context is missing. Please log in again.');
+      setSubmitting(false);
+      return;
+    }
 
     setSubmitting(true);
     try {
       const currentMetadata = user?.user_metadata ?? {};
-      const updateResult = await withTimeout(
-        supabase.auth.updateUser({
-          password,
-          data: {
-            ...currentMetadata,
-            must_change_password: false,
-          },
-        }),
-        passwordUpdateTimeoutMs,
-        'Password update timed out. Please try again.'
-      );
+      let updateResult;
+      try {
+        updateResult = await withTimeout(
+          supabase.auth.updateUser({
+            password,
+            data: {
+              ...currentMetadata,
+              must_change_password: false,
+            },
+          }),
+          passwordUpdateTimeoutMs,
+          'Password update timed out. Please try again.'
+        );
+      } catch (updateErr: any) {
+        setError(updateErr?.message || 'Failed to update password.');
+        console.error('[MerchantChangePassword][updateUser][error]', updateErr);
+        setSubmitting(false);
+        return;
+      }
       // Type guard for updateResult
       let updateError;
       if (typeof updateResult === 'object' && updateResult !== null && 'error' in updateResult) {
         updateError = (updateResult as any).error;
       }
-      if (updateError) throw updateError;
+      if (updateError) {
+        setError(updateError?.message || 'Failed to update password.');
+        console.error('[MerchantChangePassword][updateUser][error]', updateError);
+        setSubmitting(false);
+        return;
+      }
 
       let syncWarning = '';
       try {
@@ -128,20 +151,26 @@ export default function MerchantChangePasswordPage() {
         if (!resetResponse.ok) {
           const payload = await resetResponse.json().catch(() => ({} as any));
           syncWarning = payload?.error || 'Password reset sync is pending.';
+          console.error('[MerchantChangePassword][complete-password-reset][error]', syncWarning);
         }
       } catch (syncError: any) {
         syncWarning = syncError?.message || 'Password reset sync is pending.';
+        console.error('[MerchantChangePassword][complete-password-reset][error]', syncWarning);
       }
 
       // Ensure client auth/session state is refreshed before navigation checks run.
-      await supabase.auth.refreshSession();
-      await supabase.auth.getUser();
+      try {
+        await supabase.auth.refreshSession();
+        await supabase.auth.getUser();
+      } catch (refreshErr: any) {
+        console.error('[MerchantChangePassword][refreshSession][error]', refreshErr);
+      }
       for (let i = 0; i < 4; i += 1) {
         try {
           const state = await fetchMerchantAuthState();
           if (!state.mustResetPassword) break;
-        } catch {
-          // Continue best-effort polling.
+        } catch (pollErr: any) {
+          console.error('[MerchantChangePassword][pollAuthState][error]', pollErr);
         }
         await new Promise((resolve) => setTimeout(resolve, 450));
       }
