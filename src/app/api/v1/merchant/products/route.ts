@@ -30,6 +30,11 @@ function isMissingColumn(error: any, columnName: string) {
   const normalizedColumn = columnName.toLowerCase();
   return (
     (message.includes(`column "${normalizedColumn}"`) && message.includes('does not exist')) ||
+    (message.includes(`column ${normalizedColumn}`) && message.includes('does not exist')) ||
+    (message.includes(`column "merchant_products.${normalizedColumn}"`) &&
+      message.includes('does not exist')) ||
+    (message.includes(`column merchant_products.${normalizedColumn}`) &&
+      message.includes('does not exist')) ||
     message.includes(`could not find the '${normalizedColumn}' column`) ||
     message.includes(`could not find the column '${normalizedColumn}'`)
   );
