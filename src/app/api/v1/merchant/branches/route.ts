@@ -25,6 +25,8 @@ function isMissingColumn(error: any, columnName: string) {
   return (
     (message.includes(`column "${normalizedColumn}"`) && message.includes('does not exist')) ||
     (message.includes(`column ${normalizedColumn}`) && message.includes('does not exist')) ||
+    (message.includes(`column merchants.${normalizedColumn}`) && message.includes('does not exist')) ||
+    (message.includes(`column "merchants.${normalizedColumn}"`) && message.includes('does not exist')) ||
     message.includes(`could not find the '${normalizedColumn}' column`) ||
     message.includes(`could not find the column '${normalizedColumn}'`)
   );
@@ -87,11 +89,29 @@ export async function GET() {
 
     const { role } = await resolveUserRole(supabase, user);
     const admin = createAdminClient();
-    const merchant = await resolveMerchantForUser<any>(
-      admin,
-      user,
-      'id,user_id,business_name,parent_brand,merchant_type,parent_merchant_id,is_branch,status'
-    );
+    let merchant;
+    try {
+      merchant = await resolveMerchantForUser<any>(
+        admin,
+        user,
+        'id,user_id,business_name,parent_brand,merchant_type,parent_merchant_id,is_branch,status'
+      );
+    } catch (error: any) {
+      if (!isMissingBranchHierarchyColumn(error)) throw error;
+      merchant = await resolveMerchantForUser<any>(
+        admin,
+        user,
+        'id,user_id,business_name,parent_brand,status'
+      );
+      if (merchant) {
+        merchant = {
+          ...merchant,
+          merchant_type: null,
+          parent_merchant_id: null,
+          is_branch: false,
+        };
+      }
+    }
 
     if (!merchant) {
       return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
@@ -178,11 +198,29 @@ export async function POST(request: Request) {
     }
 
     const admin = createAdminClient();
-    const merchant = await resolveMerchantForUser<any>(
-      admin,
-      user,
-      'id,user_id,business_name,parent_brand,merchant_type,parent_merchant_id,is_branch,status,default_total_discount_pct,bank_name,branch_code,account_number,account_holder_name,tax_number,registration_number,business_type,physical_address'
-    );
+    let merchant;
+    try {
+      merchant = await resolveMerchantForUser<any>(
+        admin,
+        user,
+        'id,user_id,business_name,parent_brand,merchant_type,parent_merchant_id,is_branch,status,default_total_discount_pct,bank_name,branch_code,account_number,account_holder_name,tax_number,registration_number,business_type,physical_address'
+      );
+    } catch (error: any) {
+      if (!isMissingBranchHierarchyColumn(error)) throw error;
+      merchant = await resolveMerchantForUser<any>(
+        admin,
+        user,
+        'id,user_id,business_name,parent_brand,status,default_total_discount_pct,bank_name,branch_code,account_number,account_holder_name,tax_number,registration_number,business_type,physical_address'
+      );
+      if (merchant) {
+        merchant = {
+          ...merchant,
+          merchant_type: null,
+          parent_merchant_id: null,
+          is_branch: false,
+        };
+      }
+    }
 
     if (!merchant) {
       return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
@@ -274,4 +312,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

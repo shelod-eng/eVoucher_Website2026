@@ -117,6 +117,7 @@ export default function MerchantDashboard() {
   const [error, setError] = useState('');
   const [productMessage, setProductMessage] = useState('');
   const [savingProduct, setSavingProduct] = useState(false);
+  const [activeMerchantTab, setActiveMerchantTab] = useState<'products' | 'studio'>('studio');
   const [productForm, setProductForm] = useState({
     productName: '',
     faceValue: 100,
@@ -549,29 +550,55 @@ export default function MerchantDashboard() {
                 <h2 className="font-headline font-bold text-2xl text-foreground">Voucher Product Studio</h2>
                 <Icon name="TicketIcon" size={24} variant="solid" className="text-primary" />
               </div>
-
-              <p className="text-sm text-muted-foreground font-body mb-4">
-                Grocery recommendation: use a total discount between 3% and 15%. The 50/50 split is enforced:
-                consumer benefit and platform margin each receive half of total discount.
-              </p>
-              <p className="text-sm text-muted-foreground font-body mb-4">
-                Example (R100 voucher @ 5%): consumer pays R97.50, platform retains R2.50, merchant settlement is
-                R95.00.
-              </p>
-
-              <div className="flex flex-wrap gap-2 mb-5">
-                {GROCERY_PRESETS.map((preset) => (
-                  <button
-                    key={preset.label}
-                    onClick={() => applyPreset(preset)}
-                    className="px-3 py-2 rounded-lg border border-border text-xs font-headline font-semibold hover:bg-muted"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+              <div className="mb-4 inline-flex rounded-lg border border-border bg-muted p-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveMerchantTab('products')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-headline font-semibold transition-colors ${
+                    activeMerchantTab === 'products'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Products
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMerchantTab('studio')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-headline font-semibold transition-colors ${
+                    activeMerchantTab === 'studio'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Product Studio
+                </button>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-3 mb-4">
+              {activeMerchantTab === 'studio' && (
+                <>
+                  <p className="text-sm text-muted-foreground font-body mb-4">
+                    Grocery recommendation: use a total discount between 3% and 15%. The 50/50 split is enforced:
+                    consumer benefit and platform margin each receive half of total discount.
+                  </p>
+                  <p className="text-sm text-muted-foreground font-body mb-4">
+                    Example (R100 voucher @ 5%): consumer pays R97.50, platform retains R2.50, merchant settlement is
+                    R95.00.
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 mb-5">
+                    {GROCERY_PRESETS.map((preset) => (
+                      <button
+                        key={preset.label}
+                        onClick={() => applyPreset(preset)}
+                        className="px-3 py-2 rounded-lg border border-border text-xs font-headline font-semibold hover:bg-muted"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-3 mb-4">
                 <input
                   type="text"
                   value={productForm.productName}
@@ -729,21 +756,36 @@ export default function MerchantDashboard() {
                     />
                   </>
                 )}
-              </div>
+                  </div>
 
-              <button
-                onClick={() => void handleCreateProduct()}
-                disabled={savingProduct}
-                className="px-5 py-3 rounded-lg bg-primary text-primary-foreground font-headline font-semibold disabled:opacity-50"
-              >
-                {savingProduct ? 'Saving Product...' : 'Create Product'}
-              </button>
+                  <button
+                    onClick={() => void handleCreateProduct()}
+                    disabled={savingProduct}
+                    className="px-5 py-3 rounded-lg bg-primary text-primary-foreground font-headline font-semibold disabled:opacity-50"
+                  >
+                    {savingProduct ? 'Saving Product...' : 'Create Product'}
+                  </button>
 
-              {productMessage && (
-                <p className="mt-3 text-sm text-muted-foreground font-body">{productMessage}</p>
+                  {productMessage && (
+                    <p className="mt-3 text-sm text-muted-foreground font-body">{productMessage}</p>
+                  )}
+                </>
               )}
 
-              <div className="mt-6 space-y-3">
+              {activeMerchantTab === 'products' && (
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setActiveMerchantTab('studio')}
+                    className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-headline font-semibold"
+                  >
+                    New Product
+                  </button>
+                </div>
+              )}
+
+              {activeMerchantTab === 'products' && (
+                <div className="mt-2 space-y-3">
                 {merchantProducts.length === 0 ? (
                   <p className="text-sm text-muted-foreground font-body">
                     No products yet. Start by applying a grocery preset.
@@ -791,7 +833,8 @@ export default function MerchantDashboard() {
                     </div>
                   ))
                 )}
-              </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">

@@ -9,6 +9,8 @@ function isMissingColumn(error: any, columnName: string) {
   return (
     (message.includes(`column "${normalizedColumn}"`) && message.includes('does not exist')) ||
     (message.includes(`column ${normalizedColumn}`) && message.includes('does not exist')) ||
+    (message.includes(`column merchants.${normalizedColumn}`) && message.includes('does not exist')) ||
+    (message.includes(`column "merchants.${normalizedColumn}"`) && message.includes('does not exist')) ||
     message.includes(`could not find the '${normalizedColumn}' column`) ||
     message.includes(`could not find the column '${normalizedColumn}'`)
   );

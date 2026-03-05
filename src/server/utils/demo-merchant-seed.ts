@@ -188,14 +188,8 @@ const DEMO_PRODUCTS_BY_BRAND: Partial<Record<BrandKey, Array<{ name: string; fac
 };
 
 function shouldSeedDemoData() {
-  const flags = [
-    String(process.env.SEED_DEMO_MERCHANTS ?? '').toLowerCase(),
-    String(process.env.ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase(),
-    String(process.env.NEXT_PUBLIC_ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase(),
-    String(process.env.NEXT_PUBLIC_FORCE_DEMO_SEED_ON_LOGIN ?? '').toLowerCase(),
-  ];
-  const enabled = flags.some((value) => ['true', '1', 'yes', 'on'].includes(value));
-  return process.env.NODE_ENV === 'development' || enabled;
+  // Prototype/UAT requirement: demo merchants must always be seedable.
+  return true;
 }
 
 function isMissingRelation(error: any, relationName: string) {
