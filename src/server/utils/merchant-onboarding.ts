@@ -618,25 +618,43 @@ export async function submitMerchantOnboarding(args: {
       user_id: existingMerchant.data.user_id ?? insert.user_id,
       phone_verified: !otpRequired ? true : insert.phone_verified,
     };
-    const { data, error } = await admin
+    let updateResult = await admin
       .from('merchants')
       .update(updatePayload)
       .eq('id', existingMerchant.data.id)
       .select('id,business_name,email,phone,contact_name,status,vetting_status')
       .single();
-    if (error) throw error;
-    merchantData = data;
+    if (updateResult.error && isUserIdTypeMismatch(updateResult.error)) {
+      const { user_id: _ignoredUserId, ...fallbackPayload } = updatePayload;
+      updateResult = await admin
+        .from('merchants')
+        .update(fallbackPayload)
+        .eq('id', existingMerchant.data.id)
+        .select('id,business_name,email,phone,contact_name,status,vetting_status')
+        .single();
+    }
+    if (updateResult.error) throw updateResult.error;
+    merchantData = updateResult.data;
   } else {
-    const { data, error } = await admin
+    const insertPayload = {
+      ...insert,
+      phone_verified: !otpRequired ? true : insert.phone_verified,
+    };
+    let insertResult = await admin
       .from('merchants')
-      .insert({
-        ...insert,
-        phone_verified: !otpRequired ? true : insert.phone_verified,
-      })
+      .insert(insertPayload)
       .select('id,business_name,email,phone,contact_name,status,vetting_status')
       .single();
-    if (error) throw error;
-    merchantData = data;
+    if (insertResult.error && isUserIdTypeMismatch(insertResult.error)) {
+      const { user_id: _ignoredUserId, ...fallbackPayload } = insertPayload;
+      insertResult = await admin
+        .from('merchants')
+        .insert(fallbackPayload)
+        .select('id,business_name,email,phone,contact_name,status,vetting_status')
+        .single();
+    }
+    if (insertResult.error) throw insertResult.error;
+    merchantData = insertResult.data;
   }
 
   const merchantId = merchantData.id as string;
