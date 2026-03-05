@@ -255,6 +255,17 @@ function resolveAppBaseUrl() {
   return 'http://localhost:4028';
 }
 
+function isPrototypeApprovalMode() {
+  const flags = [
+    String(process.env.MERCHANT_PROTOTYPE_MODE ?? '').toLowerCase(),
+    String(process.env.NEXT_PUBLIC_MERCHANT_PROTOTYPE_MODE ?? '').toLowerCase(),
+    String(process.env.ALLOW_PUBLIC_MERCHANT_APPROVAL ?? '').toLowerCase(),
+    String(process.env.NEXT_PUBLIC_ALLOW_PUBLIC_MERCHANT_APPROVAL ?? '').toLowerCase(),
+  ];
+  const enabled = flags.some((value) => ['true', '1', 'yes', 'on'].includes(value));
+  return process.env.NODE_ENV !== 'production' || enabled;
+}
+
 function resolveInitialVettingStatus(merchantType: MerchantType) {
   return merchantType === 'private' ? 'pending_private_approval' : 'pending_chain_approval';
 }
@@ -1482,6 +1493,7 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
   const verification = await getVerificationByMerchantId(admin, options.merchantId);
   const emailVerified = Boolean(merchant.email_verified) || Boolean(verification?.email_verified_at);
   const phoneVerified = Boolean(merchant.phone_verified) || Boolean(verification?.sms_verified_at);
+  const prototypeApprovalMode = isPrototypeApprovalMode();
 
   if (merchant.status === 'approved' && Boolean(verification?.credentials_sent_at) && Boolean(merchant.user_id)) {
     return {
@@ -1506,7 +1518,7 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
   }
 
   const merchantType = merchant.merchant_type ?? 'chain';
-  if (merchantType === 'chain' && !options.forceApproveChain) {
+  if (merchantType === 'chain' && !options.forceApproveChain && !prototypeApprovalMode) {
     await admin
       .from('merchants')
       .update({
@@ -1527,7 +1539,12 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
     };
   }
 
-  if (merchantType === 'private' && !evaluatePrivateMerchantAutoApproval(merchant) && !options.forceApproveChain) {
+  if (
+    merchantType === 'private' &&
+    !evaluatePrivateMerchantAutoApproval(merchant) &&
+    !options.forceApproveChain &&
+    !prototypeApprovalMode
+  ) {
     await admin
       .from('merchants')
       .update({
