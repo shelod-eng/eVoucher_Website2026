@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -20,7 +19,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const resolveUserRole = async (currentUser: User | null): Promise<string | null> => {
@@ -115,7 +113,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('AuthContext: signIn successful:', data.user?.id);
     const resolvedRole = await resolveUserRole(data.user ?? null);
     setRole(resolvedRole);
-    router.refresh();
     return data.user ?? null;
   };
 
@@ -153,7 +150,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    router.refresh();
   };
 
   return (

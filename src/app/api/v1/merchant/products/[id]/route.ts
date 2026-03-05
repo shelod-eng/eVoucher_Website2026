@@ -27,7 +27,12 @@ interface UpdateMerchantProductRequest {
 
 function isMissingColumn(error: any, columnName: string) {
   const message = String(error?.message ?? '').toLowerCase();
-  return message.includes(`column "${columnName.toLowerCase()}"`) && message.includes('does not exist');
+  const normalizedColumn = columnName.toLowerCase();
+  return (
+    (message.includes(`column "${normalizedColumn}"`) && message.includes('does not exist')) ||
+    message.includes(`could not find the '${normalizedColumn}' column`) ||
+    message.includes(`could not find the column '${normalizedColumn}'`)
+  );
 }
 
 function isMissingSpecialsColumn(error: any) {
