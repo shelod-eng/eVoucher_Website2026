@@ -9,6 +9,7 @@ import {
   sendMerchantStatusNotifications,
   sendMerchantVerificationEmail,
 } from '@/server/utils/merchant-notifications';
+import { ensureMerchantStarterProducts } from '@/server/utils/merchant-product-bootstrap';
 
 export type MerchantType = 'chain' | 'private';
 
@@ -97,6 +98,7 @@ type MerchantRecord = {
   account_number: string | null;
   branch_code: string | null;
   account_holder_name: string | null;
+  default_total_discount_pct: number | null;
   approved_at: string | null;
   email_verified: boolean | null;
   phone_verified: boolean | null;
@@ -349,7 +351,7 @@ async function getMerchantById(admin: any, merchantId: string): Promise<Merchant
   const { data, error } = await admin
     .from('merchants')
     .select(
-      'id,user_id,business_name,parent_brand,branch_name,contact_name,email,phone,status,vetting_status,merchant_type,registration_number,tax_number,pharmacy_license_number,responsible_pharmacist_name,owner_id_number,physical_address,business_type,bank_name,account_number,branch_code,account_holder_name,approved_at,email_verified,phone_verified,must_reset_password'
+      'id,user_id,business_name,parent_brand,branch_name,contact_name,email,phone,status,vetting_status,merchant_type,registration_number,tax_number,pharmacy_license_number,responsible_pharmacist_name,owner_id_number,physical_address,business_type,bank_name,account_number,branch_code,account_holder_name,default_total_discount_pct,approved_at,email_verified,phone_verified,must_reset_password'
     )
     .eq('id', merchantId)
     .single();
@@ -896,6 +898,7 @@ export async function verifyMerchantEmailToken(args: {
           userId,
           issuedAt,
         });
+        await ensureMerchantStarterProducts(admin, merchant);
 
         const credentialsEmailResult = await sendMerchantCredentialsEmail({
           businessName: merchant.business_name,
@@ -998,6 +1001,7 @@ export async function verifyMerchantEmailToken(args: {
           userId,
           issuedAt,
         });
+        await ensureMerchantStarterProducts(admin, merchant);
 
         const credentialsEmailResult = await sendMerchantCredentialsEmail({
           businessName: merchant.business_name,
@@ -1518,6 +1522,7 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
   const temporaryPassword = generateTemporaryPassword();
   const userId = await provisionAuthUserForMerchant(admin, merchant, temporaryPassword);
   await enforceMerchantLoginReadiness(admin, merchant, userId);
+  await ensureMerchantStarterProducts(admin, merchant);
 
   const approvedAt = new Date().toISOString();
   const nextVettingStatus = options.forceApproveChain ? 'approved' : 'auto_approved';

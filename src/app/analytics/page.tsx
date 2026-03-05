@@ -117,13 +117,14 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.18),_transparent_45%),radial-gradient(circle_at_bottom_right,_rgba(20,184,166,0.16),_transparent_50%),#f4fbfa]">
       <Header />
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div>
-            <h1 className="font-headline font-bold text-5xl text-foreground">Analytics</h1>
-            <p className="text-muted-foreground">Track your spending and savings</p>
+          <div className="rounded-2xl border border-teal-300/40 bg-gradient-to-r from-teal-700 to-teal-600 px-6 py-5 text-white shadow-xl">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-teal-100 font-headline">eVoucher Insights</p>
+            <h1 className="font-headline font-bold text-5xl text-white">Analytics</h1>
+            <p className="text-teal-100">Track merchant performance, volume, and savings trends.</p>
           </div>
 
           {error && (

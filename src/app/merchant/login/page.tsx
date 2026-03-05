@@ -66,12 +66,17 @@ export default function MerchantLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/5 via-background to-primary/5">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.18),_transparent_45%),radial-gradient(circle_at_bottom_right,_rgba(20,184,166,0.16),_transparent_50%),#f4fbfa]">
       <Header />
       
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-md mx-auto">
-          <div className="bg-card rounded-2xl shadow-2xl p-8 border border-border">
+          <div className="mb-5 rounded-2xl border border-teal-300/40 bg-gradient-to-r from-teal-700 to-teal-600 px-6 py-5 text-white shadow-xl">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-teal-100 font-headline">eVoucher Merchant Platform</p>
+            <h1 className="mt-2 font-headline font-bold text-2xl">Business Portal Sign In</h1>
+            <p className="mt-1 text-sm text-teal-100">Secure access for chain and private merchants.</p>
+          </div>
+          <div className="bg-card/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-border">
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Icon name="BuildingStorefrontIcon" size={32} variant="solid" className="text-secondary" />

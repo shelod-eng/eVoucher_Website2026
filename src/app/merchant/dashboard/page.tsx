@@ -302,11 +302,20 @@ export default function MerchantDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/5 via-background to-primary/5">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.18),_transparent_45%),radial-gradient(circle_at_bottom_right,_rgba(20,184,166,0.16),_transparent_50%),#f4fbfa]">
       <Header />
 
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-7xl mx-auto">
+          <div className="mb-6 rounded-2xl border border-teal-300/40 bg-gradient-to-r from-teal-700 to-teal-600 px-6 py-5 text-white shadow-xl">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-teal-100 font-headline">
+              eVoucher Platform
+            </p>
+            <h2 className="mt-2 font-headline font-bold text-2xl">Merchant Business Portal</h2>
+            <p className="mt-1 text-sm text-teal-100">
+              Products, approvals, payouts, and analytics in one operating workspace.
+            </p>
+          </div>
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="font-headline font-bold text-3xl lg:text-4xl text-foreground mb-2">
@@ -348,7 +357,7 @@ export default function MerchantDashboard() {
           )}
 
           <div className="grid md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-card rounded-2xl p-6 border border-border shadow-lg">
+            <div className="bg-card/95 backdrop-blur-sm rounded-2xl p-6 border border-border shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center">
                   <Icon name="CheckBadgeIcon" size={24} variant="solid" className="text-secondary" />
@@ -363,17 +372,17 @@ export default function MerchantDashboard() {
               <p className="text-2xl font-headline font-bold text-foreground capitalize">{merchant?.status}</p>
             </div>
 
-            <div className="bg-gradient-to-br from-success to-success/80 rounded-2xl p-6 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-teal-600 to-teal-500 rounded-2xl p-6 text-white shadow-lg">
               <p className="text-sm opacity-90 mb-1">Total Paid Out</p>
               <p className="text-4xl font-headline font-bold">R{totalPayouts.toFixed(2)}</p>
             </div>
 
-            <div className="bg-gradient-to-br from-warning to-warning/80 rounded-2xl p-6 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-amber-500 to-orange-400 rounded-2xl p-6 text-white shadow-lg">
               <p className="text-sm opacity-90 mb-1">Pending Payouts</p>
               <p className="text-4xl font-headline font-bold">R{pendingPayouts.toFixed(2)}</p>
             </div>
 
-            <div className="bg-gradient-to-br from-primary to-primary/80 rounded-2xl p-6 text-white shadow-lg">
+            <div className="bg-gradient-to-br from-cyan-600 to-teal-500 rounded-2xl p-6 text-white shadow-lg">
               <p className="text-sm opacity-90 mb-1">Active Products</p>
               <p className="text-4xl font-headline font-bold">{activeProducts}</p>
             </div>

@@ -112,17 +112,39 @@ export default function MerchantChangePasswordPage() {
       );
       setTimeout(() => router.replace('/merchant/dashboard'), 900);
     } catch (submitError: any) {
-      setError(submitError?.message || 'Failed to update password.');
+      const message = String(submitError?.message || 'Failed to update password.');
+      if (message.toLowerCase().includes('timed out')) {
+        try {
+          await supabase.auth.refreshSession();
+          const {
+            data: { user: latestUser },
+          } = await supabase.auth.getUser();
+          if (latestUser) {
+            setSuccess('Password update is taking longer than expected. Redirecting to dashboard...');
+            setTimeout(() => router.replace('/merchant/dashboard'), 900);
+            return;
+          }
+        } catch {
+          // Continue to normal error path below.
+        }
+      }
+      setError(message);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/5 via-background to-primary/5">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.18),_transparent_45%),radial-gradient(circle_at_bottom_right,_rgba(20,184,166,0.16),_transparent_50%),#f4fbfa]">
       <Header />
       <main className="pt-24 pb-16 px-4">
-        <div className="max-w-lg mx-auto bg-card border border-border rounded-2xl shadow-lg p-8">
+        <div className="max-w-lg mx-auto">
+          <div className="mb-5 rounded-2xl border border-teal-300/40 bg-gradient-to-r from-teal-700 to-teal-600 px-6 py-5 text-white shadow-xl">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-teal-100 font-headline">eVoucher Security</p>
+            <h1 className="mt-2 font-headline font-bold text-2xl">Set your permanent password</h1>
+            <p className="mt-1 text-sm text-teal-100">One-time step before entering the merchant portal.</p>
+          </div>
+          <div className="bg-card/95 backdrop-blur-sm border border-border rounded-2xl shadow-lg p-8">
           <div className="mb-6">
             <h1 className="font-headline text-2xl font-bold text-foreground">Set a New Password</h1>
             <p className="mt-2 text-sm text-muted-foreground font-body">
@@ -179,6 +201,7 @@ export default function MerchantChangePasswordPage() {
               {submitting ? 'Updating password...' : 'Update Password'}
             </button>
           </form>
+          </div>
         </div>
       </main>
     </div>
