@@ -279,6 +279,12 @@ async function fetchProductsForMerchantIds(dataClient: any, merchantIds: string[
     },
     {
       fields:
+        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at',
+      applyActiveFilter: (query: any) => query.eq('is_active', true),
+      isRowActive: (row: any) => Boolean(row?.is_active),
+    },
+    {
+      fields:
         'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_special,special_title,special_end_at,display_priority,status,created_at',
       applyActiveFilter: (query: any) => query.eq('status', 'active'),
       isRowActive: (row: any) => String(row?.status ?? '').toLowerCase() === 'active',
