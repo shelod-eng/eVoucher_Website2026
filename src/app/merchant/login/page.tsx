@@ -19,13 +19,25 @@ const DEMO_MERCHANTS = [
   { label: 'Kalapeng Private', email: 'demo-kalapeng@evoucher.co.za' },
 ] as const;
 
+function isDemoEmail(email: string) {
+  const normalized = String(email ?? '').trim().toLowerCase();
+  return normalized.startsWith('demo-') && normalized.endsWith('@evoucher.co.za');
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
-  return await Promise.race([
-    promise,
-    new Promise<T>((_, reject) => {
-      setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
-    }),
-  ]);
+  return await new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
 }
 
 async function fetchMerchantAuthState() {
@@ -126,11 +138,30 @@ export default function MerchantLogin() {
         setLoading(false);
         return;
       }
-      const signedInUser = await withTimeout(
-        signIn(normalizedEmail, normalizedPassword),
-        60000,
-        'Sign in timed out. Please try again.'
-      );
+      let signedInUser;
+      try {
+        signedInUser = await withTimeout(
+          signIn(normalizedEmail, normalizedPassword),
+          60000,
+          'Sign in timed out. Please try again.'
+        );
+      } catch (initialSignInError: any) {
+        const message = String(initialSignInError?.message || '').toLowerCase();
+        if (isDemoEmail(normalizedEmail) && (message.includes('invalid login') || message.includes('invalid credentials'))) {
+          try {
+            await fetch('/api/v1/merchant/demo-seed', { method: 'POST' });
+            signedInUser = await withTimeout(
+              signIn(normalizedEmail, normalizedPassword),
+              60000,
+              'Sign in timed out. Please try again.'
+            );
+          } catch (retryError) {
+            throw retryError;
+          }
+        } else {
+          throw initialSignInError;
+        }
+      }
       if (
         normalizedEmail === 'demo-shoprite@evoucher.co.za' ||
         normalizedEmail === 'demo-picknpay@evoucher.co.za'

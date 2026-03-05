@@ -18,6 +18,7 @@ const DEMO_MERCHANTS: DemoMerchantSeed[] = [
     email: 'demo-boxer@evoucher.co.za',
     phone: '0101000001',
     businessType: 'Supermarket',
+    seedPortalAuth: true,
   },
   {
     brandKey: 'shoprite',
@@ -33,6 +34,7 @@ const DEMO_MERCHANTS: DemoMerchantSeed[] = [
     email: 'demo-pep@evoucher.co.za',
     phone: '0101000003',
     businessType: 'Retail',
+    seedPortalAuth: true,
   },
   {
     brandKey: 'game',
@@ -54,6 +56,7 @@ const DEMO_MERCHANTS: DemoMerchantSeed[] = [
     email: 'demo-checkers@evoucher.co.za',
     phone: '0101000006',
     businessType: 'Supermarket',
+    seedPortalAuth: true,
   },
   {
     brandKey: 'engen',
@@ -61,6 +64,7 @@ const DEMO_MERCHANTS: DemoMerchantSeed[] = [
     email: 'demo-engen@evoucher.co.za',
     phone: '0101000007',
     businessType: 'Fuel',
+    seedPortalAuth: true,
   },
   {
     brandKey: 'picknpay',
@@ -106,6 +110,7 @@ const DEMO_MERCHANTS: DemoMerchantSeed[] = [
     email: 'demo-clicks@evoucher.co.za',
     phone: '0101000012',
     businessType: 'Pharmacy',
+    seedPortalAuth: true,
   },
   {
     brandKey: 'superstore',

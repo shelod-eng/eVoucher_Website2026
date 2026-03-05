@@ -3,16 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { ensureDemoMerchantsSeeded } from '@/server/utils/demo-merchant-seed';
 
 function isDemoSeedingEnabled() {
-  const vercelEnv = String(process.env.VERCEL_ENV ?? '').toLowerCase();
-  const explicitEnableFlags = [
-    String(process.env.SEED_DEMO_MERCHANTS ?? '').toLowerCase(),
-    String(process.env.ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase(),
-    String(process.env.NEXT_PUBLIC_ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase(),
-  ];
-  const explicitlyEnabled = explicitEnableFlags.some((value) =>
-    ['true', '1', 'yes', 'on'].includes(value)
-  );
-  return process.env.NODE_ENV === 'development' || vercelEnv === 'preview' || explicitlyEnabled;
+  // Prototype/UAT requirement: demo merchant login must always be available.
+  return true;
 }
 
 export async function POST() {
