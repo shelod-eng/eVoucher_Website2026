@@ -29,6 +29,12 @@ function isMissingColumn(error: any, columnName: string) {
   return message.includes(`column "${columnName.toLowerCase()}"`) && message.includes('does not exist');
 }
 
+function isMissingSpecialsColumn(error: any) {
+  return ['is_special', 'special_title', 'special_end_at', 'display_priority'].some((column) =>
+    isMissingColumn(error, column)
+  );
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
@@ -65,8 +71,8 @@ export async function PATCH(
       .eq('merchant_id', merchant.id)
       .maybeSingle();
 
-    if (existingError && !isMissingColumn(existingError, 'is_special')) throw existingError;
-    if (existingError && isMissingColumn(existingError, 'is_special')) {
+    if (existingError && !isMissingSpecialsColumn(existingError)) throw existingError;
+    if (existingError && isMissingSpecialsColumn(existingError)) {
       const fallbackExisting = await admin
         .from('merchant_products')
         .select(
@@ -141,6 +147,21 @@ export async function PATCH(
     }
     if (body.validBranchIds !== undefined && !Array.isArray(body.validBranchIds)) {
       return NextResponse.json({ error: 'validBranchIds must be an array.' }, { status: 400 });
+    }
+    const nextScope = body.redemptionScope ?? existing.redemption_scope ?? 'all_branches';
+    const nextBranchIds = body.validBranchIds ?? existing.valid_branch_ids ?? [];
+    const nextProvinces = body.validProvinces ?? existing.valid_provinces ?? [];
+    if (nextScope === 'specific_branch' && nextBranchIds.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one branch must be selected for specific_branch scope.' },
+        { status: 400 }
+      );
+    }
+    if (nextScope === 'province_wide' && nextProvinces.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one province must be selected for province_wide scope.' },
+        { status: 400 }
+      );
     }
     if (body.displayPriority !== undefined && (!Number.isFinite(body.displayPriority) || body.displayPriority < 0)) {
       return NextResponse.json(
@@ -228,8 +249,8 @@ export async function PATCH(
       )
       .single();
 
-    if (updateError && !isMissingColumn(updateError, 'is_special')) throw updateError;
-    if (updateError && isMissingColumn(updateError, 'is_special')) {
+    if (updateError && !isMissingSpecialsColumn(updateError)) throw updateError;
+    if (updateError && isMissingSpecialsColumn(updateError)) {
       const fallbackUpdate = await admin
         .from('merchant_products')
         .update({

@@ -9,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   role: string | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<User | null>;
   signUp: (email: string, password: string, metadata?: any) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -116,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const resolvedRole = await resolveUserRole(data.user ?? null);
     setRole(resolvedRole);
     router.refresh();
+    return data.user ?? null;
   };
 
   const signUp = async (email: string, password: string, metadata?: any) => {

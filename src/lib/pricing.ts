@@ -1,6 +1,14 @@
+/**
+ * CRITICAL: These constants are governed by Merchant Business Logic Portal Technical Specification v2.0
+ * Rule R1: ALL discount splits MUST be exactly 50/50 (immutable)
+ * Rule R6: Discount range MUST be enforced (3-15%, default 5%)
+ */
+
 export const DEFAULT_TOTAL_DISCOUNT_PCT = 5;
 export const MIN_TOTAL_DISCOUNT_PCT = 3;
 export const MAX_TOTAL_DISCOUNT_PCT = 15;
+
+// Rule R1: IMMUTABLE 50/50 discount split
 export const CONSUMER_DISCOUNT_SHARE = 0.5;
 export const PLATFORM_DISCOUNT_SHARE = 0.5;
 
@@ -15,6 +23,8 @@ export interface DiscountPricingBreakdown {
   consumerPrice: number;
   merchantReceivableAfterTotalDiscount: number;
   merchantReceivableAfterEvoucherBenefit: number;
+  /** Timestamp when pricing was calculated (for Rule R3: Price Snapshot) */
+  snapshotTimestamp?: Date;
 }
 
 function roundCurrency(value: number): number {

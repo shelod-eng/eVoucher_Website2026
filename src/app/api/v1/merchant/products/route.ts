@@ -28,6 +28,12 @@ function isMissingColumn(error: any, columnName: string) {
   return message.includes(`column "${columnName.toLowerCase()}"`) && message.includes('does not exist');
 }
 
+function isMissingSpecialsColumn(error: any) {
+  return ['is_special', 'special_title', 'special_end_at', 'display_priority'].some((column) =>
+    isMissingColumn(error, column)
+  );
+}
+
 function validateCreate(body: CreateMerchantProductRequest): string | null {
   if (!body.productName?.trim()) return 'Product name is required.';
   if (!Number.isFinite(body.faceValue) || body.faceValue <= 0) return 'Face value must be greater than 0.';
@@ -51,6 +57,12 @@ function validateCreate(body: CreateMerchantProductRequest): string | null {
   }
   if (body.validBranchIds !== undefined && !Array.isArray(body.validBranchIds)) {
     return 'validBranchIds must be an array.';
+  }
+  if (body.redemptionScope === 'specific_branch' && (body.validBranchIds ?? []).length === 0) {
+    return 'At least one branch must be selected for specific_branch scope.';
+  }
+  if (body.redemptionScope === 'province_wide' && (body.validProvinces ?? []).length === 0) {
+    return 'At least one province must be selected for province_wide scope.';
   }
   if (body.displayPriority !== undefined && (!Number.isFinite(body.displayPriority) || body.displayPriority < 0)) {
     return 'displayPriority must be a number greater than or equal to 0.';
@@ -109,8 +121,8 @@ export async function GET() {
       .eq('merchant_id', merchant.id)
       .order('display_priority', { ascending: false })
       .order('created_at', { ascending: false });
-    if (productsError && !isMissingColumn(productsError, 'is_special')) throw productsError;
-    if (productsError && isMissingColumn(productsError, 'is_special')) {
+    if (productsError && !isMissingSpecialsColumn(productsError)) throw productsError;
+    if (productsError && isMissingSpecialsColumn(productsError)) {
       const fallback = await admin
         .from('merchant_products')
         .select(
@@ -177,6 +189,19 @@ export async function POST(request: Request) {
       body.totalDiscountPct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
     );
     const pricing = calculateDiscountPricing(body.faceValue, totalDiscountPct);
+
+    // --- BUSINESS RULE VALIDATION ---
+    // Import validator
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { validateAllCriticalRules, BusinessRuleViolation } = require('@/server/utils/business-rules-validator');
+    const ruleCheck = validateAllCriticalRules(pricing);
+    if (!ruleCheck.isValid) {
+      return NextResponse.json({
+        error: 'Business rule violation',
+        violations: ruleCheck.violations.map((v: any) => v.message),
+      }, { status: 400 });
+    }
+
     const isSpecial = Boolean(body.isSpecial);
     const specialTitle = isSpecial ? String(body.specialTitle ?? '').trim() : null;
     const specialEndAt = isSpecial ? new Date(String(body.specialEndAt ?? '')).toISOString() : null;
@@ -211,8 +236,8 @@ export async function POST(request: Request) {
         'id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,is_special,special_title,special_end_at,display_priority,created_at'
       )
       .single();
-    if (insertError && !isMissingColumn(insertError, 'is_special')) throw insertError;
-    if (insertError && isMissingColumn(insertError, 'is_special')) {
+    if (insertError && !isMissingSpecialsColumn(insertError)) throw insertError;
+    if (insertError && isMissingSpecialsColumn(insertError)) {
       const fallback = await admin
         .from('merchant_products')
         .insert({

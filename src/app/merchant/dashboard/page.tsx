@@ -113,14 +113,39 @@ export default function MerchantDashboard() {
     }
 
     if (!authLoading && user) {
-      if (Boolean(user.user_metadata?.must_change_password)) {
-        router.push('/merchant/change-password');
-        return;
-      }
-      const resolvedRole = String(role ?? user.user_metadata?.role ?? '').toLowerCase();
-      if (resolvedRole && resolvedRole !== 'merchant') {
-        router.push('/shop');
-      }
+      let cancelled = false;
+      const resolveGuard = async () => {
+        try {
+          const stateResponse = await fetch('/api/v1/merchant/auth-state', {
+            method: 'GET',
+            credentials: 'include',
+            cache: 'no-store',
+          });
+          const statePayload = await stateResponse.json().catch(() => ({} as any));
+          if (cancelled) return;
+          if (!stateResponse.ok) {
+            throw new Error(statePayload?.error || 'Failed to verify merchant access.');
+          }
+          if (!statePayload?.isMerchant) {
+            router.push('/shop');
+            return;
+          }
+          if (Boolean(statePayload?.mustResetPassword)) {
+            router.push('/merchant/change-password');
+          }
+        } catch {
+          const resolvedRole = String(role ?? user.user_metadata?.role ?? '').toLowerCase();
+          if (resolvedRole && resolvedRole !== 'merchant') {
+            router.push('/shop');
+          } else if (Boolean(user.user_metadata?.must_change_password)) {
+            router.push('/merchant/change-password');
+          }
+        }
+      };
+      void resolveGuard();
+      return () => {
+        cancelled = true;
+      };
     }
   }, [user, role, authLoading, router]);
 

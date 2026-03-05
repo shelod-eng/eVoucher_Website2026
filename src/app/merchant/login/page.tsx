@@ -6,7 +6,23 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
-import { createClient } from '@/lib/supabase/client';
+
+async function fetchMerchantAuthState() {
+  const response = await fetch('/api/v1/merchant/auth-state', {
+    method: 'GET',
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  const payload = await response.json().catch(() => ({} as any));
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Failed to load merchant auth state.');
+  }
+  return payload as {
+    role: string;
+    isMerchant: boolean;
+    mustResetPassword: boolean;
+  };
+}
 
 export default function MerchantLogin() {
   const [email, setEmail] = useState('');
@@ -15,19 +31,37 @@ export default function MerchantLogin() {
   const [loading, setLoading] = useState(false);
   const { user, role, signIn } = useAuth();
   const router = useRouter();
-  const supabase = createClient();
   const allowDemoSeed = String(process.env.NEXT_PUBLIC_ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase() === 'true';
   const autoSeedOnLogin =
     String(process.env.NEXT_PUBLIC_FORCE_DEMO_SEED_ON_LOGIN ?? '').toLowerCase() === 'true';
 
   useEffect(() => {
     if (!user) return;
-    const resolvedRole = String(role ?? user.user_metadata?.role ?? '').toLowerCase();
-    if (resolvedRole === 'merchant') {
-      router.replace(Boolean(user.user_metadata?.must_change_password) ? '/merchant/change-password' : '/merchant/dashboard');
-    } else if (resolvedRole) {
-      router.replace('/shop');
-    }
+    let cancelled = false;
+    const resolveLanding = async () => {
+      try {
+        const state = await fetchMerchantAuthState();
+        if (cancelled) return;
+        if (state.isMerchant) {
+          router.replace(state.mustResetPassword ? '/merchant/change-password' : '/merchant/dashboard');
+          return;
+        }
+        if (String(state.role ?? '').trim()) {
+          router.replace('/shop');
+        }
+      } catch {
+        const resolvedRole = String(role ?? user.user_metadata?.role ?? '').toLowerCase();
+        if (resolvedRole === 'merchant') {
+          router.replace(Boolean(user.user_metadata?.must_change_password) ? '/merchant/change-password' : '/merchant/dashboard');
+        } else if (resolvedRole) {
+          router.replace('/shop');
+        }
+      }
+    };
+    void resolveLanding();
+    return () => {
+      cancelled = true;
+    };
   }, [user, role, router]);
 
   useEffect(() => {
@@ -57,11 +91,8 @@ export default function MerchantLogin() {
       const normalizedEmail = String(email ?? '').trim().toLowerCase();
       const normalizedPassword = String(password ?? '').trim();
       await signIn(normalizedEmail, normalizedPassword);
-      const {
-        data: { user: signedInUser },
-      } = await supabase.auth.getUser();
-      const mustChangePassword = Boolean(signedInUser?.user_metadata?.must_change_password);
-      router.push(mustChangePassword ? '/merchant/change-password' : '/merchant/dashboard');
+      const state = await fetchMerchantAuthState();
+      router.replace(state.mustResetPassword ? '/merchant/change-password' : '/merchant/dashboard');
     } catch (err: any) {
       setError(err.message || 'Invalid email or password');
     } finally {

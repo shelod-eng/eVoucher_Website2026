@@ -24,6 +24,19 @@ function validatePassword(password: string): string | null {
   return null;
 }
 
+async function fetchMerchantAuthState() {
+  const response = await fetch('/api/v1/merchant/auth-state', {
+    method: 'GET',
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  const payload = await response.json().catch(() => ({} as any));
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Failed to load merchant auth state.');
+  }
+  return payload as { isMerchant: boolean; mustResetPassword: boolean };
+}
+
 export default function MerchantChangePasswordPage() {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -41,10 +54,29 @@ export default function MerchantChangePasswordPage() {
       router.replace('/merchant/login');
       return;
     }
-    const mustChange = Boolean(user.user_metadata?.must_change_password);
-    if (!mustChange) {
-      router.replace('/merchant/dashboard');
-    }
+    let cancelled = false;
+    const resolveResetState = async () => {
+      try {
+        const state = await fetchMerchantAuthState();
+        if (cancelled) return;
+        if (!state.isMerchant) {
+          router.replace('/shop');
+          return;
+        }
+        if (!state.mustResetPassword) {
+          router.replace('/merchant/dashboard');
+        }
+      } catch {
+        const mustChange = Boolean(user.user_metadata?.must_change_password);
+        if (!mustChange) {
+          router.replace('/merchant/dashboard');
+        }
+      }
+    };
+    void resolveResetState();
+    return () => {
+      cancelled = true;
+    };
   }, [loading, user, router]);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -104,6 +136,15 @@ export default function MerchantChangePasswordPage() {
       // Ensure client auth/session state is refreshed before navigation checks run.
       await supabase.auth.refreshSession();
       await supabase.auth.getUser();
+      for (let i = 0; i < 4; i += 1) {
+        try {
+          const state = await fetchMerchantAuthState();
+          if (!state.mustResetPassword) break;
+        } catch {
+          // Continue best-effort polling.
+        }
+        await new Promise((resolve) => setTimeout(resolve, 450));
+      }
 
       setSuccess(
         syncWarning
