@@ -10,13 +10,22 @@ interface ConsumerLoginCardProps {
   redirectTo?: string;
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    }),
+  ]);
+}
+
 export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }: ConsumerLoginCardProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, signOut } = useAuth();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -24,10 +33,25 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      const normalizedEmail = String(email ?? '').trim().toLowerCase();
+      const normalizedPassword = String(password ?? '').trim();
+      if (!normalizedEmail || !normalizedPassword) {
+        setError('Email and password are required.');
+        setLoading(false);
+        return;
+      }
+      await withTimeout(signIn(normalizedEmail, normalizedPassword), 20000, 'Sign in timed out. Please try again.');
       router.push(redirectTo);
     } catch (signInError: any) {
-      setError(signInError?.message || 'Invalid email or password.');
+      const message = String(signInError?.message || 'Invalid email or password.');
+      if (message.toLowerCase().includes('timed out')) {
+        try {
+          await signOut();
+        } catch {
+          // Best effort local session clear on timeout.
+        }
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -49,7 +73,7 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
         <div>
           <label htmlFor="consumer-email" className="block text-base font-headline font-semibold text-foreground mb-2">
             Email or Phone
@@ -63,8 +87,9 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
             />
             <input
               id="consumer-email"
+              name="consumer-email"
               type="text"
-              autoComplete="username"
+              autoComplete="off"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
@@ -87,8 +112,9 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
             />
             <input
               id="consumer-password"
+              name="consumer-password"
               type="password"
-              autoComplete="current-password"
+              autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required

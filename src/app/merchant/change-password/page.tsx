@@ -106,56 +106,30 @@ export default function MerchantChangePasswordPage() {
 
     setSubmitting(true);
     try {
-      const currentMetadata = user?.user_metadata ?? {};
-      let updateResult;
-      try {
-        updateResult = await withTimeout(
-          supabase.auth.updateUser({
-            password,
-            data: {
-              ...currentMetadata,
-              must_change_password: false,
-            },
-          }),
-          passwordUpdateTimeoutMs,
-          'Password update timed out. Please try again.'
-        );
-      } catch (updateErr: any) {
-        setError(updateErr?.message || 'Failed to update password.');
-        console.error('[MerchantChangePassword][updateUser][error]', updateErr);
-        setSubmitting(false);
-        return;
-      }
-      // Type guard for updateResult
-      let updateError;
-      if (typeof updateResult === 'object' && updateResult !== null && 'error' in updateResult) {
-        updateError = (updateResult as any).error;
-      }
-      if (updateError) {
-        setError(updateError?.message || 'Failed to update password.');
-        console.error('[MerchantChangePassword][updateUser][error]', updateError);
-        setSubmitting(false);
-        return;
-      }
-
-      let syncWarning = '';
       try {
         const resetResponse = await withTimeout(
-          fetch('/api/v1/merchant/onboarding/complete-password-reset', {
+          fetch('/api/v1/merchant/auth/change-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
           }),
-          20000,
-          'Password reset sync timed out.'
+          30000,
+          'Password update timed out. Please try again.'
         );
         if (!resetResponse.ok) {
           const payload = await resetResponse.json().catch(() => ({} as any));
-          syncWarning = payload?.error || 'Password reset sync is pending.';
-          console.error('[MerchantChangePassword][complete-password-reset][error]', syncWarning);
+          const message = payload?.error || 'Failed to update password.';
+          setError(message);
+          console.error('[MerchantChangePassword][server-change-password][error]', message);
+          setSubmitting(false);
+          return;
         }
-      } catch (syncError: any) {
-        syncWarning = syncError?.message || 'Password reset sync is pending.';
-        console.error('[MerchantChangePassword][complete-password-reset][error]', syncWarning);
+      } catch (changePasswordError: any) {
+        const message = changePasswordError?.message || 'Failed to update password.';
+        setError(message);
+        console.error('[MerchantChangePassword][server-change-password][error]', message);
+        setSubmitting(false);
+        return;
       }
 
       // Ensure client auth/session state is refreshed before navigation checks run.
@@ -175,11 +149,7 @@ export default function MerchantChangePasswordPage() {
         await new Promise((resolve) => setTimeout(resolve, 450));
       }
 
-      setSuccess(
-        syncWarning
-          ? `Password updated. Redirecting to dashboard while sync completes in background. (${syncWarning})`
-          : 'Password updated successfully. Redirecting to dashboard...'
-      );
+      setSuccess('Password updated successfully. Redirecting to dashboard...');
       setTimeout(() => router.replace('/merchant/dashboard'), 900);
     } catch (submitError: any) {
       const message = String(submitError?.message || 'Failed to update password.');

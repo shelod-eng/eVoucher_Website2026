@@ -7,6 +7,15 @@ import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    }),
+  ]);
+}
+
 async function fetchMerchantAuthState() {
   const response = await fetch('/api/v1/merchant/auth-state', {
     method: 'GET',
@@ -29,7 +38,7 @@ export default function MerchantLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { user, role, signIn } = useAuth();
+  const { user, role, signIn, signOut } = useAuth();
   useEffect(() => {
     if (typeof user === 'undefined') {
       setError('Authentication context failed to load. Please refresh or contact support.');
@@ -39,6 +48,11 @@ export default function MerchantLogin() {
   const allowDemoSeed = String(process.env.NEXT_PUBLIC_ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase() === 'true';
   const autoSeedOnLogin =
     String(process.env.NEXT_PUBLIC_FORCE_DEMO_SEED_ON_LOGIN ?? '').toLowerCase() === 'true';
+
+  useEffect(() => {
+    setEmail('');
+    setPassword('');
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -100,7 +114,7 @@ export default function MerchantLogin() {
         setLoading(false);
         return;
       }
-      await signIn(normalizedEmail, normalizedPassword);
+      await withTimeout(signIn(normalizedEmail, normalizedPassword), 20000, 'Sign in timed out. Please try again.');
       let state;
       try {
         state = await fetchMerchantAuthState();
@@ -116,7 +130,15 @@ export default function MerchantLogin() {
       }
       router.replace(state.mustResetPassword ? '/merchant/change-password' : '/merchant/dashboard');
     } catch (err: any) {
-      setError(err?.message || 'Invalid email or password');
+      const message = String(err?.message || 'Invalid email or password');
+      if (message.toLowerCase().includes('timed out')) {
+        try {
+          await signOut();
+        } catch {
+          // Best effort local session clear on timeout.
+        }
+      }
+      setError(message);
       console.error('[MerchantLogin][handleSubmit][error]', err);
     } finally {
       setLoading(false);
@@ -150,17 +172,22 @@ export default function MerchantLogin() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
               <div>
                 <label htmlFor="email" className="block text-sm font-headline font-semibold text-foreground mb-2">
                   Email Address
                 </label>
                 <input
                   id="email"
+                  name="merchant-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-200 font-body"
                   placeholder="business@example.com"
                 />
@@ -172,10 +199,12 @@ export default function MerchantLogin() {
                 </label>
                 <input
                   id="password"
+                  name="merchant-password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoComplete="new-password"
                   className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-200 font-body"
                   placeholder="••••••••"
                 />
