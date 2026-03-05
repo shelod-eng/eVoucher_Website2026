@@ -214,6 +214,14 @@ async function safeAudit(admin: any, event: any) {
   return;
 }
 
+function logMerchantOnboardingEvent(event: string, payload: Record<string, unknown>) {
+  try {
+    console.info('[merchant-onboarding][event]', JSON.stringify({ event, ...payload }));
+  } catch {
+    console.info('[merchant-onboarding][event]', event);
+  }
+}
+
 function isSmsEnabled() {
   const sid = String(process.env.TWILIO_ACCOUNT_SID ?? '').trim();
   const token = String(process.env.TWILIO_AUTH_TOKEN ?? '').trim();
@@ -1626,6 +1634,7 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
 
 export async function completeMerchantPasswordReset(userId: string) {
   const admin = createAdminClient();
+  logMerchantOnboardingEvent('password_reset_sync_started', { userId });
   const {
     data: { user },
     error: authLookupError,
@@ -1643,19 +1652,123 @@ export async function completeMerchantPasswordReset(userId: string) {
     if (authUpdateError) throw authUpdateError;
   }
 
-  const { error: byUserIdError } = await admin
+  const { data: byUserIdUpdatedRows, error: byUserIdError } = await admin
     .from('merchants')
     .update({ must_reset_password: false })
-    .eq('user_id', userId);
-  if (!byUserIdError) return;
-  if (!isUserIdTypeMismatch(byUserIdError)) throw byUserIdError;
+    .eq('user_id', userId)
+    .select('id');
+  if (!byUserIdError) {
+    if (Array.isArray(byUserIdUpdatedRows) && byUserIdUpdatedRows.length > 0) {
+      logMerchantOnboardingEvent('password_reset_sync_completed', {
+        userId,
+        merchantRowsUpdated: byUserIdUpdatedRows.length,
+        fallback: 'none',
+      });
+      return;
+    }
+  } else if (!isUserIdTypeMismatch(byUserIdError)) {
+    throw byUserIdError;
+  }
 
   const email = normalizeEmail(user?.email);
-  if (!email) throw byUserIdError;
+  if (!email) {
+    throw byUserIdError ?? new Error('Merchant email not available for password reset sync.');
+  }
 
-  const { error: byEmailError } = await admin
+  const { data: byEmailUpdatedRows, error: byEmailError } = await admin
     .from('merchants')
     .update({ must_reset_password: false })
-    .eq('email', email);
+    .eq('email', email)
+    .select('id');
   if (byEmailError) throw byEmailError;
+  if (!Array.isArray(byEmailUpdatedRows) || byEmailUpdatedRows.length === 0) {
+    throw new Error('Merchant profile not found for password reset sync.');
+  }
+  logMerchantOnboardingEvent('password_reset_sync_completed', {
+    userId,
+    merchantRowsUpdated: byEmailUpdatedRows.length,
+    fallback: 'email',
+  });
+}
+
+export async function reconcileMerchantResetState(userId: string) {
+  const admin = createAdminClient();
+  logMerchantOnboardingEvent('reset_state_reconcile_started', { userId });
+  const {
+    data: { user },
+    error: authLookupError,
+  } = await admin.auth.admin.getUserById(userId);
+  if (authLookupError) throw authLookupError;
+  if (!user) {
+    return {
+      reconciled: false as const,
+      reason: 'auth_user_not_found',
+    };
+  }
+
+  const metadataMustChange = Boolean(user.user_metadata?.must_change_password);
+  const normalizedEmail = normalizeEmail(user.email);
+
+  const byUserId = await admin
+    .from('merchants')
+    .select('id,must_reset_password,email')
+    .eq('user_id', userId)
+    .limit(1);
+  if (byUserId.error && !isUserIdTypeMismatch(byUserId.error)) throw byUserId.error;
+
+  let merchant = Array.isArray(byUserId.data) && byUserId.data.length > 0 ? byUserId.data[0] : null;
+  if (!merchant && normalizedEmail) {
+    const byEmail = await admin
+      .from('merchants')
+      .select('id,must_reset_password,email')
+      .eq('email', normalizedEmail)
+      .limit(1);
+    if (byEmail.error) throw byEmail.error;
+    merchant = Array.isArray(byEmail.data) && byEmail.data.length > 0 ? byEmail.data[0] : null;
+  }
+
+  const merchantMustReset = Boolean(merchant?.must_reset_password);
+  const mustReset = metadataMustChange || merchantMustReset;
+  if (!mustReset) {
+    logMerchantOnboardingEvent('reset_state_reconcile_skipped', {
+      userId,
+      reason: 'already_clear',
+      merchantId: merchant?.id ?? null,
+    });
+    return {
+      reconciled: false as const,
+      reason: 'already_clear',
+    };
+  }
+
+  if (!metadataMustChange) {
+    const mergedMetadata = {
+      ...(user.user_metadata ?? {}),
+      must_change_password: true,
+    };
+    const { error: authUpdateError } = await admin.auth.admin.updateUserById(userId, {
+      user_metadata: mergedMetadata,
+    });
+    if (authUpdateError) throw authUpdateError;
+  }
+
+  if (merchant?.id && !merchantMustReset) {
+    const { error: merchantUpdateError } = await admin
+      .from('merchants')
+      .update({ must_reset_password: true })
+      .eq('id', merchant.id);
+    if (merchantUpdateError) throw merchantUpdateError;
+  }
+  logMerchantOnboardingEvent('reset_state_reconciled', {
+    userId,
+    merchantId: merchant?.id ?? null,
+    metadataUpdated: !metadataMustChange,
+    merchantUpdated: Boolean(merchant?.id) && !merchantMustReset,
+  });
+
+  return {
+    reconciled: true as const,
+    merchantId: merchant?.id ?? null,
+    mustReset: true,
+  };
 }

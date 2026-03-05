@@ -9,6 +9,7 @@ import {
 } from '@/lib/pricing';
 import { isMerchantRole, resolveUserRole } from '@/server/utils/role';
 import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
+import { writeAuditEvent } from '@/server/utils/audit';
 
 interface UpdateMerchantProductRequest {
   productName?: string;
@@ -35,6 +36,44 @@ function isMissingSpecialsColumn(error: any) {
   );
 }
 
+function canOperateMerchantProducts(role: string, merchant: any, userId: string) {
+  if (isMerchantRole(role)) return true;
+  return Boolean(merchant?.user_id) && String(merchant.user_id) === String(userId);
+}
+
+function isMerchantStatusOperable(status: unknown) {
+  const normalized = String(status ?? '').trim().toLowerCase();
+  return normalized === 'approved' || normalized === 'active';
+}
+
+async function safeAuditProductEvent(
+  admin: ReturnType<typeof createAdminClient>,
+  input: {
+    actorId: string;
+    merchantId: string;
+    productId: string;
+    action: string;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  try {
+    await writeAuditEvent(admin as any, {
+      actorId: input.actorId,
+      actorRole: 'merchant',
+      entityType: 'merchant_product',
+      entityId: input.productId,
+      action: input.action,
+      metadata: {
+        merchantId: input.merchantId,
+        ...(input.metadata ?? {}),
+      },
+      requestId: null,
+    });
+  } catch (auditError: any) {
+    console.warn('[merchant-products][audit][warn]', auditError?.message || auditError);
+  }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
@@ -44,21 +83,31 @@ export async function PATCH(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { role } = await resolveUserRole(supabase, user);
-    if (!isMerchantRole(role)) {
+    const admin = createAdminClient();
+    const merchant = await resolveMerchantForUser<any>(
+      admin,
+      user,
+      'id,user_id,business_name,parent_brand,default_total_discount_pct,status'
+    );
+    if (!merchant) {
+      return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
+    }
+    if (!canOperateMerchantProducts(role, merchant, user.id)) {
       return NextResponse.json(
         { error: 'Merchant product management is merchant-only.', code: 'merchant_only' },
         { status: 403 }
       );
     }
-
-    const admin = createAdminClient();
-    const merchant = await resolveMerchantForUser<any>(
-      admin,
-      user,
-      'id,business_name,parent_brand,default_total_discount_pct'
-    );
-    if (!merchant) {
-      return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
+    if (!isMerchantStatusOperable(merchant.status)) {
+      return NextResponse.json(
+        {
+          error:
+            'Merchant is not approved for product operations yet. Complete onboarding approval first.',
+          code: 'merchant_not_approved',
+          merchantStatus: merchant.status,
+        },
+        { status: 409 }
+      );
     }
     const body = (await request.json()) as UpdateMerchantProductRequest;
 
@@ -94,6 +143,17 @@ export async function PATCH(
           DEFAULT_TOTAL_DISCOUNT_PCT
       );
       const pricing = calculateDiscountPricing(nextFaceValue, nextTotalDiscountPct);
+      const { validateAllCriticalRules } = require('@/server/utils/business-rules-validator');
+      const ruleCheck = validateAllCriticalRules(pricing);
+      if (!ruleCheck.isValid) {
+        return NextResponse.json(
+          {
+            error: 'Business rule violation',
+            violations: ruleCheck.violations.map((v: any) => v.message),
+          },
+          { status: 400 }
+        );
+      }
       const fallbackUpdate = await admin
         .from('merchant_products')
         .update({
@@ -121,6 +181,15 @@ export async function PATCH(
         )
         .single();
       if (fallbackUpdate.error) throw fallbackUpdate.error;
+      await safeAuditProductEvent(admin, {
+        actorId: user.id,
+        merchantId: merchant.id,
+        productId: String(params.id),
+        action: 'merchant_product_updated',
+        metadata: {
+          usedSpecialsFallback: true,
+        },
+      });
       return NextResponse.json({
         message: 'Product updated.',
         product: {
@@ -217,6 +286,17 @@ export async function PATCH(
     const nextDisplayPriority = Number(body.displayPriority ?? existing.display_priority ?? (nextIsSpecial ? 100 : 0));
 
     const pricing = calculateDiscountPricing(nextFaceValue, nextTotalDiscountPct);
+    const { validateAllCriticalRules } = require('@/server/utils/business-rules-validator');
+    const ruleCheck = validateAllCriticalRules(pricing);
+    if (!ruleCheck.isValid) {
+      return NextResponse.json(
+        {
+          error: 'Business rule violation',
+          violations: ruleCheck.violations.map((v: any) => v.message),
+        },
+        { status: 400 }
+      );
+    }
 
     const { data: product, error: updateError } = await admin
       .from('merchant_products')
@@ -278,6 +358,15 @@ export async function PATCH(
         )
         .single();
       if (fallbackUpdate.error) throw fallbackUpdate.error;
+      await safeAuditProductEvent(admin, {
+        actorId: user.id,
+        merchantId: merchant.id,
+        productId: String(params.id),
+        action: 'merchant_product_updated',
+        metadata: {
+          usedSpecialsFallback: true,
+        },
+      });
       return NextResponse.json({
         message: 'Product updated.',
         product: {
@@ -290,6 +379,15 @@ export async function PATCH(
       });
     }
 
+    await safeAuditProductEvent(admin, {
+      actorId: user.id,
+      merchantId: merchant.id,
+      productId: String(params.id),
+      action: 'merchant_product_updated',
+      metadata: {
+        usedSpecialsFallback: false,
+      },
+    });
     return NextResponse.json({
       message: 'Product updated.',
       product,
@@ -311,17 +409,27 @@ export async function DELETE(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { role } = await resolveUserRole(supabase, user);
-    if (!isMerchantRole(role)) {
+    const admin = createAdminClient();
+    const merchant = await resolveMerchantForUser<any>(admin, user, 'id,user_id,status');
+    if (!merchant) {
+      return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
+    }
+    if (!canOperateMerchantProducts(role, merchant, user.id)) {
       return NextResponse.json(
         { error: 'Merchant product management is merchant-only.', code: 'merchant_only' },
         { status: 403 }
       );
     }
-
-    const admin = createAdminClient();
-    const merchant = await resolveMerchantForUser<any>(admin, user, 'id');
-    if (!merchant) {
-      return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
+    if (!isMerchantStatusOperable(merchant.status)) {
+      return NextResponse.json(
+        {
+          error:
+            'Merchant is not approved for product operations yet. Complete onboarding approval first.',
+          code: 'merchant_not_approved',
+          merchantStatus: merchant.status,
+        },
+        { status: 409 }
+      );
     }
 
     const { error } = await admin
@@ -331,6 +439,12 @@ export async function DELETE(
       .eq('merchant_id', merchant.id);
 
     if (error) throw error;
+    await safeAuditProductEvent(admin, {
+      actorId: user.id,
+      merchantId: merchant.id,
+      productId: String(params.id),
+      action: 'merchant_product_deactivated',
+    });
 
     return NextResponse.json({ message: 'Product deactivated.' });
   } catch (error: any) {

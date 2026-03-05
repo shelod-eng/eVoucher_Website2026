@@ -24,9 +24,9 @@ export async function resolveMerchantForUser<T>(
   user: AuthUser,
   selectColumns: string
 ): Promise<T | null> {
-  const byUserId = await admin.from('merchants').select(selectColumns).eq('user_id', user.id).maybeSingle();
-  if (!byUserId.error && byUserId.data) {
-    return byUserId.data as T;
+  const byUserId = await admin.from('merchants').select(selectColumns).eq('user_id', user.id).limit(1);
+  if (!byUserId.error && Array.isArray(byUserId.data) && byUserId.data.length > 0) {
+    return byUserId.data[0] as T;
   }
 
   if (byUserId.error && !isUserIdTypeMismatch(byUserId.error)) {
@@ -38,7 +38,10 @@ export async function resolveMerchantForUser<T>(
     return null;
   }
 
-  const byEmail = await admin.from('merchants').select(selectColumns).eq('email', email).maybeSingle();
+  const byEmail = await admin.from('merchants').select(selectColumns).eq('email', email).limit(1);
   if (byEmail.error) throw byEmail.error;
-  return (byEmail.data as T | null) ?? null;
+  if (Array.isArray(byEmail.data) && byEmail.data.length > 0) {
+    return byEmail.data[0] as T;
+  }
+  return null;
 }

@@ -51,7 +51,8 @@ export function validateR1_DiscountSplitImmutable(pricing: DiscountPricingBreakd
 export function validateR2_ConsumerPaysLessThanFaceValue(
   faceValue: number,
   consumerPrice: number,
-  totalDiscountPct: number
+  totalDiscountPct: number,
+  consumerBenefitPct?: number | null
 ): void {
   if (consumerPrice >= faceValue) {
     throw new BusinessRuleViolation(
@@ -60,8 +61,13 @@ export function validateR2_ConsumerPaysLessThanFaceValue(
     );
   }
 
-  // Additional validation: ensure consumer price calculation is correct
-  const expectedConsumerPrice = faceValue * (1 - totalDiscountPct / 100);
+  // Additional validation: ensure consumer price matches the consumer-facing share.
+  // In this platform model, total discount is split 50/50 between consumer and platform.
+  const effectiveConsumerPct =
+    Number.isFinite(Number(consumerBenefitPct))
+      ? Number(consumerBenefitPct)
+      : Number(totalDiscountPct) / 2;
+  const expectedConsumerPrice = faceValue * (1 - effectiveConsumerPct / 100);
   const priceDiff = Math.abs(consumerPrice - expectedConsumerPrice);
   if (priceDiff > 0.01) {
     throw new BusinessRuleViolation(
@@ -236,7 +242,8 @@ export function validateAllCriticalRules(pricing: DiscountPricingBreakdown): {
     validateR2_ConsumerPaysLessThanFaceValue(
       pricing.faceValue,
       pricing.consumerPrice,
-      pricing.totalDiscountPct
+      pricing.totalDiscountPct,
+      pricing.consumerBenefitPct
     );
   } catch (err) {
     if (err instanceof BusinessRuleViolation) {

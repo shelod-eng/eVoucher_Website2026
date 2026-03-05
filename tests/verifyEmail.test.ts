@@ -1,34 +1,83 @@
-import request from 'supertest';
-import app from '../src/app'; // adjust path to your Express/Fastify app
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+  getAuthenticatedUser: vi.fn(),
+  verifyMerchantEmailToken: vi.fn(),
+}));
+
+vi.mock('@/server/utils/auth', () => ({
+  getAuthenticatedUser: mocks.getAuthenticatedUser,
+}));
+
+vi.mock('@/server/utils/merchant-onboarding', () => ({
+  verifyMerchantEmailToken: mocks.verifyMerchantEmailToken,
+}));
+
+import { POST } from '@/app/api/v1/merchant/onboarding/verify-email/route';
 
 describe('POST /api/v1/merchant/onboarding/verify-email', () => {
-  const validMerchantId = '4634a1e3-cccd-4cba-9c04-691e34623e66'; // valid UUID
-  const validToken = 'abc123def456ghi789'; // synthetic token string
-
-  it('should verify email successfully with valid UUID and token', async () => {
-    const res = await request(app)
-      .post('/api/v1/merchant/onboarding/verify-email')
-      .query({ merchantId: validMerchantId, token: validToken });
-
-    expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('success', true);
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('should fail with invalid merchantId (not a UUID)', async () => {
-    const res = await request(app)
-      .post('/api/v1/merchant/onboarding/verify-email')
-      .query({ merchantId: '12345', token: validToken });
+  it('returns success payload for valid token verification', async () => {
+    mocks.getAuthenticatedUser.mockResolvedValue({ user: { id: 'user-1' } });
+    mocks.verifyMerchantEmailToken.mockResolvedValue({
+      ok: true,
+      approved: true,
+      status: 'approved',
+      vettingStatus: 'approved',
+      emailVerified: true,
+      phoneVerified: true,
+      message: 'ok',
+      statusData: {
+        merchantId: 'merchant-1',
+        credentialsIssued: true,
+        mustResetPassword: true,
+        loginReady: true,
+      },
+    });
 
-    expect(res.status).toBe(400);
-    expect(res.body).toHaveProperty('error', 'Invalid merchantId');
+    const response = await POST(
+      new Request('http://localhost/api/v1/merchant/onboarding/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchantId: 'merchant-1', token: 'token-1' }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.approved).toBe(true);
+    expect(payload.status).toBe('approved');
+    expect(payload.merchantId).toBe('merchant-1');
+    expect(payload.credentialsIssued).toBe(true);
+    expect(payload.mustResetPassword).toBe(true);
+    expect(mocks.verifyMerchantEmailToken).toHaveBeenCalledWith({
+      merchantId: 'merchant-1',
+      token: 'token-1',
+      actorId: 'user-1',
+    });
   });
 
-  it('should fail with missing token', async () => {
-    const res = await request(app)
-      .post('/api/v1/merchant/onboarding/verify-email')
-      .query({ merchantId: validMerchantId });
+  it('returns route-level error when verification service rejects payload', async () => {
+    mocks.getAuthenticatedUser.mockResolvedValue({ user: null });
+    mocks.verifyMerchantEmailToken.mockResolvedValue({
+      ok: false,
+      status: 400,
+      error: 'Invalid token.',
+    });
 
-    expect(res.status).toBe(400);
-    expect(res.body).toHaveProperty('error', 'Invalid token');
+    const response = await POST(
+      new Request('http://localhost/api/v1/merchant/onboarding/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchantId: 'merchant-1', token: '' }),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    const payload = await response.json();
+    expect(payload.error).toBe('Invalid token.');
   });
 });

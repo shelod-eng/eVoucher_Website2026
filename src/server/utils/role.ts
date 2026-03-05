@@ -21,7 +21,13 @@ export async function resolveUserRole(
     .maybeSingle();
 
   if (error) {
-    throw error;
+    const metadataRole = String(user.user_metadata?.role ?? '')
+      .toLowerCase()
+      .trim();
+    if (metadataRole) {
+      return { role: metadataRole, source: 'metadata' };
+    }
+    return { role: 'customer', source: 'default' };
   }
 
   const profileRole = profile?.role?.toLowerCase().trim();
@@ -46,4 +52,3 @@ export function isConsumerRole(role: string) {
 export function isMerchantRole(role: string) {
   return role === 'merchant';
 }
-

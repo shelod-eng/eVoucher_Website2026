@@ -5,20 +5,29 @@ This tracker maps the currently requested "Merchant Business Logic Portal" outco
 ## Critical Workflow (Must Work First)
 
 1. New merchant onboarding -> verification email -> credentials email -> first login -> password change -> dashboard access
-- Status: In progress
+- Status: Implemented (hardened)
 - This pass delivered:
   - Type and helper mismatch fixes in merchant KPI API route.
   - Merchant login flow hardened to use `signIn` return user directly (removed extra `getUser` dependency that could hang submit state).
   - Product API fallback now tolerates missing any specials columns (`is_special`, `special_title`, `special_end_at`, `display_priority`) for backward-compatible DB schemas.
+  - Password reset completion now verifies DB update success and safely falls back from `user_id` to `email`.
+  - Auth-state now enforces reset when either auth metadata or merchant DB reset flag is true.
+  - Reset-state reconciliation added to prevent auth/merchant drift.
 
 2. Pre-seeded merchant login reliability (Shoprite, Pick n Pay, Kalapeng demo users)
-- Status: In progress
-- Note: Demo seeding endpoint behavior and seed credentials still need end-to-end production validation.
+- Status: Partial
+- This pass delivered:
+  - Merchant/product routes now allow mapped merchant user fallback (`merchant.user_id` match) to tolerate role/profile drift.
+- Remaining:
+  - End-to-end environment validation of demo seed route and credentials.
 
 3. Merchant product creation persists and appears in consumer catalog
-- Status: In progress
+- Status: Implemented (hardened)
 - This pass delivered:
   - DB-compat fallback for missing specials fields to prevent 500 errors on product list/create/update.
+  - Merchant status gating (`approved` or `active`) for product create/update/deactivate.
+  - Product lifecycle audit logging hooks (non-blocking).
+  - Product update route now validates business rules before persistence.
 
 ## Spec Features
 
