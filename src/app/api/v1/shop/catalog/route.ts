@@ -179,6 +179,15 @@ function uniqueStrings(values: unknown) {
   return Array.from(new Set(values.map((value) => String(value)).filter((value) => value.length > 0)));
 }
 
+function toGenericBrandKey(value: string) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64);
+}
+
 function toMerchantRow(row: Partial<MerchantRow> & { id: string; business_name: string; email: string; status: string }) {
   return {
     id: row.id,
@@ -327,14 +336,20 @@ async function fetchProductsForMerchantIds(dataClient: any, merchantIds: string[
 
 function resolveBrandMeta(rawBrandName: string, fallbackName: string, fallbackCategory: string | null) {
   const explicitParentBrand = String(rawBrandName ?? '').trim();
+  const fallbackDisplayName = explicitParentBrand || String(fallbackName ?? '').trim() || 'Merchant';
   const mappedBrandKey =
-    resolveBrandFromMerchantName(explicitParentBrand) ?? resolveBrandFromMerchantName(fallbackName);
+    resolveBrandFromMerchantName(explicitParentBrand) ?? resolveBrandFromMerchantName(fallbackDisplayName);
   const mappedBrand = mappedBrandKey ? getBrandByKey(mappedBrandKey) : null;
   if (!mappedBrand) {
-    return null;
-  }
-  if (!DEMO_BRAND_KEYS.has(mappedBrand.brandKey)) {
-    return null;
+    return {
+      brandKey: toGenericBrandKey(fallbackDisplayName) || 'merchant-generic',
+      mappedBrandKey: null,
+      displayName: fallbackDisplayName,
+      category: fallbackCategory ?? 'Retail',
+      assetPath: '',
+      estimatedLocationCount: 0,
+      estimatedProvinceCount: 0,
+    };
   }
 
   return {
