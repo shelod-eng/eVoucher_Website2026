@@ -42,6 +42,10 @@ type ProductRow = {
   valid_provinces: string[] | null;
   valid_branch_ids: string[] | null;
   is_active: boolean | null;
+  is_special: boolean | null;
+  special_title: string | null;
+  special_end_at: string | null;
+  display_priority: number | null;
   status: string | null;
   created_at: string;
 };
@@ -94,6 +98,11 @@ type CatalogProduct = {
   valid_branch_ids: string[];
   valid_location_count: number;
   is_active: boolean;
+  is_special: boolean;
+  special_title: string | null;
+  special_end_at: string | null;
+  display_priority: number;
+  created_at: string;
 };
 
 const DEMO_BRAND_KEYS = new Set<BrandKey>([
@@ -207,6 +216,10 @@ function toProductRow(
     valid_provinces: row.valid_provinces ?? [],
     valid_branch_ids: row.valid_branch_ids ?? [],
     is_active: row.is_active ?? null,
+    is_special: row.is_special ?? null,
+    special_title: row.special_title ?? null,
+    special_end_at: row.special_end_at ?? null,
+    display_priority: row.display_priority ?? null,
     status: row.status ?? null,
     created_at: row.created_at,
   } as ProductRow;
@@ -251,15 +264,26 @@ async function fetchProductsForMerchantIds(dataClient: any, merchantIds: string[
   }> = [
     {
       fields:
-        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at',
+        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,is_special,special_title,special_end_at,display_priority,created_at',
       applyActiveFilter: (query: any) => query.eq('is_active', true),
       isRowActive: (row: any) => Boolean(row?.is_active),
     },
     {
       fields:
-        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,status,created_at',
+        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_special,special_title,special_end_at,display_priority,status,created_at',
       applyActiveFilter: (query: any) => query.eq('status', 'active'),
       isRowActive: (row: any) => String(row?.status ?? '').toLowerCase() === 'active',
+    },
+    {
+      fields:
+        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,is_special,special_title,special_end_at,display_priority,status,created_at',
+      applyActiveFilter: (query: any) => query,
+      isRowActive: (row: any) => {
+        if (typeof row?.is_active === 'boolean') return row.is_active;
+        const status = String(row?.status ?? '').toLowerCase();
+        if (!status) return true;
+        return !['inactive', 'disabled', 'archived'].includes(status);
+      },
     },
     {
       fields:
@@ -341,6 +365,9 @@ function dedupeProducts(products: CatalogProduct[]) {
       product.product_name.toLowerCase(),
       product.face_value.toFixed(2),
       product.total_discount_pct.toFixed(2),
+      String(Boolean(product.is_special)),
+      String(product.special_title ?? ''),
+      String(product.special_end_at ?? ''),
       product.redemption_scope,
       [...product.valid_provinces].sort().join('|'),
       [...product.valid_branch_ids].sort().join('|'),
@@ -564,6 +591,11 @@ export async function GET(request: Request) {
         valid_branch_ids: uniqueStrings(row.valid_branch_ids),
         valid_location_count: getResolvedLocationCount(brand),
         is_active: true,
+        is_special: Boolean(row.is_special),
+        special_title: row.special_title ?? null,
+        special_end_at: row.special_end_at ?? null,
+        display_priority: Number(row.display_priority ?? 0),
+        created_at: row.created_at,
       });
     });
 
@@ -657,6 +689,11 @@ export async function GET(request: Request) {
         valid_branch_ids: [],
         valid_location_count: getResolvedLocationCount(selectedBrand),
         source: 'starter' as const,
+        is_special: false,
+        special_title: null,
+        special_end_at: null,
+        display_priority: 0,
+        created_at: new Date().toISOString(),
       }));
     }
 
@@ -668,6 +705,19 @@ export async function GET(request: Request) {
           withSearchMatch(product.parent_brand, searchTerm)
       );
     }
+
+    selectedProducts = selectedProducts
+      .filter((product) => {
+        if (!product.is_special || !product.special_end_at) return true;
+        return new Date(product.special_end_at).getTime() > Date.now();
+      })
+      .sort((a, b) => {
+        const specialWeight = Number(Boolean(b.is_special)) - Number(Boolean(a.is_special));
+        if (specialWeight !== 0) return specialWeight;
+        const priorityWeight = Number(b.display_priority ?? 0) - Number(a.display_priority ?? 0);
+        if (priorityWeight !== 0) return priorityWeight;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
 
     return NextResponse.json({
       brands: brandSummaries,

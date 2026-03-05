@@ -197,7 +197,8 @@ function generateOtpCode() {
 }
 
 function generateTemporaryPassword() {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+  // Keep temporary passwords copy/paste friendly to avoid email-client symbol issues.
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
   return Array.from({ length: 14 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
 }
 
@@ -556,9 +557,11 @@ async function updateMerchantCredentialIssuanceState(
 }
 
 function evaluatePrivateMerchantAutoApproval(merchant: MerchantRecord) {
-  const hasLicense = Boolean(normalizeText(merchant.pharmacy_license_number));
   const hasOwnerId = Boolean(normalizeText(merchant.owner_id_number));
-  return hasLicense && hasOwnerId;
+  const businessType = String(normalizeText(merchant.business_type) ?? '').toLowerCase();
+  const isPharmacy = businessType === 'pharmacy';
+  const hasLicense = Boolean(normalizeText(merchant.pharmacy_license_number));
+  return hasOwnerId && (!isPharmacy || hasLicense);
 }
 
 export async function submitMerchantOnboarding(args: {

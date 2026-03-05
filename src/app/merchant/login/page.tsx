@@ -17,6 +17,8 @@ export default function MerchantLogin() {
   const router = useRouter();
   const supabase = createClient();
   const allowDemoSeed = String(process.env.NEXT_PUBLIC_ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase() === 'true';
+  const autoSeedOnLogin =
+    String(process.env.NEXT_PUBLIC_FORCE_DEMO_SEED_ON_LOGIN ?? '').toLowerCase() === 'true';
 
   useEffect(() => {
     if (!user) return;
@@ -29,7 +31,7 @@ export default function MerchantLogin() {
   }, [user, role, router]);
 
   useEffect(() => {
-    if (!allowDemoSeed) return;
+    if (!allowDemoSeed || !autoSeedOnLogin) return;
     let cancelled = false;
     const seedDemoMerchants = async () => {
       try {
@@ -44,7 +46,7 @@ export default function MerchantLogin() {
     return () => {
       cancelled = true;
     };
-  }, [allowDemoSeed]);
+  }, [allowDemoSeed, autoSeedOnLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +54,9 @@ export default function MerchantLogin() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      const normalizedEmail = String(email ?? '').trim().toLowerCase();
+      const normalizedPassword = String(password ?? '').trim();
+      await signIn(normalizedEmail, normalizedPassword);
       const {
         data: { user: signedInUser },
       } = await supabase.auth.getUser();

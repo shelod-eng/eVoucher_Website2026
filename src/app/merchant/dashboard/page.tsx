@@ -47,6 +47,10 @@ interface MerchantProduct {
   consumer_price: number;
   merchant_receivable_after_total_discount: number;
   is_active: boolean;
+  is_special?: boolean;
+  special_title?: string | null;
+  special_end_at?: string | null;
+  display_priority?: number;
   created_at: string;
 }
 
@@ -95,6 +99,10 @@ export default function MerchantDashboard() {
     faceValue: 100,
     totalDiscountPct: 4,
     redemptionScope: 'all_branches' as 'all_branches' | 'specific_branch' | 'province_wide' | 'national',
+    isSpecial: false,
+    specialTitle: '',
+    specialEndAt: '',
+    displayPriority: 0,
   });
   const router = useRouter();
 
@@ -203,6 +211,10 @@ export default function MerchantDashboard() {
       faceValue: preset.faceValue,
       totalDiscountPct: preset.totalDiscountPct,
       redemptionScope: 'all_branches',
+      isSpecial: false,
+      specialTitle: '',
+      specialEndAt: '',
+      displayPriority: 0,
     });
     setProductMessage(`Applied preset: ${preset.label}`);
   };
@@ -220,6 +232,10 @@ export default function MerchantDashboard() {
           faceValue: Number(productForm.faceValue),
           totalDiscountPct: Number(productForm.totalDiscountPct),
           redemptionScope: productForm.redemptionScope,
+          isSpecial: productForm.isSpecial,
+          specialTitle: productForm.isSpecial ? productForm.specialTitle : null,
+          specialEndAt: productForm.isSpecial ? productForm.specialEndAt : null,
+          displayPriority: Number(productForm.displayPriority ?? 0),
           validProvinces:
             productForm.redemptionScope === 'province_wide' && merchant?.province
               ? [merchant.province]
@@ -240,6 +256,10 @@ export default function MerchantDashboard() {
         faceValue: 100,
         totalDiscountPct: 4,
         redemptionScope: 'all_branches',
+        isSpecial: false,
+        specialTitle: '',
+        specialEndAt: '',
+        displayPriority: 0,
       });
       await fetchDashboardData();
     } catch (productError: any) {
@@ -261,6 +281,10 @@ export default function MerchantDashboard() {
           productName: product.product_name,
           faceValue: Number(product.face_value),
           totalDiscountPct: Number(product.total_discount_pct),
+          isSpecial: Boolean(product.is_special),
+          specialTitle: product.special_title ?? null,
+          specialEndAt: product.special_end_at ?? null,
+          displayPriority: Number(product.display_priority ?? 0),
           redemptionScope: product.redemption_scope ?? 'all_branches',
           validProvinces: product.valid_provinces ?? [],
           validBranchIds: product.valid_branch_ids ?? [],
@@ -518,6 +542,51 @@ export default function MerchantDashboard() {
                   <option value="province_wide">Province-wide</option>
                   <option value="national">National</option>
                 </select>
+                <label className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-3 text-sm font-body text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={productForm.isSpecial}
+                    onChange={(event) =>
+                      setProductForm((prev) => ({ ...prev, isSpecial: event.target.checked }))
+                    }
+                  />
+                  Mark as special offer
+                </label>
+                {productForm.isSpecial && (
+                  <>
+                    <input
+                      type="text"
+                      value={productForm.specialTitle}
+                      onChange={(event) =>
+                        setProductForm((prev) => ({ ...prev, specialTitle: event.target.value }))
+                      }
+                      placeholder="Special title (e.g. Weekend Flash Deal)"
+                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                    />
+                    <input
+                      type="datetime-local"
+                      value={productForm.specialEndAt}
+                      onChange={(event) =>
+                        setProductForm((prev) => ({ ...prev, specialEndAt: event.target.value }))
+                      }
+                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      max={999}
+                      value={productForm.displayPriority}
+                      onChange={(event) =>
+                        setProductForm((prev) => ({
+                          ...prev,
+                          displayPriority: Number(event.target.value || 0),
+                        }))
+                      }
+                      placeholder="Display priority"
+                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                    />
+                  </>
+                )}
               </div>
 
               <button
@@ -552,6 +621,14 @@ export default function MerchantDashboard() {
                           <p className="text-xs text-primary font-body mt-1">
                             Scope: {String(product.redemption_scope ?? 'all_branches').replace('_', ' ')}
                           </p>
+                          {product.is_special && (
+                            <p className="text-xs text-warning font-body mt-1">
+                              Special: {product.special_title || 'Limited offer'}
+                              {product.special_end_at
+                                ? ` (ends ${new Date(product.special_end_at).toLocaleString()})`
+                                : ''}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <span

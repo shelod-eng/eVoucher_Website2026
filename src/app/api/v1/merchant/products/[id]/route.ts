@@ -18,6 +18,15 @@ interface UpdateMerchantProductRequest {
   validProvinces?: string[];
   validBranchIds?: string[];
   isActive?: boolean;
+  isSpecial?: boolean;
+  specialTitle?: string;
+  specialEndAt?: string | null;
+  displayPriority?: number;
+}
+
+function isMissingColumn(error: any, columnName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  return message.includes(`column "${columnName.toLowerCase()}"`) && message.includes('does not exist');
 }
 
 export async function PATCH(
@@ -45,22 +54,82 @@ export async function PATCH(
     if (!merchant) {
       return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
     }
+    const body = (await request.json()) as UpdateMerchantProductRequest;
 
     const { data: existing, error: existingError } = await admin
       .from('merchant_products')
       .select(
-        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active'
+        'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,is_special,special_title,special_end_at,display_priority'
       )
       .eq('id', params.id)
       .eq('merchant_id', merchant.id)
       .maybeSingle();
 
-    if (existingError) throw existingError;
+    if (existingError && !isMissingColumn(existingError, 'is_special')) throw existingError;
+    if (existingError && isMissingColumn(existingError, 'is_special')) {
+      const fallbackExisting = await admin
+        .from('merchant_products')
+        .select(
+          'id,merchant_id,product_name,face_value,total_discount_pct,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active'
+        )
+        .eq('id', params.id)
+        .eq('merchant_id', merchant.id)
+        .maybeSingle();
+      if (fallbackExisting.error) throw fallbackExisting.error;
+      if (!fallbackExisting.data) {
+        return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
+      }
+      const current = fallbackExisting.data as any;
+      const nextFaceValue = Number(body.faceValue ?? current.face_value);
+      const nextTotalDiscountPct = Number(
+        body.totalDiscountPct ??
+          current.total_discount_pct ??
+          merchant.default_total_discount_pct ??
+          DEFAULT_TOTAL_DISCOUNT_PCT
+      );
+      const pricing = calculateDiscountPricing(nextFaceValue, nextTotalDiscountPct);
+      const fallbackUpdate = await admin
+        .from('merchant_products')
+        .update({
+          product_name: body.productName?.trim() || current.product_name,
+          parent_brand: current.parent_brand || merchant.parent_brand || merchant.business_name,
+          redemption_scope: body.redemptionScope ?? current.redemption_scope ?? 'all_branches',
+          valid_provinces: body.validProvinces ?? current.valid_provinces ?? [],
+          valid_branch_ids: body.validBranchIds ?? current.valid_branch_ids ?? [],
+          face_value: pricing.faceValue,
+          total_discount_pct: pricing.totalDiscountPct,
+          consumer_benefit_pct: pricing.consumerBenefitPct,
+          evoucher_benefit_pct: pricing.evoucherBenefitPct,
+          total_discount_amount: pricing.totalDiscountAmount,
+          consumer_benefit_amount: pricing.consumerBenefitAmount,
+          evoucher_benefit_amount: pricing.evoucherBenefitAmount,
+          consumer_price: pricing.consumerPrice,
+          merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
+          merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
+          is_active: body.isActive ?? current.is_active,
+        })
+        .eq('id', params.id)
+        .eq('merchant_id', merchant.id)
+        .select(
+          'id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at,updated_at'
+        )
+        .single();
+      if (fallbackUpdate.error) throw fallbackUpdate.error;
+      return NextResponse.json({
+        message: 'Product updated.',
+        product: {
+          ...fallbackUpdate.data,
+          is_special: false,
+          special_title: null,
+          special_end_at: null,
+          display_priority: 0,
+        },
+      });
+    }
     if (!existing) {
       return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
     }
 
-    const body = (await request.json()) as UpdateMerchantProductRequest;
     if (
       body.redemptionScope &&
       !['all_branches', 'specific_branch', 'province_wide', 'national'].includes(body.redemptionScope)
@@ -72,6 +141,12 @@ export async function PATCH(
     }
     if (body.validBranchIds !== undefined && !Array.isArray(body.validBranchIds)) {
       return NextResponse.json({ error: 'validBranchIds must be an array.' }, { status: 400 });
+    }
+    if (body.displayPriority !== undefined && (!Number.isFinite(body.displayPriority) || body.displayPriority < 0)) {
+      return NextResponse.json(
+        { error: 'displayPriority must be a number greater than or equal to 0.' },
+        { status: 400 }
+      );
     }
     if (
       body.totalDiscountPct !== undefined &&
@@ -89,6 +164,36 @@ export async function PATCH(
     const nextTotalDiscountPct = Number(
       body.totalDiscountPct ?? existing.total_discount_pct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
     );
+    const nextIsSpecial = body.isSpecial ?? existing.is_special ?? false;
+    const nextSpecialTitle = nextIsSpecial
+      ? String(body.specialTitle ?? existing.special_title ?? '').trim()
+      : null;
+    const nextSpecialEndAtRaw = nextIsSpecial
+      ? body.specialEndAt !== undefined
+        ? String(body.specialEndAt).trim()
+        : String(existing.special_end_at ?? '').trim()
+      : null;
+    if (nextIsSpecial && !nextSpecialTitle) {
+      return NextResponse.json({ error: 'specialTitle is required when isSpecial is true.' }, { status: 400 });
+    }
+    const isUpdatingSpecialConfig =
+      body.specialEndAt !== undefined ||
+      body.specialTitle !== undefined ||
+      body.isSpecial !== undefined ||
+      body.displayPriority !== undefined;
+    if (nextIsSpecial && isUpdatingSpecialConfig) {
+      if (!nextSpecialEndAtRaw) {
+        return NextResponse.json({ error: 'specialEndAt is required when isSpecial is true.' }, { status: 400 });
+      }
+      const endAt = new Date(nextSpecialEndAtRaw);
+      if (Number.isNaN(endAt.getTime()) || endAt.getTime() <= Date.now()) {
+        return NextResponse.json({ error: 'specialEndAt must be a valid future date/time.' }, { status: 400 });
+      }
+    }
+    const nextSpecialEndAt = nextIsSpecial
+      ? new Date(String(nextSpecialEndAtRaw)).toISOString()
+      : null;
+    const nextDisplayPriority = Number(body.displayPriority ?? existing.display_priority ?? (nextIsSpecial ? 100 : 0));
 
     const pricing = calculateDiscountPricing(nextFaceValue, nextTotalDiscountPct);
 
@@ -100,6 +205,10 @@ export async function PATCH(
         redemption_scope: body.redemptionScope ?? existing.redemption_scope ?? 'all_branches',
         valid_provinces: body.validProvinces ?? existing.valid_provinces ?? [],
         valid_branch_ids: body.validBranchIds ?? existing.valid_branch_ids ?? [],
+        is_special: nextIsSpecial,
+        special_title: nextSpecialTitle,
+        special_end_at: nextSpecialEndAt,
+        display_priority: nextDisplayPriority,
         face_value: pricing.faceValue,
         total_discount_pct: pricing.totalDiscountPct,
         consumer_benefit_pct: pricing.consumerBenefitPct,
@@ -115,11 +224,50 @@ export async function PATCH(
       .eq('id', params.id)
       .eq('merchant_id', merchant.id)
       .select(
-        'id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at,updated_at'
+        'id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,is_special,special_title,special_end_at,display_priority,created_at,updated_at'
       )
       .single();
 
-    if (updateError) throw updateError;
+    if (updateError && !isMissingColumn(updateError, 'is_special')) throw updateError;
+    if (updateError && isMissingColumn(updateError, 'is_special')) {
+      const fallbackUpdate = await admin
+        .from('merchant_products')
+        .update({
+          product_name: body.productName?.trim() || existing.product_name,
+          parent_brand: existing.parent_brand || merchant.parent_brand || merchant.business_name,
+          redemption_scope: body.redemptionScope ?? existing.redemption_scope ?? 'all_branches',
+          valid_provinces: body.validProvinces ?? existing.valid_provinces ?? [],
+          valid_branch_ids: body.validBranchIds ?? existing.valid_branch_ids ?? [],
+          face_value: pricing.faceValue,
+          total_discount_pct: pricing.totalDiscountPct,
+          consumer_benefit_pct: pricing.consumerBenefitPct,
+          evoucher_benefit_pct: pricing.evoucherBenefitPct,
+          total_discount_amount: pricing.totalDiscountAmount,
+          consumer_benefit_amount: pricing.consumerBenefitAmount,
+          evoucher_benefit_amount: pricing.evoucherBenefitAmount,
+          consumer_price: pricing.consumerPrice,
+          merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
+          merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
+          is_active: body.isActive ?? existing.is_active,
+        })
+        .eq('id', params.id)
+        .eq('merchant_id', merchant.id)
+        .select(
+          'id,product_name,face_value,total_discount_pct,consumer_benefit_pct,evoucher_benefit_pct,total_discount_amount,consumer_benefit_amount,evoucher_benefit_amount,consumer_price,merchant_receivable_after_total_discount,merchant_receivable_after_evoucher_benefit,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,is_active,created_at,updated_at'
+        )
+        .single();
+      if (fallbackUpdate.error) throw fallbackUpdate.error;
+      return NextResponse.json({
+        message: 'Product updated.',
+        product: {
+          ...fallbackUpdate.data,
+          is_special: false,
+          special_title: null,
+          special_end_at: null,
+          display_priority: 0,
+        },
+      });
+    }
 
     return NextResponse.json({
       message: 'Product updated.',

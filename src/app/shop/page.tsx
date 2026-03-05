@@ -49,6 +49,10 @@ interface CatalogProduct {
   valid_provinces: string[];
   valid_branch_ids: string[];
   valid_location_count: number;
+  is_special?: boolean;
+  special_title?: string | null;
+  special_end_at?: string | null;
+  display_priority?: number;
 }
 
 function getCategoryIcon(category: string) {
@@ -422,9 +426,16 @@ export default function ShopPage() {
                       <p className="text-xs uppercase tracking-wide text-primary font-headline font-semibold">
                         {product.parent_brand}
                       </p>
-                      <span className="px-2 py-1 rounded-full text-xs bg-success/20 text-success font-headline font-semibold">
-                        Save {Number(product.consumer_benefit_pct).toFixed(1)}%
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {product.is_special && (
+                          <span className="px-2 py-1 rounded-full text-xs bg-warning/20 text-warning font-headline font-semibold">
+                            {product.special_title || 'Special'}
+                          </span>
+                        )}
+                        <span className="px-2 py-1 rounded-full text-xs bg-success/20 text-success font-headline font-semibold">
+                          Save {Number(product.consumer_benefit_pct).toFixed(1)}%
+                        </span>
+                      </div>
                     </div>
 
                     <div className="p-4">
@@ -454,6 +465,11 @@ export default function ShopPage() {
                           <p className="text-xs text-muted-foreground">
                             {getRedemptionScopeLabel(product, selectedBrand)}
                           </p>
+                          {product.is_special && product.special_end_at && (
+                            <p className="text-xs text-warning mt-1">
+                              Ends: {new Date(product.special_end_at).toLocaleString()}
+                            </p>
+                          )}
                         </div>
                       </div>
 

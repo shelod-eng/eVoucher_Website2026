@@ -100,7 +100,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     console.log('AuthContext: Attempting signIn...');
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const normalizedEmail = String(email ?? '').trim().toLowerCase();
+    const normalizedPassword = String(password ?? '').trim();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password: normalizedPassword,
+    });
     
     if (error) {
       console.error('AuthContext: signIn error:', error);
@@ -138,9 +143,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRole(null);
     setLoading(false);
 
-    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    const { error } = await supabase.auth.signOut();
     if (error) {
-      console.warn('AuthContext: local signOut warning:', error.message);
+      console.warn('AuthContext: signOut warning:', error.message);
+      const fallback = await supabase.auth.signOut({ scope: 'local' });
+      if (fallback.error) {
+        console.warn('AuthContext: local signOut fallback warning:', fallback.error.message);
+      }
     }
 
     router.refresh();
