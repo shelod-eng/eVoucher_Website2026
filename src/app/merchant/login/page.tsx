@@ -24,6 +24,23 @@ function isDemoEmail(email: string) {
   return normalized.startsWith('demo-') && normalized.endsWith('@evoucher.co.za');
 }
 
+async function ensureDemoProvisioned(email: string) {
+  if (!isDemoEmail(email)) return { ok: true as const };
+  const response = await withTimeout(
+    fetch('/api/v1/merchant/demo-seed', { method: 'POST' }),
+    25000,
+    'Demo provisioning timed out.'
+  );
+  const payload = await response.json().catch(() => ({} as any));
+  if (!response.ok) {
+    return {
+      ok: false as const,
+      error: String(payload?.error || 'Demo provisioning failed.'),
+    };
+  }
+  return { ok: true as const };
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
   return await new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
@@ -138,6 +155,12 @@ export default function MerchantLogin() {
         setLoading(false);
         return;
       }
+      const demoProvision = await ensureDemoProvisioned(normalizedEmail);
+      if (!demoProvision.ok) {
+        setError(demoProvision.error);
+        setLoading(false);
+        return;
+      }
       let signedInUser;
       try {
         signedInUser = await withTimeout(
@@ -149,7 +172,10 @@ export default function MerchantLogin() {
         const message = String(initialSignInError?.message || '').toLowerCase();
         if (isDemoEmail(normalizedEmail) && (message.includes('invalid login') || message.includes('invalid credentials'))) {
           try {
-            await fetch('/api/v1/merchant/demo-seed', { method: 'POST' });
+            const retryProvision = await ensureDemoProvisioned(normalizedEmail);
+            if (!retryProvision.ok) {
+              throw new Error(retryProvision.error);
+            }
             signedInUser = await withTimeout(
               signIn(normalizedEmail, normalizedPassword),
               60000,
