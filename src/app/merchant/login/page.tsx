@@ -7,6 +7,18 @@ import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
 
+const DEMO_PASSWORD = 'demo123';
+const DEMO_MERCHANTS = [
+  { label: 'Shoprite', email: 'demo-shoprite@evoucher.co.za' },
+  { label: 'Pick n Pay', email: 'demo-picknpay@evoucher.co.za' },
+  { label: 'Boxer', email: 'demo-boxer@evoucher.co.za' },
+  { label: 'Checkers', email: 'demo-checkers@evoucher.co.za' },
+  { label: 'Clicks', email: 'demo-clicks@evoucher.co.za' },
+  { label: 'Pep', email: 'demo-pep@evoucher.co.za' },
+  { label: 'Engen', email: 'demo-engen@evoucher.co.za' },
+  { label: 'Kalapeng Private', email: 'demo-kalapeng@evoucher.co.za' },
+] as const;
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
   return await Promise.race([
     promise,
@@ -114,11 +126,39 @@ export default function MerchantLogin() {
         setLoading(false);
         return;
       }
-      await withTimeout(signIn(normalizedEmail, normalizedPassword), 20000, 'Sign in timed out. Please try again.');
+      const signedInUser = await withTimeout(
+        signIn(normalizedEmail, normalizedPassword),
+        60000,
+        'Sign in timed out. Please try again.'
+      );
+      if (
+        normalizedEmail === 'demo-shoprite@evoucher.co.za' ||
+        normalizedEmail === 'demo-picknpay@evoucher.co.za'
+      ) {
+        try {
+          await fetch('/api/v1/merchant/demo-seed', { method: 'POST' });
+        } catch {
+          // Best effort seeding to keep login resilient.
+        }
+      }
       let state;
       try {
-        state = await fetchMerchantAuthState();
+        state = await withTimeout(
+          fetchMerchantAuthState(),
+          15000,
+          'Failed to fetch merchant authentication state.'
+        );
       } catch (apiErr: any) {
+        const fallbackRole = String(signedInUser?.user_metadata?.role ?? '').toLowerCase();
+        const fallbackMustChange = Boolean(signedInUser?.user_metadata?.must_change_password);
+        if (fallbackRole === 'merchant') {
+          router.replace(fallbackMustChange ? '/merchant/change-password' : '/merchant/dashboard');
+          return;
+        }
+        if (fallbackRole) {
+          router.replace('/shop');
+          return;
+        }
         setError('Failed to fetch merchant authentication state. Please try again or contact support.');
         setLoading(false);
         return;
@@ -228,15 +268,34 @@ export default function MerchantLogin() {
               </p>
             </div>
 
-            {allowDemoSeed && (
-              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                <p className="text-xs text-muted-foreground font-body mb-2 font-semibold">Demo Merchant Credentials:</p>
-                <p className="text-xs text-foreground font-body">Shoprite: demo-shoprite@evoucher.co.za</p>
-                <p className="text-xs text-foreground font-body">Pick n Pay: demo-picknpay@evoucher.co.za</p>
-                <p className="text-xs text-foreground font-body">Kalapeng Private: demo-kalapeng@evoucher.co.za</p>
-                <p className="text-xs text-foreground font-body mt-1">Password: demo123</p>
+            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+              <p className="text-xs text-muted-foreground font-body mb-2 font-semibold">
+                Demo Merchant Credentials (click to autofill):
+              </p>
+              <div className="space-y-2">
+                {DEMO_MERCHANTS.map((merchant) => (
+                  <button
+                    key={merchant.email}
+                    type="button"
+                    onClick={() => {
+                      setEmail(merchant.email);
+                      setPassword(DEMO_PASSWORD);
+                      setError('');
+                    }}
+                    className="w-full text-left rounded-md border border-border bg-background px-3 py-2 hover:bg-muted transition-colors"
+                  >
+                    <p className="text-xs font-headline font-semibold text-foreground">{merchant.label}</p>
+                    <p className="text-[11px] text-muted-foreground font-body">{merchant.email}</p>
+                  </button>
+                ))}
               </div>
-            )}
+              <p className="text-xs text-foreground font-body mt-2">Password: {DEMO_PASSWORD}</p>
+              {!allowDemoSeed && (
+                <p className="text-[11px] text-warning font-body mt-1">
+                  Demo seeding endpoint is currently disabled by env flags.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>

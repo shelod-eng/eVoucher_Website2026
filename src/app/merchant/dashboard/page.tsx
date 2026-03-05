@@ -23,6 +23,9 @@ interface Merchant {
   email: string;
   phone: string;
   bank_name: string | null;
+  merchant_type?: string | null;
+  parent_merchant_id?: string | null;
+  is_branch?: boolean | null;
 }
 
 interface Payout {
@@ -65,6 +68,25 @@ interface AnalyticsMetrics {
   roiPct: number;
 }
 
+interface MerchantBranch {
+  id: string;
+  business_name: string | null;
+  branch_name: string | null;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  province: string | null;
+  status: string | null;
+}
+
+const PROMOTION_BADGES = [
+  'Weekend Special',
+  'Flash Sale',
+  'Monthly Deal',
+  'Clearance',
+  'Member Exclusive',
+] as const;
+
 const GROCERY_PRESETS = [
   { label: 'R50 Essentials', productName: 'R50 Grocery Voucher', faceValue: 50, totalDiscountPct: 4 },
   { label: 'R100 Basket', productName: 'R100 Grocery Voucher', faceValue: 100, totalDiscountPct: 4 },
@@ -89,6 +111,7 @@ export default function MerchantDashboard() {
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [merchantProducts, setMerchantProducts] = useState<MerchantProduct[]>([]);
+  const [branches, setBranches] = useState<MerchantBranch[]>([]);
   const [analyticsMetrics, setAnalyticsMetrics] = useState<AnalyticsMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -98,11 +121,13 @@ export default function MerchantDashboard() {
     productName: '',
     faceValue: 100,
     totalDiscountPct: 4,
+    validityDays: 90,
     redemptionScope: 'all_branches' as 'all_branches' | 'specific_branch' | 'province_wide' | 'national',
     isSpecial: false,
-    specialTitle: '',
+    specialTitle: 'Weekend Special',
     specialEndAt: '',
     displayPriority: 0,
+    validBranchIds: [] as string[],
   });
   const router = useRouter();
 
@@ -171,12 +196,16 @@ export default function MerchantDashboard() {
       setMerchant(dashboardData.merchant || null);
       setPayouts(dashboardData.payouts || []);
 
-      const [analyticsRes, productsRes] = await Promise.all([
+      const [analyticsRes, productsRes, branchesRes] = await Promise.all([
         fetch('/api/v1/analytics/overview', {
           method: 'GET',
           credentials: 'include',
         }),
         fetch('/api/v1/merchant/products', {
+          method: 'GET',
+          credentials: 'include',
+        }),
+        fetch('/api/v1/merchant/branches', {
           method: 'GET',
           credentials: 'include',
         }),
@@ -192,6 +221,11 @@ export default function MerchantDashboard() {
         setMerchantProducts(productsData.products || []);
       } else {
         setProductMessage(productsData.error || 'Unable to load products.');
+      }
+
+      const branchesData = await branchesRes.json().catch(() => ({} as any));
+      if (branchesRes.ok) {
+        setBranches(Array.isArray(branchesData?.branches) ? branchesData.branches : []);
       }
     } catch (dashboardError: any) {
       setError(toFriendlyDashboardError(String(dashboardError?.message || '')));
@@ -229,17 +263,37 @@ export default function MerchantDashboard() {
     () => merchantProducts.filter((product) => product.is_active).length,
     [merchantProducts]
   );
+  const pricingPreview = useMemo(() => {
+    const faceValue = Number(productForm.faceValue || 0);
+    const totalDiscountPct = Number(productForm.totalDiscountPct || 0);
+    const consumerBenefitPct = totalDiscountPct / 2;
+    const platformBenefitPct = totalDiscountPct / 2;
+    const consumerPrice = faceValue * (1 - consumerBenefitPct / 100);
+    const merchantReceivable = faceValue * (1 - totalDiscountPct / 100);
+    const platformRevenue = faceValue * (platformBenefitPct / 100);
+    return {
+      faceValue,
+      totalDiscountPct,
+      consumerBenefitPct,
+      platformBenefitPct,
+      consumerPrice,
+      merchantReceivable,
+      platformRevenue,
+    };
+  }, [productForm.faceValue, productForm.totalDiscountPct]);
 
   const applyPreset = (preset: (typeof GROCERY_PRESETS)[number]) => {
     setProductForm({
       productName: preset.productName,
       faceValue: preset.faceValue,
       totalDiscountPct: preset.totalDiscountPct,
+      validityDays: 90,
       redemptionScope: 'all_branches',
       isSpecial: false,
-      specialTitle: '',
+      specialTitle: 'Weekend Special',
       specialEndAt: '',
       displayPriority: 0,
+      validBranchIds: [],
     });
     setProductMessage(`Applied preset: ${preset.label}`);
   };
@@ -266,7 +320,9 @@ export default function MerchantDashboard() {
               ? [merchant.province]
               : [],
           validBranchIds:
-            productForm.redemptionScope === 'specific_branch' && merchant?.id ? [merchant.id] : [],
+            productForm.redemptionScope === 'specific_branch'
+              ? productForm.validBranchIds
+              : [],
         }),
       });
 
@@ -280,11 +336,13 @@ export default function MerchantDashboard() {
         productName: '',
         faceValue: 100,
         totalDiscountPct: 4,
+        validityDays: 90,
         redemptionScope: 'all_branches',
         isSpecial: false,
-        specialTitle: '',
+        specialTitle: 'Weekend Special',
         specialEndAt: '',
         displayPriority: 0,
+        validBranchIds: [],
       });
       await fetchDashboardData();
     } catch (productError: any) {
@@ -548,6 +606,26 @@ export default function MerchantDashboard() {
                   placeholder="Total discount %"
                   className="px-4 py-3 border border-border rounded-lg bg-background font-body"
                 />
+                <div className="md:col-span-3 rounded-lg border border-border bg-background px-4 py-3">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                    <span>Discount slider ({Number(productForm.totalDiscountPct).toFixed(1)}%)</span>
+                    <span>3% - 15%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={3}
+                    max={15}
+                    step={0.5}
+                    value={productForm.totalDiscountPct}
+                    onChange={(event) =>
+                      setProductForm((prev) => ({
+                        ...prev,
+                        totalDiscountPct: Number(event.target.value || 0),
+                      }))
+                    }
+                    className="w-full accent-primary"
+                  />
+                </div>
                 <select
                   value={productForm.redemptionScope}
                   onChange={(event) =>
@@ -567,6 +645,41 @@ export default function MerchantDashboard() {
                   <option value="province_wide">Province-wide</option>
                   <option value="national">National</option>
                 </select>
+                <select
+                  value={productForm.validityDays}
+                  onChange={(event) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      validityDays: Number(event.target.value || 90),
+                    }))
+                  }
+                  className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                >
+                  <option value={30}>30 days validity</option>
+                  <option value={60}>60 days validity</option>
+                  <option value={90}>90 days validity</option>
+                  <option value={180}>180 days validity</option>
+                  <option value={365}>365 days validity</option>
+                </select>
+                {productForm.redemptionScope === 'specific_branch' && (
+                  <select
+                    value={productForm.validBranchIds[0] ?? ''}
+                    onChange={(event) =>
+                      setProductForm((prev) => ({
+                        ...prev,
+                        validBranchIds: event.target.value ? [event.target.value] : [],
+                      }))
+                    }
+                    className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                  >
+                    <option value="">Select branch</option>
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.branch_name || branch.business_name || branch.email || branch.id}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <label className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-3 text-sm font-body text-foreground">
                   <input
                     type="checkbox"
@@ -579,15 +692,19 @@ export default function MerchantDashboard() {
                 </label>
                 {productForm.isSpecial && (
                   <>
-                    <input
-                      type="text"
+                    <select
                       value={productForm.specialTitle}
                       onChange={(event) =>
                         setProductForm((prev) => ({ ...prev, specialTitle: event.target.value }))
                       }
-                      placeholder="Special title (e.g. Weekend Flash Deal)"
                       className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                    />
+                    >
+                      {PROMOTION_BADGES.map((badge) => (
+                        <option key={badge} value={badge}>
+                          {badge}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="datetime-local"
                       value={productForm.specialEndAt}
@@ -678,6 +795,46 @@ export default function MerchantDashboard() {
             </div>
 
             <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
+              <div className="mb-6 rounded-xl bg-slate-900 text-white p-4">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-slate-300 font-headline">
+                  Live Price Calculator
+                </p>
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-300">Face Value</span>
+                    <span className="font-headline font-semibold">R{pricingPreview.faceValue.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-300">Total Discount</span>
+                    <span className="font-headline font-semibold">
+                      {pricingPreview.totalDiscountPct.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="h-px bg-slate-700 my-2" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-300">Consumer Pays</span>
+                    <span className="font-headline font-semibold text-emerald-300">
+                      R{pricingPreview.consumerPrice.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-300">Merchant Receives</span>
+                    <span className="font-headline font-semibold text-amber-300">
+                      R{pricingPreview.merchantReceivable.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-300">Platform Earns</span>
+                    <span className="font-headline font-semibold text-cyan-300">
+                      R{pricingPreview.platformRevenue.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="mt-2 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] text-slate-200">
+                    50/50 split rule: Consumer benefit {pricingPreview.consumerBenefitPct.toFixed(2)}% |
+                    Platform margin {pricingPreview.platformBenefitPct.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-headline font-bold text-2xl text-foreground">Merchant Operations</h2>
                 <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-secondary" />
@@ -698,6 +855,9 @@ export default function MerchantDashboard() {
                   <p className="text-xs text-muted-foreground font-body">
                     Email: {merchant?.email || 'N/A'}
                   </p>
+                  <p className="text-xs text-muted-foreground font-body">
+                    Merchant Type: {String(merchant?.merchant_type ?? 'private').toUpperCase()}
+                  </p>
                 </div>
 
                 <div className="p-4 bg-muted/50 rounded-lg">
@@ -716,6 +876,35 @@ export default function MerchantDashboard() {
                     Keep discount budgets between 4% and 5% for grocery products to balance conversion and payout.
                   </p>
                 </div>
+
+                {String(merchant?.merchant_type ?? '').toLowerCase() === 'chain' && (
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm font-headline font-semibold text-foreground">Branch Management</p>
+                    <p className="text-xs text-muted-foreground font-body mt-1">
+                      Parent/child branch hierarchy with branch-scoped product visibility.
+                    </p>
+                    <div className="mt-3 space-y-2 max-h-40 overflow-auto pr-1">
+                      {branches.length === 0 ? (
+                        <p className="text-xs text-muted-foreground font-body">No branches linked yet.</p>
+                      ) : (
+                        branches.map((branch) => (
+                          <div
+                            key={branch.id}
+                            className="rounded-md border border-border bg-background px-2 py-2"
+                          >
+                            <p className="text-xs font-headline font-semibold text-foreground">
+                              {branch.branch_name || branch.business_name || 'Branch'}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground font-body">
+                              {branch.city || 'City n/a'} | {branch.province || 'Province n/a'} |{' '}
+                              {String(branch.status ?? 'pending')}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

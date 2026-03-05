@@ -51,7 +51,7 @@ export default function MerchantChangePasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const passwordUpdateTimeoutMs = 90000;
+  const passwordUpdateTimeoutMs = 180000;
 
   useEffect(() => {
     if (loading) return;

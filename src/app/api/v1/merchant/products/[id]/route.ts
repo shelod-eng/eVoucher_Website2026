@@ -264,6 +264,19 @@ export async function PATCH(
     const nextTotalDiscountPct = Number(
       body.totalDiscountPct ?? existing.total_discount_pct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
     );
+    if (
+      body.totalDiscountPct !== undefined &&
+      Number(existing.total_discount_pct ?? nextTotalDiscountPct) !== nextTotalDiscountPct
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Total discount is immutable after product creation. Create a new product to change discount.',
+          code: 'immutable_discount',
+        },
+        { status: 409 }
+      );
+    }
     const nextIsSpecial = body.isSpecial ?? existing.is_special ?? false;
     const nextSpecialTitle = nextIsSpecial
       ? String(body.specialTitle ?? existing.special_title ?? '').trim()

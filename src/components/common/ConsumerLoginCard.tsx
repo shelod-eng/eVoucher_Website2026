@@ -40,7 +40,7 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
         setLoading(false);
         return;
       }
-      await withTimeout(signIn(normalizedEmail, normalizedPassword), 20000, 'Sign in timed out. Please try again.');
+      await withTimeout(signIn(normalizedEmail, normalizedPassword), 60000, 'Sign in timed out. Please try again.');
       router.push(redirectTo);
     } catch (signInError: any) {
       const message = String(signInError?.message || 'Invalid email or password.');
