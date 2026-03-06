@@ -7,9 +7,6 @@ import CustomerRegistrationModal from './components/CustomerRegistrationModal';
 import MerchantOnboardingModal from './components/MerchantOnboardingModal';
 import { createClient } from '@/lib/supabase/client';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 export default function Home() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showMerchantModal, setShowMerchantModal] = useState(false);
