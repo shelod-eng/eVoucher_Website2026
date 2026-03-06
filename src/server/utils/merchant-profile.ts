@@ -35,34 +35,53 @@ async function autoApprovePendingMerchantsForUser(admin: any, user: AuthUser) {
   if (!isForcedAutoApprovalMode()) return;
 
   const approvedAt = new Date().toISOString();
-  const baseUpdate = {
+  const preApproveUpdate = {
+    vetting_status: 'approved',
+    email_verified: true,
+    phone_verified: true,
+  };
+  const finalizeApproveUpdate = {
     status: 'approved',
-    vetting_status: 'auto_approved',
     approved_at: approvedAt,
     onboarding_fee_paid: true,
     email_verified: true,
     phone_verified: true,
+    vetting_status: 'approved',
   };
 
-  const byUserId = await admin
-    .from('merchants')
-    .update(baseUpdate)
-    .eq('user_id', user.id)
-    .eq('status', 'pending');
-
-  if (byUserId.error && !isUserIdTypeMismatch(byUserId.error)) {
-    throw byUserId.error;
+  // Never throw here; onboarding gates must not break dashboard/auth-state reads.
+  try {
+    await admin.from('merchants').update(preApproveUpdate).eq('user_id', user.id).eq('status', 'pending');
+    const byUserIdFinalize = await admin
+      .from('merchants')
+      .update(finalizeApproveUpdate)
+      .eq('user_id', user.id)
+      .eq('status', 'pending');
+    if (byUserIdFinalize.error && !isUserIdTypeMismatch(byUserIdFinalize.error)) {
+      console.warn('[merchant-profile][auto-approve-by-user][warn]', byUserIdFinalize.error.message);
+    }
+  } catch (error: any) {
+    if (!isUserIdTypeMismatch(error)) {
+      console.warn('[merchant-profile][auto-approve-by-user][warn]', error?.message || error);
+    }
   }
 
   const email = normalizeEmail(user.email);
   if (!email) return;
 
-  const byEmail = await admin
-    .from('merchants')
-    .update(baseUpdate)
-    .eq('email', email)
-    .eq('status', 'pending');
-  if (byEmail.error) throw byEmail.error;
+  try {
+    await admin.from('merchants').update(preApproveUpdate).eq('email', email).eq('status', 'pending');
+    const byEmailFinalize = await admin
+      .from('merchants')
+      .update(finalizeApproveUpdate)
+      .eq('email', email)
+      .eq('status', 'pending');
+    if (byEmailFinalize.error) {
+      console.warn('[merchant-profile][auto-approve-by-email][warn]', byEmailFinalize.error.message);
+    }
+  } catch (error: any) {
+    console.warn('[merchant-profile][auto-approve-by-email][warn]', error?.message || error);
+  }
 }
 
 export async function resolveMerchantForUser<T>(
