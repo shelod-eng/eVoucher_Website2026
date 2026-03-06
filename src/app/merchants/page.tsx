@@ -114,15 +114,7 @@ export default function MerchantsPage() {
     };
     return mapping[statusData.vettingStatus] ?? `Current vetting state: ${statusData.vettingStatus}`;
   }, [statusData]);
-  const hasApprovalKey = approvalKey.trim().length > 0;
-  const isPrototypeApprovalMode = useMemo(() => {
-    const flags = [
-      String(process.env.NEXT_PUBLIC_MERCHANT_PROTOTYPE_MODE ?? '').toLowerCase(),
-      String(process.env.NEXT_PUBLIC_ALLOW_PUBLIC_MERCHANT_APPROVAL ?? '').toLowerCase(),
-    ];
-    return flags.some((value) => ['true', '1', 'yes', 'on'].includes(value));
-  }, []);
-  const canUseManualApprovalActions = isPrototypeApprovalMode || hasApprovalKey;
+  const canUseManualApprovalActions = true;
 
   const approvalConfirmationNote = (result: any) => {
     if (result?.approvalConfirmationSent === true) {
@@ -777,9 +769,7 @@ export default function MerchantsPage() {
                         )}
 
                         <div className="mt-3 flex flex-col gap-2">
-                          <label className="text-xs text-muted-foreground font-body">
-                            Approval Key (optional in prototype mode)
-                          </label>
+                          <label className="text-xs text-muted-foreground font-body">Approval Key (optional)</label>
                           <input
                             type="password"
                             name="merchantApprovalKey"
@@ -789,11 +779,6 @@ export default function MerchantsPage() {
                             className="w-full px-3 py-2 border border-border rounded-lg text-sm font-body bg-background"
                             placeholder="Enter x-merchant-approval-key"
                           />
-                          {!canUseManualApprovalActions && (
-                            <p className="mt-1 text-xs text-amber-700 font-body">
-                              Enter approval key to enable manual approve and credential resend actions.
-                            </p>
-                          )}
                         </div>
 
                         {statusData.status === 'pending' && statusData.emailVerified && statusData.phoneVerified && (
