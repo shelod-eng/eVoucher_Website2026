@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import { createClient } from '@/lib/supabase/client';
 
 function validatePassword(password: string): string | null {
   if (password.length < 8) return 'Password must be at least 8 characters.';
@@ -30,7 +29,6 @@ async function fetchMerchantAuthState() {
 
 export default function MerchantChangePasswordPage() {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
   const { user, loading } = useAuth();
   useEffect(() => {
     if (typeof user === 'undefined') {
@@ -127,14 +125,11 @@ export default function MerchantChangePasswordPage() {
         return;
       }
 
-      // Ensure client auth/session state is refreshed before navigation checks run.
-      try {
-        await supabase.auth.refreshSession();
-        await supabase.auth.getUser();
-      } catch (refreshErr: any) {
-        console.error('[MerchantChangePassword][refreshSession][error]', refreshErr);
-      }
       setSuccess('Password updated successfully. Redirecting to dashboard...');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/merchant/dashboard';
+        return;
+      }
       router.replace('/merchant/dashboard');
     } catch (submitError: any) {
       const message = String(submitError?.message || 'Failed to update password.');
