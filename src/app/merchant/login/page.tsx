@@ -163,11 +163,7 @@ export default function MerchantLogin() {
       }
       let signedInUser;
       try {
-        signedInUser = await withTimeout(
-          signIn(normalizedEmail, normalizedPassword),
-          60000,
-          'Sign in timed out. Please try again.'
-        );
+        signedInUser = await signIn(normalizedEmail, normalizedPassword);
       } catch (initialSignInError: any) {
         const message = String(initialSignInError?.message || '').toLowerCase();
         if (isDemoEmail(normalizedEmail) && (message.includes('invalid login') || message.includes('invalid credentials'))) {
@@ -176,11 +172,7 @@ export default function MerchantLogin() {
             if (!retryProvision.ok) {
               throw new Error(retryProvision.error);
             }
-            signedInUser = await withTimeout(
-              signIn(normalizedEmail, normalizedPassword),
-              60000,
-              'Sign in timed out. Please try again.'
-            );
+            signedInUser = await signIn(normalizedEmail, normalizedPassword);
           } catch (retryError) {
             throw retryError;
           }
@@ -198,28 +190,20 @@ export default function MerchantLogin() {
           // Best effort seeding to keep login resilient.
         }
       }
-      let state;
-      try {
-        state = await withTimeout(
-          fetchMerchantAuthState(),
-          15000,
-          'Failed to fetch merchant authentication state.'
-        );
-      } catch (apiErr: any) {
-        const fallbackRole = String(signedInUser?.user_metadata?.role ?? '').toLowerCase();
-        const fallbackMustChange = Boolean(signedInUser?.user_metadata?.must_change_password);
-        if (fallbackRole === 'merchant') {
-          router.replace(fallbackMustChange ? '/merchant/change-password' : '/merchant/dashboard');
-          return;
-        }
-        if (fallbackRole) {
-          router.replace('/shop');
-          return;
-        }
-        setError('Failed to fetch merchant authentication state. Please try again or contact support.');
-        setLoading(false);
+      // First-login routing must be immediate: use fresh auth metadata first.
+      const metadataRole = String(signedInUser?.user_metadata?.role ?? '').toLowerCase();
+      const metadataMustChange = Boolean(signedInUser?.user_metadata?.must_change_password);
+      if (metadataRole === 'merchant') {
+        router.replace(metadataMustChange ? '/merchant/change-password' : '/merchant/dashboard');
         return;
       }
+      if (metadataRole) {
+        router.replace('/shop');
+        return;
+      }
+
+      // Fallback only if metadata is missing.
+      const state = await fetchMerchantAuthState();
       if (!state || typeof state.mustResetPassword === 'undefined') {
         setError('Merchant authentication state is invalid.');
         setLoading(false);
@@ -228,13 +212,6 @@ export default function MerchantLogin() {
       router.replace(state.mustResetPassword ? '/merchant/change-password' : '/merchant/dashboard');
     } catch (err: any) {
       const message = String(err?.message || 'Invalid email or password');
-      if (message.toLowerCase().includes('timed out')) {
-        try {
-          await signOut();
-        } catch {
-          // Best effort local session clear on timeout.
-        }
-      }
       setError(message);
       console.error('[MerchantLogin][handleSubmit][error]', err);
     } finally {
