@@ -7,22 +7,6 @@ import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
-  return await new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        reject(error);
-      }
-    );
-  });
-}
-
 function validatePassword(password: string): string | null {
   if (password.length < 8) return 'Password must be at least 8 characters.';
   if (!/[A-Z]/.test(password)) return 'Password must include at least one uppercase letter.';
@@ -58,7 +42,6 @@ export default function MerchantChangePasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const passwordUpdateTimeoutMs = 180000;
 
   useEffect(() => {
     if (loading) return;
@@ -114,15 +97,15 @@ export default function MerchantChangePasswordPage() {
     setSubmitting(true);
     try {
       try {
-        const resetResponse = await withTimeout(
-          fetch('/api/v1/merchant/auth/change-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password }),
-          }),
-          30000,
-          'Password update timed out. Please try again.'
-        );
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        const resetResponse = await fetch('/api/v1/merchant/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({ password }),
+        });
+        clearTimeout(timeoutId);
         if (!resetResponse.ok) {
           const payload = await resetResponse.json().catch(() => ({} as any));
           const message = payload?.error || 'Failed to update password.';
@@ -132,6 +115,11 @@ export default function MerchantChangePasswordPage() {
           return;
         }
       } catch (changePasswordError: any) {
+        if (changePasswordError?.name === 'AbortError') {
+          setError('Password update is taking longer than expected. Please try once more.');
+          setSubmitting(false);
+          return;
+        }
         const message = changePasswordError?.message || 'Failed to update password.';
         setError(message);
         console.error('[MerchantChangePassword][server-change-password][error]', message);
@@ -146,35 +134,10 @@ export default function MerchantChangePasswordPage() {
       } catch (refreshErr: any) {
         console.error('[MerchantChangePassword][refreshSession][error]', refreshErr);
       }
-      for (let i = 0; i < 4; i += 1) {
-        try {
-          const state = await fetchMerchantAuthState();
-          if (!state.mustResetPassword) break;
-        } catch (pollErr: any) {
-          console.error('[MerchantChangePassword][pollAuthState][error]', pollErr);
-        }
-        await new Promise((resolve) => setTimeout(resolve, 450));
-      }
-
       setSuccess('Password updated successfully. Redirecting to dashboard...');
-      setTimeout(() => router.replace('/merchant/dashboard'), 900);
+      router.replace('/merchant/dashboard');
     } catch (submitError: any) {
       const message = String(submitError?.message || 'Failed to update password.');
-      if (message.toLowerCase().includes('timed out')) {
-        try {
-          await supabase.auth.refreshSession();
-          const {
-            data: { user: latestUser },
-          } = await supabase.auth.getUser();
-          if (latestUser) {
-            setSuccess('Password update is taking longer than expected. Redirecting to dashboard...');
-            setTimeout(() => router.replace('/merchant/dashboard'), 900);
-            return;
-          }
-        } catch {
-          // Continue to normal error path below.
-        }
-      }
       setError(message);
     } finally {
       setSubmitting(false);

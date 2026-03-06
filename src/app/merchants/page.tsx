@@ -115,6 +115,14 @@ export default function MerchantsPage() {
     return mapping[statusData.vettingStatus] ?? `Current vetting state: ${statusData.vettingStatus}`;
   }, [statusData]);
   const hasApprovalKey = approvalKey.trim().length > 0;
+  const isPrototypeApprovalMode = useMemo(() => {
+    const flags = [
+      String(process.env.NEXT_PUBLIC_MERCHANT_PROTOTYPE_MODE ?? '').toLowerCase(),
+      String(process.env.NEXT_PUBLIC_ALLOW_PUBLIC_MERCHANT_APPROVAL ?? '').toLowerCase(),
+    ];
+    return flags.some((value) => ['true', '1', 'yes', 'on'].includes(value));
+  }, []);
+  const canUseManualApprovalActions = isPrototypeApprovalMode || hasApprovalKey;
 
   const approvalConfirmationNote = (result: any) => {
     if (result?.approvalConfirmationSent === true) {
@@ -770,7 +778,7 @@ export default function MerchantsPage() {
 
                         <div className="mt-3 flex flex-col gap-2">
                           <label className="text-xs text-muted-foreground font-body">
-                            Approval Key (required for manual approve/resend in demo)
+                            Approval Key (optional in prototype mode)
                           </label>
                           <input
                             type="password"
@@ -781,7 +789,7 @@ export default function MerchantsPage() {
                             className="w-full px-3 py-2 border border-border rounded-lg text-sm font-body bg-background"
                             placeholder="Enter x-merchant-approval-key"
                           />
-                          {!hasApprovalKey && (
+                          {!canUseManualApprovalActions && (
                             <p className="mt-1 text-xs text-amber-700 font-body">
                               Enter approval key to enable manual approve and credential resend actions.
                             </p>
@@ -798,7 +806,7 @@ export default function MerchantsPage() {
                             <button
                               type="button"
                               onClick={() => void handleApproveMerchant()}
-                              disabled={approvingMerchant || !hasApprovalKey}
+                              disabled={approvingMerchant || !canUseManualApprovalActions}
                               className="mt-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-headline font-semibold disabled:opacity-50"
                             >
                               {approvingMerchant ? 'Approving...' : 'Approve Merchant'}
@@ -814,7 +822,7 @@ export default function MerchantsPage() {
                             <button
                               type="button"
                               onClick={() => void handleResendCredentials()}
-                              disabled={resendingCredentials || !hasApprovalKey}
+                              disabled={resendingCredentials || !canUseManualApprovalActions}
                               className="mt-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-headline font-semibold disabled:opacity-50"
                             >
                               {resendingCredentials ? 'Resending...' : 'Resend Credentials Email'}
