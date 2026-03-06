@@ -103,7 +103,8 @@ export default function MerchantLogin() {
         const state = await fetchMerchantAuthState();
         if (cancelled) return;
         if (state.isMerchant) {
-          router.replace(state.mustResetPassword ? '/merchant/change-password' : '/merchant/dashboard');
+          // Always land on change-password first; page self-redirects to dashboard when reset is not required.
+          router.replace('/merchant/change-password');
           return;
         }
         if (String(state.role ?? '').trim()) {
@@ -112,7 +113,7 @@ export default function MerchantLogin() {
       } catch {
         const resolvedRole = String(role ?? user.user_metadata?.role ?? '').toLowerCase();
         if (resolvedRole === 'merchant') {
-          router.replace(Boolean(user.user_metadata?.must_change_password) ? '/merchant/change-password' : '/merchant/dashboard');
+          router.replace('/merchant/change-password');
         } else if (resolvedRole) {
           router.replace('/shop');
         }
@@ -192,9 +193,8 @@ export default function MerchantLogin() {
       }
       // First-login routing must be immediate: use fresh auth metadata first.
       const metadataRole = String(signedInUser?.user_metadata?.role ?? '').toLowerCase();
-      const metadataMustChange = Boolean(signedInUser?.user_metadata?.must_change_password);
       if (metadataRole === 'merchant') {
-        router.replace(metadataMustChange ? '/merchant/change-password' : '/merchant/dashboard');
+        router.replace('/merchant/change-password');
         return;
       }
       if (metadataRole) {
@@ -209,7 +209,7 @@ export default function MerchantLogin() {
         setLoading(false);
         return;
       }
-      router.replace(state.mustResetPassword ? '/merchant/change-password' : '/merchant/dashboard');
+      router.replace('/merchant/change-password');
     } catch (err: any) {
       const message = String(err?.message || 'Invalid email or password');
       setError(message);

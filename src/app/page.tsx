@@ -1,14 +1,52 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
 import CustomerRegistrationModal from './components/CustomerRegistrationModal';
 import MerchantOnboardingModal from './components/MerchantOnboardingModal';
+import { createClient } from '@/lib/supabase/client';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default function Home() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showMerchantModal, setShowMerchantModal] = useState(false);
+  const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const resetHomeSessions = async () => {
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // Best effort; continue with local cleanup.
+        try {
+          await supabase.auth.signOut({ scope: 'local' });
+        } catch {
+          // Ignore sign out fallback errors.
+        }
+      }
+      if (cancelled || typeof window === 'undefined') return;
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < window.localStorage.length; i += 1) {
+          const key = String(window.localStorage.key(i) ?? '');
+          if (key.includes('-auth-token') || key.startsWith('sb-')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+      } catch {
+        // Ignore storage cleanup errors.
+      }
+    };
+    void resetHomeSessions();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
 
   const handleCustomerClick = () => {
     setShowCustomerModal(true);
