@@ -1,4 +1,5 @@
 import React from 'react';
+import { Analytics } from '@vercel/analytics/next';
 import { AuthProvider } from '@/contexts/AuthContext';
 import '../styles/index.css';
 
@@ -28,7 +29,8 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
-</body>
+        <Analytics />
+      </body>
     </html>
   );
 }
