@@ -272,7 +272,19 @@ function isPrototypeApprovalMode() {
 }
 
 function isForcedAutoApprovalMode() {
-  // UAT default: keep onboarding frictionless unless explicitly disabled.
+  // Keep CI/tests deterministic: default OFF in test unless explicitly enabled.
+  if (process.env.NODE_ENV === 'test') {
+    const testRaw = String(
+      process.env.FORCE_MERCHANT_AUTO_APPROVAL ??
+        process.env.NEXT_PUBLIC_FORCE_MERCHANT_AUTO_APPROVAL ??
+        ''
+    )
+      .trim()
+      .toLowerCase();
+    return ['true', '1', 'yes', 'on'].includes(testRaw);
+  }
+
+  // UAT/prototype default: keep onboarding frictionless unless explicitly disabled.
   const raw = String(
     process.env.FORCE_MERCHANT_AUTO_APPROVAL ??
       process.env.NEXT_PUBLIC_FORCE_MERCHANT_AUTO_APPROVAL ??
