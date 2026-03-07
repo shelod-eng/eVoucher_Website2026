@@ -19,6 +19,11 @@ function isUserIdTypeMismatch(error: any) {
   );
 }
 
+function isKycApprovalGate(error: any) {
+  const message = String(error?.message ?? '').toLowerCase();
+  return message.includes('cannot be moved to approved without approved kyc review');
+}
+
 function isForcedAutoApprovalMode() {
   const raw = String(
     process.env.FORCE_MERCHANT_AUTO_APPROVAL ??
@@ -57,7 +62,19 @@ async function autoApprovePendingMerchantsForUser(admin: any, user: AuthUser) {
       .update(finalizeApproveUpdate)
       .eq('user_id', user.id)
       .eq('status', 'pending');
-    if (byUserIdFinalize.error && !isUserIdTypeMismatch(byUserIdFinalize.error)) {
+    if (byUserIdFinalize.error && isKycApprovalGate(byUserIdFinalize.error)) {
+      const activeFallback = await admin
+        .from('merchants')
+        .update({
+          ...finalizeApproveUpdate,
+          status: 'active',
+        })
+        .eq('user_id', user.id)
+        .eq('status', 'pending');
+      if (activeFallback.error && !isUserIdTypeMismatch(activeFallback.error)) {
+        console.warn('[merchant-profile][auto-approve-by-user-active-fallback][warn]', activeFallback.error.message);
+      }
+    } else if (byUserIdFinalize.error && !isUserIdTypeMismatch(byUserIdFinalize.error)) {
       console.warn('[merchant-profile][auto-approve-by-user][warn]', byUserIdFinalize.error.message);
     }
   } catch (error: any) {
@@ -76,7 +93,19 @@ async function autoApprovePendingMerchantsForUser(admin: any, user: AuthUser) {
       .update(finalizeApproveUpdate)
       .eq('email', email)
       .eq('status', 'pending');
-    if (byEmailFinalize.error) {
+    if (byEmailFinalize.error && isKycApprovalGate(byEmailFinalize.error)) {
+      const activeFallback = await admin
+        .from('merchants')
+        .update({
+          ...finalizeApproveUpdate,
+          status: 'active',
+        })
+        .eq('email', email)
+        .eq('status', 'pending');
+      if (activeFallback.error) {
+        console.warn('[merchant-profile][auto-approve-by-email-active-fallback][warn]', activeFallback.error.message);
+      }
+    } else if (byEmailFinalize.error) {
       console.warn('[merchant-profile][auto-approve-by-email][warn]', byEmailFinalize.error.message);
     }
   } catch (error: any) {

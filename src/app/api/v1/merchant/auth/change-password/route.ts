@@ -34,7 +34,17 @@ export async function POST(request: Request) {
     });
     if (updateError) throw updateError;
 
-    await completeMerchantPasswordReset(user.id);
+    try {
+      await completeMerchantPasswordReset(user.id);
+    } catch (syncError: any) {
+      // Password is already updated in Supabase Auth; do not strand user on this page due sync drift.
+      console.warn('[merchant-auth-change-password][sync-warning]', syncError?.message || syncError);
+      return NextResponse.json({
+        success: true,
+        warning: 'Password updated, but merchant reset sync had a non-blocking issue.',
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json(

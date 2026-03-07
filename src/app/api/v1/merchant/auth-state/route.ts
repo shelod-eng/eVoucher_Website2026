@@ -17,12 +17,27 @@ export async function GET() {
 
     const { role } = await resolveUserRole(supabase, user);
     const admin = createAdminClient();
-    const merchant = await resolveMerchantForUser<{
-      id: string;
-      user_id: string | null;
-      must_reset_password: boolean | null;
-      status: string | null;
-    }>(admin, user, 'id,user_id,must_reset_password,status');
+    let merchant:
+      | {
+          id: string;
+          user_id: string | null;
+          must_reset_password: boolean | null;
+          status: string | null;
+        }
+      | null = null;
+    try {
+      merchant = await resolveMerchantForUser<{
+        id: string;
+        user_id: string | null;
+        must_reset_password: boolean | null;
+        status: string | null;
+      }>(admin, user, 'id,user_id,must_reset_password,status');
+    } catch (merchantResolveError: any) {
+      console.warn(
+        '[merchant-auth-state][resolve-merchant][warn]',
+        merchantResolveError?.message || merchantResolveError
+      );
+    }
 
     const isMerchant =
       role === 'merchant' ||
@@ -37,8 +52,7 @@ export async function GET() {
     }
 
     const mustResetPassword =
-      Boolean(merchant?.must_reset_password) ||
-      Boolean(user.user_metadata?.must_change_password);
+      Boolean(merchant?.must_reset_password) || Boolean(user.user_metadata?.must_change_password);
     if (mustResetPassword) {
       try {
         await reconcileMerchantResetState(user.id);

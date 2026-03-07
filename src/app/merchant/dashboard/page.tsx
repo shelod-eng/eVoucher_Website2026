@@ -224,8 +224,13 @@ export default function MerchantDashboard() {
       const dashboardRes = await fetch('/api/v1/merchant/dashboard', {
         method: 'GET',
         credentials: 'include',
+        cache: 'no-store',
       });
       const dashboardData = await dashboardRes.json();
+      if (dashboardRes.status === 401) {
+        router.replace('/merchant/login');
+        return;
+      }
       if (!dashboardRes.ok) {
         throw new Error(dashboardData.error || 'Failed to load merchant dashboard');
       }

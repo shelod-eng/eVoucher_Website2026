@@ -9,6 +9,7 @@ import { getCartItems } from '@/lib/cart';
 
 interface HeaderProps {
   className?: string;
+  forcePublic?: boolean;
 }
 
 interface NavItem {
@@ -18,7 +19,7 @@ interface NavItem {
   dashboardTab?: 'studio' | 'products' | 'payouts';
 }
 
-const Header = ({ className = '' }: HeaderProps) => {
+const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -27,8 +28,10 @@ const Header = ({ className = '' }: HeaderProps) => {
   const isSignedIn = !loading && Boolean(user);
   const isMerchantRoute = pathname?.startsWith('/merchant') || pathname?.startsWith('/merchants');
   const isMerchantUser = userRole === 'merchant';
+  const effectiveSignedIn = forcePublic ? false : isSignedIn;
+  const effectiveMerchantUser = forcePublic ? false : isMerchantUser;
   const publicSignInHref = isMerchantRoute ? '/merchant/login' : '/signin';
-  const signOutRedirect = isMerchantUser || isMerchantRoute ? '/merchant/login' : '/signin';
+  const signOutRedirect = effectiveMerchantUser || isMerchantRoute ? '/merchant/login' : '/signin';
   const [cartCount, setCartCount] = useState(0);
   const displayName = String(
     user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'consumer'
@@ -61,12 +64,14 @@ const Header = ({ className = '' }: HeaderProps) => {
     { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
   ];
 
-  const navItems = isSignedIn ? (isMerchantUser ? merchantNavItems : consumerNavItems) : publicNavItems;
+  const navItems = effectiveSignedIn
+    ? (effectiveMerchantUser ? merchantNavItems : consumerNavItems)
+    : publicNavItems;
 
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!effectiveSignedIn) return;
 
-    const prefetchTargets = isMerchantUser
+    const prefetchTargets = effectiveMerchantUser
       ? [
           '/merchant/dashboard',
           '/merchant/dashboard?tab=studio',
@@ -90,10 +95,10 @@ const Header = ({ className = '' }: HeaderProps) => {
     prefetchTargets.forEach((target) => {
       router.prefetch(target);
     });
-  }, [isSignedIn, isMerchantUser, router]);
+  }, [effectiveSignedIn, effectiveMerchantUser, router]);
 
   useEffect(() => {
-    if (!isSignedIn || isMerchantUser) return;
+    if (!effectiveSignedIn || effectiveMerchantUser) return;
 
     const refreshCartCount = () => {
       const items = getCartItems();
@@ -108,10 +113,10 @@ const Header = ({ className = '' }: HeaderProps) => {
       window.removeEventListener('evoucher-cart-updated', refreshCartCount);
       window.removeEventListener('storage', refreshCartCount);
     };
-  }, [isSignedIn, isMerchantUser]);
+  }, [effectiveSignedIn, effectiveMerchantUser]);
 
   const handleMerchantTabIntent = (item: NavItem) => {
-    if (!isMerchantUser || !item.dashboardTab || typeof window === 'undefined') return;
+    if (!effectiveMerchantUser || !item.dashboardTab || typeof window === 'undefined') return;
     window.dispatchEvent(
       new CustomEvent('merchant-tab-change', {
         detail: { tab: item.dashboardTab },
@@ -168,7 +173,7 @@ const Header = ({ className = '' }: HeaderProps) => {
               >
                 <Icon name={item.icon as any} size={18} variant="outline" />
                 <span>{item.label}</span>
-                {!isMerchantUser && isSignedIn && item.label === 'Cart' && cartCount > 0 && (
+                {!effectiveMerchantUser && effectiveSignedIn && item.label === 'Cart' && cartCount > 0 && (
                   <span className="inline-flex min-w-5 h-5 px-1 items-center justify-center text-xs rounded-full bg-primary text-primary-foreground font-headline">
                     {cartCount}
                   </span>
@@ -176,9 +181,9 @@ const Header = ({ className = '' }: HeaderProps) => {
               </Link>
             ))}
 
-            {user ? (
+            {effectiveSignedIn && user ? (
               <>
-                {!isMerchantUser && (
+                {!effectiveMerchantUser && (
                   <span className="px-3 py-2 text-sm font-body text-muted-foreground">
                     Hello, <span className="font-headline font-semibold text-foreground">{displayName}</span>
                   </span>
@@ -232,9 +237,9 @@ const Header = ({ className = '' }: HeaderProps) => {
                 </Link>
               ))}
 
-              {user ? (
+              {effectiveSignedIn && user ? (
                 <>
-                  {!isMerchantUser && (
+                  {!effectiveMerchantUser && (
                     <div className="px-4 py-2 text-sm text-muted-foreground">
                       Hello, <span className="font-headline font-semibold text-foreground">{displayName}</span>
                     </div>

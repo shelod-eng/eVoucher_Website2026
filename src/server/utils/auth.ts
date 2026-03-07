@@ -8,6 +8,11 @@ export async function getAuthenticatedUser() {
   } = await supabase.auth.getUser();
 
   if (error) {
+    const message = String(error?.message ?? '').toLowerCase();
+    // Treat missing session as unauthenticated instead of hard server error.
+    if (message.includes('auth session missing')) {
+      return { supabase, user: null };
+    }
     throw error;
   }
 

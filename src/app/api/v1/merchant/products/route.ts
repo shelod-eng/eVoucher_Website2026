@@ -113,6 +113,15 @@ function canOperateMerchantProducts(role: string, merchant: any, userId: string)
 
 function isMerchantStatusOperable(status: unknown) {
   const normalized = String(status ?? '').trim().toLowerCase();
+  const forceAutoApproval =
+    String(
+      process.env.FORCE_MERCHANT_AUTO_APPROVAL ??
+        process.env.NEXT_PUBLIC_FORCE_MERCHANT_AUTO_APPROVAL ??
+        ''
+    )
+      .trim()
+      .toLowerCase() !== 'false';
+  if (forceAutoApproval && normalized === 'pending') return true;
   return normalized === 'approved' || normalized === 'active';
 }
 

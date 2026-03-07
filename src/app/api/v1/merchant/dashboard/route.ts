@@ -3,6 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 function isMissingColumn(error: any, columnName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const normalizedColumn = columnName.toLowerCase();
@@ -80,10 +83,17 @@ export async function GET() {
 
     if (payoutsError) throw payoutsError;
 
-    return NextResponse.json({
-      merchant,
-      payouts: payouts ?? [],
-    });
+    return NextResponse.json(
+      {
+        merchant,
+        payouts: payouts ?? [],
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to load merchant dashboard.' },
