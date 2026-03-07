@@ -24,7 +24,39 @@ type OnboardingStatus = {
   merchantUserId: string | null;
 };
 
-const businessTypes = ['Spaza Shop', 'Supermarket', 'Pharmacy', 'Restaurant', 'Transport', 'Other'];
+const PRIVATE_BUSINESS_TYPES = [
+  'Pharmacy',
+  'Spaza Shop',
+  'Supermarket',
+  'Restaurant',
+  'Clothing Boutique',
+  'Hardware Store',
+  'Salon / Barber Shop',
+  'Liquor Store',
+  'Electronics & Mobile Shop',
+  'Butchery / Bakery',
+  'Internet Cafe',
+  'Auto Repair / Car Wash',
+  'Health Practitioner',
+  'IT Services',
+  'Motor Vehicle Services',
+  'Other',
+];
+
+const CHAIN_BUSINESS_TYPES = [
+  'Retail Chains',
+  'National Pharmacies',
+  'Fast Food Chains',
+  'Fuel Stations',
+  'Clothing Chains',
+  'Electronics Chains',
+  'Furniture Chains',
+  'Transport Networks',
+  'IT Services',
+  'Hardware & Building Supply',
+  'Motor Vehicle Companies',
+  'Other',
+];
 const BANK_BRANCH_CODES: Record<string, string> = {
   'FNB': '250655',
   'Standard Bank': '051001',
@@ -99,8 +131,18 @@ export default function MerchantsPage() {
     () => (merchantType === 'private' ? 'Private Merchant (Kalapeng-style)' : 'Chain Merchant'),
     [merchantType]
   );
+  const availableBusinessTypes = useMemo(
+    () => (merchantType === 'private' ? PRIVATE_BUSINESS_TYPES : CHAIN_BUSINESS_TYPES),
+    [merchantType]
+  );
   const isPrivateMerchant = merchantType === 'private';
   const isPrivatePharmacy = isPrivateMerchant && formData.businessType === 'Pharmacy';
+
+  useEffect(() => {
+    if (!availableBusinessTypes.includes(formData.businessType)) {
+      setFormData((prev) => ({ ...prev, businessType: availableBusinessTypes[0] ?? 'Other' }));
+    }
+  }, [availableBusinessTypes, formData.businessType]);
 
   const vettingHelpText = useMemo(() => {
     if (!statusData) return null;
@@ -483,65 +525,103 @@ export default function MerchantsPage() {
                 <div>
                   <h3 className="font-headline text-lg font-semibold text-foreground">1. Business profile</h3>
                   <div className="mt-4 grid md:grid-cols-2 gap-4">
-                    <input
-                      name="businessName"
-                      value={formData.businessName}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="Business Name *"
-                    />
-                    <input
-                      name="contactName"
-                      value={formData.contactName}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="Contact Person *"
-                    />
-                    <input
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="Email *"
-                    />
-                    <input
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="Phone *"
-                    />
-                    <select
-                      id="businessType"
-                      name="businessType"
-                      value={formData.businessType}
-                      onChange={handleChange}
-                      aria-label="Business Type"
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                    >
-                      {businessTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      name="discountPercentage"
-                      type="number"
-                      min={3}
-                      max={15}
-                      step={0.5}
-                      value={formData.discountPercentage}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="Discount Offered (%) *"
-                    />
+                    <div>
+                      <label htmlFor="businessName" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                        Business Name *
+                      </label>
+                      <input
+                        id="businessName"
+                        name="businessName"
+                        value={formData.businessName}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                        placeholder="Enter legal business name"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="contactName" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                        Contact Person *
+                      </label>
+                      <input
+                        id="contactName"
+                        name="contactName"
+                        value={formData.contactName}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                        placeholder="Enter full name"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="email" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                        Email Address *
+                      </label>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                        placeholder="Enter business email"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="phone" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                        Phone Number *
+                      </label>
+                      <input
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                        placeholder="Enter contact number"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="businessType" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                        Business Type *
+                      </label>
+                      <select
+                        id="businessType"
+                        name="businessType"
+                        value={formData.businessType}
+                        onChange={handleChange}
+                        aria-label="Business Type"
+                        className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                      >
+                        {availableBusinessTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="discountPercentage"
+                        className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                      >
+                        Discount Value (%) *
+                      </label>
+                      <input
+                        id="discountPercentage"
+                        name="discountPercentage"
+                        type="number"
+                        min={3}
+                        max={15}
+                        step={0.5}
+                        value={formData.discountPercentage}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                        placeholder="Enter discount between 3 and 15"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -550,60 +630,96 @@ export default function MerchantsPage() {
                   <div className="mt-4 grid md:grid-cols-2 gap-4">
                     {merchantType === 'chain' ? (
                       <>
-                        <input
-                          name="registrationNumber"
-                          value={formData.registrationNumber}
-                          onChange={handleChange}
-                          required
-                          className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                          placeholder="Company Registration Number *"
-                        />
-                        <input
-                          name="taxNumber"
-                          value={formData.taxNumber}
-                          onChange={handleChange}
-                          required
-                          className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                          placeholder="VAT / Tax Number *"
-                        />
+                        <div>
+                          <label htmlFor="registrationNumber" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                            Company Registration Number *
+                          </label>
+                          <input
+                            id="registrationNumber"
+                            name="registrationNumber"
+                            value={formData.registrationNumber}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                            placeholder="Enter CIPC registration number"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="taxNumber" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                            VAT / Tax Number *
+                          </label>
+                          <input
+                            id="taxNumber"
+                            name="taxNumber"
+                            value={formData.taxNumber}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                            placeholder="Enter SARS VAT or tax number"
+                          />
+                        </div>
                       </>
                     ) : (
                       <>
                         {isPrivatePharmacy && (
                           <>
-                            <input
-                              name="pharmacyLicenseNumber"
-                              value={formData.pharmacyLicenseNumber}
-                              onChange={handleChange}
-                              required
-                              className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                              placeholder="Pharmacy License Number *"
-                            />
-                            <input
-                              name="responsiblePharmacistName"
-                              value={formData.responsiblePharmacistName}
-                              onChange={handleChange}
-                              required
-                              className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                              placeholder="Responsible Pharmacist Name *"
-                            />
+                            <div>
+                              <label htmlFor="pharmacyLicenseNumber" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                                Pharmacy License Number *
+                              </label>
+                              <input
+                                id="pharmacyLicenseNumber"
+                                name="pharmacyLicenseNumber"
+                                value={formData.pharmacyLicenseNumber}
+                                onChange={handleChange}
+                                required
+                                className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                                placeholder="Enter pharmacy council license number"
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="responsiblePharmacistName" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                                Responsible Pharmacist Name *
+                              </label>
+                              <input
+                                id="responsiblePharmacistName"
+                                name="responsiblePharmacistName"
+                                value={formData.responsiblePharmacistName}
+                                onChange={handleChange}
+                                required
+                                className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                                placeholder="Enter pharmacist full name"
+                              />
+                            </div>
                           </>
                         )}
-                        <input
-                          name="ownerIdNumber"
-                          value={formData.ownerIdNumber}
-                          onChange={handleChange}
-                          required={isPrivateMerchant}
-                          className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                          placeholder="Owner ID Number *"
-                        />
-                        <input
-                          name="proofOfPremises"
-                          value={formData.proofOfPremises}
-                          onChange={handleChange}
-                          className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                          placeholder="Proof of Premises / Website (optional)"
-                        />
+                        <div>
+                          <label htmlFor="ownerIdNumber" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                            Owner ID Number *
+                          </label>
+                          <input
+                            id="ownerIdNumber"
+                            name="ownerIdNumber"
+                            value={formData.ownerIdNumber}
+                            onChange={handleChange}
+                            required={isPrivateMerchant}
+                            className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                            placeholder="Enter owner South African ID"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="proofOfPremises" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                            Proof of Premises / Website (Optional)
+                          </label>
+                          <input
+                            id="proofOfPremises"
+                            name="proofOfPremises"
+                            value={formData.proofOfPremises}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                            placeholder="Enter website URL or premises proof reference"
+                          />
+                        </div>
                       </>
                     )}
                   </div>
@@ -614,55 +730,88 @@ export default function MerchantsPage() {
                 <div>
                   <h3 className="font-headline text-lg font-semibold text-foreground">3. Settlement account</h3>
                   <div className="mt-4 grid md:grid-cols-2 gap-4">
-                    <input
-                      name="physicalAddress"
-                      value={formData.physicalAddress}
-                      onChange={handleChange}
-                      required
-                      className="md:col-span-2 w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="Physical Address *"
-                    />
-                    <select
-                      name="bankName"
-                      value={formData.bankName}
-                      onChange={handleChange}
-                      required
-                      aria-label="Select Bank"
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                    >
-                      <option value="" disabled>
+                    <div className="md:col-span-2">
+                      <label
+                        htmlFor="physicalAddress"
+                        className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                      >
+                        Settlement Address *
+                      </label>
+                      <input
+                        id="physicalAddress"
+                        name="physicalAddress"
+                        value={formData.physicalAddress}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                        placeholder="Physical address for settlement"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="bankName" className="mb-2 block text-sm font-headline font-semibold text-foreground">
                         Select Bank *
-                      </option>
-                      {BANK_OPTIONS.map((bank) => (
-                        <option key={bank} value={bank}>
-                          {bank}
+                      </label>
+                      <select
+                        id="bankName"
+                        name="bankName"
+                        value={formData.bankName}
+                        onChange={handleChange}
+                        required
+                        aria-label="Select Bank"
+                        className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                      >
+                        <option value="" disabled>
+                          Select Bank
                         </option>
-                      ))}
-                    </select>
-                    <input
-                      name="accountHolderName"
-                      value={formData.accountHolderName}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="Account Holder Name *"
-                    />
-                    <input
-                      name="accountNumber"
-                      value={formData.accountNumber}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="Account Number *"
-                    />
-                    <input
-                      name="branchCode"
-                      value={formData.branchCode}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                      placeholder="Branch Code *"
-                    />
+                        {BANK_OPTIONS.map((bank) => (
+                          <option key={bank} value={bank}>
+                            {bank}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="accountHolderName" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                        Account Holder Name *
+                      </label>
+                      <input
+                        id="accountHolderName"
+                        name="accountHolderName"
+                        value={formData.accountHolderName}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                        placeholder="Enter account holder name"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="accountNumber" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                        Account Number *
+                      </label>
+                      <input
+                        id="accountNumber"
+                        name="accountNumber"
+                        value={formData.accountNumber}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                        placeholder="Enter bank account number"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="branchCode" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                        Branch Code *
+                      </label>
+                      <input
+                        id="branchCode"
+                        name="branchCode"
+                        value={formData.branchCode}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                        placeholder="Enter branch code"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -697,7 +846,11 @@ export default function MerchantsPage() {
                         Use the link in your email or paste the token below.
                       </p>
                       <div className="mt-3 flex gap-2">
+                        <label htmlFor="emailVerificationToken" className="sr-only">
+                          Email Verification Token
+                        </label>
                         <input
+                          id="emailVerificationToken"
                           name="emailVerificationToken"
                           value={emailToken}
                           onChange={(event) => setEmailToken(event.target.value)}
@@ -730,7 +883,11 @@ export default function MerchantsPage() {
                         Not required in the current flow. Email verification is sufficient.
                       </p>
                       <div className="mt-3 flex gap-2">
+                        <label htmlFor="smsOtpCode" className="sr-only">
+                          SMS OTP Code
+                        </label>
                         <input
+                          id="smsOtpCode"
                           name="smsOtpCode"
                           value={otpCode}
                           onChange={(event) => setOtpCode(event.target.value)}
@@ -769,9 +926,12 @@ export default function MerchantsPage() {
                         )}
 
                         <div className="mt-3 flex flex-col gap-2">
-                          <label className="text-xs text-muted-foreground font-body">Approval Key (optional)</label>
+                          <label htmlFor="merchantApprovalKey" className="text-xs text-muted-foreground font-body">
+                            Approval Key (optional)
+                          </label>
                           <input
                             type="password"
+                            id="merchantApprovalKey"
                             name="merchantApprovalKey"
                             value={approvalKey}
                             onChange={(event) => setApprovalKey(event.target.value)}
