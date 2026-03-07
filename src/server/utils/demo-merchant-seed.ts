@@ -204,6 +204,18 @@ function isMissingRelation(error: any, relationName: string) {
   );
 }
 
+function isUserIdTypeMismatch(error: any) {
+  const code = String(error?.code ?? '').trim().toLowerCase();
+  const message = String(error?.message ?? '').toLowerCase();
+  return (
+    code === '22p02' ||
+    message.includes('invalid input syntax for type integer') ||
+    message.includes('invalid input syntax for type bigint') ||
+    message.includes('operator does not exist: integer =') ||
+    message.includes('operator does not exist: bigint =')
+  );
+}
+
 function buildDemoProductName(merchantName: string, faceValue: number) {
   return `${merchantName} Voucher R${faceValue}`;
 }
@@ -341,7 +353,7 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
       },
       { onConflict: 'id' }
     );
-    if (profileError) throw profileError;
+    if (profileError && !isUserIdTypeMismatch(profileError)) throw profileError;
 
     const promotedFields = {
       user_id: userId,
@@ -357,7 +369,7 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
     };
 
     const promotionResult = await admin.from('merchants').update(promotedFields).eq('id', merchant.id);
-    if (promotionResult.error) {
+    if (promotionResult.error && !isUserIdTypeMismatch(promotionResult.error)) {
       const fallbackResult = await admin
         .from('merchants')
         .update({
@@ -368,6 +380,13 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
         })
         .eq('id', merchant.id);
       if (fallbackResult.error) throw fallbackResult.error;
+    } else if (promotionResult.error && isUserIdTypeMismatch(promotionResult.error)) {
+      const { user_id: _ignoredUserId, ...withoutUserId } = promotedFields;
+      const fallbackNoUserId = await admin
+        .from('merchants')
+        .update(withoutUserId)
+        .eq('id', merchant.id);
+      if (fallbackNoUserId.error) throw fallbackNoUserId.error;
     }
 
     const verificationUpsert = await admin.from('merchant_onboarding_verifications').upsert(

@@ -48,6 +48,7 @@ const Header = ({ className = '' }: HeaderProps) => {
   const merchantNavItems = [
     { label: 'Home', href: '/merchant/dashboard', icon: 'HomeIcon' },
     { label: 'Dashboard', href: '/merchant/dashboard', icon: 'BuildingStorefrontIcon' },
+    { label: 'Payouts', href: '/merchant/payouts', icon: 'BanknotesIcon' },
     { label: 'Analytics', href: '/analytics', icon: 'ChartBarIcon' },
     { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
   ];
@@ -58,7 +59,7 @@ const Header = ({ className = '' }: HeaderProps) => {
     if (!isSignedIn) return;
 
     const prefetchTargets = isMerchantUser
-      ? ['/merchant/dashboard', '/analytics', '/support']
+      ? ['/merchant/dashboard', '/merchant/payouts', '/analytics', '/support']
       : [
           '/customer/dashboard',
           '/shop',

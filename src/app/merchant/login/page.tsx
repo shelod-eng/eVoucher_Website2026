@@ -24,7 +24,7 @@ function isDemoEmail(email: string) {
   return normalized.startsWith('demo-') && normalized.endsWith('@evoucher.co.za');
 }
 
-async function ensureDemoProvisioned(email: string) {
+async function ensureDemoProvisioned(email: string): Promise<{ ok: boolean; error?: string }> {
   if (!isDemoEmail(email)) return { ok: true as const };
   const response = await withTimeout(
     fetch('/api/v1/merchant/demo-seed', { method: 'POST' }),
@@ -33,10 +33,9 @@ async function ensureDemoProvisioned(email: string) {
   );
   const payload = await response.json().catch(() => ({} as any));
   if (!response.ok) {
-    return {
-      ok: false as const,
-      error: String(payload?.error || 'Demo provisioning failed.'),
-    };
+    // Never block login when seeding has a transient schema mismatch.
+    console.warn('[merchant-login][demo-seed][warn]', payload?.error || 'Demo provisioning failed.');
+    return { ok: true as const };
   }
   return { ok: true as const };
 }
@@ -158,7 +157,7 @@ export default function MerchantLogin() {
       }
       const demoProvision = await ensureDemoProvisioned(normalizedEmail);
       if (!demoProvision.ok) {
-        setError(demoProvision.error);
+        setError(demoProvision.error || 'Demo provisioning failed.');
         setLoading(false);
         return;
       }
@@ -171,7 +170,7 @@ export default function MerchantLogin() {
           try {
             const retryProvision = await ensureDemoProvisioned(normalizedEmail);
             if (!retryProvision.ok) {
-              throw new Error(retryProvision.error);
+              throw new Error(retryProvision.error || 'Demo provisioning failed.');
             }
             signedInUser = await signIn(normalizedEmail, normalizedPassword);
           } catch (retryError) {

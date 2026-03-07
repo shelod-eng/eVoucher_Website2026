@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
 
@@ -117,7 +117,7 @@ export default function MerchantDashboard() {
   const [error, setError] = useState('');
   const [productMessage, setProductMessage] = useState('');
   const [savingProduct, setSavingProduct] = useState(false);
-  const [activeMerchantTab, setActiveMerchantTab] = useState<'products' | 'studio'>('studio');
+  const [activeMerchantTab, setActiveMerchantTab] = useState<'products' | 'studio' | 'payouts'>('studio');
   const [productForm, setProductForm] = useState({
     productName: '',
     faceValue: 100,
@@ -131,6 +131,8 @@ export default function MerchantDashboard() {
     validBranchIds: [] as string[],
   });
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedTab = String(searchParams?.get('tab') ?? '').toLowerCase();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -180,6 +182,20 @@ export default function MerchantDashboard() {
       void fetchDashboardData();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (requestedTab === 'payouts') {
+      setActiveMerchantTab('payouts');
+      return;
+    }
+    if (requestedTab === 'products') {
+      setActiveMerchantTab('products');
+      return;
+    }
+    if (requestedTab === 'studio') {
+      setActiveMerchantTab('studio');
+    }
+  }, [requestedTab]);
 
   const fetchDashboardData = async () => {
     try {
@@ -259,6 +275,34 @@ export default function MerchantDashboard() {
   const pendingPayouts = payouts
     .filter((payout) => payout.status === 'pending')
     .reduce((sum, payout) => sum + Number(payout.amount), 0);
+  const completedPayouts = useMemo(
+    () => payouts.filter((payout) => String(payout.status).toLowerCase() === 'completed'),
+    [payouts]
+  );
+  const pendingPayoutItems = useMemo(
+    () => payouts.filter((payout) => String(payout.status).toLowerCase() === 'pending'),
+    [payouts]
+  );
+  const nextPayoutDateLabel = useMemo(() => {
+    const pendingWithDate = pendingPayoutItems.find((entry) => Boolean(entry.payout_date));
+    if (pendingWithDate?.payout_date) {
+      return new Date(pendingWithDate.payout_date).toLocaleDateString(undefined, {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
+    const nextFriday = new Date();
+    const distanceToFriday = (5 - nextFriday.getDay() + 7) % 7 || 7;
+    nextFriday.setDate(nextFriday.getDate() + distanceToFriday);
+    return nextFriday.toLocaleDateString(undefined, {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  }, [pendingPayoutItems]);
 
   const activeProducts = useMemo(
     () => merchantProducts.filter((product) => product.is_active).length,
@@ -573,6 +617,17 @@ export default function MerchantDashboard() {
                 >
                   Product Studio
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMerchantTab('payouts')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-headline font-semibold transition-colors ${
+                    activeMerchantTab === 'payouts'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Payouts
+                </button>
               </div>
 
               {activeMerchantTab === 'studio' && (
@@ -835,8 +890,156 @@ export default function MerchantDashboard() {
                 )}
                 </div>
               )}
+
+              {activeMerchantTab === 'payouts' && (
+                <div className="space-y-5">
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-amber-700 font-headline">
+                        Pending Payouts
+                      </p>
+                      <p className="mt-1 text-2xl font-headline font-bold text-amber-700">
+                        R{pendingPayouts.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-amber-700/80">{pendingPayoutItems.length} transactions</p>
+                    </div>
+                    <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-teal-700 font-headline">
+                        Total Paid Out
+                      </p>
+                      <p className="mt-1 text-2xl font-headline font-bold text-teal-700">
+                        R{totalPayouts.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-teal-700/80">{completedPayouts.length} completed</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-headline">
+                        Next Payout
+                      </p>
+                      <p className="mt-1 text-lg font-headline font-bold text-foreground">{nextPayoutDateLabel}</p>
+                      <p className="text-xs text-muted-foreground">Weekly EFT cycle</p>
+                    </div>
+                  </div>
+
+                  <div className="grid xl:grid-cols-[1.8fr,1fr] gap-4">
+                    <div className="space-y-4">
+                      <div className="rounded-xl border border-amber-200 overflow-hidden">
+                        <div className="flex items-center justify-between bg-amber-50 px-4 py-2">
+                          <p className="font-headline font-semibold text-amber-800">Pending Payouts</p>
+                          <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-headline font-semibold text-amber-800">
+                            {pendingPayoutItems.length}
+                          </span>
+                        </div>
+                        <div className="divide-y divide-border">
+                          {pendingPayoutItems.length === 0 ? (
+                            <p className="px-4 py-3 text-sm text-muted-foreground font-body">No pending payouts.</p>
+                          ) : (
+                            pendingPayoutItems.map((payout, index) => (
+                              <div key={payout.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="font-headline font-semibold text-foreground">
+                                    PAY-{new Date(payout.created_at).getFullYear()}-{String(index + 1).padStart(3, '0')}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(payout.created_at).toLocaleDateString()} - status: {payout.status}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-headline font-bold text-foreground">R{Number(payout.amount).toFixed(2)}</p>
+                                  <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-headline font-semibold text-amber-800">
+                                    Awaiting
+                                  </span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-emerald-200 overflow-hidden">
+                        <div className="flex items-center justify-between bg-emerald-50 px-4 py-2">
+                          <p className="font-headline font-semibold text-emerald-800">Completed Payouts</p>
+                          <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-xs font-headline font-semibold text-emerald-800">
+                            {completedPayouts.length}
+                          </span>
+                        </div>
+                        <div className="divide-y divide-border">
+                          {completedPayouts.length === 0 ? (
+                            <p className="px-4 py-3 text-sm text-muted-foreground font-body">No completed payouts yet.</p>
+                          ) : (
+                            completedPayouts.map((payout, index) => (
+                              <div key={payout.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="font-headline font-semibold text-foreground">
+                                    PAY-{new Date(payout.created_at).getFullYear()}-{String(index + 1).padStart(3, '0')}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(payout.created_at).toLocaleDateString()} - EFT complete
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-headline font-bold text-foreground">R{Number(payout.amount).toFixed(2)}</p>
+                                  <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-headline font-semibold text-emerald-800">
+                                    Completed
+                                  </span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="rounded-xl border border-border p-4 bg-muted/20">
+                        <div className="flex items-center justify-between">
+                          <p className="font-headline font-semibold text-foreground">Bank Details</p>
+                          <span className="text-xs text-primary font-headline">Edit</span>
+                        </div>
+                        <div className="mt-3 space-y-2 text-sm">
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Bank</span>
+                            <span className="font-headline font-semibold text-foreground">{merchant?.bank_name || 'Not set'}</span>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Account Type</span>
+                            <span className="font-headline font-semibold text-foreground">Business Cheque</span>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Account Number</span>
+                            <span className="font-headline font-semibold text-foreground">******5678</span>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Branch Code</span>
+                            <span className="font-headline font-semibold text-foreground">{merchant?.branch_code || 'N/A'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-white">
+                        <p className="font-headline font-semibold">Request Payout</p>
+                        <p className="text-xs text-slate-300 mt-1">
+                          Manually request an off-cycle payout. Processed within 1-2 business days.
+                        </p>
+                        <div className="mt-3 rounded-lg bg-slate-800 border border-slate-700 px-3 py-2">
+                          <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Available Balance</p>
+                          <p className="text-3xl font-headline font-bold text-emerald-300">R{pendingPayouts.toFixed(2)}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setProductMessage('Payout request submitted (prototype mode).')}
+                          className="mt-3 w-full rounded-lg bg-teal-500 px-4 py-2.5 font-headline font-semibold text-slate-950 hover:bg-teal-400"
+                        >
+                          Request Payout Now
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
+            {activeMerchantTab !== 'payouts' && (
             <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
               <div className="mb-6 rounded-xl bg-slate-900 text-white p-4">
                 <p className="text-[10px] uppercase tracking-[0.22em] text-slate-300 font-headline">
@@ -950,8 +1153,10 @@ export default function MerchantDashboard() {
                 )}
               </div>
             </div>
+            )}
           </div>
 
+          {activeMerchantTab !== 'payouts' && (
           <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-headline font-bold text-2xl text-foreground">Payout Status</h2>
@@ -1008,8 +1213,10 @@ export default function MerchantDashboard() {
               )}
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
