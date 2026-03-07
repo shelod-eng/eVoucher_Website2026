@@ -202,6 +202,20 @@ export default function MerchantDashboard() {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ tab?: 'products' | 'studio' | 'payouts' }>;
+      const requestedTab = customEvent?.detail?.tab;
+      if (!requestedTab) return;
+      setActiveMerchantTab(requestedTab);
+    };
+    window.addEventListener('merchant-tab-change', handler as EventListener);
+    return () => {
+      window.removeEventListener('merchant-tab-change', handler as EventListener);
+    };
+  }, []);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);

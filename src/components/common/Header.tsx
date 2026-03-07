@@ -11,6 +11,13 @@ interface HeaderProps {
   className?: string;
 }
 
+interface NavItem {
+  label: string;
+  href: string;
+  icon: string;
+  dashboardTab?: 'studio' | 'products' | 'payouts';
+}
+
 const Header = ({ className = '' }: HeaderProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -27,14 +34,14 @@ const Header = ({ className = '' }: HeaderProps) => {
     user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'consumer'
   ).trim();
 
-  const publicNavItems = [
+  const publicNavItems: NavItem[] = [
     { label: 'Home', href: '/', icon: 'HomeIcon' },
     { label: 'Consumer', href: '/consumer-experience', icon: 'UserIcon' },
     { label: 'Merchants', href: '/merchants', icon: 'BuildingStorefrontIcon' },
     { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
   ];
 
-  const consumerNavItems = [
+  const consumerNavItems: NavItem[] = [
     { label: 'Home', href: '/customer/dashboard', icon: 'HomeIcon' },
     { label: 'Shop', href: '/shop', icon: 'BuildingStorefrontIcon' },
     { label: 'Wallet', href: '/wallet', icon: 'WalletIcon' },
@@ -45,10 +52,11 @@ const Header = ({ className = '' }: HeaderProps) => {
     { label: 'Profile', href: '/profile', icon: 'UserCircleIcon' },
   ];
 
-  const merchantNavItems = [
+  const merchantNavItems: NavItem[] = [
     { label: 'Home', href: '/merchant/dashboard', icon: 'HomeIcon' },
-    { label: 'Dashboard', href: '/merchant/dashboard', icon: 'BuildingStorefrontIcon' },
-    { label: 'Payouts', href: '/merchant/payouts', icon: 'BanknotesIcon' },
+    { label: 'Dashboard', href: '/merchant/dashboard?tab=studio', icon: 'BuildingStorefrontIcon', dashboardTab: 'studio' },
+    { label: 'Products', href: '/merchant/dashboard?tab=products', icon: 'Squares2X2Icon', dashboardTab: 'products' },
+    { label: 'Payouts', href: '/merchant/dashboard?tab=payouts', icon: 'BanknotesIcon', dashboardTab: 'payouts' },
     { label: 'Analytics', href: '/analytics', icon: 'ChartBarIcon' },
     { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
   ];
@@ -59,7 +67,14 @@ const Header = ({ className = '' }: HeaderProps) => {
     if (!isSignedIn) return;
 
     const prefetchTargets = isMerchantUser
-      ? ['/merchant/dashboard', '/merchant/payouts', '/analytics', '/support']
+      ? [
+          '/merchant/dashboard',
+          '/merchant/dashboard?tab=studio',
+          '/merchant/dashboard?tab=products',
+          '/merchant/dashboard?tab=payouts',
+          '/analytics',
+          '/support',
+        ]
       : [
           '/customer/dashboard',
           '/shop',
@@ -94,6 +109,15 @@ const Header = ({ className = '' }: HeaderProps) => {
       window.removeEventListener('storage', refreshCartCount);
     };
   }, [isSignedIn, isMerchantUser]);
+
+  const handleMerchantTabIntent = (item: NavItem) => {
+    if (!isMerchantUser || !item.dashboardTab || typeof window === 'undefined') return;
+    window.dispatchEvent(
+      new CustomEvent('merchant-tab-change', {
+        detail: { tab: item.dashboardTab },
+      })
+    );
+  };
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -139,6 +163,7 @@ const Header = ({ className = '' }: HeaderProps) => {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => handleMerchantTabIntent(item)}
                 className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-all duration-300 ease-smooth"
               >
                 <Icon name={item.icon as any} size={18} variant="outline" />
@@ -196,7 +221,10 @@ const Header = ({ className = '' }: HeaderProps) => {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={closeMobileMenu}
+                  onClick={() => {
+                    handleMerchantTabIntent(item);
+                    closeMobileMenu();
+                  }}
                   className="flex items-center space-x-3 px-4 py-3 rounded-md text-base font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-colors duration-200"
                 >
                   <Icon name={item.icon as any} size={20} variant="outline" />
