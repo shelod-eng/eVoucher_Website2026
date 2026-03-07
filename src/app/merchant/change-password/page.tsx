@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 function validatePassword(password: string): string | null {
   if (password.length < 8) return 'Password must be at least 8 characters.';
@@ -27,9 +28,23 @@ async function fetchMerchantAuthState() {
   return payload as { isMerchant: boolean; mustResetPassword: boolean };
 }
 
+async function waitForResetClear(maxAttempts = 10, delayMs = 350) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      const state = await fetchMerchantAuthState();
+      if (state.isMerchant && !state.mustResetPassword) return true;
+    } catch {
+      // Ignore transient state-read failures and retry.
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return false;
+}
+
 export default function MerchantChangePasswordPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, signIn } = useAuth();
+  const supabase = createClient();
   useEffect(() => {
     if (typeof user === 'undefined') {
       setError('Authentication context failed to load. Please refresh or contact support.');
@@ -126,8 +141,22 @@ export default function MerchantChangePasswordPage() {
       }
 
       setSuccess('Password updated successfully. Redirecting to dashboard...');
-      if (typeof window !== 'undefined') {
-        window.location.href = '/merchant/dashboard';
+      // Force fresh session/user metadata to avoid stale must_change_password loops.
+      const email = String(user?.email ?? '').trim().toLowerCase();
+      if (email) {
+        try {
+          await supabase.auth.signOut({ scope: 'local' });
+        } catch {
+          // no-op
+        }
+        await signIn(email, password);
+      }
+
+      const resetCleared = await waitForResetClear(12, 300);
+      if (!resetCleared) {
+        setError('Password updated but session sync is delayed. Please sign in once with your new password.');
+        setSubmitting(false);
+        router.replace('/merchant/login');
         return;
       }
       router.replace('/merchant/dashboard');

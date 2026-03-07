@@ -51,11 +51,23 @@ export async function GET() {
       });
     }
 
-    const mustResetPassword =
-      Boolean(merchant?.must_reset_password) || Boolean(user.user_metadata?.must_change_password);
-    if (mustResetPassword) {
+    let effectiveMerchant = merchant;
+    if (Boolean(effectiveMerchant?.must_reset_password) || Boolean(user.user_metadata?.must_change_password)) {
       try {
         await reconcileMerchantResetState(user.id);
+        try {
+          effectiveMerchant = await resolveMerchantForUser<{
+            id: string;
+            user_id: string | null;
+            must_reset_password: boolean | null;
+            status: string | null;
+          }>(admin, user, 'id,user_id,must_reset_password,status');
+        } catch (reloadError: any) {
+          console.warn(
+            '[merchant-auth-state][reload-merchant][warn]',
+            reloadError?.message || reloadError
+          );
+        }
       } catch (reconcileError: any) {
         console.warn(
           '[merchant-auth-state][reconcile-reset][warn]',
@@ -64,13 +76,18 @@ export async function GET() {
       }
     }
 
+    // Keep strict behavior for safety/tests: if auth metadata still requires reset, enforce it.
+    // Merchant row is also considered, but metadata remains authoritative until refreshed.
+    const mustResetPassword =
+      Boolean(effectiveMerchant?.must_reset_password) || Boolean(user.user_metadata?.must_change_password);
+
     return NextResponse.json(
       {
         role,
         isMerchant,
         mustResetPassword,
-        merchantId: merchant?.id ?? null,
-        merchantStatus: merchant?.status ?? null,
+        merchantId: effectiveMerchant?.id ?? null,
+        merchantStatus: effectiveMerchant?.status ?? null,
       },
       {
         headers: {
