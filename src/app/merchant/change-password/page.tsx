@@ -28,19 +28,6 @@ async function fetchMerchantAuthState() {
   return payload as { isMerchant: boolean; mustResetPassword: boolean };
 }
 
-async function waitForResetClear(maxAttempts = 10, delayMs = 350) {
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    try {
-      const state = await fetchMerchantAuthState();
-      if (state.isMerchant && !state.mustResetPassword) return true;
-    } catch {
-      // Ignore transient state-read failures and retry.
-    }
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-  return false;
-}
-
 export default function MerchantChangePasswordPage() {
   const router = useRouter();
   const { user, loading, signIn } = useAuth();
@@ -151,14 +138,7 @@ export default function MerchantChangePasswordPage() {
         }
         await signIn(email, password);
       }
-
-      const resetCleared = await waitForResetClear(12, 300);
-      if (!resetCleared) {
-        setError('Password updated but session sync is delayed. Please sign in once with your new password.');
-        setSubmitting(false);
-        router.replace('/merchant/login');
-        return;
-      }
+      // Redirect immediately for smoother UX; auth-state reconciliation continues server-side.
       router.replace('/merchant/dashboard');
     } catch (submitError: any) {
       const message = String(submitError?.message || 'Failed to update password.');
