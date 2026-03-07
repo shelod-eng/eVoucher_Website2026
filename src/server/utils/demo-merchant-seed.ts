@@ -216,6 +216,11 @@ function isUserIdTypeMismatch(error: any) {
   );
 }
 
+function isKycApprovalGate(error: any) {
+  const message = String(error?.message ?? '').toLowerCase();
+  return message.includes('cannot be moved to approved without approved kyc review');
+}
+
 function buildDemoProductName(merchantName: string, faceValue: number) {
   return `${merchantName} Voucher R${faceValue}`;
 }
@@ -370,6 +375,9 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
 
     const promotionResult = await admin.from('merchants').update(promotedFields).eq('id', merchant.id);
     if (promotionResult.error && !isUserIdTypeMismatch(promotionResult.error)) {
+      if (isKycApprovalGate(promotionResult.error)) {
+        continue;
+      }
       const fallbackResult = await admin
         .from('merchants')
         .update({
@@ -379,14 +387,24 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
           onboarding_fee_paid: true,
         })
         .eq('id', merchant.id);
-      if (fallbackResult.error) throw fallbackResult.error;
+      if (fallbackResult.error) {
+        if (isKycApprovalGate(fallbackResult.error)) {
+          continue;
+        }
+        throw fallbackResult.error;
+      }
     } else if (promotionResult.error && isUserIdTypeMismatch(promotionResult.error)) {
       const { user_id: _ignoredUserId, ...withoutUserId } = promotedFields;
       const fallbackNoUserId = await admin
         .from('merchants')
         .update(withoutUserId)
         .eq('id', merchant.id);
-      if (fallbackNoUserId.error) throw fallbackNoUserId.error;
+      if (fallbackNoUserId.error) {
+        if (isKycApprovalGate(fallbackNoUserId.error)) {
+          continue;
+        }
+        throw fallbackNoUserId.error;
+      }
     }
 
     const verificationUpsert = await admin.from('merchant_onboarding_verifications').upsert(

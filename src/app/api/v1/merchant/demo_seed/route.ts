@@ -20,9 +20,11 @@ export async function POST() {
       message: 'Demo merchant seed ensured.',
     });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Failed to seed demo merchants.' },
-      { status: 500 }
-    );
+    console.warn('[merchant-demo_seed][warn]', error?.message || error);
+    return NextResponse.json({
+      ok: false,
+      seeded: false,
+      warning: error?.message || 'Failed to seed demo merchants.',
+    });
   }
 }
