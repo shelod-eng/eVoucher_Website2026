@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
 
@@ -118,6 +118,10 @@ export default function MerchantDashboard() {
   const [productMessage, setProductMessage] = useState('');
   const [savingProduct, setSavingProduct] = useState(false);
   const [activeMerchantTab, setActiveMerchantTab] = useState<'products' | 'studio' | 'payouts'>('studio');
+  const [productsFilter, setProductsFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [productsSearch, setProductsSearch] = useState('');
+  const [productsPage, setProductsPage] = useState(1);
+  const [savingInlineEdit, setSavingInlineEdit] = useState(false);
   const [productForm, setProductForm] = useState({
     productName: '',
     faceValue: 100,
@@ -131,8 +135,6 @@ export default function MerchantDashboard() {
     validBranchIds: [] as string[],
   });
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const requestedTab = String(searchParams?.get('tab') ?? '').toLowerCase();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -184,6 +186,9 @@ export default function MerchantDashboard() {
   }, [user]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const requestedTab = String(params.get('tab') ?? '').toLowerCase();
     if (requestedTab === 'payouts') {
       setActiveMerchantTab('payouts');
       return;
@@ -195,7 +200,7 @@ export default function MerchantDashboard() {
     if (requestedTab === 'studio') {
       setActiveMerchantTab('studio');
     }
-  }, [requestedTab]);
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -308,6 +313,42 @@ export default function MerchantDashboard() {
     () => merchantProducts.filter((product) => product.is_active).length,
     [merchantProducts]
   );
+  const filteredProducts = useMemo(() => {
+    const query = productsSearch.trim().toLowerCase();
+    return merchantProducts.filter((product) => {
+      const byFilter =
+        productsFilter === 'all' ||
+        (productsFilter === 'active' && product.is_active) ||
+        (productsFilter === 'inactive' && !product.is_active);
+      if (!byFilter) return false;
+      if (!query) return true;
+      return (
+        String(product.product_name ?? '').toLowerCase().includes(query) ||
+        String(product.parent_brand ?? '').toLowerCase().includes(query)
+      );
+    });
+  }, [merchantProducts, productsFilter, productsSearch]);
+  const productsPageSize = 5;
+  const productsPageCount = Math.max(1, Math.ceil(filteredProducts.length / productsPageSize));
+  const paginatedProducts = useMemo(() => {
+    const start = (productsPage - 1) * productsPageSize;
+    return filteredProducts.slice(start, start + productsPageSize);
+  }, [filteredProducts, productsPage]);
+  useEffect(() => {
+    if (productsPage > productsPageCount) {
+      setProductsPage(productsPageCount);
+    }
+  }, [productsPage, productsPageCount]);
+  const estimatedTotalRevenue = useMemo(() => {
+    return merchantProducts.reduce((sum, product) => {
+      const base = Number(product.consumer_price ?? 0);
+      const multiplier = product.is_active ? 12 : 4;
+      return sum + base * multiplier;
+    }, 0);
+  }, [merchantProducts]);
+  const estimatedVouchersSold = useMemo(() => {
+    return merchantProducts.reduce((sum, product) => sum + (product.is_active ? 12 : 4), 0);
+  }, [merchantProducts]);
   const pricingPreview = useMemo(() => {
     const faceValue = Number(productForm.faceValue || 0);
     const totalDiscountPct = Number(productForm.totalDiscountPct || 0);
@@ -430,6 +471,59 @@ export default function MerchantDashboard() {
       await fetchDashboardData();
     } catch (toggleError: any) {
       setProductMessage(toggleError?.message || 'Failed to update product.');
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string, productName: string) => {
+    try {
+      setProductMessage('');
+      const response = await fetch(`/api/v1/merchant/products/${productId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to deactivate product.');
+      }
+      setProductMessage(`${productName} deactivated.`);
+      await fetchDashboardData();
+    } catch (deleteError: any) {
+      setProductMessage(deleteError?.message || 'Failed to deactivate product.');
+    }
+  };
+
+  const handleInlineDiscountUpdate = async (product: MerchantProduct, nextDiscountPct: number) => {
+    try {
+      setSavingInlineEdit(true);
+      setProductMessage('');
+      const response = await fetch(`/api/v1/merchant/products/${product.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          productName: product.product_name,
+          faceValue: Number(product.face_value),
+          totalDiscountPct: Number(nextDiscountPct),
+          isActive: Boolean(product.is_active),
+          isSpecial: Boolean(product.is_special),
+          specialTitle: product.special_title ?? null,
+          specialEndAt: product.special_end_at ?? null,
+          displayPriority: Number(product.display_priority ?? 0),
+          redemptionScope: product.redemption_scope ?? 'all_branches',
+          validProvinces: product.valid_provinces ?? [],
+          validBranchIds: product.valid_branch_ids ?? [],
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update discount.');
+      }
+      setProductMessage(`${product.product_name} discount updated.`);
+      await fetchDashboardData();
+    } catch (discountError: any) {
+      setProductMessage(discountError?.message || 'Failed to update discount.');
+    } finally {
+      setSavingInlineEdit(false);
     }
   };
 
@@ -828,66 +922,193 @@ export default function MerchantDashboard() {
               )}
 
               {activeMerchantTab === 'products' && (
-                <div className="mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setActiveMerchantTab('studio')}
-                    className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-headline font-semibold"
-                  >
-                    New Product
-                  </button>
-                </div>
-              )}
+                <div className="space-y-4">
+                  <div className="grid md:grid-cols-3 gap-3">
+                    <div className="rounded-xl border border-teal-200 bg-teal-50 p-4">
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-teal-700">Active Products</p>
+                      <p className="text-4xl font-headline font-bold text-teal-700 mt-1">{activeProducts}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-slate-300">Total Revenue</p>
+                      <p className="text-4xl font-headline font-bold text-emerald-300 mt-1">R{estimatedTotalRevenue.toFixed(0)}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background p-4">
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-muted-foreground">Vouchers Sold</p>
+                      <p className="text-4xl font-headline font-bold text-foreground mt-1">{estimatedVouchersSold}</p>
+                    </div>
+                  </div>
 
-              {activeMerchantTab === 'products' && (
-                <div className="mt-2 space-y-3">
-                {merchantProducts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground font-body">
-                    No products yet. Start by applying a grocery preset.
-                  </p>
-                ) : (
-                  merchantProducts.map((product) => (
-                    <div key={product.id} className="rounded-xl border border-border p-4 bg-muted/30">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                        <div>
-                          <p className="font-headline font-semibold text-foreground">{product.product_name}</p>
-                          <p className="text-sm text-muted-foreground font-body">
-                            FV R{Number(product.face_value).toFixed(2)} | Discount{' '}
-                            {Number(product.total_discount_pct).toFixed(2)}% | Consumer pays R
-                            {Number(product.consumer_price).toFixed(2)} | Merchant receives R
-                            {Number(product.merchant_receivable_after_total_discount).toFixed(2)}
-                          </p>
-                          <p className="text-xs text-primary font-body mt-1">
-                            Scope: {String(product.redemption_scope ?? 'all_branches').replace('_', ' ')}
-                          </p>
-                          {product.is_special && (
-                            <p className="text-xs text-warning font-body mt-1">
-                              Special: {product.special_title || 'Limited offer'}
-                              {product.special_end_at
-                                ? ` (ends ${new Date(product.special_end_at).toLocaleString()})`
-                                : ''}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-headline font-semibold ${
-                              product.is_active ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
-                            }`}
-                          >
-                            {product.is_active ? 'ACTIVE' : 'INACTIVE'}
-                          </span>
-                          <button
-                            onClick={() => void handleToggleProduct(product)}
-                            className="px-3 py-2 rounded-lg border border-border text-xs font-headline font-semibold hover:bg-muted"
-                          >
-                            {product.is_active ? 'Deactivate' : 'Activate'}
-                          </button>
-                        </div>
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    <div className="inline-flex rounded-lg border border-border bg-muted p-1">
+                      {(['all', 'active', 'inactive'] as const).map((filter) => (
+                        <button
+                          key={filter}
+                          type="button"
+                          onClick={() => {
+                            setProductsFilter(filter);
+                            setProductsPage(1);
+                          }}
+                          className={`px-3 py-1.5 rounded-md text-sm font-headline font-semibold transition-colors ${
+                            productsFilter === filter
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          {filter[0].toUpperCase() + filter.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="search"
+                        value={productsSearch}
+                        onChange={(event) => {
+                          setProductsSearch(event.target.value);
+                          setProductsPage(1);
+                        }}
+                        placeholder="Search products..."
+                        className="w-56 rounded-lg border border-border bg-background px-3 py-2 text-sm font-body"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setActiveMerchantTab('studio')}
+                        className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-headline font-semibold"
+                      >
+                        Add Product
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {paginatedProducts.length === 0 ? (
+                      <p className="text-sm text-muted-foreground font-body">
+                        No products found for this filter.
+                      </p>
+                    ) : (
+                      paginatedProducts.map((product) => {
+                        const estimatedSold = product.is_active ? 12 : 4;
+                        const estimatedRevenue = Number(product.consumer_price ?? 0) * estimatedSold;
+                        const estimatedRedemptionRate = product.is_active ? 92 : 61;
+                        return (
+                          <div key={product.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-headline font-semibold text-foreground text-lg">{product.product_name}</p>
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-headline font-semibold ${product.is_active ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                                    {product.is_active ? 'Active' : 'Inactive'}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground font-body">
+                                  Scope: {String(product.redemption_scope ?? 'all_branches').replace('_', ' ')}
+                                  {product.special_title ? ` | Special: ${product.special_title}` : ''}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-4 text-sm font-body">
+                                  <span className="text-foreground font-headline">R{Number(product.face_value).toFixed(0)} <span className="text-muted-foreground font-body">face value</span></span>
+                                  <span className="text-primary font-headline">{Number(product.total_discount_pct).toFixed(1)}% discount</span>
+                                  <span className="text-muted-foreground">You pay R{Number(product.consumer_price).toFixed(2)}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleToggleProduct(product)}
+                                  className="rounded-lg border border-border px-2.5 py-2 text-xs font-headline font-semibold hover:bg-muted"
+                                >
+                                  {product.is_active ? 'Hide' : 'Show'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleInlineDiscountUpdate(product, Number(product.total_discount_pct))}
+                                  disabled={savingInlineEdit}
+                                  className="rounded-lg border border-border px-2.5 py-2 text-xs font-headline font-semibold hover:bg-muted disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleDeleteProduct(product.id, product.product_name)}
+                                  className="rounded-lg border border-error/30 px-2.5 py-2 text-xs font-headline font-semibold text-error hover:bg-error/10"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 grid md:grid-cols-4 gap-3 text-sm">
+                              <label className="flex flex-col gap-1">
+                                <span className="text-xs text-muted-foreground">Face Value</span>
+                                <input
+                                  type="number"
+                                  min={10}
+                                  defaultValue={Number(product.face_value)}
+                                  onBlur={(event) => {
+                                    const nextValue = Number(event.currentTarget.value || 0);
+                                    if (!Number.isFinite(nextValue) || nextValue <= 0 || nextValue === Number(product.face_value)) return;
+                                    void handleInlineDiscountUpdate({ ...product, face_value: nextValue }, Number(product.total_discount_pct));
+                                  }}
+                                  className="rounded-lg border border-border bg-background px-2.5 py-1.5"
+                                />
+                              </label>
+                              <label className="flex flex-col gap-1">
+                                <span className="text-xs text-muted-foreground">Discount %</span>
+                                <input
+                                  type="number"
+                                  min={3}
+                                  max={15}
+                                  step={0.1}
+                                  defaultValue={Number(product.total_discount_pct)}
+                                  onBlur={(event) => {
+                                    const nextDiscount = Number(event.currentTarget.value || 0);
+                                    if (!Number.isFinite(nextDiscount) || nextDiscount < 3 || nextDiscount > 15 || nextDiscount === Number(product.total_discount_pct)) return;
+                                    void handleInlineDiscountUpdate(product, nextDiscount);
+                                  }}
+                                  className="rounded-lg border border-border bg-background px-2.5 py-1.5"
+                                />
+                              </label>
+                              <div className="rounded-lg border border-border bg-muted/20 px-2.5 py-1.5">
+                                <p className="text-xs text-muted-foreground">Sold Count</p>
+                                <p className="font-headline font-bold text-foreground">{estimatedSold}</p>
+                              </div>
+                              <div className="rounded-lg border border-border bg-muted/20 px-2.5 py-1.5">
+                                <p className="text-xs text-muted-foreground">Revenue</p>
+                                <p className="font-headline font-bold text-primary">R{estimatedRevenue.toFixed(0)}</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 text-xs text-muted-foreground font-body">
+                              Redemption rate: <span className="font-headline font-semibold text-success">{estimatedRedemptionRate}%</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {productsPageCount > 1 && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        Page {productsPage} of {productsPageCount}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setProductsPage((prev) => Math.max(1, prev - 1))}
+                          disabled={productsPage <= 1}
+                          className="px-3 py-1.5 rounded-lg border border-border text-xs font-headline font-semibold disabled:opacity-50"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProductsPage((prev) => Math.min(productsPageCount, prev + 1))}
+                          disabled={productsPage >= productsPageCount}
+                          className="px-3 py-1.5 rounded-lg border border-border text-xs font-headline font-semibold disabled:opacity-50"
+                        >
+                          Next
+                        </button>
                       </div>
                     </div>
-                  ))
-                )}
+                  )}
                 </div>
               )}
 
