@@ -90,15 +90,21 @@ export default function CartPage() {
             <div className="grid lg:grid-cols-[1fr_300px] gap-6">
               <div className="space-y-4">
                 {items.map((item) => (
-                  <div key={item.productId} className="bg-card rounded-2xl border border-border p-5">
+                  <div
+                    key={item.productId}
+                    className="bg-card rounded-2xl border border-border p-5"
+                  >
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <p className="text-xs uppercase tracking-wide text-primary font-headline font-semibold">
                           {item.merchantName}
                         </p>
-                        <h2 className="font-headline font-bold text-2xl text-foreground">{item.productName}</h2>
+                        <h2 className="font-headline font-bold text-2xl text-foreground">
+                          {item.productName}
+                        </h2>
                         <p className="text-sm text-muted-foreground">
-                          Face: R{item.faceValue.toFixed(2)} | You pay: R{item.consumerPrice.toFixed(2)}
+                          Face: R{item.faceValue.toFixed(2)} | You pay: R
+                          {item.consumerPrice.toFixed(2)}
                         </p>
                       </div>
                       <button
@@ -117,7 +123,9 @@ export default function CartPage() {
                         >
                           -
                         </button>
-                        <span className="min-w-8 text-center font-headline font-semibold">{item.quantity}</span>
+                        <span className="min-w-8 text-center font-headline font-semibold">
+                          {item.quantity}
+                        </span>
                         <button
                           onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}
                           className="w-8 h-8 rounded-lg border border-border"
@@ -143,11 +151,15 @@ export default function CartPage() {
               </div>
 
               <div className="bg-card rounded-2xl border border-border p-5 h-fit">
-                <h3 className="font-headline font-bold text-2xl text-foreground mb-4">Order Summary</h3>
+                <h3 className="font-headline font-bold text-2xl text-foreground mb-4">
+                  Order Summary
+                </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Total Face Value</span>
-                    <span className="font-headline font-semibold">R{summary.totalFaceValue.toFixed(2)}</span>
+                    <span className="font-headline font-semibold">
+                      R{summary.totalFaceValue.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Your Savings</span>
@@ -156,7 +168,9 @@ export default function CartPage() {
                     </span>
                   </div>
                   <div className="border-t border-border pt-2 flex items-center justify-between">
-                    <span className="font-headline font-bold text-foreground text-3xl">You Pay</span>
+                    <span className="font-headline font-bold text-foreground text-3xl">
+                      You Pay
+                    </span>
                     <span className="font-headline font-bold text-primary text-4xl">
                       R{summary.totalConsumerPrice.toFixed(2)}
                     </span>

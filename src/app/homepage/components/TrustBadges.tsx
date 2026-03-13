@@ -11,33 +11,33 @@ const TrustBadges = () => {
     {
       icon: 'ShieldCheckIcon',
       title: 'POPIA Compliant',
-      description: 'Full data protection compliance'
+      description: 'Full data protection compliance',
     },
     {
       icon: 'BuildingLibraryIcon',
       title: 'SARB Aligned',
-      description: 'Reserve Bank regulations met'
+      description: 'Reserve Bank regulations met',
     },
     {
       icon: 'DocumentCheckIcon',
       title: 'FIC Registered',
-      description: 'Financial Intelligence Centre'
+      description: 'Financial Intelligence Centre',
     },
     {
       icon: 'LockClosedIcon',
       title: 'Bank-Grade Security',
-      description: 'End-to-end encryption'
+      description: 'End-to-end encryption',
     },
     {
       icon: 'ChartBarIcon',
       title: 'Real-Time Auditing',
-      description: 'Transparent tracking systems'
+      description: 'Transparent tracking systems',
     },
     {
       icon: 'UserGroupIcon',
       title: 'Community Verified',
-      description: '12,847+ active users'
-    }
+      description: '12,847+ active users',
+    },
   ];
 
   return (
@@ -64,9 +64,7 @@ const TrustBadges = () => {
               <p className="font-headline font-semibold text-sm text-foreground mb-1">
                 {badge.title}
               </p>
-              <p className="font-body text-xs text-muted-foreground">
-                {badge.description}
-              </p>
+              <p className="font-body text-xs text-muted-foreground">{badge.description}</p>
             </div>
           ))}
         </div>

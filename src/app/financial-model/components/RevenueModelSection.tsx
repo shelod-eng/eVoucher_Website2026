@@ -16,39 +16,43 @@ const RevenueModelSection = () => {
     {
       id: 1,
       title: 'Transaction Fees',
-      description: 'Small percentage on each voucher transaction, split between platform sustainability and merchant benefits',
+      description:
+        'Small percentage on each voucher transaction, split between platform sustainability and merchant benefits',
       percentage: 45,
       amount: 'R 180M annually',
       icon: 'CreditCardIcon',
-      color: 'bg-primary'
+      color: 'bg-primary',
     },
     {
       id: 2,
       title: 'Merchant Subscriptions',
-      description: 'Premium analytics and marketing tools for merchants seeking advanced customer insights',
+      description:
+        'Premium analytics and marketing tools for merchants seeking advanced customer insights',
       percentage: 25,
       amount: 'R 100M annually',
       icon: 'BuildingStorefrontIcon',
-      color: 'bg-secondary'
+      color: 'bg-secondary',
     },
     {
       id: 3,
       title: 'Government Partnerships',
-      description: 'Service fees for program administration, fraud prevention, and impact measurement',
+      description:
+        'Service fees for program administration, fraud prevention, and impact measurement',
       percentage: 20,
       amount: 'R 80M annually',
       icon: 'BuildingLibraryIcon',
-      color: 'bg-success'
+      color: 'bg-success',
     },
     {
       id: 4,
       title: 'Corporate Sponsorships',
-      description: 'Brand partnerships for social impact campaigns and community development initiatives',
+      description:
+        'Brand partnerships for social impact campaigns and community development initiatives',
       percentage: 10,
       amount: 'R 40M annually',
       icon: 'SparklesIcon',
-      color: 'bg-accent'
-    }
+      color: 'bg-accent',
+    },
   ];
 
   return (
@@ -63,18 +67,28 @@ const RevenueModelSection = () => {
             Diversified Revenue Streams
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Multiple income sources ensure platform sustainability while maximizing stakeholder benefits. Projected Year 3 annual revenue: <span className="font-bold text-foreground">R 400M</span>
+            Multiple income sources ensure platform sustainability while maximizing stakeholder
+            benefits. Projected Year 3 annual revenue:{' '}
+            <span className="font-bold text-foreground">R 400M</span>
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {revenueStreams.map((stream) => (
-            <div key={stream.id} className="bg-card rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border border-border">
+            <div
+              key={stream.id}
+              className="bg-card rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border border-border"
+            >
               <div className="flex items-start space-x-4">
                 <div className={`${stream.color} p-4 rounded-lg flex-shrink-0`}>
-                  <Icon name={stream.icon as any} size={28} variant="solid" className="text-white" />
+                  <Icon
+                    name={stream.icon as any}
+                    size={28}
+                    variant="solid"
+                    className="text-white"
+                  />
                 </div>
-                
+
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xl font-headline font-bold text-foreground">
@@ -84,17 +98,13 @@ const RevenueModelSection = () => {
                       {stream.percentage}%
                     </span>
                   </div>
-                  
-                  <p className="text-muted-foreground mb-3 leading-relaxed">
-                    {stream.description}
-                  </p>
-                  
+
+                  <p className="text-muted-foreground mb-3 leading-relaxed">{stream.description}</p>
+
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-success">
-                      {stream.amount}
-                    </span>
+                    <span className="text-sm font-semibold text-success">{stream.amount}</span>
                     <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full ${stream.color} rounded-full transition-all duration-500`}
                         style={{ width: `${stream.percentage}%` }}
                       ></div>
@@ -116,7 +126,11 @@ const RevenueModelSection = () => {
                 Sustainable Growth Model
               </h4>
               <p className="text-muted-foreground leading-relaxed">
-                Our diversified revenue approach ensures no single stakeholder bears disproportionate costs. Transaction fees remain minimal (2-3%), merchant subscriptions are optional premium services, and government partnerships are structured as efficiency-sharing agreements. This model allows us to scale impact while maintaining financial sustainability.
+                Our diversified revenue approach ensures no single stakeholder bears
+                disproportionate costs. Transaction fees remain minimal (2-3%), merchant
+                subscriptions are optional premium services, and government partnerships are
+                structured as efficiency-sharing agreements. This model allows us to scale impact
+                while maintaining financial sustainability.
               </p>
             </div>
           </div>

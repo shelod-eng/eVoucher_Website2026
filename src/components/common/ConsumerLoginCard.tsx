@@ -10,7 +10,11 @@ interface ConsumerLoginCardProps {
   redirectTo?: string;
 }
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string
+): Promise<T> {
   return await new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
     promise.then(
@@ -26,7 +30,9 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMes
   });
 }
 
-export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }: ConsumerLoginCardProps) {
+export default function ConsumerLoginCard({
+  redirectTo = '/customer/dashboard',
+}: ConsumerLoginCardProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -40,14 +46,20 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
     setLoading(true);
 
     try {
-      const normalizedEmail = String(email ?? '').trim().toLowerCase();
+      const normalizedEmail = String(email ?? '')
+        .trim()
+        .toLowerCase();
       const normalizedPassword = String(password ?? '').trim();
       if (!normalizedEmail || !normalizedPassword) {
         setError('Email and password are required.');
         setLoading(false);
         return;
       }
-      await withTimeout(signIn(normalizedEmail, normalizedPassword), 60000, 'Sign in timed out. Please try again.');
+      await withTimeout(
+        signIn(normalizedEmail, normalizedPassword),
+        60000,
+        'Sign in timed out. Please try again.'
+      );
       router.push(redirectTo);
     } catch (signInError: any) {
       const message = String(signInError?.message || 'Invalid email or password.');
@@ -71,7 +83,9 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
           <span className="font-headline font-bold text-primary text-2xl">eV</span>
         </div>
         <h1 className="font-headline font-bold text-5xl text-primary mb-2">eVoucher</h1>
-        <p className="text-lg text-foreground font-body">Smart Savings for South African Consumers</p>
+        <p className="text-lg text-foreground font-body">
+          Smart Savings for South African Consumers
+        </p>
       </div>
 
       {error && (
@@ -82,7 +96,10 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
 
       <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
         <div>
-          <label htmlFor="consumer-email" className="block text-base font-headline font-semibold text-foreground mb-2">
+          <label
+            htmlFor="consumer-email"
+            className="block text-base font-headline font-semibold text-foreground mb-2"
+          >
             Email or Phone
           </label>
           <div className="relative">
@@ -107,7 +124,10 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
         </div>
 
         <div>
-          <label htmlFor="consumer-password" className="block text-base font-headline font-semibold text-foreground mb-2">
+          <label
+            htmlFor="consumer-password"
+            className="block text-base font-headline font-semibold text-foreground mb-2"
+          >
             Password
           </label>
           <div className="relative">
@@ -132,7 +152,10 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
         </div>
 
         <div className="text-right">
-          <Link href="/support" className="text-primary text-sm font-headline font-semibold hover:underline">
+          <Link
+            href="/support"
+            className="text-primary text-sm font-headline font-semibold hover:underline"
+          >
             Forgot Password?
           </Link>
         </div>
@@ -153,23 +176,35 @@ export default function ConsumerLoginCard({ redirectTo = '/customer/dashboard' }
       </div>
 
       <div className="flex justify-center gap-4 mb-6">
-        <button type="button" className="w-14 h-14 rounded-2xl border border-border bg-muted/40 flex items-center justify-center">
+        <button
+          type="button"
+          className="w-14 h-14 rounded-2xl border border-border bg-muted/40 flex items-center justify-center"
+        >
           <Icon name="DevicePhoneMobileIcon" size={22} variant="outline" />
         </button>
-        <button type="button" className="w-14 h-14 rounded-2xl border border-border bg-muted/40 flex items-center justify-center">
+        <button
+          type="button"
+          className="w-14 h-14 rounded-2xl border border-border bg-muted/40 flex items-center justify-center"
+        >
           <Icon name="FingerPrintIcon" size={22} variant="outline" />
         </button>
       </div>
 
       <p className="text-center text-sm text-muted-foreground font-body">
         Don&apos;t have an account?{' '}
-        <Link href="/consumer-experience" className="text-primary font-headline font-semibold hover:underline">
+        <Link
+          href="/consumer-experience"
+          className="text-primary font-headline font-semibold hover:underline"
+        >
           Register Now
         </Link>
       </p>
       <p className="text-center text-sm text-muted-foreground font-body mt-2">
         Merchant account?{' '}
-        <Link href="/merchant/login" className="text-secondary font-headline font-semibold hover:underline">
+        <Link
+          href="/merchant/login"
+          className="text-secondary font-headline font-semibold hover:underline"
+        >
           Sign in here
         </Link>
       </p>

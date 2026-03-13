@@ -43,7 +43,10 @@ export async function POST(request: Request) {
     }
 
     if (!isApprovalAuthorized(request, actorRole)) {
-      return NextResponse.json({ error: 'Unauthorized merchant approval attempt.' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized merchant approval attempt.' },
+        { status: 401 }
+      );
     }
 
     const result = await approveMerchantManually({
@@ -53,7 +56,10 @@ export async function POST(request: Request) {
     });
 
     if (!result.ok) {
-      return NextResponse.json({ error: 'Merchant approval failed.' }, { status: result.httpStatus });
+      return NextResponse.json(
+        { error: 'Merchant approval failed.' },
+        { status: result.httpStatus }
+      );
     }
 
     return NextResponse.json({
@@ -65,12 +71,14 @@ export async function POST(request: Request) {
         'approvalConfirmationSent' in result ? result.approvalConfirmationSent : undefined,
       approvalConfirmationError:
         'approvalConfirmationError' in result ? result.approvalConfirmationError : undefined,
-      credentialsEmailSent: 'credentialsEmailSent' in result ? result.credentialsEmailSent : undefined,
+      credentialsEmailSent:
+        'credentialsEmailSent' in result ? result.credentialsEmailSent : undefined,
       credentialsEmailRecipient:
         'credentialsEmailRecipient' in result ? result.credentialsEmailRecipient : undefined,
       credentialsEmailProvider:
         'credentialsEmailProvider' in result ? result.credentialsEmailProvider : undefined,
-      credentialsEmailError: 'credentialsEmailError' in result ? result.credentialsEmailError : undefined,
+      credentialsEmailError:
+        'credentialsEmailError' in result ? result.credentialsEmailError : undefined,
       statusData: 'statusData' in result ? result.statusData : undefined,
       debug: 'debug' in result ? result.debug : undefined,
     });

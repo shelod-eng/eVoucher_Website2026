@@ -84,9 +84,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
-      await applySessionState(session);
-    });
+    } = supabase.auth.onAuthStateChange(
+      async (_event: AuthChangeEvent, session: Session | null) => {
+        await applySessionState(session);
+      }
+    );
 
     void bootstrap();
 
@@ -98,18 +100,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     console.log('AuthContext: Attempting signIn...');
-    const normalizedEmail = String(email ?? '').trim().toLowerCase();
+    const normalizedEmail = String(email ?? '')
+      .trim()
+      .toLowerCase();
     const normalizedPassword = String(password ?? '').trim();
     const { data, error } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password: normalizedPassword,
     });
-    
+
     if (error) {
       console.error('AuthContext: signIn error:', error);
       throw error;
     }
-    
+
     console.log('AuthContext: signIn successful:', data.user?.id);
     const resolvedRole = await resolveUserRole(data.user ?? null);
     setRole(resolvedRole);
@@ -123,12 +127,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: { data: metadata },
     });
-    
+
     if (error) {
       console.error('AuthContext: signUp error:', error);
       throw error;
     }
-    
+
     console.log('AuthContext: signUp successful:', data.user?.id);
     const resolvedRole = await resolveUserRole(data.user ?? null);
     setRole(resolvedRole);
@@ -149,7 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('AuthContext: local signOut fallback warning:', fallback.error.message);
       }
     }
-
   };
 
   return (

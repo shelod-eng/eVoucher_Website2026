@@ -4,11 +4,15 @@ type AuthUser = {
 };
 
 function normalizeEmail(value: unknown) {
-  return String(value ?? '').trim().toLowerCase();
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 function isUserIdTypeMismatch(error: any) {
-  const code = String(error?.code ?? '').trim().toLowerCase();
+  const code = String(error?.code ?? '')
+    .trim()
+    .toLowerCase();
   const message = String(error?.message ?? '').toLowerCase();
   return (
     code === '22p02' ||
@@ -68,7 +72,11 @@ async function autoApprovePendingMerchantsForUser(admin: any, user: AuthUser) {
 
   // Never throw here; onboarding gates must not break dashboard/auth-state reads.
   try {
-    await admin.from('merchants').update(preApproveUpdate).eq('user_id', user.id).eq('status', 'pending');
+    await admin
+      .from('merchants')
+      .update(preApproveUpdate)
+      .eq('user_id', user.id)
+      .eq('status', 'pending');
     const byUserIdFinalize = await admin
       .from('merchants')
       .update(finalizeApproveUpdate)
@@ -84,10 +92,16 @@ async function autoApprovePendingMerchantsForUser(admin: any, user: AuthUser) {
         .eq('user_id', user.id)
         .eq('status', 'pending');
       if (activeFallback.error && !isUserIdTypeMismatch(activeFallback.error)) {
-        console.warn('[merchant-profile][auto-approve-by-user-active-fallback][warn]', activeFallback.error.message);
+        console.warn(
+          '[merchant-profile][auto-approve-by-user-active-fallback][warn]',
+          activeFallback.error.message
+        );
       }
     } else if (byUserIdFinalize.error && !isUserIdTypeMismatch(byUserIdFinalize.error)) {
-      console.warn('[merchant-profile][auto-approve-by-user][warn]', byUserIdFinalize.error.message);
+      console.warn(
+        '[merchant-profile][auto-approve-by-user][warn]',
+        byUserIdFinalize.error.message
+      );
     }
   } catch (error: any) {
     if (!isUserIdTypeMismatch(error)) {
@@ -99,7 +113,11 @@ async function autoApprovePendingMerchantsForUser(admin: any, user: AuthUser) {
   if (!email) return;
 
   try {
-    await admin.from('merchants').update(preApproveUpdate).eq('email', email).eq('status', 'pending');
+    await admin
+      .from('merchants')
+      .update(preApproveUpdate)
+      .eq('email', email)
+      .eq('status', 'pending');
     const byEmailFinalize = await admin
       .from('merchants')
       .update(finalizeApproveUpdate)
@@ -115,10 +133,16 @@ async function autoApprovePendingMerchantsForUser(admin: any, user: AuthUser) {
         .eq('email', email)
         .eq('status', 'pending');
       if (activeFallback.error) {
-        console.warn('[merchant-profile][auto-approve-by-email-active-fallback][warn]', activeFallback.error.message);
+        console.warn(
+          '[merchant-profile][auto-approve-by-email-active-fallback][warn]',
+          activeFallback.error.message
+        );
       }
     } else if (byEmailFinalize.error) {
-      console.warn('[merchant-profile][auto-approve-by-email][warn]', byEmailFinalize.error.message);
+      console.warn(
+        '[merchant-profile][auto-approve-by-email][warn]',
+        byEmailFinalize.error.message
+      );
     }
   } catch (error: any) {
     console.warn('[merchant-profile][auto-approve-by-email][warn]', error?.message || error);

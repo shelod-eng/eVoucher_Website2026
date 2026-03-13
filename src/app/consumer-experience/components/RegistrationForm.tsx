@@ -67,12 +67,16 @@ export default function RegistrationForm() {
             <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <Icon name="CheckCircleIcon" size={48} variant="solid" className="text-success" />
             </div>
-            <h2 className="font-headline font-bold text-3xl text-foreground mb-4">Welcome to eVoucher!</h2>
+            <h2 className="font-headline font-bold text-3xl text-foreground mb-4">
+              Welcome to eVoucher!
+            </h2>
             <p className="font-body text-lg text-muted-foreground mb-6">
               Your account has been created successfully. You can now start saving with dignity.
             </p>
             <div className="bg-primary/10 rounded-xl p-6 border border-primary/20">
-              <p className="font-body text-sm text-muted-foreground mb-2">Access anytime via USSD</p>
+              <p className="font-body text-sm text-muted-foreground mb-2">
+                Access anytime via USSD
+              </p>
               <p className="font-accent text-3xl font-bold text-primary">*134*2468#</p>
             </div>
           </div>
@@ -89,7 +93,8 @@ export default function RegistrationForm() {
             Join as a Customer
           </h2>
           <p className="font-body text-xl text-muted-foreground max-w-2xl mx-auto">
-            Create your account and start saving on essential goods today. Simple signup — name, phone, and PIN.
+            Create your account and start saving on essential goods today. Simple signup — name,
+            phone, and PIN.
           </p>
         </div>
 
@@ -100,49 +105,89 @@ export default function RegistrationForm() {
             <div className="bg-card rounded-2xl p-8 shadow-lg border-2 border-primary">
               <div className="flex items-start space-x-4 mb-6">
                 <div className="bg-primary/10 p-3 rounded-xl flex-shrink-0">
-                  <Icon name="DevicePhoneMobileIcon" size={32} variant="solid" className="text-primary" />
+                  <Icon
+                    name="DevicePhoneMobileIcon"
+                    size={32}
+                    variant="solid"
+                    className="text-primary"
+                  />
                 </div>
                 <div>
-                  <h3 className="font-headline font-bold text-xl text-foreground mb-2">No Smartphone? No Problem</h3>
-                  <p className="font-body text-muted-foreground">Access your vouchers from any phone using USSD</p>
+                  <h3 className="font-headline font-bold text-xl text-foreground mb-2">
+                    No Smartphone? No Problem
+                  </h3>
+                  <p className="font-body text-muted-foreground">
+                    Access your vouchers from any phone using USSD
+                  </p>
                 </div>
               </div>
               <div className="bg-primary/5 rounded-xl p-6 text-center">
-                <p className="font-body text-sm text-muted-foreground mb-2">Dial this code from any phone</p>
+                <p className="font-body text-sm text-muted-foreground mb-2">
+                  Dial this code from any phone
+                </p>
                 <p className="font-accent text-4xl font-bold text-primary mb-2">*134*2468#</p>
-                <p className="font-body text-xs text-muted-foreground">No data required • Works on any network</p>
+                <p className="font-body text-xs text-muted-foreground">
+                  No data required • Works on any network
+                </p>
               </div>
             </div>
 
             {/* Benefits List */}
             <div className="bg-card rounded-2xl p-8 shadow-lg border border-border">
-              <h3 className="font-headline font-semibold text-xl text-foreground mb-6">What You Get:</h3>
+              <h3 className="font-headline font-semibold text-xl text-foreground mb-6">
+                What You Get:
+              </h3>
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
                   <div className="bg-success/10 p-2 rounded-lg flex-shrink-0">
-                    <Icon name="CurrencyDollarIcon" size={20} variant="solid" className="text-success" />
+                    <Icon
+                      name="CurrencyDollarIcon"
+                      size={20}
+                      variant="solid"
+                      className="text-success"
+                    />
                   </div>
                   <div>
-                    <h4 className="font-headline font-semibold text-foreground">Up to 30% Savings</h4>
-                    <p className="font-body text-sm text-muted-foreground">Real discounts on groceries, airtime, transport</p>
+                    <h4 className="font-headline font-semibold text-foreground">
+                      Up to 30% Savings
+                    </h4>
+                    <p className="font-body text-sm text-muted-foreground">
+                      Real discounts on groceries, airtime, transport
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="bg-success/10 p-2 rounded-lg flex-shrink-0">
-                    <Icon name="ShieldCheckIcon" size={20} variant="solid" className="text-success" />
+                    <Icon
+                      name="ShieldCheckIcon"
+                      size={20}
+                      variant="solid"
+                      className="text-success"
+                    />
                   </div>
                   <div>
                     <h4 className="font-headline font-semibold text-foreground">Safe & Secure</h4>
-                    <p className="font-body text-sm text-muted-foreground">Government-aligned and protected</p>
+                    <p className="font-body text-sm text-muted-foreground">
+                      Government-aligned and protected
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="bg-success/10 p-2 rounded-lg flex-shrink-0">
-                    <Icon name="DevicePhoneMobileIcon" size={20} variant="solid" className="text-success" />
+                    <Icon
+                      name="DevicePhoneMobileIcon"
+                      size={20}
+                      variant="solid"
+                      className="text-success"
+                    />
                   </div>
                   <div>
-                    <h4 className="font-headline font-semibold text-foreground">Works on Any Phone</h4>
-                    <p className="font-body text-sm text-muted-foreground">Smartphone or basic phone — everyone included</p>
+                    <h4 className="font-headline font-semibold text-foreground">
+                      Works on Any Phone
+                    </h4>
+                    <p className="font-body text-sm text-muted-foreground">
+                      Smartphone or basic phone — everyone included
+                    </p>
                   </div>
                 </div>
               </div>
@@ -155,20 +200,32 @@ export default function RegistrationForm() {
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Icon name="UserPlusIcon" size={32} variant="solid" className="text-primary" />
               </div>
-              <h3 className="font-headline font-bold text-2xl text-foreground mb-2">Create Your Account</h3>
-              <p className="text-muted-foreground font-body">Quick and easy — takes less than 1 minute</p>
+              <h3 className="font-headline font-bold text-2xl text-foreground mb-2">
+                Create Your Account
+              </h3>
+              <p className="text-muted-foreground font-body">
+                Quick and easy — takes less than 1 minute
+              </p>
             </div>
 
             {error && (
               <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg flex items-start space-x-3">
-                <Icon name="ExclamationCircleIcon" size={20} variant="solid" className="text-error flex-shrink-0 mt-0.5" />
+                <Icon
+                  name="ExclamationCircleIcon"
+                  size={20}
+                  variant="solid"
+                  className="text-error flex-shrink-0 mt-0.5"
+                />
                 <p className="text-sm text-error font-body">{error}</p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label htmlFor="fullName" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                <label
+                  htmlFor="fullName"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
                   Full Name
                 </label>
                 <input
@@ -184,7 +241,10 @@ export default function RegistrationForm() {
               </div>
 
               <div>
-                <label htmlFor="phone" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                <label
+                  htmlFor="phone"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
                   Phone Number
                 </label>
                 <input
@@ -200,7 +260,10 @@ export default function RegistrationForm() {
               </div>
 
               <div>
-                <label htmlFor="pin" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                <label
+                  htmlFor="pin"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
                   Create 4-Digit PIN
                 </label>
                 <input
@@ -215,7 +278,9 @@ export default function RegistrationForm() {
                   className="w-full px-4 py-3 border-2 border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 font-body text-lg text-center tracking-widest"
                   placeholder="••••"
                 />
-                <p className="text-xs text-muted-foreground mt-1">Use this PIN to access your account via USSD</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use this PIN to access your account via USSD
+                </p>
               </div>
 
               <button

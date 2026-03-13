@@ -25,8 +25,10 @@ function isMissingColumn(error: any, columnName: string) {
   return (
     (message.includes(`column "${normalizedColumn}"`) && message.includes('does not exist')) ||
     (message.includes(`column ${normalizedColumn}`) && message.includes('does not exist')) ||
-    (message.includes(`column merchants.${normalizedColumn}`) && message.includes('does not exist')) ||
-    (message.includes(`column "merchants.${normalizedColumn}"`) && message.includes('does not exist')) ||
+    (message.includes(`column merchants.${normalizedColumn}`) &&
+      message.includes('does not exist')) ||
+    (message.includes(`column "merchants.${normalizedColumn}"`) &&
+      message.includes('does not exist')) ||
     message.includes(`could not find the '${normalizedColumn}' column`) ||
     message.includes(`could not find the column '${normalizedColumn}'`)
   );
@@ -39,7 +41,9 @@ function isMissingBranchHierarchyColumn(error: any) {
 }
 
 function normalizeMerchantType(value: unknown) {
-  const normalized = String(value ?? '').trim().toLowerCase();
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
   return normalized === 'chain' ? 'chain' : normalized === 'private' ? 'private' : null;
 }
 
@@ -153,7 +157,9 @@ export async function GET() {
       // Fallback for older schemas without parent_merchant_id/is_branch.
       const fallback = await admin
         .from('merchants')
-        .select('id,business_name,branch_name,email,phone,city,province,status,merchant_type,parent_brand')
+        .select(
+          'id,business_name,branch_name,email,phone,city,province,status,merchant_type,parent_brand'
+        )
         .eq('parent_brand', parentBrand)
         .neq('id', merchant.id)
         .order('branch_name', { ascending: true });
@@ -181,7 +187,7 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { role } = await resolveUserRole(supabase, user);
-    const body = (await request.json().catch(() => ({} as any))) as {
+    const body = (await request.json().catch(() => ({}) as any)) as {
       branchName?: string;
       email?: string;
       phone?: string;
@@ -189,7 +195,9 @@ export async function POST(request: Request) {
       province?: string;
     };
     const branchName = String(body.branchName ?? '').trim();
-    const branchEmail = String(body.email ?? '').trim().toLowerCase();
+    const branchEmail = String(body.email ?? '')
+      .trim()
+      .toLowerCase();
     if (!branchName) {
       return NextResponse.json({ error: 'Branch name is required.' }, { status: 400 });
     }
@@ -270,7 +278,9 @@ export async function POST(request: Request) {
     let insertResult = await admin
       .from('merchants')
       .insert(insertPayload)
-      .select('id,business_name,branch_name,email,phone,city,province,status,merchant_type,parent_merchant_id,is_branch')
+      .select(
+        'id,business_name,branch_name,email,phone,city,province,status,merchant_type,parent_merchant_id,is_branch'
+      )
       .single();
 
     if (insertResult.error && isMissingBranchHierarchyColumn(insertResult.error)) {
@@ -282,7 +292,9 @@ export async function POST(request: Request) {
       insertResult = await admin
         .from('merchants')
         .insert(fallbackPayload)
-        .select('id,business_name,branch_name,email,phone,city,province,status,merchant_type,parent_brand')
+        .select(
+          'id,business_name,branch_name,email,phone,city,province,status,merchant_type,parent_brand'
+        )
         .single();
     }
 

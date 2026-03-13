@@ -132,13 +132,20 @@ export default function CustomerDashboard() {
     [vouchers]
   );
 
-  const walletBalance = activeVouchers.reduce((sum, voucher) => sum + Number(voucher.current_balance), 0);
+  const walletBalance = activeVouchers.reduce(
+    (sum, voucher) => sum + Number(voucher.current_balance),
+    0
+  );
 
   const recentActivity = useMemo(() => {
     const purchaseRows = paymentTransactions
-      .filter((transaction) => String(transaction.payment_status ?? '').toLowerCase() === 'completed')
+      .filter(
+        (transaction) => String(transaction.payment_status ?? '').toLowerCase() === 'completed'
+      )
       .map((transaction) => {
-        const matchedVoucher = vouchers.find((voucher) => voucher.voucher_code === transaction.voucher_code);
+        const matchedVoucher = vouchers.find(
+          (voucher) => voucher.voucher_code === transaction.voucher_code
+        );
         const savings = Number(matchedVoucher?.face_value ?? 0) - Number(transaction.amount ?? 0);
         return {
           id: `purchase-${transaction.id}`,
@@ -191,25 +198,41 @@ export default function CustomerDashboard() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(32,178,170,0.18),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(255,122,0,0.14),_transparent_48%),#ecf8f7]">
         <Header />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(32,178,170,0.22),_transparent_42%),radial-gradient(circle_at_bottom_right,_rgba(255,122,0,0.16),_transparent_50%),#ecf8f7]">
       <Header />
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-7xl mx-auto space-y-6">
+          <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-[#0d5f64] via-[#0f8077] to-[#158f87] p-6 lg:p-8 text-white shadow-xl">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-white/75 font-headline">
+                  eVoucher Platform
+                </p>
+                <h1 className="font-headline font-bold text-4xl">Hello, {displayName}</h1>
+                <p className="text-white/85 mt-1">Welcome back to eVoucher</p>
+              </div>
+              <div className="rounded-full bg-white/15 border border-white/25 px-5 py-3 min-w-40 text-center backdrop-blur-sm">
+                <p className="font-headline font-bold">Cashback Benefits</p>
+                <p className="text-xs">{rewards.savingsRatePct.toFixed(1)}% savings rate</p>
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="font-headline font-bold text-4xl text-foreground">Hello, {displayName}</h1>
-              <p className="text-muted-foreground mt-1">Welcome back to eVoucher</p>
-            </div>
-            <div className="rounded-full bg-success text-white px-5 py-3 min-w-40 text-center">
-              <p className="font-headline font-bold">Cashback Benefits</p>
-              <p className="text-xs">{rewards.savingsRatePct.toFixed(1)}% savings rate</p>
+              <h2 className="font-headline font-bold text-2xl text-foreground">
+                Dashboard Snapshot
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Your wallet, savings, and voucher activity.
+              </p>
             </div>
           </div>
 
@@ -220,21 +243,30 @@ export default function CustomerDashboard() {
           )}
 
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-card rounded-2xl border border-border p-5">
+            <div className="bg-card/95 rounded-2xl border border-primary/15 p-5 shadow-sm">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                 <Icon name="WalletIcon" size={20} variant="outline" className="text-primary" />
               </div>
-              <p className="text-4xl font-headline font-bold text-foreground">R{walletBalance.toFixed(2)}</p>
+              <p className="text-4xl font-headline font-bold text-foreground">
+                R{walletBalance.toFixed(2)}
+              </p>
               <p className="text-sm text-muted-foreground">Wallet Balance</p>
             </div>
-            <div className="bg-card rounded-2xl border border-border p-5">
+            <div className="bg-card/95 rounded-2xl border border-primary/15 p-5 shadow-sm">
               <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center mb-3">
-                <Icon name="ArrowTrendingUpIcon" size={20} variant="outline" className="text-success" />
+                <Icon
+                  name="ArrowTrendingUpIcon"
+                  size={20}
+                  variant="outline"
+                  className="text-success"
+                />
               </div>
-              <p className="text-4xl font-headline font-bold text-foreground">R{rewards.totalCashSaved.toFixed(2)}</p>
+              <p className="text-4xl font-headline font-bold text-foreground">
+                R{rewards.totalCashSaved.toFixed(2)}
+              </p>
               <p className="text-sm text-muted-foreground">Total Cash Saved</p>
             </div>
-            <div className="bg-card rounded-2xl border border-border p-5">
+            <div className="bg-card/95 rounded-2xl border border-primary/15 p-5 shadow-sm">
               <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center mb-3">
                 <Icon name="StarIcon" size={20} variant="outline" className="text-warning" />
               </div>
@@ -243,11 +275,13 @@ export default function CustomerDashboard() {
               </p>
               <p className="text-sm text-muted-foreground">This Month Savings</p>
             </div>
-            <div className="bg-card rounded-2xl border border-border p-5">
+            <div className="bg-card/95 rounded-2xl border border-primary/15 p-5 shadow-sm">
               <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center mb-3">
                 <Icon name="TicketIcon" size={20} variant="outline" className="text-blue-600" />
               </div>
-              <p className="text-4xl font-headline font-bold text-foreground">{activeVouchers.length}</p>
+              <p className="text-4xl font-headline font-bold text-foreground">
+                {activeVouchers.length}
+              </p>
               <p className="text-sm text-muted-foreground">Active Vouchers</p>
             </div>
           </div>
@@ -259,9 +293,11 @@ export default function CustomerDashboard() {
                 <button
                   key={action.label}
                   onClick={() => router.push(action.href)}
-                  className="bg-card rounded-2xl border border-border p-5 text-left hover:bg-muted transition-colors"
+                  className="bg-card/95 rounded-2xl border border-primary/15 p-5 text-left hover:bg-muted transition-colors shadow-sm"
                 >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${action.color}`}>
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center ${action.color}`}
+                  >
                     <Icon name={action.icon as any} size={22} variant="outline" />
                   </div>
                   <p className="font-headline font-semibold text-foreground mt-4">{action.label}</p>
@@ -272,7 +308,7 @@ export default function CustomerDashboard() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-6">
-            <div className="bg-card rounded-2xl border border-border p-6">
+            <div className="bg-card/95 rounded-2xl border border-primary/15 p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-headline font-bold text-2xl text-foreground">My Vouchers</h3>
                 <Icon name="TicketIcon" size={20} variant="outline" className="text-primary" />
@@ -283,7 +319,9 @@ export default function CustomerDashboard() {
                 <div className="space-y-3">
                   {activeVouchers.slice(0, 5).map((voucher) => (
                     <div key={voucher.id} className="rounded-xl border border-border p-4">
-                      <p className="font-headline font-semibold text-foreground">{voucher.merchant_name}</p>
+                      <p className="font-headline font-semibold text-foreground">
+                        {voucher.merchant_name}
+                      </p>
                       <p className="text-xs text-muted-foreground">{voucher.voucher_code}</p>
                       <p className="text-sm text-primary mt-1">
                         Balance: R{Number(voucher.current_balance).toFixed(2)}
@@ -294,9 +332,11 @@ export default function CustomerDashboard() {
               )}
             </div>
 
-            <div className="bg-card rounded-2xl border border-border p-6">
+            <div className="bg-card/95 rounded-2xl border border-primary/15 p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-headline font-bold text-2xl text-foreground">Recent Activity</h3>
+                <h3 className="font-headline font-bold text-2xl text-foreground">
+                  Recent Activity
+                </h3>
                 <button
                   onClick={() => router.push('/analytics')}
                   className="text-primary text-sm font-headline font-semibold"
@@ -314,7 +354,9 @@ export default function CustomerDashboard() {
                       className="rounded-xl border border-border p-4 flex items-center justify-between"
                     >
                       <div>
-                        <p className="font-headline font-semibold text-foreground">{transaction.merchantName}</p>
+                        <p className="font-headline font-semibold text-foreground">
+                          {transaction.merchantName}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(transaction.createdAt).toLocaleDateString()}
                         </p>

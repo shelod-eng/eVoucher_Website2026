@@ -139,16 +139,13 @@ function buildHtmlBody(payload: MerchantStatusPayload) {
   `.trim();
 }
 
-async function sendViaResend(
-  recipients: string[],
-  subject: string,
-  text: string,
-  html: string
-) {
+async function sendViaResend(recipients: string[], subject: string, text: string, html: string) {
   const resendApiKey = String(process.env.RESEND_API_KEY ?? '').trim();
   if (!resendApiKey) return null;
 
-  const fromAddress = String(process.env.RESEND_FROM ?? 'eVoucher Onboarding <onboarding@resend.dev>').trim();
+  const fromAddress = String(
+    process.env.RESEND_FROM ?? 'eVoucher Onboarding <onboarding@resend.dev>'
+  ).trim();
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -191,10 +188,14 @@ function resolveAppBaseUrl() {
 }
 
 function resolveMerchantEmailRecipient(targetEmail: string) {
-  const normalizedTarget = String(targetEmail ?? '').trim().toLowerCase();
+  const normalizedTarget = String(targetEmail ?? '')
+    .trim()
+    .toLowerCase();
   const isProduction = process.env.NODE_ENV === 'production';
   const allowProdOverride =
-    String(process.env.ALLOW_PROD_EMAIL_OVERRIDE ?? '').trim().toLowerCase() === 'true';
+    String(process.env.ALLOW_PROD_EMAIL_OVERRIDE ?? '')
+      .trim()
+      .toLowerCase() === 'true';
   // Safety: never reroute merchant-facing emails in production unless explicitly enabled.
   if (isProduction && !allowProdOverride) {
     return normalizedTarget;
@@ -261,14 +262,17 @@ async function sendSmsViaTwilio(phone: string, message: string) {
   });
 
   const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
-  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${credentials}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body,
-  });
+  const response = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+    }
+  );
 
   if (!response.ok) {
     const responseText = await response.text();
@@ -406,7 +410,11 @@ export async function sendMerchantApprovalConfirmationEmail(
       };
     }
 
-    console.info('[merchant-approval-confirmation][dev]', { recipients, subject, details: payload });
+    console.info('[merchant-approval-confirmation][dev]', {
+      recipients,
+      subject,
+      details: payload,
+    });
     return { sent: true, provider: 'console', recipients };
   } catch (error: any) {
     return {

@@ -11,7 +11,7 @@ const ROICalculatorSection = () => {
     newCustomers: 0,
     additionalRevenue: 0,
     totalRevenue: 0,
-    revenueIncrease: 0
+    revenueIncrease: 0,
   });
 
   useEffect(() => {
@@ -29,7 +29,7 @@ const ROICalculatorSection = () => {
         newCustomers,
         additionalRevenue,
         totalRevenue,
-        revenueIncrease
+        revenueIncrease,
       });
     }
   }, [monthlyRevenue, averageTransaction, isHydrated]);
@@ -66,22 +66,27 @@ const ROICalculatorSection = () => {
             <Icon name="CalculatorIcon" size={20} variant="solid" />
             <span className="text-sm font-headline font-semibold">ROI Calculator</span>
           </div>
-          
+
           <h2 className="font-headline font-bold text-3xl lg:text-4xl text-foreground mb-4">
             Calculate Your Potential Growth
           </h2>
           <p className="text-lg text-muted-foreground">
-            See how much your business could grow with eVoucher. Adjust the sliders to match your current business metrics.
+            See how much your business could grow with eVoucher. Adjust the sliders to match your
+            current business metrics.
           </p>
         </div>
-        
+
         <div className="bg-card rounded-2xl shadow-xl p-8 lg:p-12 border border-border">
           <div className="grid lg:grid-cols-2 gap-12">
             <div className="space-y-8">
               <div>
                 <label className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-headline font-semibold text-foreground">Current Monthly Revenue</span>
-                  <span className="text-lg font-headline font-bold text-primary">R{monthlyRevenue?.toLocaleString()}</span>
+                  <span className="text-sm font-headline font-semibold text-foreground">
+                    Current Monthly Revenue
+                  </span>
+                  <span className="text-lg font-headline font-bold text-primary">
+                    R{monthlyRevenue?.toLocaleString()}
+                  </span>
                 </label>
                 <input
                   type="range"
@@ -97,11 +102,15 @@ const ROICalculatorSection = () => {
                   <span>R200,000</span>
                 </div>
               </div>
-              
+
               <div>
                 <label className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-headline font-semibold text-foreground">Average Transaction Value</span>
-                  <span className="text-lg font-headline font-bold text-secondary">R{averageTransaction}</span>
+                  <span className="text-sm font-headline font-semibold text-foreground">
+                    Average Transaction Value
+                  </span>
+                  <span className="text-lg font-headline font-bold text-secondary">
+                    R{averageTransaction}
+                  </span>
                 </label>
                 <input
                   type="range"
@@ -117,69 +126,135 @@ const ROICalculatorSection = () => {
                   <span>R500</span>
                 </div>
               </div>
-              
+
               <div className="bg-muted/50 rounded-xl p-6">
-                <h4 className="font-headline font-bold text-lg text-foreground mb-4">Calculation Assumptions</h4>
+                <h4 className="font-headline font-bold text-lg text-foreground mb-4">
+                  Calculation Assumptions
+                </h4>
                 <div className="space-y-2">
                   <div className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={16} variant="solid" className="text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-xs font-body text-muted-foreground">Based on average merchant performance data</span>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={16}
+                      variant="solid"
+                      className="text-success flex-shrink-0 mt-0.5"
+                    />
+                    <span className="text-xs font-body text-muted-foreground">
+                      Based on average merchant performance data
+                    </span>
                   </div>
                   <div className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={16} variant="solid" className="text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-xs font-body text-muted-foreground">47% average revenue increase over 6 months</span>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={16}
+                      variant="solid"
+                      className="text-success flex-shrink-0 mt-0.5"
+                    />
+                    <span className="text-xs font-body text-muted-foreground">
+                      47% average revenue increase over 6 months
+                    </span>
                   </div>
                   <div className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={16} variant="solid" className="text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-xs font-body text-muted-foreground">320+ new customers per month on average</span>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={16}
+                      variant="solid"
+                      className="text-success flex-shrink-0 mt-0.5"
+                    />
+                    <span className="text-xs font-body text-muted-foreground">
+                      320+ new customers per month on average
+                    </span>
                   </div>
                   <div className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={16} variant="solid" className="text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-xs font-body text-muted-foreground">Results may vary based on location and category</span>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={16}
+                      variant="solid"
+                      className="text-success flex-shrink-0 mt-0.5"
+                    />
+                    <span className="text-xs font-body text-muted-foreground">
+                      Results may vary based on location and category
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-6">
-              <h3 className="font-headline font-bold text-2xl text-foreground mb-6">Your Projected Results</h3>
-              
+              <h3 className="font-headline font-bold text-2xl text-foreground mb-6">
+                Your Projected Results
+              </h3>
+
               <div className="bg-gradient-to-br from-success/10 to-success/5 rounded-xl p-6 border border-success/20">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-body text-muted-foreground">New Customers Monthly</span>
+                  <span className="text-sm font-body text-muted-foreground">
+                    New Customers Monthly
+                  </span>
                   <Icon name="UserGroupIcon" size={24} variant="outline" className="text-success" />
                 </div>
-                <p className="text-4xl font-headline font-bold text-success mb-1">+{calculatedResults?.newCustomers}</p>
-                <p className="text-xs text-muted-foreground font-body">Average new customer acquisition</p>
+                <p className="text-4xl font-headline font-bold text-success mb-1">
+                  +{calculatedResults?.newCustomers}
+                </p>
+                <p className="text-xs text-muted-foreground font-body">
+                  Average new customer acquisition
+                </p>
               </div>
-              
+
               <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-6 border border-primary/20">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-body text-muted-foreground">Additional Monthly Revenue</span>
-                  <Icon name="CurrencyDollarIcon" size={24} variant="outline" className="text-primary" />
+                  <span className="text-sm font-body text-muted-foreground">
+                    Additional Monthly Revenue
+                  </span>
+                  <Icon
+                    name="CurrencyDollarIcon"
+                    size={24}
+                    variant="outline"
+                    className="text-primary"
+                  />
                 </div>
-                <p className="text-4xl font-headline font-bold text-primary mb-1">R{calculatedResults?.additionalRevenue?.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground font-body">Projected revenue increase</p>
+                <p className="text-4xl font-headline font-bold text-primary mb-1">
+                  R{calculatedResults?.additionalRevenue?.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground font-body">
+                  Projected revenue increase
+                </p>
               </div>
-              
+
               <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-xl p-6 border border-secondary/20">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-body text-muted-foreground">Total Monthly Revenue</span>
-                  <Icon name="TrendingUpIcon" size={24} variant="outline" className="text-secondary" />
+                  <span className="text-sm font-body text-muted-foreground">
+                    Total Monthly Revenue
+                  </span>
+                  <Icon
+                    name="TrendingUpIcon"
+                    size={24}
+                    variant="outline"
+                    className="text-secondary"
+                  />
                 </div>
-                <p className="text-4xl font-headline font-bold text-secondary mb-1">R{calculatedResults?.totalRevenue?.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground font-body">Your new projected revenue</p>
+                <p className="text-4xl font-headline font-bold text-secondary mb-1">
+                  R{calculatedResults?.totalRevenue?.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground font-body">
+                  Your new projected revenue
+                </p>
               </div>
-              
+
               <div className="bg-gradient-to-br from-accent/10 to-accent/5 rounded-xl p-6 border border-accent/20">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-body text-muted-foreground">Revenue Growth Rate</span>
+                  <span className="text-sm font-body text-muted-foreground">
+                    Revenue Growth Rate
+                  </span>
                   <Icon name="ChartBarIcon" size={24} variant="outline" className="text-accent" />
                 </div>
-                <p className="text-4xl font-headline font-bold text-accent mb-1">+{calculatedResults?.revenueIncrease}%</p>
-                <p className="text-xs text-muted-foreground font-body">Average growth over 6 months</p>
+                <p className="text-4xl font-headline font-bold text-accent mb-1">
+                  +{calculatedResults?.revenueIncrease}%
+                </p>
+                <p className="text-xs text-muted-foreground font-body">
+                  Average growth over 6 months
+                </p>
               </div>
-              
+
               <div className="bg-action/10 rounded-xl p-6 text-center">
                 <p className="text-sm font-body text-foreground mb-4">
                   Ready to achieve these results for your business?

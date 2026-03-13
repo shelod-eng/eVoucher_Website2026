@@ -8,12 +8,12 @@ interface AuditCapabilityCardProps {
   accessLevel: string;
 }
 
-export default function AuditCapabilityCard({ 
-  title, 
-  description, 
-  icon, 
-  features, 
-  accessLevel 
+export default function AuditCapabilityCard({
+  title,
+  description,
+  icon,
+  features,
+  accessLevel,
 }: AuditCapabilityCardProps) {
   return (
     <div className="bg-card rounded-lg shadow-md p-6 border border-border hover:shadow-lg transition-shadow duration-300">
@@ -31,11 +31,16 @@ export default function AuditCapabilityCard({
           <p className="text-sm text-muted-foreground font-body">{description}</p>
         </div>
       </div>
-      
+
       <div className="space-y-2">
         {features.map((feature, index) => (
           <div key={index} className="flex items-center space-x-2">
-            <Icon name="CheckCircleIcon" size={16} variant="solid" className="text-success flex-shrink-0" />
+            <Icon
+              name="CheckCircleIcon"
+              size={16}
+              variant="solid"
+              className="text-success flex-shrink-0"
+            />
             <span className="text-sm font-body text-foreground">{feature}</span>
           </div>
         ))}

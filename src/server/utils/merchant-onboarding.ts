@@ -151,7 +151,9 @@ function isUuid(value: string) {
 }
 
 function isUserIdTypeMismatch(error: any) {
-  const code = String(error?.code ?? '').trim().toLowerCase();
+  const code = String(error?.code ?? '')
+    .trim()
+    .toLowerCase();
   const message = String(error?.message ?? '').toLowerCase();
   return (
     code === '22p02' ||
@@ -181,11 +183,15 @@ function normalizeText(value: unknown) {
 }
 
 function normalizeEmail(value: unknown) {
-  return String(value ?? '').trim().toLowerCase();
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 function normalizeMerchantType(value: unknown): MerchantType {
-  const normalized = String(value ?? '').trim().toLowerCase();
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
   return normalized === 'private' ? 'private' : 'chain';
 }
 
@@ -204,7 +210,10 @@ function generateOtpCode() {
 function generateTemporaryPassword() {
   // Keep temporary passwords copy/paste friendly to avoid email-client symbol issues.
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  return Array.from({ length: 14 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+  return Array.from(
+    { length: 14 },
+    () => alphabet[Math.floor(Math.random() * alphabet.length)]
+  ).join('');
 }
 
 function shouldExposeDebugSecrets() {
@@ -235,7 +244,9 @@ function isSmsEnabled() {
 }
 
 function isOtpVerificationRequired() {
-  const raw = String(process.env.MERCHANT_REQUIRE_SMS_OTP ?? '').trim().toLowerCase();
+  const raw = String(process.env.MERCHANT_REQUIRE_SMS_OTP ?? '')
+    .trim()
+    .toLowerCase();
   if (!raw) return false;
   return raw === 'true' || raw === '1' || raw === 'yes';
 }
@@ -559,7 +570,10 @@ async function updateMerchantApprovalState(
     user_id: args.userId,
   };
 
-  const { error: primaryError } = await admin.from('merchants').update(withUserId).eq('id', args.merchantId);
+  const { error: primaryError } = await admin
+    .from('merchants')
+    .update(withUserId)
+    .eq('id', args.merchantId);
   if (!primaryError) {
     return { userIdPersisted: true as const, finalStatus: 'approved' as const };
   }
@@ -568,7 +582,10 @@ async function updateMerchantApprovalState(
     throw primaryError;
   }
 
-  const { error: fallbackError } = await admin.from('merchants').update(baseUpdate).eq('id', args.merchantId);
+  const { error: fallbackError } = await admin
+    .from('merchants')
+    .update(baseUpdate)
+    .eq('id', args.merchantId);
   if (!fallbackError) {
     return { userIdPersisted: false as const, finalStatus: 'approved' as const };
   }
@@ -620,7 +637,10 @@ async function updateMerchantCredentialIssuanceState(
     user_id: args.userId,
   };
 
-  const { error: primaryError } = await admin.from('merchants').update(withUserId).eq('id', args.merchantId);
+  const { error: primaryError } = await admin
+    .from('merchants')
+    .update(withUserId)
+    .eq('id', args.merchantId);
   if (!primaryError) {
     return { userIdPersisted: true as const };
   }
@@ -629,7 +649,10 @@ async function updateMerchantCredentialIssuanceState(
     throw primaryError;
   }
 
-  const { error: fallbackError } = await admin.from('merchants').update(baseUpdate).eq('id', args.merchantId);
+  const { error: fallbackError } = await admin
+    .from('merchants')
+    .update(baseUpdate)
+    .eq('id', args.merchantId);
   if (fallbackError) throw fallbackError;
   return { userIdPersisted: false as const };
 }
@@ -731,7 +754,9 @@ export async function submitMerchantOnboarding(args: {
   const now = new Date();
   const emailToken = generateEmailToken();
   const emailTokenHash = hashSecret(emailToken);
-  const emailExpiry = new Date(now.getTime() + EMAIL_TOKEN_TTL_HOURS * 60 * 60 * 1000).toISOString();
+  const emailExpiry = new Date(
+    now.getTime() + EMAIL_TOKEN_TTL_HOURS * 60 * 60 * 1000
+  ).toISOString();
 
   const { error: verificationError } = await admin.from('merchant_onboarding_verifications').upsert(
     {
@@ -796,7 +821,10 @@ export async function submitMerchantOnboarding(args: {
       approvedAt: null,
     });
   } catch (notifyError) {
-    console.warn('[merchant-onboarding][notify][warn]', (notifyError as any)?.message || notifyError);
+    console.warn(
+      '[merchant-onboarding][notify][warn]',
+      (notifyError as any)?.message || notifyError
+    );
   }
 
   return {
@@ -832,7 +860,8 @@ export async function getMerchantOnboardingStatus(merchantId: string) {
   const admin = createAdminClient();
   const merchant = await getMerchantById(admin, merchantId);
   const verification = await getVerificationByMerchantId(admin, merchantId);
-  const emailVerified = Boolean(merchant.email_verified) || Boolean(verification?.email_verified_at);
+  const emailVerified =
+    Boolean(merchant.email_verified) || Boolean(verification?.email_verified_at);
   const phoneVerified = Boolean(merchant.phone_verified) || Boolean(verification?.sms_verified_at);
   const credentialsIssued = Boolean(verification?.credentials_sent_at);
   const mustResetPassword = Boolean(merchant.must_reset_password);
@@ -865,7 +894,8 @@ export async function getMerchantOnboardingStatus(merchantId: string) {
     email: merchant.email,
     merchantType: merchant.merchant_type ?? 'chain',
     status: resolvedStatus,
-    vettingStatus: merchant.vetting_status ?? resolveInitialVettingStatus(merchant.merchant_type ?? 'chain'),
+    vettingStatus:
+      merchant.vetting_status ?? resolveInitialVettingStatus(merchant.merchant_type ?? 'chain'),
     emailVerified,
     phoneVerified,
     credentialsIssued,
@@ -896,7 +926,8 @@ export async function verifyMerchantEmailToken(args: {
     return { ok: false as const, status: 404, error: 'Email verification record not found.' };
   }
   const tokenMatches = hashSecret(token) === verification.email_token_hash;
-  if (!tokenMatches) return { ok: false as const, status: 400, error: 'Invalid verification token.' };
+  if (!tokenMatches)
+    return { ok: false as const, status: 400, error: 'Invalid verification token.' };
   const tokenExpiry = verification.email_token_expires_at
     ? new Date(verification.email_token_expires_at).getTime()
     : 0;
@@ -921,7 +952,8 @@ export async function verifyMerchantEmailToken(args: {
   const merchant = await getMerchantById(admin, merchantId);
   const smsEnabled = isSmsEnabled();
   const otpRequired = isOtpVerificationRequired() && smsEnabled;
-  const phoneWasVerified = Boolean(merchant.phone_verified) || Boolean(verification.sms_verified_at);
+  const phoneWasVerified =
+    Boolean(merchant.phone_verified) || Boolean(verification.sms_verified_at);
   let phoneAlreadyVerified = phoneWasVerified;
   let emailOnlyPhoneVerificationApplied = false;
   let smsOtpSent = false;
@@ -980,14 +1012,12 @@ export async function verifyMerchantEmailToken(args: {
       requestId: null,
     });
 
-    let postConfirmationCredentials:
-      | {
-          sent: boolean;
-          recipient: string;
-          provider: 'resend' | 'console';
-          error?: string;
-        }
-      | null = null;
+    let postConfirmationCredentials: {
+      sent: boolean;
+      recipient: string;
+      provider: 'resend' | 'console';
+      error?: string;
+    } | null = null;
     let postConfirmationTemporaryPassword: string | null = null;
 
     // If confirmation succeeded but approval is still pending, issue credentials immediately.
@@ -1036,7 +1066,7 @@ export async function verifyMerchantEmailToken(args: {
           : ` SMS OTP delivery failed: ${smsOtpDeliveryError ?? 'unknown error'}.`
         : emailOnlyPhoneVerificationApplied
           ? ' Phone verification completed via email confirmation.'
-        : '';
+          : '';
     const credentialsMessageSuffix = postConfirmationCredentials
       ? postConfirmationCredentials.sent
         ? ` Login credentials sent to ${postConfirmationCredentials.recipient} via ${postConfirmationCredentials.provider}.`
@@ -1052,7 +1082,9 @@ export async function verifyMerchantEmailToken(args: {
               : {}),
             otpCode: issuedOtpCode,
             smsOtpDeliveryError: smsOtpDeliveryError ?? null,
-            ...(postConfirmationTemporaryPassword ? { temporaryPassword: postConfirmationTemporaryPassword } : {}),
+            ...(postConfirmationTemporaryPassword
+              ? { temporaryPassword: postConfirmationTemporaryPassword }
+              : {}),
             ...(postConfirmationCredentials
               ? {
                   credentialsEmailRecipient: postConfirmationCredentials.recipient,
@@ -1068,19 +1100,26 @@ export async function verifyMerchantEmailToken(args: {
       ('credentialsEmailSent' in finalizeResult ? finalizeResult.credentialsEmailSent : undefined);
     const credentialsEmailRecipient =
       postConfirmationCredentials?.recipient ??
-      ('credentialsEmailRecipient' in finalizeResult ? finalizeResult.credentialsEmailRecipient : undefined);
+      ('credentialsEmailRecipient' in finalizeResult
+        ? finalizeResult.credentialsEmailRecipient
+        : undefined);
     const credentialsEmailProvider =
       postConfirmationCredentials?.provider ??
-      ('credentialsEmailProvider' in finalizeResult ? finalizeResult.credentialsEmailProvider : undefined);
+      ('credentialsEmailProvider' in finalizeResult
+        ? finalizeResult.credentialsEmailProvider
+        : undefined);
     const credentialsEmailError =
-      (postConfirmationCredentials ? postConfirmationCredentials.error ?? null : undefined) ??
-      ('credentialsEmailError' in finalizeResult ? finalizeResult.credentialsEmailError : undefined);
+      (postConfirmationCredentials ? (postConfirmationCredentials.error ?? null) : undefined) ??
+      ('credentialsEmailError' in finalizeResult
+        ? finalizeResult.credentialsEmailError
+        : undefined);
 
     return {
       ok: true as const,
       httpStatus: 200,
       ...finalizeResult,
-      message: `${finalizeResult.message ?? 'Email verified.'}${otpMessageSuffix}${credentialsMessageSuffix}`.trim(),
+      message:
+        `${finalizeResult.message ?? 'Email verified.'}${otpMessageSuffix}${credentialsMessageSuffix}`.trim(),
       otpSent: otpRequired && !phoneWasVerified ? smsOtpSent : undefined,
       otpDeliveryError: otpRequired && !phoneWasVerified ? smsOtpDeliveryError : undefined,
       credentialsEmailSent,
@@ -1138,7 +1177,12 @@ export async function verifyMerchantEmailToken(args: {
             : `Email verified. Approval is pending KYC review, and credentials email failed: ${credentialsEmailResult.error ?? 'unknown error'}`,
           statusData: await getMerchantOnboardingStatus(merchantId),
           ...(shouldExposeDebugSecrets()
-            ? { debug: { temporaryPassword, credentialsEmailError: credentialsEmailResult.error ?? null } }
+            ? {
+                debug: {
+                  temporaryPassword,
+                  credentialsEmailError: credentialsEmailResult.error ?? null,
+                },
+              }
             : {}),
         };
       } catch (issueError) {
@@ -1192,8 +1236,12 @@ export async function verifyMerchantEmailToken(args: {
       approvalConfirmationSent = confirmationResult.sent;
       approvalConfirmationError = confirmationResult.error ?? null;
     } catch (confirmError) {
-      approvalConfirmationError = (confirmError as any)?.message || 'Approval confirmation email failed.';
-      console.warn('[merchant-email-verify][approval-confirmation][warn]', approvalConfirmationError);
+      approvalConfirmationError =
+        (confirmError as any)?.message || 'Approval confirmation email failed.';
+      console.warn(
+        '[merchant-email-verify][approval-confirmation][warn]',
+        approvalConfirmationError
+      );
     }
 
     return {
@@ -1215,11 +1263,19 @@ export async function verifyMerchantEmailToken(args: {
       approvalConfirmationError,
       statusData: await getMerchantOnboardingStatus(merchantId),
       ...(shouldExposeDebugSecrets()
-        ? { debug: { temporaryPassword, credentialsEmailError: credentialsEmailResult.error ?? null } }
+        ? {
+            debug: {
+              temporaryPassword,
+              credentialsEmailError: credentialsEmailResult.error ?? null,
+            },
+          }
         : {}),
     };
   } catch (fallbackErr) {
-    console.warn('[merchant-email-verify][fatal-fallback]', (fallbackErr as any)?.message || fallbackErr);
+    console.warn(
+      '[merchant-email-verify][fatal-fallback]',
+      (fallbackErr as any)?.message || fallbackErr
+    );
     return {
       ok: true as const,
       httpStatus: 200,
@@ -1262,10 +1318,18 @@ export async function verifyMerchantOtp(args: {
     };
   }
   if (!otpCode) {
-    return { ok: false as const, status: 400, error: 'otpCode is required when OTP verification is enabled.' };
+    return {
+      ok: false as const,
+      status: 400,
+      error: 'otpCode is required when OTP verification is enabled.',
+    };
   }
   if (!isSmsEnabled()) {
-    return { ok: false as const, status: 503, error: 'SMS OTP is required but SMS provider is not configured.' };
+    return {
+      ok: false as const,
+      status: 503,
+      error: 'SMS OTP is required but SMS provider is not configured.',
+    };
   }
 
   const verification = await getVerificationByMerchantId(admin, merchantId);
@@ -1289,10 +1353,16 @@ export async function verifyMerchantOtp(args: {
 
   const attempts = Number(verification.otp_attempts ?? 0);
   if (attempts >= OTP_MAX_ATTEMPTS) {
-    return { ok: false as const, status: 429, error: 'Too many OTP attempts. Please request a new OTP.' };
+    return {
+      ok: false as const,
+      status: 429,
+      error: 'Too many OTP attempts. Please request a new OTP.',
+    };
   }
 
-  const otpExpiry = verification.sms_otp_expires_at ? new Date(verification.sms_otp_expires_at).getTime() : 0;
+  const otpExpiry = verification.sms_otp_expires_at
+    ? new Date(verification.sms_otp_expires_at).getTime()
+    : 0;
   if (!otpExpiry || otpExpiry < Date.now()) {
     return { ok: false as const, status: 400, error: 'OTP has expired.' };
   }
@@ -1389,7 +1459,11 @@ export async function resendMerchantVerificationEmail(args: {
 
   const merchant = await getMerchantById(admin, merchantId);
   if (normalizeEmail(merchant.email) !== email) {
-    return { ok: false as const, status: 403, error: 'Merchant email does not match onboarding record.' };
+    return {
+      ok: false as const,
+      status: 403,
+      error: 'Merchant email does not match onboarding record.',
+    };
   }
 
   const verification = await getVerificationByMerchantId(admin, merchantId);
@@ -1397,7 +1471,8 @@ export async function resendMerchantVerificationEmail(args: {
     return { ok: false as const, status: 404, error: 'Merchant verification record not found.' };
   }
 
-  const alreadyVerified = Boolean(merchant.email_verified) || Boolean(verification.email_verified_at);
+  const alreadyVerified =
+    Boolean(merchant.email_verified) || Boolean(verification.email_verified_at);
   if (alreadyVerified) {
     return {
       ok: true as const,
@@ -1411,7 +1486,9 @@ export async function resendMerchantVerificationEmail(args: {
   const now = new Date();
   const emailToken = generateEmailToken();
   const emailTokenHash = hashSecret(emailToken);
-  const emailExpiry = new Date(now.getTime() + EMAIL_TOKEN_TTL_HOURS * 60 * 60 * 1000).toISOString();
+  const emailExpiry = new Date(
+    now.getTime() + EMAIL_TOKEN_TTL_HOURS * 60 * 60 * 1000
+  ).toISOString();
   const { error: verificationUpdateError } = await admin
     .from('merchant_onboarding_verifications')
     .update({
@@ -1452,7 +1529,9 @@ export async function resendMerchantVerificationEmail(args: {
     message: emailResult.sent
       ? `Verification email resent to ${emailResult.recipient}.`
       : `Verification email resend failed: ${emailDeliveryError ?? 'unknown error'}`,
-    error: emailResult.sent ? undefined : emailDeliveryError ?? 'Failed to resend verification email.',
+    error: emailResult.sent
+      ? undefined
+      : (emailDeliveryError ?? 'Failed to resend verification email.'),
     statusData: await getMerchantOnboardingStatus(merchantId),
     ...(shouldExposeDebugSecrets()
       ? {
@@ -1492,7 +1571,8 @@ export async function resendMerchantCredentials(args: {
     return {
       ok: false as const,
       status: 409,
-      error: 'Merchant must be approved with a linked auth account before credentials can be resent.',
+      error:
+        'Merchant must be approved with a linked auth account before credentials can be resent.',
     };
   }
 
@@ -1543,10 +1623,14 @@ export async function resendMerchantCredentials(args: {
     message: credentialsEmailResult.sent
       ? 'Credentials resent successfully.'
       : `Merchant approved, but credentials email failed: ${credentialsEmailResult.error ?? 'unknown error'}`,
-    error: credentialsEmailResult.sent ? undefined : credentialsEmailResult.error ?? 'Failed to send credentials email.',
+    error: credentialsEmailResult.sent
+      ? undefined
+      : (credentialsEmailResult.error ?? 'Failed to send credentials email.'),
     statusData: await getMerchantOnboardingStatus(merchantId),
     ...(shouldExposeDebugSecrets()
-      ? { debug: { temporaryPassword, credentialsEmailError: credentialsEmailResult.error ?? null } }
+      ? {
+          debug: { temporaryPassword, credentialsEmailError: credentialsEmailResult.error ?? null },
+        }
       : {}),
   };
 }
@@ -1555,12 +1639,17 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
   const admin = createAdminClient();
   const merchant = await getMerchantById(admin, options.merchantId);
   const verification = await getVerificationByMerchantId(admin, options.merchantId);
-  const emailVerified = Boolean(merchant.email_verified) || Boolean(verification?.email_verified_at);
+  const emailVerified =
+    Boolean(merchant.email_verified) || Boolean(verification?.email_verified_at);
   const phoneVerified = Boolean(merchant.phone_verified) || Boolean(verification?.sms_verified_at);
   const prototypeApprovalMode = isPrototypeApprovalMode();
   const forceAutoApprovalMode = isForcedAutoApprovalMode();
 
-  if (merchant.status === 'approved' && Boolean(verification?.credentials_sent_at) && Boolean(merchant.user_id)) {
+  if (
+    merchant.status === 'approved' &&
+    Boolean(verification?.credentials_sent_at) &&
+    Boolean(merchant.user_id)
+  ) {
     return {
       approved: true,
       status: 'approved',
@@ -1697,7 +1786,8 @@ async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId:
     approvalConfirmationSent = confirmationResult.sent;
     approvalConfirmationError = confirmationResult.error ?? null;
   } catch (confirmError) {
-    approvalConfirmationError = (confirmError as any)?.message || 'Approval confirmation email failed.';
+    approvalConfirmationError =
+      (confirmError as any)?.message || 'Approval confirmation email failed.';
     console.warn('[merchant-approval][confirmation-email][warn]', approvalConfirmationError);
   }
 

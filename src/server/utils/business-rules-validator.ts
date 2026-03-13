@@ -63,10 +63,9 @@ export function validateR2_ConsumerPaysLessThanFaceValue(
 
   // Additional validation: ensure consumer price matches the consumer-facing share.
   // In this platform model, total discount is split 50/50 between consumer and platform.
-  const effectiveConsumerPct =
-    Number.isFinite(Number(consumerBenefitPct))
-      ? Number(consumerBenefitPct)
-      : Number(totalDiscountPct) / 2;
+  const effectiveConsumerPct = Number.isFinite(Number(consumerBenefitPct))
+    ? Number(consumerBenefitPct)
+    : Number(totalDiscountPct) / 2;
   const expectedConsumerPrice = faceValue * (1 - effectiveConsumerPct / 100);
   const priceDiff = Math.abs(consumerPrice - expectedConsumerPrice);
   if (priceDiff > 0.01) {
@@ -118,7 +117,7 @@ export function validateR4_ActiveProductsVisibleToConsumers(
   // 1. RLS Policies: Only active products visible in SELECT
   // 2. Real-time Subscriptions: Consumers see changes instantly
   // 3. Cache Invalidation: React Query invalidates 'shopProducts' on merchant update
-  
+
   if (!isActive) {
     // Product is inactive - should NOT appear in consumer shop
     // This should be verified via RLS when querying VoucherProduct
@@ -192,23 +191,17 @@ export function validateR6_DiscountRangeEnforcement(
   let adjustedValue = totalDiscountPct;
 
   if (!Number.isFinite(totalDiscountPct)) {
-    violations.push(
-      `Total discount must be a finite number. Got: ${totalDiscountPct}`
-    );
+    violations.push(`Total discount must be a finite number. Got: ${totalDiscountPct}`);
     adjustedValue = defaultPct;
   }
 
   if (totalDiscountPct < minPct) {
-    violations.push(
-      `Total discount ${totalDiscountPct}% is below minimum ${minPct}%`
-    );
+    violations.push(`Total discount ${totalDiscountPct}% is below minimum ${minPct}%`);
     adjustedValue = minPct;
   }
 
   if (totalDiscountPct > maxPct) {
-    violations.push(
-      `Total discount ${totalDiscountPct}% exceeds maximum ${maxPct}%`
-    );
+    violations.push(`Total discount ${totalDiscountPct}% exceeds maximum ${maxPct}%`);
     adjustedValue = maxPct;
   }
 
@@ -255,10 +248,7 @@ export function validateAllCriticalRules(pricing: DiscountPricingBreakdown): {
   const r6 = validateR6_DiscountRangeEnforcement(pricing.totalDiscountPct);
   if (!r6.isValid) {
     violations.push(
-      new BusinessRuleViolation(
-        'R6',
-        `Discount range violations: ${r6.violations.join(', ')}`
-      )
+      new BusinessRuleViolation('R6', `Discount range violations: ${r6.violations.join(', ')}`)
     );
   }
 

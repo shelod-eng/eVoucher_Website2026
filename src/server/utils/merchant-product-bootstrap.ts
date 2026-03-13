@@ -15,7 +15,9 @@ type StarterTemplate = {
 };
 
 function normalizeBusinessType(value: unknown) {
-  return String(value ?? '').trim().toLowerCase();
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 function resolveStarterTemplates(merchant: MerchantBootstrapRecord): StarterTemplate[] {
@@ -46,10 +48,7 @@ function resolveStarterTemplates(merchant: MerchantBootstrapRecord): StarterTemp
   ];
 }
 
-export async function ensureMerchantStarterProducts(
-  admin: any,
-  merchant: MerchantBootstrapRecord
-) {
+export async function ensureMerchantStarterProducts(admin: any, merchant: MerchantBootstrapRecord) {
   const { count, error: countError } = await admin
     .from('merchant_products')
     .select('id', { count: 'exact', head: true })
@@ -87,4 +86,3 @@ export async function ensureMerchantStarterProducts(
   if (insertError) throw insertError;
   return { inserted: rows.length, skipped: false as const };
 }
-

@@ -27,8 +27,8 @@ const InvestmentSection = () => {
       allocation: [
         { category: 'Technology Development', percentage: 50, amount: 'R 25M' },
         { category: 'Pilot Operations', percentage: 30, amount: 'R 15M' },
-        { category: 'Team Building', percentage: 20, amount: 'R 10M' }
-      ]
+        { category: 'Team Building', percentage: 20, amount: 'R 10M' },
+      ],
     },
     {
       id: 2,
@@ -39,8 +39,8 @@ const InvestmentSection = () => {
       allocation: [
         { category: 'Market Expansion', percentage: 40, amount: 'R 60M' },
         { category: 'Technology Scaling', percentage: 35, amount: 'R 52.5M' },
-        { category: 'Marketing & Growth', percentage: 25, amount: 'R 37.5M' }
-      ]
+        { category: 'Marketing & Growth', percentage: 25, amount: 'R 37.5M' },
+      ],
     },
     {
       id: 3,
@@ -51,9 +51,9 @@ const InvestmentSection = () => {
       allocation: [
         { category: 'National Infrastructure', percentage: 45, amount: 'R 135M' },
         { category: 'Merchant Onboarding', percentage: 30, amount: 'R 90M' },
-        { category: 'Government Partnerships', percentage: 25, amount: 'R 75M' }
-      ]
-    }
+        { category: 'Government Partnerships', percentage: 25, amount: 'R 75M' },
+      ],
+    },
   ];
 
   return (
@@ -68,13 +68,18 @@ const InvestmentSection = () => {
             Funding Strategy & Allocation
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Transparent breakdown of capital requirements and strategic allocation across development phases. Total funding target: <span className="font-bold text-foreground">R 500M</span> over 3 years
+            Transparent breakdown of capital requirements and strategic allocation across
+            development phases. Total funding target:{' '}
+            <span className="font-bold text-foreground">R 500M</span> over 3 years
           </p>
         </div>
 
         <div className="space-y-8 mb-12">
           {fundingRounds.map((round) => (
-            <div key={round.id} className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+            <div
+              key={round.id}
+              className="bg-card rounded-xl shadow-lg border border-border overflow-hidden"
+            >
               <div className="bg-gradient-to-r from-primary/10 to-secondary/10 px-6 py-4 border-b border-border">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                   <div>
@@ -109,7 +114,7 @@ const InvestmentSection = () => {
                         </div>
                       </div>
                       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-700"
                           style={{ width: `${item.percentage}%` }}
                         ></div>
@@ -134,20 +139,48 @@ const InvestmentSection = () => {
                 </h4>
                 <ul className="space-y-2">
                   <li className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={18} variant="solid" className="text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-muted-foreground">32% projected ROI by Year 3</span>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={18}
+                      variant="solid"
+                      className="text-success flex-shrink-0 mt-0.5"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      32% projected ROI by Year 3
+                    </span>
                   </li>
                   <li className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={18} variant="solid" className="text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-muted-foreground">Break-even achieved in Month 18</span>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={18}
+                      variant="solid"
+                      className="text-success flex-shrink-0 mt-0.5"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Break-even achieved in Month 18
+                    </span>
                   </li>
                   <li className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={18} variant="solid" className="text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-muted-foreground">Positive cash flow from Year 2</span>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={18}
+                      variant="solid"
+                      className="text-success flex-shrink-0 mt-0.5"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Positive cash flow from Year 2
+                    </span>
                   </li>
                   <li className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={18} variant="solid" className="text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-muted-foreground">Exit opportunities from Year 4</span>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={18}
+                      variant="solid"
+                      className="text-success flex-shrink-0 mt-0.5"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Exit opportunities from Year 4
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -165,20 +198,46 @@ const InvestmentSection = () => {
                 </h4>
                 <ul className="space-y-2">
                   <li className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={18} variant="solid" className="text-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-muted-foreground">Diversified revenue streams</span>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={18}
+                      variant="solid"
+                      className="text-primary flex-shrink-0 mt-0.5"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Diversified revenue streams
+                    </span>
                   </li>
                   <li className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={18} variant="solid" className="text-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-muted-foreground">Government partnership backing</span>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={18}
+                      variant="solid"
+                      className="text-primary flex-shrink-0 mt-0.5"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Government partnership backing
+                    </span>
                   </li>
                   <li className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={18} variant="solid" className="text-primary flex-shrink-0 mt-0.5" />
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={18}
+                      variant="solid"
+                      className="text-primary flex-shrink-0 mt-0.5"
+                    />
                     <span className="text-sm text-muted-foreground">Proven market demand</span>
                   </li>
                   <li className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={18} variant="solid" className="text-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-muted-foreground">Scalable technology platform</span>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={18}
+                      variant="solid"
+                      className="text-primary flex-shrink-0 mt-0.5"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Scalable technology platform
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -195,7 +254,7 @@ const InvestmentSection = () => {
               Join us in building South Africa's leading social impact commerce platform
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="text-center">
               <div className="text-3xl font-headline font-bold text-primary mb-1">R 2.4B</div>

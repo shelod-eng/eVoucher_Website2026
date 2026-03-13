@@ -19,7 +19,11 @@ export async function GET(request: Request) {
       },
     });
   } catch (error: any) {
-    if (String(error?.message ?? '').toLowerCase().includes('invalid merchantid format')) {
+    if (
+      String(error?.message ?? '')
+        .toLowerCase()
+        .includes('invalid merchantid format')
+    ) {
       return NextResponse.json({ error: 'Invalid merchantId format.' }, { status: 400 });
     }
     return NextResponse.json(

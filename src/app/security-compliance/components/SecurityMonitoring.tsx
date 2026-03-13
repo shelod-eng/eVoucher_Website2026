@@ -31,87 +31,87 @@ const SecurityMonitoring = () => {
   const securityMetrics: SecurityMetric[] = [
     {
       id: 1,
-      label: "System Uptime",
-      value: "99.98%",
-      trend: "stable",
-      icon: "ServerIcon",
-      status: "healthy"
+      label: 'System Uptime',
+      value: '99.98%',
+      trend: 'stable',
+      icon: 'ServerIcon',
+      status: 'healthy',
     },
     {
       id: 2,
-      label: "Blocked Threats",
-      value: "1,247",
-      trend: "down",
-      icon: "ShieldExclamationIcon",
-      status: "healthy"
+      label: 'Blocked Threats',
+      value: '1,247',
+      trend: 'down',
+      icon: 'ShieldExclamationIcon',
+      status: 'healthy',
     },
     {
       id: 3,
-      label: "Active Sessions",
-      value: "45,892",
-      trend: "up",
-      icon: "UsersIcon",
-      status: "healthy"
+      label: 'Active Sessions',
+      value: '45,892',
+      trend: 'up',
+      icon: 'UsersIcon',
+      status: 'healthy',
     },
     {
       id: 4,
-      label: "Failed Login Attempts",
-      value: "23",
-      trend: "down",
-      icon: "LockClosedIcon",
-      status: "healthy"
+      label: 'Failed Login Attempts',
+      value: '23',
+      trend: 'down',
+      icon: 'LockClosedIcon',
+      status: 'healthy',
     },
     {
       id: 5,
-      label: "API Response Time",
-      value: "127ms",
-      trend: "stable",
-      icon: "BoltIcon",
-      status: "healthy"
+      label: 'API Response Time',
+      value: '127ms',
+      trend: 'stable',
+      icon: 'BoltIcon',
+      status: 'healthy',
     },
     {
       id: 6,
-      label: "Data Encryption Rate",
-      value: "100%",
-      trend: "stable",
-      icon: "KeyIcon",
-      status: "healthy"
-    }
+      label: 'Data Encryption Rate',
+      value: '100%',
+      trend: 'stable',
+      icon: 'KeyIcon',
+      status: 'healthy',
+    },
   ];
 
   const recentSecurityEvents: SecurityEvent[] = [
     {
       id: 1,
-      timestamp: "04/01/2026 11:45",
-      type: "Suspicious Login Attempt",
-      severity: "medium",
-      description: "Multiple failed login attempts from unusual location blocked",
-      status: "resolved"
+      timestamp: '04/01/2026 11:45',
+      type: 'Suspicious Login Attempt',
+      severity: 'medium',
+      description: 'Multiple failed login attempts from unusual location blocked',
+      status: 'resolved',
     },
     {
       id: 2,
-      timestamp: "04/01/2026 10:22",
-      type: "DDoS Mitigation",
-      severity: "high",
-      description: "Automated DDoS attack detected and mitigated successfully",
-      status: "resolved"
+      timestamp: '04/01/2026 10:22',
+      type: 'DDoS Mitigation',
+      severity: 'high',
+      description: 'Automated DDoS attack detected and mitigated successfully',
+      status: 'resolved',
     },
     {
       id: 3,
-      timestamp: "04/01/2026 09:15",
-      type: "Unusual Transaction Pattern",
-      severity: "low",
-      description: "Velocity check triggered for merchant account, under review",
-      status: "monitoring"
+      timestamp: '04/01/2026 09:15',
+      type: 'Unusual Transaction Pattern',
+      severity: 'low',
+      description: 'Velocity check triggered for merchant account, under review',
+      status: 'monitoring',
     },
     {
       id: 4,
-      timestamp: "04/01/2026 08:30",
-      type: "Security Scan Completed",
-      severity: "low",
-      description: "Daily vulnerability scan completed with no issues found",
-      status: "resolved"
-    }
+      timestamp: '04/01/2026 08:30',
+      type: 'Security Scan Completed',
+      severity: 'low',
+      description: 'Daily vulnerability scan completed with no issues found',
+      status: 'resolved',
+    },
   ];
 
   const getStatusColor = (status: string) => {
@@ -186,30 +186,47 @@ const SecurityMonitoring = () => {
           {securityMetrics.map((metric) => (
             <div key={metric.id} className="bg-card rounded-lg shadow-md p-6 border border-border">
               <div className="flex items-start justify-between mb-4">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getStatusColor(metric.status)}`}>
+                <div
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center ${getStatusColor(metric.status)}`}
+                >
                   <Icon name={metric.icon as any} size={24} variant="outline" />
                 </div>
-                <div className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(metric.status)}`}>
+                <div
+                  className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(metric.status)}`}
+                >
                   {metric.status.toUpperCase()}
                 </div>
               </div>
-              
-              <h3 className="font-body text-sm text-muted-foreground mb-2">
-                {metric.label}
-              </h3>
-              
+
+              <h3 className="font-body text-sm text-muted-foreground mb-2">{metric.label}</h3>
+
               <div className="flex items-end justify-between">
                 <span className="font-headline font-bold text-3xl text-foreground">
                   {metric.value}
                 </span>
                 {metric.trend === 'up' && (
-                  <Icon name="ArrowTrendingUpIcon" size={20} variant="outline" className="text-success" />
+                  <Icon
+                    name="ArrowTrendingUpIcon"
+                    size={20}
+                    variant="outline"
+                    className="text-success"
+                  />
                 )}
                 {metric.trend === 'down' && (
-                  <Icon name="ArrowTrendingDownIcon" size={20} variant="outline" className="text-success" />
+                  <Icon
+                    name="ArrowTrendingDownIcon"
+                    size={20}
+                    variant="outline"
+                    className="text-success"
+                  />
                 )}
                 {metric.trend === 'stable' && (
-                  <Icon name="MinusIcon" size={20} variant="outline" className="text-muted-foreground" />
+                  <Icon
+                    name="MinusIcon"
+                    size={20}
+                    variant="outline"
+                    className="text-muted-foreground"
+                  />
                 )}
               </div>
             </div>
@@ -222,7 +239,7 @@ const SecurityMonitoring = () => {
               Recent Security Events
             </h3>
           </div>
-          
+
           <div className="divide-y divide-border">
             {recentSecurityEvents.map((event) => (
               <div key={event.id} className="p-6 hover:bg-muted/30 transition-colors duration-200">
@@ -232,10 +249,14 @@ const SecurityMonitoring = () => {
                       <h4 className="font-body font-semibold text-base text-foreground">
                         {event.type}
                       </h4>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getSeverityColor(event.severity)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${getSeverityColor(event.severity)}`}
+                      >
                         {event.severity.toUpperCase()}
                       </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getEventStatusColor(event.status)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${getEventStatusColor(event.status)}`}
+                      >
                         {event.status.toUpperCase()}
                       </span>
                     </div>

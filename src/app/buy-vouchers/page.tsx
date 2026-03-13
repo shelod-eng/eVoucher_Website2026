@@ -5,7 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
-import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT, DiscountPricingBreakdown } from '@/lib/pricing';
+import {
+  calculateDiscountPricing,
+  DEFAULT_TOTAL_DISCOUNT_PCT,
+  DiscountPricingBreakdown,
+} from '@/lib/pricing';
 import { clearCart } from '@/lib/cart';
 
 interface MerchantOption {
@@ -58,7 +62,8 @@ function BuyVouchersContent() {
   const brandKeyFromQuery = searchParams.get('brandKey');
   const productIdFromQuery = searchParams.get('productId');
   const merchantLocked = Boolean(merchantIdFromQuery);
-  const selectedMerchantDetails = merchants.find((merchant) => merchant.id === selectedMerchant) ?? null;
+  const selectedMerchantDetails =
+    merchants.find((merchant) => merchant.id === selectedMerchant) ?? null;
   const amountOptions = useMemo(() => {
     const defaults = [100, 200, 300, 500, 1000];
     if (Number.isFinite(faceValueFromQuery) && faceValueFromQuery > 0) {
@@ -98,7 +103,10 @@ function BuyVouchersContent() {
 
     if (merchantLocked) {
       setSelectedMerchant(merchants[0]?.id ?? null);
-    } else if (merchantIdFromQuery && merchants.some((merchant) => merchant.id === merchantIdFromQuery)) {
+    } else if (
+      merchantIdFromQuery &&
+      merchants.some((merchant) => merchant.id === merchantIdFromQuery)
+    ) {
       setSelectedMerchant(merchantIdFromQuery);
     } else if (!selectedMerchant) {
       setSelectedMerchant(merchants[0]?.id ?? null);
@@ -227,7 +235,8 @@ function BuyVouchersContent() {
       if (!billingAddress.trim()) errs.billingAddress = 'Billing address required.';
     }
     if (selectedPaymentMethod === 'payfast') {
-      if (!payfastEmail.trim() || !payfastEmail.includes('@')) errs.payfastEmail = 'Valid email required.';
+      if (!payfastEmail.trim() || !payfastEmail.includes('@'))
+        errs.payfastEmail = 'Valid email required.';
     }
     if (selectedPaymentMethod === 'eft') {
       if (!eftReference.trim()) errs.eftReference = 'Reference required.';
@@ -282,7 +291,9 @@ function BuyVouchersContent() {
       if (!response.ok) {
         setBlockingCode(data.code ?? null);
         if (data.code === 'consumer_only_purchase') {
-          setBlockingReason('This route is consumer-only. Sign in as a consumer account to continue.');
+          setBlockingReason(
+            'This route is consumer-only. Sign in as a consumer account to continue.'
+          );
         } else if (data.code === 'missing_admin_env') {
           setBlockingReason(
             'Server configuration is incomplete. Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL.'
@@ -383,22 +394,35 @@ function BuyVouchersContent() {
         <div className="pt-24 pb-16 px-4">
           <div className="max-w-md mx-auto">
             <div className="bg-card rounded-2xl shadow-2xl p-8 border border-border text-center">
-              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${statusClasses.bg}`}>
-                <Icon name={statusIcon as any} size={48} variant="solid" className={statusClasses.text} />
+              <div
+                className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${statusClasses.bg}`}
+              >
+                <Icon
+                  name={statusIcon as any}
+                  size={48}
+                  variant="solid"
+                  className={statusClasses.text}
+                />
               </div>
-              <h2 className="font-headline font-bold text-3xl text-foreground mb-3">{statusTitle}</h2>
+              <h2 className="font-headline font-bold text-3xl text-foreground mb-3">
+                {statusTitle}
+              </h2>
               <p className="text-muted-foreground font-body mb-6">
-                {purchaseStatus === 'completed' && 'Your voucher has been issued and is ready to use.'}
-                {purchaseStatus === 'pending' && 'Your payment is pending confirmation. Your voucher will be issued once confirmed.'}
+                {purchaseStatus === 'completed' &&
+                  'Your voucher has been issued and is ready to use.'}
+                {purchaseStatus === 'pending' &&
+                  'Your payment is pending confirmation. Your voucher will be issued once confirmed.'}
                 {purchaseStatus === 'failed' && 'Your payment could not be processed.'}
               </p>
 
               <div className="bg-muted/50 rounded-xl p-4 mb-6 text-left space-y-2">
                 <p className="text-sm font-body text-muted-foreground">
-                  <span className="font-semibold text-foreground">Payment status:</span> {purchaseStatus}
+                  <span className="font-semibold text-foreground">Payment status:</span>{' '}
+                  {purchaseStatus}
                 </p>
                 <p className="text-sm font-body text-muted-foreground">
-                  <span className="font-semibold text-foreground">Payment method:</span> {paymentMethodLabel}
+                  <span className="font-semibold text-foreground">Payment method:</span>{' '}
+                  {paymentMethodLabel}
                 </p>
                 {pricingResult && (
                   <>
@@ -418,12 +442,14 @@ function BuyVouchersContent() {
                 )}
                 {transactionReference && (
                   <p className="text-sm font-body text-muted-foreground">
-                    <span className="font-semibold text-foreground">Transaction ref:</span> {transactionReference}
+                    <span className="font-semibold text-foreground">Transaction ref:</span>{' '}
+                    {transactionReference}
                   </p>
                 )}
                 {voucherCode && (
                   <p className="text-sm font-body text-muted-foreground">
-                    <span className="font-semibold text-foreground">Voucher issued:</span> {voucherCode}
+                    <span className="font-semibold text-foreground">Voucher issued:</span>{' '}
+                    {voucherCode}
                   </p>
                 )}
                 {issuedVouchers.length > 0 && (
@@ -433,14 +459,17 @@ function BuyVouchersContent() {
                       {issuedVouchers.map((voucher) => (
                         <div key={voucher.code} className="rounded-lg border border-border p-2">
                           <p className="text-xs text-muted-foreground font-body">
-                            Code: <span className="font-semibold text-foreground">{voucher.code}</span>
+                            Code:{' '}
+                            <span className="font-semibold text-foreground">{voucher.code}</span>
                           </p>
                           <p className="text-xs text-muted-foreground font-body">
                             Face value: R{Number(voucher.faceValue ?? 0).toFixed(2)}
                           </p>
                           <p className="text-xs text-muted-foreground font-body">
                             Expiry:{' '}
-                            {voucher.expiresAt ? new Date(voucher.expiresAt).toLocaleDateString() : 'N/A'}
+                            {voucher.expiresAt
+                              ? new Date(voucher.expiresAt).toLocaleDateString()
+                              : 'N/A'}
                           </p>
                         </div>
                       ))}
@@ -497,9 +526,12 @@ function BuyVouchersContent() {
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-5xl mx-auto">
           <div className="mb-8">
-            <h1 className="font-headline font-bold text-3xl lg:text-4xl text-foreground mb-2">Buy Vouchers</h1>
+            <h1 className="font-headline font-bold text-3xl lg:text-4xl text-foreground mb-2">
+              Buy Vouchers
+            </h1>
             <p className="text-muted-foreground font-body">
-              Secure purchase with server-side billing. You only see safe payment status and voucher output.
+              Secure purchase with server-side billing. You only see safe payment status and voucher
+              output.
             </p>
           </div>
 
@@ -526,23 +558,38 @@ function BuyVouchersContent() {
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
               <div className="flex items-center space-x-3 mb-6">
-                <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-primary" />
-                <h2 className="font-headline font-bold text-2xl text-foreground">Select Merchant</h2>
+                <Icon
+                  name="BuildingStorefrontIcon"
+                  size={24}
+                  variant="solid"
+                  className="text-primary"
+                />
+                <h2 className="font-headline font-bold text-2xl text-foreground">
+                  Select Merchant
+                </h2>
               </div>
               {merchantLocked ? (
                 <div className="rounded-xl border-2 border-primary bg-primary/5 p-4">
                   {selectedMerchantDetails ? (
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10">
-                        <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-primary" />
+                        <Icon
+                          name="BuildingStorefrontIcon"
+                          size={24}
+                          variant="solid"
+                          className="text-primary"
+                        />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-headline font-bold text-foreground">
                           {selectedMerchantDetails.businessName}
                         </h3>
-                        <p className="text-sm text-muted-foreground font-body">{selectedMerchantDetails.email}</p>
+                        <p className="text-sm text-muted-foreground font-body">
+                          {selectedMerchantDetails.email}
+                        </p>
                         <p className="text-xs text-primary font-body mt-1">
-                          Discount budget: {selectedMerchantDetails.defaultTotalDiscountPct.toFixed(2)}%
+                          Discount budget:{' '}
+                          {selectedMerchantDetails.defaultTotalDiscountPct.toFixed(2)}%
                         </p>
                         {brandKeyFromQuery && (
                           <p className="text-xs text-muted-foreground font-body mt-1">
@@ -550,7 +597,12 @@ function BuyVouchersContent() {
                           </p>
                         )}
                       </div>
-                      <Icon name="LockClosedIcon" size={20} variant="solid" className="text-primary" />
+                      <Icon
+                        name="LockClosedIcon"
+                        size={20}
+                        variant="solid"
+                        className="text-primary"
+                      />
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground font-body">
@@ -568,7 +620,9 @@ function BuyVouchersContent() {
                         variant="outline"
                         className="text-muted-foreground mx-auto mb-4"
                       />
-                      <p className="text-muted-foreground font-body">No active merchants available</p>
+                      <p className="text-muted-foreground font-body">
+                        No active merchants available
+                      </p>
                     </div>
                   ) : (
                     merchants.map((merchant) => (
@@ -583,17 +637,31 @@ function BuyVouchersContent() {
                       >
                         <div className="flex items-center space-x-3">
                           <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-primary/10">
-                            <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-primary" />
+                            <Icon
+                              name="BuildingStorefrontIcon"
+                              size={24}
+                              variant="solid"
+                              className="text-primary"
+                            />
                           </div>
                           <div className="flex-1">
-                            <h3 className="font-headline font-bold text-foreground">{merchant.businessName}</h3>
-                            <p className="text-sm text-muted-foreground font-body">{merchant.email}</p>
+                            <h3 className="font-headline font-bold text-foreground">
+                              {merchant.businessName}
+                            </h3>
+                            <p className="text-sm text-muted-foreground font-body">
+                              {merchant.email}
+                            </p>
                             <p className="text-xs text-primary font-body mt-1">
                               Discount budget: {merchant.defaultTotalDiscountPct.toFixed(2)}%
                             </p>
                           </div>
                           {selectedMerchant === merchant.id && (
-                            <Icon name="CheckCircleIcon" size={24} variant="solid" className="text-primary" />
+                            <Icon
+                              name="CheckCircleIcon"
+                              size={24}
+                              variant="solid"
+                              className="text-primary"
+                            />
                           )}
                         </div>
                       </button>
@@ -651,14 +719,26 @@ function BuyVouchersContent() {
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Icon name={method.icon as any} size={24} variant="solid" className="text-primary" />
+                        <Icon
+                          name={method.icon as any}
+                          size={24}
+                          variant="solid"
+                          className="text-primary"
+                        />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-headline font-bold text-foreground">{method.name}</h3>
-                        <p className="text-sm text-muted-foreground font-body">{method.description}</p>
+                        <p className="text-sm text-muted-foreground font-body">
+                          {method.description}
+                        </p>
                       </div>
                       {selectedPaymentMethod === method.id && (
-                        <Icon name="CheckCircleIcon" size={24} variant="solid" className="text-primary" />
+                        <Icon
+                          name="CheckCircleIcon"
+                          size={24}
+                          variant="solid"
+                          className="text-primary"
+                        />
                       )}
                     </div>
                   </button>
@@ -669,7 +749,8 @@ function BuyVouchersContent() {
                 <p className="text-xs text-error font-body mb-4">{formErrors.paymentMethod}</p>
               )}
 
-              {(selectedPaymentMethod === 'visa_secure' || selectedPaymentMethod === 'debit_credit') && (
+              {(selectedPaymentMethod === 'visa_secure' ||
+                selectedPaymentMethod === 'debit_credit') && (
                 <div className="rounded-xl border border-border p-4 mb-6 space-y-3">
                   {selectedPaymentMethod === 'visa_secure' && (
                     <div className="flex items-center justify-between rounded-lg bg-primary/5 border border-primary/20 px-3 py-2">
@@ -678,7 +759,10 @@ function BuyVouchersContent() {
                     </div>
                   )}
                   <div>
-                    <label htmlFor="card-number" className="block text-xs text-muted-foreground mb-1">
+                    <label
+                      htmlFor="card-number"
+                      className="block text-xs text-muted-foreground mb-1"
+                    >
                       Card Number
                     </label>
                     <input
@@ -690,7 +774,9 @@ function BuyVouchersContent() {
                       className="w-full px-3 py-2 border border-border rounded-lg"
                       placeholder="4111 1111 1111 1111"
                     />
-                    {formErrors.cardNumber && <p className="text-xs text-error mt-1">{formErrors.cardNumber}</p>}
+                    {formErrors.cardNumber && (
+                      <p className="text-xs text-error mt-1">{formErrors.cardNumber}</p>
+                    )}
                   </div>
                   <div>
                     <label htmlFor="card-name" className="block text-xs text-muted-foreground mb-1">
@@ -704,11 +790,16 @@ function BuyVouchersContent() {
                       className="w-full px-3 py-2 border border-border rounded-lg"
                       placeholder="Name on card"
                     />
-                    {formErrors.cardName && <p className="text-xs text-error mt-1">{formErrors.cardName}</p>}
+                    {formErrors.cardName && (
+                      <p className="text-xs text-error mt-1">{formErrors.cardName}</p>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="card-expiry" className="block text-xs text-muted-foreground mb-1">
+                      <label
+                        htmlFor="card-expiry"
+                        className="block text-xs text-muted-foreground mb-1"
+                      >
                         Expiry (MM/YY)
                       </label>
                       <input
@@ -719,10 +810,15 @@ function BuyVouchersContent() {
                         className="w-full px-3 py-2 border border-border rounded-lg"
                         placeholder="12/29"
                       />
-                      {formErrors.cardExpiry && <p className="text-xs text-error mt-1">{formErrors.cardExpiry}</p>}
+                      {formErrors.cardExpiry && (
+                        <p className="text-xs text-error mt-1">{formErrors.cardExpiry}</p>
+                      )}
                     </div>
                     <div>
-                      <label htmlFor="card-cvv" className="block text-xs text-muted-foreground mb-1">
+                      <label
+                        htmlFor="card-cvv"
+                        className="block text-xs text-muted-foreground mb-1"
+                      >
                         CVV
                       </label>
                       <input
@@ -734,11 +830,16 @@ function BuyVouchersContent() {
                         className="w-full px-3 py-2 border border-border rounded-lg"
                         placeholder="123"
                       />
-                      {formErrors.cardCvv && <p className="text-xs text-error mt-1">{formErrors.cardCvv}</p>}
+                      {formErrors.cardCvv && (
+                        <p className="text-xs text-error mt-1">{formErrors.cardCvv}</p>
+                      )}
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="billing-address" className="block text-xs text-muted-foreground mb-1">
+                    <label
+                      htmlFor="billing-address"
+                      className="block text-xs text-muted-foreground mb-1"
+                    >
                       Billing Address
                     </label>
                     <input
@@ -758,9 +859,14 @@ function BuyVouchersContent() {
 
               {selectedPaymentMethod === 'payfast' && (
                 <div className="rounded-xl border border-border p-4 mb-6 space-y-3">
-                  <p className="text-xs text-muted-foreground">PayFast redirect checkout (simulated)</p>
+                  <p className="text-xs text-muted-foreground">
+                    PayFast redirect checkout (simulated)
+                  </p>
                   <div>
-                    <label htmlFor="payfast-email" className="block text-xs text-muted-foreground mb-1">
+                    <label
+                      htmlFor="payfast-email"
+                      className="block text-xs text-muted-foreground mb-1"
+                    >
                       Receipt Email
                     </label>
                     <input
@@ -784,7 +890,10 @@ function BuyVouchersContent() {
                     EFT Details: FNB Business Account | Acc: 62834910251 | Branch: 250655
                   </p>
                   <div>
-                    <label htmlFor="eft-reference" className="block text-xs text-muted-foreground mb-1">
+                    <label
+                      htmlFor="eft-reference"
+                      className="block text-xs text-muted-foreground mb-1"
+                    >
                       EFT Reference
                     </label>
                     <input
@@ -810,7 +919,9 @@ function BuyVouchersContent() {
                       onChange={(event) => setEftProofName(event.target.files?.[0]?.name ?? null)}
                       className="w-full px-3 py-2 border border-border rounded-lg"
                     />
-                    {eftProofName && <p className="text-xs text-muted-foreground mt-1">Selected: {eftProofName}</p>}
+                    {eftProofName && (
+                      <p className="text-xs text-muted-foreground mt-1">Selected: {eftProofName}</p>
+                    )}
                     {formErrors.eftProofName && (
                       <p className="text-xs text-error mt-1">{formErrors.eftProofName}</p>
                     )}
@@ -821,21 +932,29 @@ function BuyVouchersContent() {
               {selectedPaymentMethod === 'wallet' && (
                 <div className="rounded-xl border border-border p-4 mb-6 space-y-2">
                   <p className="text-sm text-muted-foreground">Available eVoucher Wallet Balance</p>
-                  <p className="text-2xl font-headline font-bold text-foreground">R{walletBalanceMock.toFixed(2)}</p>
-                  {formErrors.wallet && <p className="text-xs text-error mt-1">{formErrors.wallet}</p>}
+                  <p className="text-2xl font-headline font-bold text-foreground">
+                    R{walletBalanceMock.toFixed(2)}
+                  </p>
+                  {formErrors.wallet && (
+                    <p className="text-xs text-error mt-1">{formErrors.wallet}</p>
+                  )}
                 </div>
               )}
 
               <div className="bg-muted/50 rounded-xl p-4 mb-6">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground font-body">Face Value</span>
-                  <span className="font-headline font-bold text-foreground">R{previewPricing.faceValue.toFixed(2)}</span>
+                  <span className="font-headline font-bold text-foreground">
+                    R{previewPricing.faceValue.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground font-body">
                     Total Discount Budget ({previewPricing.totalDiscountPct.toFixed(2)}%)
                   </span>
-                  <span className="font-headline font-bold text-success">-R{previewPricing.totalDiscountAmount.toFixed(2)}</span>
+                  <span className="font-headline font-bold text-success">
+                    -R{previewPricing.totalDiscountAmount.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground font-body">
@@ -863,7 +982,9 @@ function BuyVouchersContent() {
                 </div>
                 <div className="mt-2 pt-2 border-t border-border">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground font-body">Merchant Receivable (FV - Total Discount)</span>
+                    <span className="text-sm text-muted-foreground font-body">
+                      Merchant Receivable (FV - Total Discount)
+                    </span>
                     <span className="font-headline font-semibold text-foreground">
                       R{previewPricing.merchantReceivableAfterTotalDiscount.toFixed(2)}
                     </span>
@@ -873,7 +994,12 @@ function BuyVouchersContent() {
 
               <button
                 onClick={handlePurchase}
-                disabled={!selectedMerchant || !selectedPaymentMethod || processing || Boolean(blockingReason)}
+                disabled={
+                  !selectedMerchant ||
+                  !selectedPaymentMethod ||
+                  processing ||
+                  Boolean(blockingReason)
+                }
                 className="w-full py-4 bg-primary text-primary-foreground rounded-lg font-headline font-semibold hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
               >
                 {processing ? 'Processing...' : 'Complete Purchase'}

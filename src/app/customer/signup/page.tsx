@@ -57,7 +57,7 @@ export default function CustomerSignup() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <Header />
-      
+
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-md mx-auto">
           <div className="bg-card rounded-2xl shadow-2xl p-8 border border-border">
@@ -65,20 +65,32 @@ export default function CustomerSignup() {
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Icon name="UserPlusIcon" size={32} variant="solid" className="text-primary" />
               </div>
-              <h1 className="font-headline font-bold text-3xl text-foreground mb-2">Create Account</h1>
-              <p className="text-muted-foreground font-body">Join eVoucher and start saving today</p>
+              <h1 className="font-headline font-bold text-3xl text-foreground mb-2">
+                Create Account
+              </h1>
+              <p className="text-muted-foreground font-body">
+                Join eVoucher and start saving today
+              </p>
             </div>
 
             {error && (
               <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg flex items-start space-x-3">
-                <Icon name="ExclamationCircleIcon" size={20} variant="solid" className="text-error flex-shrink-0 mt-0.5" />
+                <Icon
+                  name="ExclamationCircleIcon"
+                  size={20}
+                  variant="solid"
+                  className="text-error flex-shrink-0 mt-0.5"
+                />
                 <p className="text-sm text-error font-body">{error}</p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label htmlFor="fullName" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                <label
+                  htmlFor="fullName"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
                   Full Name
                 </label>
                 <input
@@ -94,7 +106,10 @@ export default function CustomerSignup() {
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
                   Email Address
                 </label>
                 <input
@@ -110,7 +125,10 @@ export default function CustomerSignup() {
               </div>
 
               <div>
-                <label htmlFor="phone" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                <label
+                  htmlFor="phone"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
                   Phone Number
                 </label>
                 <input
@@ -126,7 +144,10 @@ export default function CustomerSignup() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
                   Password
                 </label>
                 <input
@@ -142,7 +163,10 @@ export default function CustomerSignup() {
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
                   Confirm Password
                 </label>
                 <input

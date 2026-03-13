@@ -58,11 +58,11 @@ const CHAIN_BUSINESS_TYPES = [
   'Other',
 ];
 const BANK_BRANCH_CODES: Record<string, string> = {
-  'FNB': '250655',
+  FNB: '250655',
   'Standard Bank': '051001',
-  'Capitec': '470010',
-  'Nedbank': '198765',
-  'ABSA': '632005',
+  Capitec: '470010',
+  Nedbank: '198765',
+  ABSA: '632005',
   'Discovery Bank': '679000',
   'Investec Bank': '580105',
 };
@@ -154,7 +154,9 @@ export default function MerchantsPage() {
       auto_approved: 'Merchant auto-vetting approved.',
       approved: 'Merchant has been approved and can access portal after credentials are issued.',
     };
-    return mapping[statusData.vettingStatus] ?? `Current vetting state: ${statusData.vettingStatus}`;
+    return (
+      mapping[statusData.vettingStatus] ?? `Current vetting state: ${statusData.vettingStatus}`
+    );
   }, [statusData]);
   const canUseManualApprovalActions = true;
 
@@ -194,7 +196,7 @@ export default function MerchantsPage() {
       setFormData((prev) => ({
         ...prev,
         bankName: value,
-        branchCode: value === 'Other' ? '' : autoBranchCode ?? prev.branchCode,
+        branchCode: value === 'Other' ? '' : (autoBranchCode ?? prev.branchCode),
       }));
       return;
     }
@@ -204,10 +206,13 @@ export default function MerchantsPage() {
   const loadStatus = async (targetMerchantId?: string) => {
     const id = String(targetMerchantId ?? merchantId).trim();
     if (!id) return;
-    const response = await fetch(`/api/v1/merchant/onboarding/status?merchantId=${encodeURIComponent(id)}`, {
-      method: 'GET',
-      cache: 'no-store',
-    });
+    const response = await fetch(
+      `/api/v1/merchant/onboarding/status?merchantId=${encodeURIComponent(id)}`,
+      {
+        method: 'GET',
+        cache: 'no-store',
+      }
+    );
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Failed to fetch onboarding status.');
     setStatusData(result);
@@ -216,7 +221,9 @@ export default function MerchantsPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const merchantIdFromQuery = String(new URLSearchParams(window.location.search).get('merchantId') ?? '').trim();
+    const merchantIdFromQuery = String(
+      new URLSearchParams(window.location.search).get('merchantId') ?? ''
+    ).trim();
     if (!merchantIdFromQuery) return;
     setMerchantId(merchantIdFromQuery);
     void loadStatus(merchantIdFromQuery).catch(() => undefined);
@@ -255,7 +262,9 @@ export default function MerchantsPage() {
       }
 
       setMerchantId(result.merchantId);
-      const verificationRecipient = String(result.verificationEmailTo ?? formData.email ?? '').trim();
+      const verificationRecipient = String(
+        result.verificationEmailTo ?? formData.email ?? ''
+      ).trim();
       if (result.emailSent) {
         setStatusMessage(
           `Onboarding submitted. Verification email sent to ${verificationRecipient}. Verify email to continue.`
@@ -451,12 +460,14 @@ export default function MerchantsPage() {
               Onboard your business with verification and auto-vetting
             </h1>
             <p className="mt-4 text-base lg:text-lg text-muted-foreground font-body leading-relaxed">
-              Supports both major chains and private merchants like Kalapeng. Approval issues temporary credentials
-              and forces a secure password change on first login.
+              Supports both major chains and private merchants like Kalapeng. Approval issues
+              temporary credentials and forces a secure password change on first login.
             </p>
 
             <div className="mt-6 rounded-xl border border-border bg-muted/40 p-4">
-              <p className="text-sm font-headline font-semibold text-foreground">Selected flow: {modeLabel}</p>
+              <p className="text-sm font-headline font-semibold text-foreground">
+                Selected flow: {modeLabel}
+              </p>
               <ul className="mt-2 space-y-1 text-xs text-muted-foreground font-body">
                 <li>1. Submit registration + compliance details.</li>
                 <li>2. Confirm your email token.</li>
@@ -467,7 +478,10 @@ export default function MerchantsPage() {
 
             <div className="mt-6 text-sm font-body text-muted-foreground">
               Already approved?
-              <Link href="/merchant/login" className="ml-1 font-semibold text-primary hover:text-primary/80 transition-colors">
+              <Link
+                href="/merchant/login"
+                className="ml-1 font-semibold text-primary hover:text-primary/80 transition-colors"
+              >
                 Sign in to merchant portal
               </Link>
             </div>
@@ -475,7 +489,9 @@ export default function MerchantsPage() {
 
           <section className="bg-card rounded-2xl shadow-2xl border border-border overflow-hidden">
             <div className="border-b border-border bg-gradient-to-r from-primary/10 via-background to-secondary/10 px-6 py-6 lg:px-8">
-              <h2 className="font-headline font-bold text-2xl lg:text-3xl text-foreground">Merchant onboarding form</h2>
+              <h2 className="font-headline font-bold text-2xl lg:text-3xl text-foreground">
+                Merchant onboarding form
+              </h2>
               <p className="mt-1 text-sm text-muted-foreground font-body">
                 Required fields change by merchant type to support both chain and private merchants.
               </p>
@@ -484,14 +500,24 @@ export default function MerchantsPage() {
             <div className="px-6 py-6 lg:px-8 lg:py-8">
               {error && (
                 <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg flex items-start space-x-3">
-                  <Icon name="ExclamationCircleIcon" size={20} variant="solid" className="text-error flex-shrink-0 mt-0.5" />
+                  <Icon
+                    name="ExclamationCircleIcon"
+                    size={20}
+                    variant="solid"
+                    className="text-error flex-shrink-0 mt-0.5"
+                  />
                   <p className="text-sm text-error font-body">{error}</p>
                 </div>
               )}
 
               {statusMessage && (
                 <div className="mb-6 p-4 bg-success/10 border border-success/20 rounded-lg flex items-start gap-3">
-                  <Icon name="CheckCircleIcon" size={20} variant="solid" className="text-success flex-shrink-0 mt-0.5" />
+                  <Icon
+                    name="CheckCircleIcon"
+                    size={20}
+                    variant="solid"
+                    className="text-success flex-shrink-0 mt-0.5"
+                  />
                   <p className="text-sm text-success font-body">{statusMessage}</p>
                 </div>
               )}
@@ -523,10 +549,15 @@ export default function MerchantsPage() {
 
               <form onSubmit={handleSubmit} className="space-y-8">
                 <div>
-                  <h3 className="font-headline text-lg font-semibold text-foreground">1. Business profile</h3>
+                  <h3 className="font-headline text-lg font-semibold text-foreground">
+                    1. Business profile
+                  </h3>
                   <div className="mt-4 grid md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="businessName" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                      <label
+                        htmlFor="businessName"
+                        className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                      >
                         Business Name *
                       </label>
                       <input
@@ -540,7 +571,10 @@ export default function MerchantsPage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="contactName" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                      <label
+                        htmlFor="contactName"
+                        className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                      >
                         Contact Person *
                       </label>
                       <input
@@ -554,7 +588,10 @@ export default function MerchantsPage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="email" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                      <label
+                        htmlFor="email"
+                        className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                      >
                         Email Address *
                       </label>
                       <input
@@ -569,7 +606,10 @@ export default function MerchantsPage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="phone" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                      <label
+                        htmlFor="phone"
+                        className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                      >
                         Phone Number *
                       </label>
                       <input
@@ -583,7 +623,10 @@ export default function MerchantsPage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="businessType" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                      <label
+                        htmlFor="businessType"
+                        className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                      >
                         Business Type *
                       </label>
                       <select
@@ -626,12 +669,17 @@ export default function MerchantsPage() {
                 </div>
 
                 <div>
-                  <h3 className="font-headline text-lg font-semibold text-foreground">2. Compliance details</h3>
+                  <h3 className="font-headline text-lg font-semibold text-foreground">
+                    2. Compliance details
+                  </h3>
                   <div className="mt-4 grid md:grid-cols-2 gap-4">
                     {merchantType === 'chain' ? (
                       <>
                         <div>
-                          <label htmlFor="registrationNumber" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                          <label
+                            htmlFor="registrationNumber"
+                            className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                          >
                             Company Registration Number *
                           </label>
                           <input
@@ -645,7 +693,10 @@ export default function MerchantsPage() {
                           />
                         </div>
                         <div>
-                          <label htmlFor="taxNumber" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                          <label
+                            htmlFor="taxNumber"
+                            className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                          >
                             VAT / Tax Number *
                           </label>
                           <input
@@ -664,7 +715,10 @@ export default function MerchantsPage() {
                         {isPrivatePharmacy && (
                           <>
                             <div>
-                              <label htmlFor="pharmacyLicenseNumber" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                              <label
+                                htmlFor="pharmacyLicenseNumber"
+                                className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                              >
                                 Pharmacy License Number *
                               </label>
                               <input
@@ -678,7 +732,10 @@ export default function MerchantsPage() {
                               />
                             </div>
                             <div>
-                              <label htmlFor="responsiblePharmacistName" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                              <label
+                                htmlFor="responsiblePharmacistName"
+                                className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                              >
                                 Responsible Pharmacist Name *
                               </label>
                               <input
@@ -694,7 +751,10 @@ export default function MerchantsPage() {
                           </>
                         )}
                         <div>
-                          <label htmlFor="ownerIdNumber" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                          <label
+                            htmlFor="ownerIdNumber"
+                            className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                          >
                             Owner ID Number *
                           </label>
                           <input
@@ -708,7 +768,10 @@ export default function MerchantsPage() {
                           />
                         </div>
                         <div>
-                          <label htmlFor="proofOfPremises" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                          <label
+                            htmlFor="proofOfPremises"
+                            className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                          >
                             Proof of Premises / Website (Optional)
                           </label>
                           <input
@@ -728,7 +791,9 @@ export default function MerchantsPage() {
                 <div className="h-px bg-border" />
 
                 <div>
-                  <h3 className="font-headline text-lg font-semibold text-foreground">3. Settlement account</h3>
+                  <h3 className="font-headline text-lg font-semibold text-foreground">
+                    3. Settlement account
+                  </h3>
                   <div className="mt-4 grid md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
                       <label
@@ -748,7 +813,10 @@ export default function MerchantsPage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="bankName" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                      <label
+                        htmlFor="bankName"
+                        className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                      >
                         Select Bank *
                       </label>
                       <select
@@ -771,7 +839,10 @@ export default function MerchantsPage() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="accountHolderName" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                      <label
+                        htmlFor="accountHolderName"
+                        className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                      >
                         Account Holder Name *
                       </label>
                       <input
@@ -785,7 +856,10 @@ export default function MerchantsPage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="accountNumber" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                      <label
+                        htmlFor="accountNumber"
+                        className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                      >
                         Account Number *
                       </label>
                       <input
@@ -799,7 +873,10 @@ export default function MerchantsPage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="branchCode" className="mb-2 block text-sm font-headline font-semibold text-foreground">
+                      <label
+                        htmlFor="branchCode"
+                        className="mb-2 block text-sm font-headline font-semibold text-foreground"
+                      >
                         Branch Code *
                       </label>
                       <input
@@ -828,7 +905,9 @@ export default function MerchantsPage() {
               {merchantId && (
                 <div className="mt-8 border-t border-border pt-6">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <h3 className="font-headline text-lg font-semibold text-foreground">4. Verification</h3>
+                    <h3 className="font-headline text-lg font-semibold text-foreground">
+                      4. Verification
+                    </h3>
                     <button
                       type="button"
                       onClick={() => void loadStatus()}
@@ -837,11 +916,15 @@ export default function MerchantsPage() {
                       Refresh Status
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1 font-body">Merchant ID: {merchantId}</p>
+                  <p className="text-xs text-muted-foreground mt-1 font-body">
+                    Merchant ID: {merchantId}
+                  </p>
 
                   <div className="mt-4 grid gap-4">
                     <div className="rounded-xl border border-border bg-muted/30 p-4">
-                      <p className="text-sm font-headline font-semibold text-foreground">Email Confirmation</p>
+                      <p className="text-sm font-headline font-semibold text-foreground">
+                        Email Confirmation
+                      </p>
                       <p className="mt-1 text-xs text-muted-foreground font-body">
                         Use the link in your email or paste the token below.
                       </p>
@@ -873,7 +956,9 @@ export default function MerchantsPage() {
                         disabled={resendingVerificationEmail}
                         className="mt-3 text-xs font-headline font-semibold text-primary hover:text-primary/80 disabled:opacity-50"
                       >
-                        {resendingVerificationEmail ? 'Resending verification email...' : 'Resend verification email'}
+                        {resendingVerificationEmail
+                          ? 'Resending verification email...'
+                          : 'Resend verification email'}
                       </button>
                     </div>
 
@@ -912,7 +997,9 @@ export default function MerchantsPage() {
 
                     {statusData && (
                       <div className="rounded-xl border border-border bg-card p-4">
-                        <p className="text-sm font-headline font-semibold text-foreground">Onboarding Status</p>
+                        <p className="text-sm font-headline font-semibold text-foreground">
+                          Onboarding Status
+                        </p>
                         <div className="mt-2 grid sm:grid-cols-2 gap-2 text-xs text-muted-foreground font-body">
                           <p>Email Verified: {statusData.emailVerified ? 'Yes' : 'No'}</p>
                           <p>Phone Verified: {statusData.phoneVerified ? 'Yes' : 'No'}</p>
@@ -922,11 +1009,16 @@ export default function MerchantsPage() {
                           <p>Login Ready: {statusData.loginReady ? 'Yes' : 'No'}</p>
                         </div>
                         {vettingHelpText && (
-                          <p className="mt-3 text-xs text-muted-foreground font-body">{vettingHelpText}</p>
+                          <p className="mt-3 text-xs text-muted-foreground font-body">
+                            {vettingHelpText}
+                          </p>
                         )}
 
                         <div className="mt-3 flex flex-col gap-2">
-                          <label htmlFor="merchantApprovalKey" className="text-xs text-muted-foreground font-body">
+                          <label
+                            htmlFor="merchantApprovalKey"
+                            className="text-xs text-muted-foreground font-body"
+                          >
                             Approval Key (optional)
                           </label>
                           <input
@@ -941,28 +1033,31 @@ export default function MerchantsPage() {
                           />
                         </div>
 
-                        {statusData.status === 'pending' && statusData.emailVerified && statusData.phoneVerified && (
-                          <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                            <p className="text-sm text-amber-800 font-headline font-semibold">
-                              {statusData.vettingStatus === 'pending_private_approval'
-                                ? 'Private merchant verified. Auto-vetting is pending; use manual approve if needed.'
-                                : 'Pending approval. Approve to issue login credentials.'}
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => void handleApproveMerchant()}
-                              disabled={approvingMerchant || !canUseManualApprovalActions}
-                              className="mt-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-headline font-semibold disabled:opacity-50"
-                            >
-                              {approvingMerchant ? 'Approving...' : 'Approve Merchant'}
-                            </button>
-                          </div>
-                        )}
+                        {statusData.status === 'pending' &&
+                          statusData.emailVerified &&
+                          statusData.phoneVerified && (
+                            <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                              <p className="text-sm text-amber-800 font-headline font-semibold">
+                                {statusData.vettingStatus === 'pending_private_approval'
+                                  ? 'Private merchant verified. Auto-vetting is pending; use manual approve if needed.'
+                                  : 'Pending approval. Approve to issue login credentials.'}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => void handleApproveMerchant()}
+                                disabled={approvingMerchant || !canUseManualApprovalActions}
+                                className="mt-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-headline font-semibold disabled:opacity-50"
+                              >
+                                {approvingMerchant ? 'Approving...' : 'Approve Merchant'}
+                              </button>
+                            </div>
+                          )}
 
                         {statusData.status === 'approved' && !statusData.credentialsIssued && (
                           <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
                             <p className="text-sm text-amber-800 font-headline font-semibold">
-                              Merchant is approved, but credentials email is not marked as delivered yet.
+                              Merchant is approved, but credentials email is not marked as delivered
+                              yet.
                             </p>
                             <button
                               type="button"

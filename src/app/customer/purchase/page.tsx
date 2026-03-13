@@ -24,7 +24,12 @@ export default function CustomerPurchase() {
         <div className="max-w-2xl mx-auto px-4">
           <div className="bg-card rounded-2xl shadow-xl p-12 text-center border border-border">
             <div className="bg-muted/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Icon name="ExclamationTriangleIcon" size={40} variant="solid" className="text-warning" />
+              <Icon
+                name="ExclamationTriangleIcon"
+                size={40}
+                variant="solid"
+                className="text-warning"
+              />
             </div>
             <h1 className="font-headline font-bold text-3xl text-foreground mb-4">
               Feature Not Available

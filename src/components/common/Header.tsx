@@ -16,7 +16,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: string;
-  dashboardTab?: 'studio' | 'products' | 'payouts';
+  dashboardTab?: 'studio' | 'products' | 'payouts' | 'compliance';
 }
 
 const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
@@ -34,7 +34,10 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
   const signOutRedirect = effectiveMerchantUser || isMerchantRoute ? '/merchant/login' : '/signin';
   const [cartCount, setCartCount] = useState(0);
   const displayName = String(
-    user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'consumer'
+    user?.user_metadata?.full_name ??
+      user?.user_metadata?.name ??
+      user?.email?.split('@')[0] ??
+      'consumer'
   ).trim();
 
   const publicNavItems: NavItem[] = [
@@ -57,15 +60,38 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
 
   const merchantNavItems: NavItem[] = [
     { label: 'Home', href: '/merchant/dashboard', icon: 'HomeIcon' },
-    { label: 'Dashboard', href: '/merchant/dashboard?tab=studio', icon: 'BuildingStorefrontIcon', dashboardTab: 'studio' },
-    { label: 'Products', href: '/merchant/dashboard?tab=products', icon: 'Squares2X2Icon', dashboardTab: 'products' },
-    { label: 'Payouts', href: '/merchant/dashboard?tab=payouts', icon: 'BanknotesIcon', dashboardTab: 'payouts' },
+    {
+      label: 'Dashboard',
+      href: '/merchant/dashboard?tab=studio',
+      icon: 'BuildingStorefrontIcon',
+      dashboardTab: 'studio',
+    },
+    {
+      label: 'Products',
+      href: '/merchant/dashboard?tab=products',
+      icon: 'Squares2X2Icon',
+      dashboardTab: 'products',
+    },
+    {
+      label: 'Payouts',
+      href: '/merchant/dashboard?tab=payouts',
+      icon: 'BanknotesIcon',
+      dashboardTab: 'payouts',
+    },
+    {
+      label: 'Compliance',
+      href: '/merchant/compliance',
+      icon: 'ShieldCheckIcon',
+      dashboardTab: 'compliance',
+    },
     { label: 'Analytics', href: '/analytics', icon: 'ChartBarIcon' },
     { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
   ];
 
   const navItems = effectiveSignedIn
-    ? (effectiveMerchantUser ? merchantNavItems : consumerNavItems)
+    ? effectiveMerchantUser
+      ? merchantNavItems
+      : consumerNavItems
     : publicNavItems;
 
   useEffect(() => {
@@ -149,16 +175,32 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 group" onClick={closeMobileMenu}>
             <div className="relative">
-              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="40" height="40" rx="8" fill="#20B2AA" className="transition-all duration-300 group-hover:fill-[#1a9d96]"/>
-                <path d="M20 10L28 16V24L20 30L12 24V16L20 10Z" fill="white" opacity="0.9"/>
-                <path d="M20 15L24 18V22L20 25L16 22V18L20 15Z" fill="#FF7A00"/>
-                <circle cx="20" cy="20" r="3" fill="white"/>
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 40 40"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  width="40"
+                  height="40"
+                  rx="8"
+                  fill="#20B2AA"
+                  className="transition-all duration-300 group-hover:fill-[#1a9d96]"
+                />
+                <path d="M20 10L28 16V24L20 30L12 24V16L20 10Z" fill="white" opacity="0.9" />
+                <path d="M20 15L24 18V22L20 25L16 22V18L20 15Z" fill="#FF7A00" />
+                <circle cx="20" cy="20" r="3" fill="white" />
               </svg>
             </div>
             <div className="flex flex-col">
-              <span className="font-headline font-bold text-lg text-foreground leading-tight">eVoucher</span>
-              <span className="font-body text-xs text-muted-foreground leading-tight">Dignified Impact</span>
+              <span className="font-headline font-bold text-lg text-foreground leading-tight">
+                eVoucher
+              </span>
+              <span className="font-body text-xs text-muted-foreground leading-tight">
+                Dignified Impact
+              </span>
             </div>
           </Link>
 
@@ -173,11 +215,14 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
               >
                 <Icon name={item.icon as any} size={18} variant="outline" />
                 <span>{item.label}</span>
-                {!effectiveMerchantUser && effectiveSignedIn && item.label === 'Cart' && cartCount > 0 && (
-                  <span className="inline-flex min-w-5 h-5 px-1 items-center justify-center text-xs rounded-full bg-primary text-primary-foreground font-headline">
-                    {cartCount}
-                  </span>
-                )}
+                {!effectiveMerchantUser &&
+                  effectiveSignedIn &&
+                  item.label === 'Cart' &&
+                  cartCount > 0 && (
+                    <span className="inline-flex min-w-5 h-5 px-1 items-center justify-center text-xs rounded-full bg-primary text-primary-foreground font-headline">
+                      {cartCount}
+                    </span>
+                  )}
               </Link>
             ))}
 
@@ -185,7 +230,10 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
               <>
                 {!effectiveMerchantUser && (
                   <span className="px-3 py-2 text-sm font-body text-muted-foreground">
-                    Hello, <span className="font-headline font-semibold text-foreground">{displayName}</span>
+                    Hello,{' '}
+                    <span className="font-headline font-semibold text-foreground">
+                      {displayName}
+                    </span>
                   </span>
                 )}
                 <button
@@ -241,7 +289,10 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
                 <>
                   {!effectiveMerchantUser && (
                     <div className="px-4 py-2 text-sm text-muted-foreground">
-                      Hello, <span className="font-headline font-semibold text-foreground">{displayName}</span>
+                      Hello,{' '}
+                      <span className="font-headline font-semibold text-foreground">
+                        {displayName}
+                      </span>
                     </div>
                   )}
                   <button

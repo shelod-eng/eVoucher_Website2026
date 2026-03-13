@@ -13,26 +13,26 @@ const ImpactStats = () => {
       icon: 'CurrencyDollarIcon',
       value: 'R2.1M',
       label: 'Total Savings Delivered',
-      color: 'success'
+      color: 'success',
     },
     {
       icon: 'BuildingStorefrontIcon',
       value: '1,200+',
       label: 'Partner Merchants',
-      color: 'primary'
+      color: 'primary',
     },
     {
       icon: 'ShoppingBagIcon',
       value: '45K+',
       label: 'Vouchers Redeemed',
-      color: 'secondary'
+      color: 'secondary',
     },
     {
       icon: 'ChartBarIcon',
       value: '30%',
       label: 'Average Discount',
-      color: 'accent'
-    }
+      color: 'accent',
+    },
   ];
 
   const getColorClasses = (color: string) => {
@@ -40,7 +40,7 @@ const ImpactStats = () => {
       success: { bg: 'bg-success/10', text: 'text-success', icon: 'text-success' },
       primary: { bg: 'bg-primary/10', text: 'text-primary', icon: 'text-primary' },
       secondary: { bg: 'bg-secondary/10', text: 'text-secondary', icon: 'text-secondary' },
-      accent: { bg: 'bg-accent/10', text: 'text-accent', icon: 'text-accent' }
+      accent: { bg: 'bg-accent/10', text: 'text-accent', icon: 'text-accent' },
     };
     return colorMap[color] || colorMap.primary;
   };
@@ -56,7 +56,7 @@ const ImpactStats = () => {
             Every voucher purchased creates measurable impact across South African communities
           </p>
         </div>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat, index) => {
             const colors = getColorClasses(stat.color);
@@ -65,15 +65,15 @@ const ImpactStats = () => {
                 key={index}
                 className="bg-card rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105"
               >
-                <div className={`w-14 h-14 ${colors.bg} rounded-full flex items-center justify-center mb-4`}>
+                <div
+                  className={`w-14 h-14 ${colors.bg} rounded-full flex items-center justify-center mb-4`}
+                >
                   <Icon name={stat.icon as any} size={28} variant="solid" className={colors.icon} />
                 </div>
                 <p className={`text-4xl font-headline font-bold ${colors.text} mb-2`}>
                   {stat.value}
                 </p>
-                <p className="text-sm font-body text-muted-foreground">
-                  {stat.label}
-                </p>
+                <p className="text-sm font-body text-muted-foreground">{stat.label}</p>
               </div>
             );
           })}

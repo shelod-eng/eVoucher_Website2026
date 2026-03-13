@@ -14,7 +14,7 @@ const PartnerLogosSection = () => {
     { name: 'Mr Price', category: 'Fashion' },
     { name: 'Edgars', category: 'Fashion' },
     { name: 'Spar', category: 'Retail' },
-    { name: 'Boxer', category: 'Retail' }
+    { name: 'Boxer', category: 'Retail' },
   ];
 
   return (
@@ -25,15 +25,16 @@ const PartnerLogosSection = () => {
             <Icon name="BuildingStorefrontIcon" size={20} variant="solid" />
             <span className="text-sm font-headline font-semibold">Trusted Partners</span>
           </div>
-          
+
           <h2 className="font-headline font-bold text-3xl lg:text-4xl text-foreground mb-4">
             Join South Africa's Leading Merchants
           </h2>
           <p className="text-lg text-muted-foreground">
-            Over 2,500 merchants across all categories trust eVoucher to grow their businesses and serve their communities.
+            Over 2,500 merchants across all categories trust eVoucher to grow their businesses and
+            serve their communities.
           </p>
         </div>
-        
+
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {partners?.map((partner, index) => (
             <div
@@ -41,7 +42,12 @@ const PartnerLogosSection = () => {
               className="bg-card rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border border-border group hover:border-primary flex flex-col items-center justify-center text-center"
             >
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors duration-300">
-                <Icon name="BuildingStorefrontIcon" size={32} variant="outline" className="text-primary" />
+                <Icon
+                  name="BuildingStorefrontIcon"
+                  size={32}
+                  variant="outline"
+                  className="text-primary"
+                />
               </div>
               <h3 className="font-headline font-bold text-lg text-foreground mb-1">
                 {partner?.name}
@@ -52,7 +58,7 @@ const PartnerLogosSection = () => {
             </div>
           ))}
         </div>
-        
+
         <div className="mt-12 text-center">
           <div className="inline-flex flex-col items-center space-y-4 bg-card border border-border rounded-xl px-8 py-6">
             <div className="flex items-center space-x-8">

@@ -4,7 +4,8 @@ import GovernmentAlignmentInteractive from './components/GovernmentAlignmentInte
 
 export const metadata: Metadata = {
   title: 'Government Alignment - eVoucher Platform',
-  description: 'Comprehensive policy alignment, real-time impact analytics, advanced fraud prevention, and transparency tools for South African social welfare programs. Partner with eVoucher for accountable and measurable social impact delivery.',
+  description:
+    'Comprehensive policy alignment, real-time impact analytics, advanced fraud prevention, and transparency tools for South African social welfare programs. Partner with eVoucher for accountable and measurable social impact delivery.',
 };
 
 export default function GovernmentAlignmentPage() {

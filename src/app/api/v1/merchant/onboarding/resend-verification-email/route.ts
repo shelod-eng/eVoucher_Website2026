@@ -20,7 +20,10 @@ export async function POST(request: Request) {
       const { user } = await getAuthenticatedUser();
       if (user) {
         actorId = user.id;
-        actorRole = String(user.user_metadata?.role ?? '').trim().toLowerCase() || 'authenticated';
+        actorRole =
+          String(user.user_metadata?.role ?? '')
+            .trim()
+            .toLowerCase() || 'authenticated';
       }
     } catch {
       // Public onboarding flow can request verification resend.

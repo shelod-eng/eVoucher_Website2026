@@ -79,7 +79,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       user,
       'id,user_id,business_name,parent_brand,status'
     );
-    if (!merchant) return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
+    if (!merchant)
+      return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
     if (!canOperateMerchantProducts(role, merchant, user.id)) {
       return NextResponse.json(
         { error: 'Merchant product management is merchant-only.', code: 'merchant_only' },
@@ -87,7 +88,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       );
     }
 
-    const body = (await request.json().catch(() => ({} as any))) as {
+    const body = (await request.json().catch(() => ({}) as any)) as {
       promotionalBadge?: string;
       promotionExpiresAt?: string | null;
       displayPriority?: number;
@@ -104,7 +105,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
     const endAt = new Date(String(body.promotionExpiresAt));
     if (Number.isNaN(endAt.getTime()) || endAt.getTime() <= Date.now()) {
-      return NextResponse.json({ error: 'promotionExpiresAt must be a valid future date/time.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'promotionExpiresAt must be a valid future date/time.' },
+        { status: 400 }
+      );
     }
 
     const displayPriority = Number(body.displayPriority ?? 100);
@@ -127,7 +131,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       )
       .single();
 
-    if (updateResult.error && !isMissingSpecialsColumn(updateResult.error)) throw updateResult.error;
+    if (updateResult.error && !isMissingSpecialsColumn(updateResult.error))
+      throw updateResult.error;
     if (updateResult.error && isMissingSpecialsColumn(updateResult.error)) {
       return NextResponse.json(
         { error: 'Promotions are not available until specials columns are migrated.' },
@@ -170,7 +175,8 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
       user,
       'id,user_id,business_name,parent_brand,status'
     );
-    if (!merchant) return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
+    if (!merchant)
+      return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
     if (!canOperateMerchantProducts(role, merchant, user.id)) {
       return NextResponse.json(
         { error: 'Merchant product management is merchant-only.', code: 'merchant_only' },
@@ -217,4 +223,3 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
     );
   }
 }
-

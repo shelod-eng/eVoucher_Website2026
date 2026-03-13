@@ -23,10 +23,13 @@ function validate(body: PurchaseVoucherRequest): string | null {
   if (body.faceValue !== undefined && (!Number.isFinite(body.faceValue) || body.faceValue <= 0)) {
     return 'Face value must be > 0.';
   }
-  if (body.faceValue !== undefined && body.faceValue > 10000) return 'Face value exceeds the allowed limit.';
-  if (!body.productId && body.faceValue === undefined) return 'Either product or face value is required.';
+  if (body.faceValue !== undefined && body.faceValue > 10000)
+    return 'Face value exceeds the allowed limit.';
+  if (!body.productId && body.faceValue === undefined)
+    return 'Either product or face value is required.';
   if (!body.paymentMethod) return 'Payment method is required.';
-  if (!SUPPORTED_PAYMENT_METHODS.has(body.paymentMethod)) return 'Unsupported payment method selected.';
+  if (!SUPPORTED_PAYMENT_METHODS.has(body.paymentMethod))
+    return 'Unsupported payment method selected.';
   if (body.paymentMethod === 'payfast') {
     if (!String(body.payfastEmail ?? '').includes('@')) return 'PayFast email is required.';
   }
@@ -35,7 +38,8 @@ function validate(body: PurchaseVoucherRequest): string | null {
     if (!String(body.eftProofName ?? '').trim()) return 'EFT proof of payment is required.';
   }
   if (body.paymentMethod === 'visa_secure' || body.paymentMethod === 'debit_credit') {
-    if (!String(body.billingAddress ?? '').trim()) return 'Billing address is required for card payments.';
+    if (!String(body.billingAddress ?? '').trim())
+      return 'Billing address is required for card payments.';
     const lastFour = String(body.cardLastFour ?? '').trim();
     if (lastFour && !/^\d{4}$/.test(lastFour)) return 'Card last four must be 4 digits.';
   }
@@ -63,7 +67,9 @@ async function sendPurchaseReceiptEmail(payload: {
   paymentMethod: string;
 }) {
   const resendApiKey = String(process.env.RESEND_API_KEY ?? '').trim();
-  const fromAddress = String(process.env.RESEND_FROM ?? 'eVoucher Receipts <receipts@evoucher.co.za>').trim();
+  const fromAddress = String(
+    process.env.RESEND_FROM ?? 'eVoucher Receipts <receipts@evoucher.co.za>'
+  ).trim();
   const subject = `eVoucher purchase receipt - ${payload.merchantName}`;
   const text = [
     'eVoucher Purchase Receipt',
@@ -210,7 +216,10 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(
-      { error: error?.message || 'Failed to fetch purchase status.', code: 'purchase_status_failed' },
+      {
+        error: error?.message || 'Failed to fetch purchase status.',
+        code: 'purchase_status_failed',
+      },
       { status: 500 }
     );
   }
@@ -240,7 +249,10 @@ export async function POST(request: Request) {
     const body = (await request.json()) as PurchaseVoucherRequest;
     const validationError = validate(body);
     if (validationError) {
-      return NextResponse.json({ error: validationError, code: 'invalid_purchase_input' }, { status: 400 });
+      return NextResponse.json(
+        { error: validationError, code: 'invalid_purchase_input' },
+        { status: 400 }
+      );
     }
 
     const admin = createAdminClient();
@@ -250,7 +262,9 @@ export async function POST(request: Request) {
 
     const { data: merchant, error: merchantError } = await admin
       .from('merchants')
-      .select('id,business_name,status,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province')
+      .select(
+        'id,business_name,status,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province'
+      )
       .eq('id', body.merchantId)
       .single();
 
@@ -292,7 +306,9 @@ export async function POST(request: Request) {
         String(product.parent_brand ?? '').trim() ||
         String(merchant.parent_brand ?? '').trim() ||
         null;
-      const scope = String(product.redemption_scope ?? '').trim().toLowerCase();
+      const scope = String(product.redemption_scope ?? '')
+        .trim()
+        .toLowerCase();
       if (
         scope === 'all_branches' ||
         scope === 'specific_branch' ||
@@ -310,7 +326,11 @@ export async function POST(request: Request) {
 
       pricing = calculateDiscountPricing(
         Number(product.face_value),
-        Number(product.total_discount_pct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT)
+        Number(
+          product.total_discount_pct ??
+            merchant.default_total_discount_pct ??
+            DEFAULT_TOTAL_DISCOUNT_PCT
+        )
       );
     } else {
       if (body.faceValue === undefined) {
@@ -335,7 +355,7 @@ export async function POST(request: Request) {
     });
     const devForceSuccess = process.env.NODE_ENV === 'development';
     const paymentStatus = devForceSuccess ? 'completed' : payment.status;
-    const checkoutUrl = devForceSuccess ? null : payment.checkoutUrl ?? null;
+    const checkoutUrl = devForceSuccess ? null : (payment.checkoutUrl ?? null);
 
     let voucherCode: string | null = null;
     if (paymentStatus === 'completed') {
@@ -380,7 +400,9 @@ export async function POST(request: Request) {
           : body.paymentMethod.toUpperCase();
     const cardLastFour =
       body.paymentMethod === 'visa_secure' || body.paymentMethod === 'debit_credit'
-        ? String(body.cardLastFour ?? '0000').slice(-4).padStart(4, '0')
+        ? String(body.cardLastFour ?? '0000')
+            .slice(-4)
+            .padStart(4, '0')
         : '0000';
 
     const { error: transactionError } = await admin.from('payment_transactions').insert({
@@ -464,7 +486,8 @@ export async function POST(request: Request) {
       actorRole: 'customer',
       entityType: 'payment_transaction',
       entityId: transactionReference,
-      action: paymentStatus === 'completed' ? 'voucher_purchase_completed' : 'voucher_purchase_pending',
+      action:
+        paymentStatus === 'completed' ? 'voucher_purchase_completed' : 'voucher_purchase_pending',
       metadata: {
         merchantId: merchant.id,
         faceValue: pricing.faceValue,
@@ -495,7 +518,10 @@ export async function POST(request: Request) {
               'Server is missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL. Add them to run purchases.',
             code: 'missing_admin_env',
           }
-        : { error: error?.message || 'Failed to process voucher purchase.', code: 'purchase_failed' },
+        : {
+            error: error?.message || 'Failed to process voucher purchase.',
+            code: 'purchase_failed',
+          },
       { status: 500 }
     );
   }

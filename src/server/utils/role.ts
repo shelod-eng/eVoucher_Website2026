@@ -3,7 +3,10 @@ import type { User } from '@supabase/supabase-js';
 type SupabaseLikeClient = {
   from: (table: string) => {
     select: (columns: string) => {
-      eq: (column: string, value: string) => {
+      eq: (
+        column: string,
+        value: string
+      ) => {
         maybeSingle: () => Promise<{ data: { role?: string | null } | null; error: any }>;
       };
     };

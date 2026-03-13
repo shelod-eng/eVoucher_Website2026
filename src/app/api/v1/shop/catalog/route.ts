@@ -117,6 +117,7 @@ const DEMO_BRAND_KEYS = new Set<BrandKey>([
   'game',
   'woolworths',
   'mrprice',
+  'superprecast',
 ]);
 
 function resolveDataClient(supabase: any) {
@@ -130,7 +131,7 @@ function resolveDataClient(supabase: any) {
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const relation = relationName.toLowerCase();
-  const bareRelation = relation.includes('.') ? relation.split('.').at(-1) ?? relation : relation;
+  const bareRelation = relation.includes('.') ? (relation.split('.').at(-1) ?? relation) : relation;
   return (
     message.includes(`relation "${relation}" does not exist`) ||
     message.includes(`relation "${bareRelation}" does not exist`) ||
@@ -145,7 +146,9 @@ function withSearchMatch(text: string, term: string) {
 }
 
 function isBankMerchantLabel(value: string) {
-  const normalized = String(value ?? '').trim().toLowerCase();
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
   if (!normalized) return false;
   const bankTerms = [
     'absa',
@@ -161,8 +164,12 @@ function isBankMerchantLabel(value: string) {
   return bankTerms.some((term) => normalized.includes(term));
 }
 
-function normalizeScope(value: unknown): 'all_branches' | 'specific_branch' | 'province_wide' | 'national' {
-  const scope = String(value ?? '').trim().toLowerCase();
+function normalizeScope(
+  value: unknown
+): 'all_branches' | 'specific_branch' | 'province_wide' | 'national' {
+  const scope = String(value ?? '')
+    .trim()
+    .toLowerCase();
   if (
     scope === 'all_branches' ||
     scope === 'specific_branch' ||
@@ -176,7 +183,9 @@ function normalizeScope(value: unknown): 'all_branches' | 'specific_branch' | 'p
 
 function uniqueStrings(values: unknown) {
   if (!Array.isArray(values)) return [];
-  return Array.from(new Set(values.map((value) => String(value)).filter((value) => value.length > 0)));
+  return Array.from(
+    new Set(values.map((value) => String(value)).filter((value) => value.length > 0))
+  );
 }
 
 function toGenericBrandKey(value: string) {
@@ -188,7 +197,9 @@ function toGenericBrandKey(value: string) {
     .slice(0, 64);
 }
 
-function toMerchantRow(row: Partial<MerchantRow> & { id: string; business_name: string; email: string; status: string }) {
+function toMerchantRow(
+  row: Partial<MerchantRow> & { id: string; business_name: string; email: string; status: string }
+) {
   return {
     id: row.id,
     business_name: row.business_name,
@@ -263,7 +274,10 @@ async function fetchMerchants(dataClient: any, activeOnly: boolean): Promise<Mer
   throw lastError ?? new Error('Failed to load merchants');
 }
 
-async function fetchProductsForMerchantIds(dataClient: any, merchantIds: string[]): Promise<ProductRow[]> {
+async function fetchProductsForMerchantIds(
+  dataClient: any,
+  merchantIds: string[]
+): Promise<ProductRow[]> {
   if (merchantIds.length === 0) return [];
   const merchantIdSet = new Set(merchantIds.map((id) => String(id)));
   const queryPlans: Array<{
@@ -340,11 +354,17 @@ async function fetchProductsForMerchantIds(dataClient: any, merchantIds: string[
   throw lastError ?? new Error('Failed to load products');
 }
 
-function resolveBrandMeta(rawBrandName: string, fallbackName: string, fallbackCategory: string | null) {
+function resolveBrandMeta(
+  rawBrandName: string,
+  fallbackName: string,
+  fallbackCategory: string | null
+) {
   const explicitParentBrand = String(rawBrandName ?? '').trim();
-  const fallbackDisplayName = explicitParentBrand || String(fallbackName ?? '').trim() || 'Merchant';
+  const fallbackDisplayName =
+    explicitParentBrand || String(fallbackName ?? '').trim() || 'Merchant';
   const mappedBrandKey =
-    resolveBrandFromMerchantName(explicitParentBrand) ?? resolveBrandFromMerchantName(fallbackDisplayName);
+    resolveBrandFromMerchantName(explicitParentBrand) ??
+    resolveBrandFromMerchantName(fallbackDisplayName);
   const mappedBrand = mappedBrandKey ? getBrandByKey(mappedBrandKey) : null;
   if (!mappedBrand) {
     return {
@@ -446,8 +466,7 @@ export async function GET(request: Request) {
       }
 
       merchantById.set(merchant.id, merchant);
-      const merchantBrandName =
-        String(merchant.parent_brand ?? '').trim();
+      const merchantBrandName = String(merchant.parent_brand ?? '').trim();
       const brandMeta = resolveBrandMeta(
         merchantBrandName,
         merchant.business_name,
@@ -527,7 +546,9 @@ export async function GET(request: Request) {
         });
       });
 
-    const merchantIds = Array.from(new Set(Array.from(brandMap.values()).flatMap((brand) => brand.merchantIds)));
+    const merchantIds = Array.from(
+      new Set(Array.from(brandMap.values()).flatMap((brand) => brand.merchantIds))
+    );
 
     const productRows = await fetchProductsForMerchantIds(dataClient, merchantIds);
 
@@ -535,7 +556,9 @@ export async function GET(request: Request) {
     let globalRepresentative: MerchantRow | null = null;
     Array.from(brandMap.values()).forEach((brand) => {
       if (!brand.representativeMerchant) return;
-      const categoryKey = String(brand.category || '').trim().toLowerCase();
+      const categoryKey = String(brand.category || '')
+        .trim()
+        .toLowerCase();
       if (categoryKey && !representativeByCategory.has(categoryKey)) {
         representativeByCategory.set(categoryKey, brand.representativeMerchant);
       }
@@ -546,7 +569,9 @@ export async function GET(request: Request) {
 
     const checkoutRepresentativeByBrandKey = new Map<string, MerchantRow | null>();
     Array.from(brandMap.values()).forEach((brand) => {
-      const categoryKey = String(brand.category || '').trim().toLowerCase();
+      const categoryKey = String(brand.category || '')
+        .trim()
+        .toLowerCase();
       const categoryRepresentative =
         (categoryKey ? representativeByCategory.get(categoryKey) : null) ?? null;
       checkoutRepresentativeByBrandKey.set(
@@ -566,7 +591,11 @@ export async function GET(request: Request) {
         String(row.parent_brand ?? '').trim() ||
         String(merchant.parent_brand ?? '').trim() ||
         merchant.business_name;
-      const brandMeta = resolveBrandMeta(productBrandName, merchant.business_name, merchant.business_type);
+      const brandMeta = resolveBrandMeta(
+        productBrandName,
+        merchant.business_name,
+        merchant.business_type
+      );
       if (!brandMeta) return;
       if (!dbProductsByBrand.has(brandMeta.brandKey)) {
         dbProductsByBrand.set(brandMeta.brandKey, []);
@@ -754,4 +783,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

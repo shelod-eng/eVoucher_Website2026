@@ -35,12 +35,14 @@ export async function POST(request: Request) {
         'approvalConfirmationSent' in result ? result.approvalConfirmationSent : undefined,
       approvalConfirmationError:
         'approvalConfirmationError' in result ? result.approvalConfirmationError : undefined,
-      credentialsEmailSent: 'credentialsEmailSent' in result ? result.credentialsEmailSent : undefined,
+      credentialsEmailSent:
+        'credentialsEmailSent' in result ? result.credentialsEmailSent : undefined,
       credentialsEmailRecipient:
         'credentialsEmailRecipient' in result ? result.credentialsEmailRecipient : undefined,
       credentialsEmailProvider:
         'credentialsEmailProvider' in result ? result.credentialsEmailProvider : undefined,
-      credentialsEmailError: 'credentialsEmailError' in result ? result.credentialsEmailError : undefined,
+      credentialsEmailError:
+        'credentialsEmailError' in result ? result.credentialsEmailError : undefined,
       credentialsIssued: statusData?.credentialsIssued ?? false,
       mustResetPassword: statusData?.mustResetPassword ?? false,
       loginReady: statusData?.loginReady ?? false,

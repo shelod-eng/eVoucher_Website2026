@@ -28,7 +28,7 @@ function escapeCsv(value: string | number) {
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const relation = relationName.toLowerCase();
-  const bareRelation = relation.includes('.') ? relation.split('.').at(-1) ?? relation : relation;
+  const bareRelation = relation.includes('.') ? (relation.split('.').at(-1) ?? relation) : relation;
   return (
     message.includes(`relation "${relation}" does not exist`) ||
     message.includes(`relation "${bareRelation}" does not exist`) ||

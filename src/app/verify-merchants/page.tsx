@@ -157,7 +157,8 @@ export default function VerifyMerchantsPage() {
                             <span
                               className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                                 merchant.is_active
-                                  ? 'bg-green-100 text-green-800' :'bg-red-100 text-red-800'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
                               }`}
                             >
                               {merchant.is_active ? 'Active' : 'Inactive'}
@@ -165,7 +166,8 @@ export default function VerifyMerchantsPage() {
                             <span
                               className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                                 merchant.is_verified
-                                  ? 'bg-blue-100 text-blue-800' :'bg-yellow-100 text-yellow-800'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-yellow-100 text-yellow-800'
                               }`}
                             >
                               {merchant.is_verified ? 'Verified' : 'Pending'}
@@ -185,9 +187,12 @@ export default function VerifyMerchantsPage() {
                 <h3 className="font-semibold text-blue-900 mb-2">Database Statistics:</h3>
                 <ul className="text-blue-800 space-y-1">
                   <li>• Total merchants shown: {merchants.length}</li>
-                  <li>• Active merchants: {merchants.filter(m => m.is_active).length}</li>
-                  <li>• Verified merchants: {merchants.filter(m => m.is_verified).length}</li>
-                  <li>• Latest registration: {merchants[0] ? formatDate(merchants[0].registered_at) : 'N/A'}</li>
+                  <li>• Active merchants: {merchants.filter((m) => m.is_active).length}</li>
+                  <li>• Verified merchants: {merchants.filter((m) => m.is_verified).length}</li>
+                  <li>
+                    • Latest registration:{' '}
+                    {merchants[0] ? formatDate(merchants[0].registered_at) : 'N/A'}
+                  </li>
                 </ul>
               </div>
             </>

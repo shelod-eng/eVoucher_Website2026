@@ -41,7 +41,9 @@ function formatRand(value: number, digits = 0) {
 }
 
 function formatMonth(month: string) {
-  const [year, monthNumber] = String(month).split('-').map((value) => Number(value));
+  const [year, monthNumber] = String(month)
+    .split('-')
+    .map((value) => Number(value));
   if (!year || !monthNumber) return month;
   const date = new Date(Date.UTC(year, monthNumber - 1, 1));
   return date.toLocaleString('en-ZA', { month: 'short', year: 'numeric' });
@@ -122,17 +124,23 @@ export default function BenefitsPage() {
 
             <div className="text-center">
               <p className="text-lg opacity-90 mt-4">Total Cash Saved</p>
-              <p className="font-headline font-bold text-8xl mt-2">{formatRand(data?.totalCashSaved ?? 0)}</p>
+              <p className="font-headline font-bold text-8xl mt-2">
+                {formatRand(data?.totalCashSaved ?? 0)}
+              </p>
             </div>
 
             <div className="mt-6 grid grid-cols-3 rounded-xl overflow-hidden border border-white/20">
               <div className="p-4 text-center bg-black/15">
                 <p className="text-sm opacity-90">This Month</p>
-                <p className="font-headline font-bold text-3xl">{formatRand(data?.thisMonthSavings ?? 0)}</p>
+                <p className="font-headline font-bold text-3xl">
+                  {formatRand(data?.thisMonthSavings ?? 0)}
+                </p>
               </div>
               <div className="p-4 text-center bg-black/10 border-x border-white/20">
                 <p className="text-sm opacity-90">Avg Annual</p>
-                <p className="font-headline font-bold text-3xl">{formatRand(data?.averageAnnualSavings ?? 0)}</p>
+                <p className="font-headline font-bold text-3xl">
+                  {formatRand(data?.averageAnnualSavings ?? 0)}
+                </p>
               </div>
               <div className="p-4 text-center bg-black/15">
                 <p className="text-sm opacity-90">Rate</p>
@@ -149,7 +157,9 @@ export default function BenefitsPage() {
                 <Icon name="ArrowTrendingUpIcon" size={24} variant="outline" />
               </div>
               <div>
-                <h2 className="font-headline font-bold text-4xl text-foreground">Real Cash Impact</h2>
+                <h2 className="font-headline font-bold text-4xl text-foreground">
+                  Real Cash Impact
+                </h2>
                 <p className="text-sm text-muted-foreground">Putting money back in your pocket</p>
               </div>
             </div>
@@ -172,7 +182,12 @@ export default function BenefitsPage() {
 
           <section className="rounded-2xl border border-border bg-card p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Icon name="InformationCircleIcon" size={18} variant="outline" className="text-primary" />
+              <Icon
+                name="InformationCircleIcon"
+                size={18}
+                variant="outline"
+                className="text-primary"
+              />
               <h2 className="font-headline font-bold text-2xl text-foreground">How It Works</h2>
             </div>
             <p className="text-sm text-muted-foreground mb-4">Transparent breakdown of value</p>
@@ -193,7 +208,9 @@ export default function BenefitsPage() {
               <div className="rounded-lg border border-border bg-background px-4 py-3 flex items-center justify-between">
                 <div>
                   <p className="text-foreground font-body">Platform Fee</p>
-                  <p className="text-xs text-muted-foreground">Covers secure USSD access and operational costs</p>
+                  <p className="text-xs text-muted-foreground">
+                    Covers secure USSD access and operational costs
+                  </p>
                 </div>
                 <span className="font-headline font-bold text-foreground">
                   {Number(data?.platformFeePct ?? 0).toFixed(1)}%
@@ -205,8 +222,15 @@ export default function BenefitsPage() {
           <section className="rounded-2xl border border-border bg-card p-6">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Icon name="DocumentTextIcon" size={18} variant="outline" className="text-primary" />
-                <h2 className="font-headline font-bold text-2xl text-foreground">Monthly Statements</h2>
+                <Icon
+                  name="DocumentTextIcon"
+                  size={18}
+                  variant="outline"
+                  className="text-primary"
+                />
+                <h2 className="font-headline font-bold text-2xl text-foreground">
+                  Monthly Statements
+                </h2>
               </div>
               <button
                 onClick={() => router.push('/analytics')}
@@ -228,21 +252,29 @@ export default function BenefitsPage() {
                     >
                       <div>
                         <p className="text-xs text-muted-foreground">Month</p>
-                        <p className="font-headline font-semibold text-foreground">{formatMonth(entry.month)}</p>
+                        <p className="font-headline font-semibold text-foreground">
+                          {formatMonth(entry.month)}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Spend</p>
-                        <p className="font-headline font-semibold text-foreground">{formatRand(entry.spent, 2)}</p>
+                        <p className="font-headline font-semibold text-foreground">
+                          {formatRand(entry.spent, 2)}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Saved</p>
-                        <p className="font-headline font-semibold text-success">{formatRand(entry.savings, 2)}</p>
+                        <p className="font-headline font-semibold text-success">
+                          {formatRand(entry.savings, 2)}
+                        </p>
                       </div>
                     </div>
                   ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No statement data yet. Start buying vouchers to build your savings history.</p>
+              <p className="text-sm text-muted-foreground">
+                No statement data yet. Start buying vouchers to build your savings history.
+              </p>
             )}
           </section>
         </div>

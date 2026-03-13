@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-label="Super Precast Concrete logo">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b2c66" />
+      <stop offset="1" stop-color="#081b3f" />
+    </linearGradient>
+    <linearGradient id="starBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4fc3f7" />
+      <stop offset="1" stop-color="#1565c0" />
+    </linearGradient>
+    <linearGradient id="starGreen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2ecc71" />
+      <stop offset="1" stop-color="#00a878" />
+    </linearGradient>
+    <linearGradient id="starOrange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffb74d" />
+      <stop offset="1" stop-color="#ff6f00" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="1200" height="360" fill="url(#bg)" />
+
+  <!-- Mark (simplified star + S) -->
+  <g transform="translate(90 70)">
+    <polygon points="110,0 150,55 220,55 165,95 185,165 110,125 35,165 55,95 0,55 70,55" fill="url(#starBlue)" opacity="0.95"/>
+    <polygon points="110,18 142,62 196,62 154,92 170,146 110,116 50,146 66,92 24,62 78,62" fill="url(#starGreen)" opacity="0.92"/>
+    <polygon points="110,36 134,69 172,69 142,90 154,127 110,105 66,127 78,90 48,69 86,69" fill="url(#starOrange)" opacity="0.9"/>
+    <circle cx="110" cy="90" r="34" fill="#0b2c66" opacity="0.9"/>
+    <text x="110" y="102" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="800" fill="#ffffff">S</text>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(340 120)">
+    <text x="0" y="0" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="800" fill="#ffffff" letter-spacing="2">
+      SUPER PRECAST
+    </text>
+    <text x="6" y="78" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="600" fill="#cfe3ff" letter-spacing="8">
+      CONCRETE
+    </text>
+  </g>
+</svg>
+

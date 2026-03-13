@@ -1,7 +1,7 @@
 /**
  * Merchant Dashboard KPI Endpoints
  * Section 11 of Technical Specification - Merchant Dashboard KPI Specification
- * 
+ *
  * Returns real-time KPIs:
  * - Total Paid Out (Invoice with payment_at)
  * - Pending Payouts (Invoice with pending status)
@@ -84,10 +84,7 @@ export async function GET() {
       business_name: string | null;
     }>(admin, user, 'id,business_name');
     if (!merchant) {
-      return NextResponse.json(
-        { error: 'Merchant profile not found.' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Merchant profile not found.' }, { status: 404 });
     }
     // Fetch all KPI data in parallel
     const [
@@ -135,10 +132,7 @@ export async function GET() {
       // Transaction Statistics
       admin
         .from('payment_transactions')
-        .select(
-          'amount,total_discount_pct,evoucher_benefit_amount',
-          { count: 'exact' }
-        )
+        .select('amount,total_discount_pct,evoucher_benefit_amount', { count: 'exact' })
         .eq('merchant_id', merchant.id)
         .eq('payment_status', 'completed')
         .then(({ data, count, error }) => {
@@ -234,9 +228,6 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error('[/api/merchant/dashboard/kpis] Error:', error);
-    return NextResponse.json(
-      { error: error?.message || 'Failed to fetch KPIs.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error?.message || 'Failed to fetch KPIs.' }, { status: 500 });
   }
 }

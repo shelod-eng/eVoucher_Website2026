@@ -7,9 +7,15 @@ interface HeroSectionProps {
   onOpenCustomerModal?: () => void;
 }
 
-const HeroSection = ({ className = '', onOpenMerchantModal, onOpenCustomerModal }: HeroSectionProps) => {
+const HeroSection = ({
+  className = '',
+  onOpenMerchantModal,
+  onOpenCustomerModal,
+}: HeroSectionProps) => {
   return (
-    <section className={`relative bg-gradient-to-br from-primary/10 via-background to-secondary/10 py-20 lg:py-32 ${className}`}>
+    <section
+      className={`relative bg-gradient-to-br from-primary/10 via-background to-secondary/10 py-20 lg:py-32 ${className}`}
+    >
       <div className="max-w-7xl mx-auto px-4 lg:px-6">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
@@ -22,24 +28,32 @@ const HeroSection = ({ className = '', onOpenMerchantModal, onOpenCustomerModal 
 
             {/* Main Heading */}
             <h1 className="font-headline font-bold text-4xl lg:text-6xl text-foreground leading-tight">
-              Digital Commerce That Serves With{' '}
-              <span className="text-primary">Dignity</span> &{' '}
+              Digital Commerce That Serves With <span className="text-primary">Dignity</span> &{' '}
               <span className="text-secondary">Transparency</span>
             </h1>
 
             {/* Subheading */}
             <p className="font-body text-lg lg:text-xl text-muted-foreground leading-relaxed">
-              Bridging government social programs with merchant networks to deliver meaningful savings to South Africa's most vulnerable communities. Real savings, real impact, real accountability.
+              Bridging government social programs with merchant networks to deliver meaningful
+              savings to South Africa's most vulnerable communities. Real savings, real impact, real
+              accountability.
             </p>
 
             {/* USSD Code Highlight */}
             <div className="bg-card border-2 border-primary rounded-lg p-6 shadow-md">
               <div className="flex items-center space-x-4">
                 <div className="bg-primary/10 p-3 rounded-full">
-                  <Icon name="DevicePhoneMobileIcon" size={32} variant="solid" className="text-primary" />
+                  <Icon
+                    name="DevicePhoneMobileIcon"
+                    size={32}
+                    variant="solid"
+                    className="text-primary"
+                  />
                 </div>
                 <div>
-                  <p className="font-body text-sm text-muted-foreground">Access Without Smartphone</p>
+                  <p className="font-body text-sm text-muted-foreground">
+                    Access Without Smartphone
+                  </p>
                   <p className="font-accent text-2xl font-bold text-foreground">*134*2468#</p>
                 </div>
               </div>
@@ -79,7 +93,12 @@ const HeroSection = ({ className = '', onOpenMerchantModal, onOpenCustomerModal 
             <div className="bg-card rounded-xl p-6 shadow-lg border border-border hover:shadow-xl transition-shadow duration-300">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="bg-success/10 p-2 rounded-lg">
-                  <Icon name="CurrencyDollarIcon" size={24} variant="solid" className="text-success" />
+                  <Icon
+                    name="CurrencyDollarIcon"
+                    size={24}
+                    variant="solid"
+                    className="text-success"
+                  />
                 </div>
                 <p className="font-body text-sm text-muted-foreground">Total Savings</p>
               </div>
@@ -101,7 +120,12 @@ const HeroSection = ({ className = '', onOpenMerchantModal, onOpenCustomerModal 
             <div className="bg-card rounded-xl p-6 shadow-lg border border-border hover:shadow-xl transition-shadow duration-300">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="bg-secondary/10 p-2 rounded-lg">
-                  <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-secondary" />
+                  <Icon
+                    name="BuildingStorefrontIcon"
+                    size={24}
+                    variant="solid"
+                    className="text-secondary"
+                  />
                 </div>
                 <p className="font-body text-sm text-muted-foreground">Partner Merchants</p>
               </div>

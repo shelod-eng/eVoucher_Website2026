@@ -12,7 +12,7 @@ const CTASection = () => {
     phone: '',
     location: '',
     category: '',
-    monthlyRevenue: ''
+    monthlyRevenue: '',
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -33,7 +33,7 @@ const CTASection = () => {
           phone: '',
           location: '',
           category: '',
-          monthlyRevenue: ''
+          monthlyRevenue: '',
         });
       }, 3000);
     }
@@ -43,7 +43,7 @@ const CTASection = () => {
     if (isHydrated) {
       setFormData({
         ...formData,
-        [e.target.name]: e.target.value
+        [e.target.name]: e.target.value,
       });
     }
   };
@@ -85,9 +85,10 @@ const CTASection = () => {
                 Ready to Grow Your Business?
               </h2>
               <p className="text-lg opacity-90 mb-8 leading-relaxed">
-                Join thousands of merchants who are increasing revenue, acquiring new customers, and supporting their communities through eVoucher.
+                Join thousands of merchants who are increasing revenue, acquiring new customers, and
+                supporting their communities through eVoucher.
               </p>
-              
+
               <div className="space-y-6">
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -95,31 +96,37 @@ const CTASection = () => {
                   </div>
                   <div>
                     <h3 className="font-headline font-bold text-lg mb-1">Quick Response</h3>
-                    <p className="text-sm opacity-90">Our team will contact you within 24 hours to discuss your application.</p>
+                    <p className="text-sm opacity-90">
+                      Our team will contact you within 24 hours to discuss your application.
+                    </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Icon name="ShieldCheckIcon" size={24} variant="outline" />
                   </div>
                   <div>
                     <h3 className="font-headline font-bold text-lg mb-1">No Obligations</h3>
-                    <p className="text-sm opacity-90">Submit your inquiry with no commitment. Learn more before making a decision.</p>
+                    <p className="text-sm opacity-90">
+                      Submit your inquiry with no commitment. Learn more before making a decision.
+                    </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Icon name="UserGroupIcon" size={24} variant="outline" />
                   </div>
                   <div>
                     <h3 className="font-headline font-bold text-lg mb-1">Dedicated Support</h3>
-                    <p className="text-sm opacity-90">Get personalized guidance throughout the onboarding process and beyond.</p>
+                    <p className="text-sm opacity-90">
+                      Get personalized guidance throughout the onboarding process and beyond.
+                    </p>
                   </div>
                 </div>
               </div>
-              
+
               <div className="mt-8 pt-8 border-t border-white/20">
                 <p className="text-sm opacity-75 mb-2">Questions? Contact our merchant team:</p>
                 <div className="flex items-center space-x-2 mb-2">
@@ -132,19 +139,25 @@ const CTASection = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="p-8 lg:p-12">
               {isSubmitted ? (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
                   <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center">
-                    <Icon name="CheckCircleIcon" size={48} variant="solid" className="text-success" />
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={48}
+                      variant="solid"
+                      className="text-success"
+                    />
                   </div>
                   <div>
                     <h3 className="font-headline font-bold text-2xl text-foreground mb-2">
                       Application Submitted!
                     </h3>
                     <p className="text-muted-foreground font-body">
-                      Thank you for your interest. Our merchant partnership team will review your application and contact you within 24 hours.
+                      Thank you for your interest. Our merchant partnership team will review your
+                      application and contact you within 24 hours.
                     </p>
                   </div>
                 </div>
@@ -156,7 +169,7 @@ const CTASection = () => {
                   <p className="text-muted-foreground font-body mb-8">
                     Fill out the form below and our team will get back to you shortly.
                   </p>
-                  
+
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
@@ -173,7 +186,7 @@ const CTASection = () => {
                           placeholder="Your Business Name"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-headline font-semibold text-foreground mb-2">
                           Owner Name *
@@ -189,7 +202,7 @@ const CTASection = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-headline font-semibold text-foreground mb-2">
@@ -205,7 +218,7 @@ const CTASection = () => {
                           placeholder="your@email.com"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-headline font-semibold text-foreground mb-2">
                           Phone Number *
@@ -221,7 +234,7 @@ const CTASection = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-headline font-semibold text-foreground mb-2">
@@ -237,7 +250,7 @@ const CTASection = () => {
                           placeholder="City/Township"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-headline font-semibold text-foreground mb-2">
                           Business Category *
@@ -261,7 +274,7 @@ const CTASection = () => {
                         </select>
                       </div>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-headline font-semibold text-foreground mb-2">
                         Estimated Monthly Revenue *
@@ -281,7 +294,7 @@ const CTASection = () => {
                         <option value="250k+">R250,000+</option>
                       </select>
                     </div>
-                    
+
                     <button
                       type="submit"
                       className="w-full inline-flex items-center justify-center space-x-2 px-8 py-4 bg-action text-action-foreground rounded-lg font-headline font-semibold text-lg hover:bg-action/90 transition-all duration-300 transform hover:scale-105 shadow-lg"
@@ -289,7 +302,7 @@ const CTASection = () => {
                       <span>Submit Application</span>
                       <Icon name="ArrowRightIcon" size={20} variant="outline" />
                     </button>
-                    
+
                     <p className="text-xs text-muted-foreground text-center">
                       By submitting this form, you agree to our Terms of Service and Privacy Policy.
                     </p>

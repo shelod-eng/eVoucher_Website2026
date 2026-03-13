@@ -9,11 +9,10 @@ export const viewport = {
 
 export const metadata = {
   title: 'eVoucher Platform - Dignified Digital Commerce for All South Africans',
-  description: 'Government-aligned digital voucher platform delivering real savings to vulnerable communities. Register as a customer or join as a merchant partner.',
+  description:
+    'Government-aligned digital voucher platform delivering real savings to vulnerable communities. Register as a customer or join as a merchant partner.',
   icons: {
-    icon: [
-      { url: '/favicon.ico', type: 'image/x-icon' }
-    ],
+    icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
   },
 };
 
@@ -25,10 +24,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
-</body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

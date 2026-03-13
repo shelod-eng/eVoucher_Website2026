@@ -11,7 +11,10 @@ interface CustomerRegistrationModalProps {
   onClose: () => void;
 }
 
-export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerRegistrationModalProps) {
+export default function CustomerRegistrationModal({
+  isOpen,
+  onClose,
+}: CustomerRegistrationModalProps) {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -58,7 +61,7 @@ export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerR
     const data = encoder.encode(password);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,7 +97,7 @@ export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerR
 
     try {
       const supabase = createClient();
-      
+
       // Step 1: Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
@@ -111,15 +114,20 @@ export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerR
 
       if (authError) {
         console.error('Auth signup error:', authError);
-        
+
         // Handle specific "User already registered" error
-        if (authError.message?.includes('User already registered') || authError.message?.includes('already been registered')) {
-          setError('This email is already registered. Please sign in to your account or use a different email address.');
+        if (
+          authError.message?.includes('User already registered') ||
+          authError.message?.includes('already been registered')
+        ) {
+          setError(
+            'This email is already registered. Please sign in to your account or use a different email address.'
+          );
           setLoading(false);
           setUserAlreadyExists(true);
           return;
         }
-        
+
         throw authError;
       }
 
@@ -144,7 +152,7 @@ export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerR
       });
 
       setSuccess(true);
-      
+
       // Auto sign in after registration
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
@@ -217,26 +225,43 @@ export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerR
               <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Icon name="CheckCircleIcon" size={48} variant="solid" className="text-success" />
               </div>
-              <h3 className="font-headline font-bold text-3xl text-foreground mb-4">Welcome to eVoucher!</h3>
+              <h3 className="font-headline font-bold text-3xl text-foreground mb-4">
+                Welcome to eVoucher!
+              </h3>
               <p className="font-body text-lg text-muted-foreground mb-6">
                 Your account has been created successfully. Redirecting to your dashboard...
               </p>
-              
+
               {/* User Details Card */}
               <div className="bg-success/10 rounded-xl p-6 border border-success/20 mb-6">
                 <p className="font-body text-sm text-muted-foreground mb-3">Account Details</p>
                 <div className="space-y-2">
-                  <p className="font-body text-base text-foreground"><span className="font-semibold">Name:</span> {userDetails.fullName}</p>
-                  <p className="font-body text-base text-foreground"><span className="font-semibold">Email:</span> {userDetails.email}</p>
-                  <p className="font-body text-base text-foreground"><span className="font-semibold">Phone:</span> {userDetails.phone}</p>
-                  <p className="font-body text-base text-foreground"><span className="font-semibold">Loyalty Tier:</span> {userDetails.loyaltyTier}</p>
-                  <p className="font-body text-base text-foreground"><span className="font-semibold">Wallet Balance:</span> R {userDetails.walletBalance}</p>
-                  <p className="font-body text-base text-foreground"><span className="font-semibold">Referral Code:</span> {userDetails.referralCode}</p>
+                  <p className="font-body text-base text-foreground">
+                    <span className="font-semibold">Name:</span> {userDetails.fullName}
+                  </p>
+                  <p className="font-body text-base text-foreground">
+                    <span className="font-semibold">Email:</span> {userDetails.email}
+                  </p>
+                  <p className="font-body text-base text-foreground">
+                    <span className="font-semibold">Phone:</span> {userDetails.phone}
+                  </p>
+                  <p className="font-body text-base text-foreground">
+                    <span className="font-semibold">Loyalty Tier:</span> {userDetails.loyaltyTier}
+                  </p>
+                  <p className="font-body text-base text-foreground">
+                    <span className="font-semibold">Wallet Balance:</span> R{' '}
+                    {userDetails.walletBalance}
+                  </p>
+                  <p className="font-body text-base text-foreground">
+                    <span className="font-semibold">Referral Code:</span> {userDetails.referralCode}
+                  </p>
                 </div>
               </div>
 
               <div className="bg-primary/10 rounded-xl p-6 border border-primary/20">
-                <p className="font-body text-sm text-muted-foreground mb-2">Access anytime via USSD</p>
+                <p className="font-body text-sm text-muted-foreground mb-2">
+                  Access anytime via USSD
+                </p>
                 <p className="font-accent text-3xl font-bold text-primary">*134*2468#</p>
               </div>
             </div>
@@ -244,32 +269,60 @@ export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerR
             <>
               {/* Benefits */}
               <div className="bg-gradient-to-br from-primary/5 to-secondary/5 rounded-xl p-6 mb-6">
-                <h3 className="font-headline font-semibold text-lg text-foreground mb-4">What You Get:</h3>
+                <h3 className="font-headline font-semibold text-lg text-foreground mb-4">
+                  What You Get:
+                </h3>
                 <div className="grid gap-3">
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-success/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Icon name="CurrencyDollarIcon" size={16} variant="solid" className="text-success" />
+                      <Icon
+                        name="CurrencyDollarIcon"
+                        size={16}
+                        variant="solid"
+                        className="text-success"
+                      />
                     </div>
-                    <p className="font-body text-sm text-foreground">Up to 30% savings on essentials</p>
+                    <p className="font-body text-sm text-foreground">
+                      Up to 30% savings on essentials
+                    </p>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-success/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Icon name="DevicePhoneMobileIcon" size={16} variant="solid" className="text-success" />
+                      <Icon
+                        name="DevicePhoneMobileIcon"
+                        size={16}
+                        variant="solid"
+                        className="text-success"
+                      />
                     </div>
-                    <p className="font-body text-sm text-foreground">Works on any phone (smartphone or basic)</p>
+                    <p className="font-body text-sm text-foreground">
+                      Works on any phone (smartphone or basic)
+                    </p>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-success/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Icon name="ShieldCheckIcon" size={16} variant="solid" className="text-success" />
+                      <Icon
+                        name="ShieldCheckIcon"
+                        size={16}
+                        variant="solid"
+                        className="text-success"
+                      />
                     </div>
-                    <p className="font-body text-sm text-foreground">Safe, secure, and government-aligned</p>
+                    <p className="font-body text-sm text-foreground">
+                      Safe, secure, and government-aligned
+                    </p>
                   </div>
                 </div>
               </div>
 
               {error && (
                 <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg flex items-start space-x-3">
-                  <Icon name="ExclamationCircleIcon" size={20} variant="solid" className="text-error flex-shrink-0 mt-0.5" />
+                  <Icon
+                    name="ExclamationCircleIcon"
+                    size={20}
+                    variant="solid"
+                    className="text-error flex-shrink-0 mt-0.5"
+                  />
                   <p className="text-sm text-error font-body">{error}</p>
                   {userAlreadyExists && (
                     <button
@@ -288,7 +341,10 @@ export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerR
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                  <label
+                    htmlFor="fullName"
+                    className="block text-sm font-headline font-semibold text-foreground mb-2"
+                  >
                     Full Name *
                   </label>
                   <input
@@ -304,7 +360,10 @@ export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerR
                 </div>
 
                 <div>
-                  <label htmlFor="email" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-headline font-semibold text-foreground mb-2"
+                  >
                     Email Address *
                   </label>
                   <input
@@ -320,7 +379,10 @@ export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerR
                 </div>
 
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                  <label
+                    htmlFor="phone"
+                    className="block text-sm font-headline font-semibold text-foreground mb-2"
+                  >
                     Phone Number *
                   </label>
                   <input
@@ -336,7 +398,10 @@ export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerR
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-headline font-semibold text-foreground mb-2"
+                  >
                     Password *
                   </label>
                   <input
@@ -352,7 +417,10 @@ export default function CustomerRegistrationModal({ isOpen, onClose }: CustomerR
                 </div>
 
                 <div>
-                  <label htmlFor="pin" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                  <label
+                    htmlFor="pin"
+                    className="block text-sm font-headline font-semibold text-foreground mb-2"
+                  >
                     4-Digit PIN *
                   </label>
                   <input

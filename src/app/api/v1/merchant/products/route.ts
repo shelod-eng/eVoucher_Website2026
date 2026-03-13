@@ -11,6 +11,7 @@ import { isMerchantRole, resolveUserRole } from '@/server/utils/role';
 import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
 import { writeAuditEvent } from '@/server/utils/audit';
 import { validateAllCriticalRules } from '@/server/utils/business-rules-validator';
+import { getMerchantComplianceSnapshot } from '@/server/utils/compliance';
 
 interface CreateMerchantProductRequest {
   productName: string;
@@ -48,7 +49,8 @@ function isMissingSpecialsColumn(error: any) {
 
 function validateCreate(body: CreateMerchantProductRequest): string | null {
   if (!body.productName?.trim()) return 'Product name is required.';
-  if (!Number.isFinite(body.faceValue) || body.faceValue <= 0) return 'Face value must be greater than 0.';
+  if (!Number.isFinite(body.faceValue) || body.faceValue <= 0)
+    return 'Face value must be greater than 0.';
   if (body.faceValue > 100000) return 'Face value exceeds the allowed limit.';
   if (
     body.totalDiscountPct !== undefined &&
@@ -76,7 +78,10 @@ function validateCreate(body: CreateMerchantProductRequest): string | null {
   if (body.redemptionScope === 'province_wide' && (body.validProvinces ?? []).length === 0) {
     return 'At least one province must be selected for province_wide scope.';
   }
-  if (body.displayPriority !== undefined && (!Number.isFinite(body.displayPriority) || body.displayPriority < 0)) {
+  if (
+    body.displayPriority !== undefined &&
+    (!Number.isFinite(body.displayPriority) || body.displayPriority < 0)
+  ) {
     return 'displayPriority must be a number greater than or equal to 0.';
   }
   const isSpecial = Boolean(body.isSpecial);
@@ -112,7 +117,9 @@ function canOperateMerchantProducts(role: string, merchant: any, userId: string)
 }
 
 function isMerchantStatusOperable(status: unknown) {
-  const normalized = String(status ?? '').trim().toLowerCase();
+  const normalized = String(status ?? '')
+    .trim()
+    .toLowerCase();
   if (process.env.NODE_ENV === 'test') {
     const testRaw = String(
       process.env.FORCE_MERCHANT_AUTO_APPROVAL ??
@@ -209,7 +216,9 @@ export async function GET() {
       return NextResponse.json({
         merchantId: merchant.id,
         merchantStatus: merchant.status,
-        defaultTotalDiscountPct: Number(merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT),
+        defaultTotalDiscountPct: Number(
+          merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+        ),
         products: hydrated,
       });
     }
@@ -217,7 +226,9 @@ export async function GET() {
     return NextResponse.json({
       merchantId: merchant.id,
       merchantStatus: merchant.status,
-      defaultTotalDiscountPct: Number(merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT),
+      defaultTotalDiscountPct: Number(
+        merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+      ),
       products: products ?? [],
     });
   } catch (error: any) {
@@ -262,6 +273,23 @@ export async function POST(request: Request) {
         { status: 409 }
       );
     }
+    const complianceSnapshot = await getMerchantComplianceSnapshot(
+      admin,
+      merchant.id,
+      merchant.status
+    );
+    if (!complianceSnapshot.canIssueVouchers) {
+      return NextResponse.json(
+        {
+          error:
+            'Compliance verification is incomplete. Upload and verify all required compliance documents before issuing vouchers.',
+          code: 'compliance_not_verified',
+          overallStatus: complianceSnapshot.overallStatus,
+          missingDocuments: complianceSnapshot.missingDocuments,
+        },
+        { status: 409 }
+      );
+    }
 
     const totalDiscountPct = Number(
       body.totalDiscountPct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
@@ -271,10 +299,13 @@ export async function POST(request: Request) {
     // --- BUSINESS RULE VALIDATION ---
     const ruleCheck = validateAllCriticalRules(pricing);
     if (!ruleCheck.isValid) {
-      return NextResponse.json({
-        error: 'Business rule violation',
-        violations: ruleCheck.violations.map((v: any) => v.message),
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: 'Business rule violation',
+          violations: ruleCheck.violations.map((v: any) => v.message),
+        },
+        { status: 400 }
+      );
     }
 
     const isSpecial = Boolean(body.isSpecial);
@@ -331,7 +362,8 @@ export async function POST(request: Request) {
           evoucher_benefit_amount: pricing.evoucherBenefitAmount,
           consumer_price: pricing.consumerPrice,
           merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
-          merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
+          merchant_receivable_after_evoucher_benefit:
+            pricing.merchantReceivableAfterEvoucherBenefit,
           is_active: true,
         })
         .select(

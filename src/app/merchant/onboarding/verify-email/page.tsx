@@ -94,7 +94,9 @@ export default function MerchantEmailVerificationPage() {
               />
             </span>
             <div>
-              <h1 className="font-headline text-2xl font-bold text-foreground">Merchant Email Verification</h1>
+              <h1 className="font-headline text-2xl font-bold text-foreground">
+                Merchant Email Verification
+              </h1>
               <p className="mt-2 text-sm text-muted-foreground font-body">{message}</p>
             </div>
           </div>

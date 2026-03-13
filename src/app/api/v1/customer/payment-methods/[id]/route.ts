@@ -7,10 +7,7 @@ interface UpdatePaymentMethodRequest {
   isActive?: boolean;
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
@@ -42,7 +39,10 @@ export async function PATCH(
     if (body.isActive !== undefined) updatePayload.is_active = Boolean(body.isActive);
 
     if (Object.keys(updatePayload).length === 0) {
-      return NextResponse.json({ error: 'No updates provided.', code: 'no_updates' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'No updates provided.', code: 'no_updates' },
+        { status: 400 }
+      );
     }
 
     const { data, error } = await supabase
@@ -70,10 +70,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  _request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
@@ -112,4 +109,3 @@ export async function DELETE(
     );
   }
 }
-

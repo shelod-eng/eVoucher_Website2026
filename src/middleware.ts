@@ -36,7 +36,9 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const role = String(user?.user_metadata?.role ?? '').toLowerCase();
   const path = request.nextUrl.pathname;
 

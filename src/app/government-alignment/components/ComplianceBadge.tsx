@@ -9,24 +9,24 @@ interface ComplianceBadgeProps {
   icon: string;
 }
 
-export default function ComplianceBadge({ 
-  name, 
-  acronym, 
-  status, 
-  certificationDate, 
-  expiryDate, 
-  icon 
+export default function ComplianceBadge({
+  name,
+  acronym,
+  status,
+  certificationDate,
+  expiryDate,
+  icon,
 }: ComplianceBadgeProps) {
   const statusColors = {
     certified: 'bg-success/10 text-success border-success/20',
     pending: 'bg-warning/10 text-warning border-warning/20',
-    compliant: 'bg-accent/10 text-accent border-accent/20'
+    compliant: 'bg-accent/10 text-accent border-accent/20',
   };
 
   const statusLabels = {
     certified: 'Certified',
     pending: 'Pending Review',
-    compliant: 'Fully Compliant'
+    compliant: 'Fully Compliant',
   };
 
   return (
@@ -41,11 +41,13 @@ export default function ComplianceBadge({
             <p className="text-sm text-muted-foreground">{name}</p>
           </div>
         </div>
-        <div className={`px-3 py-1 rounded-full text-xs font-body font-semibold border ${statusColors[status]}`}>
+        <div
+          className={`px-3 py-1 rounded-full text-xs font-body font-semibold border ${statusColors[status]}`}
+        >
           {statusLabels[status]}
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
           <p className="text-muted-foreground font-body">Certified</p>

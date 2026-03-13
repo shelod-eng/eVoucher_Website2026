@@ -23,9 +23,9 @@ const BenefitDistributionSection = () => {
         'Average 30% savings on essential goods',
         'R 450 monthly savings per household',
         'Free digital payment infrastructure',
-        'Financial inclusion pathways'
+        'Financial inclusion pathways',
       ],
-      annualValue: 'R 5,400 per household'
+      annualValue: 'R 5,400 per household',
     },
     {
       id: 2,
@@ -37,9 +37,9 @@ const BenefitDistributionSection = () => {
         '25% increase in foot traffic',
         'Free customer loyalty system',
         'Guaranteed payment settlement',
-        'Marketing and analytics tools'
+        'Marketing and analytics tools',
       ],
-      annualValue: 'R 180,000 revenue increase'
+      annualValue: 'R 180,000 revenue increase',
     },
     {
       id: 3,
@@ -51,10 +51,10 @@ const BenefitDistributionSection = () => {
         'Technology infrastructure',
         'Security and compliance',
         'Customer support systems',
-        'Continuous innovation'
+        'Continuous innovation',
       ],
-      annualValue: 'R 40M operational budget'
-    }
+      annualValue: 'R 40M operational budget',
+    },
   ];
 
   return (
@@ -69,7 +69,8 @@ const BenefitDistributionSection = () => {
             Value Distribution Model
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Our commitment to social impact means 70% of all value created flows directly to consumers, with the remaining 30% supporting merchants and platform sustainability
+            Our commitment to social impact means 70% of all value created flows directly to
+            consumers, with the remaining 30% supporting merchants and platform sustainability
           </p>
         </div>
 
@@ -86,7 +87,12 @@ const BenefitDistributionSection = () => {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-3">
                           <div className={`${stakeholder.color} p-2 rounded-lg`}>
-                            <Icon name={stakeholder.icon as any} size={20} variant="solid" className="text-white" />
+                            <Icon
+                              name={stakeholder.icon as any}
+                              size={20}
+                              variant="solid"
+                              className="text-white"
+                            />
                           </div>
                           <span className="font-headline font-semibold text-foreground">
                             {stakeholder.stakeholder}
@@ -97,7 +103,7 @@ const BenefitDistributionSection = () => {
                         </span>
                       </div>
                       <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className={`h-full ${stakeholder.color} rounded-full transition-all duration-700`}
                           style={{ width: `${stakeholder.percentage}%` }}
                         ></div>
@@ -111,35 +117,35 @@ const BenefitDistributionSection = () => {
                 <div className="relative w-64 h-64 mx-auto">
                   <svg viewBox="0 0 100 100" className="transform -rotate-90">
                     <circle cx="50" cy="50" r="40" fill="none" stroke="#E2E8F0" strokeWidth="10" />
-                    <circle 
-                      cx="50" 
-                      cy="50" 
-                      r="40" 
-                      fill="none" 
-                      stroke="#20B2AA" 
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke="#20B2AA"
                       strokeWidth="10"
                       strokeDasharray="175.93 251.33"
                       strokeLinecap="round"
                       className="transition-all duration-700"
                     />
-                    <circle 
-                      cx="50" 
-                      cy="50" 
-                      r="40" 
-                      fill="none" 
-                      stroke="#FF7A00" 
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke="#FF7A00"
                       strokeWidth="10"
                       strokeDasharray="50.27 251.33"
                       strokeDashoffset="-175.93"
                       strokeLinecap="round"
                       className="transition-all duration-700"
                     />
-                    <circle 
-                      cx="50" 
-                      cy="50" 
-                      r="40" 
-                      fill="none" 
-                      stroke="#1BBE7A" 
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke="#1BBE7A"
                       strokeWidth="10"
                       strokeDasharray="25.13 251.33"
                       strokeDashoffset="-226.20"
@@ -161,21 +167,36 @@ const BenefitDistributionSection = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {stakeholderBenefits.map((stakeholder) => (
-            <div key={stakeholder.id} className="bg-card rounded-xl p-6 shadow-md border border-border hover:shadow-lg transition-all duration-300">
+            <div
+              key={stakeholder.id}
+              className="bg-card rounded-xl p-6 shadow-md border border-border hover:shadow-lg transition-all duration-300"
+            >
               <div className="flex items-center space-x-3 mb-4">
                 <div className={`${stakeholder.color} p-3 rounded-lg`}>
-                  <Icon name={stakeholder.icon as any} size={24} variant="solid" className="text-white" />
+                  <Icon
+                    name={stakeholder.icon as any}
+                    size={24}
+                    variant="solid"
+                    className="text-white"
+                  />
                 </div>
                 <div>
-                  <h4 className="font-headline font-bold text-foreground">{stakeholder.stakeholder}</h4>
+                  <h4 className="font-headline font-bold text-foreground">
+                    {stakeholder.stakeholder}
+                  </h4>
                   <p className="text-sm text-success font-semibold">{stakeholder.annualValue}</p>
                 </div>
               </div>
-              
+
               <ul className="space-y-2">
                 {stakeholder.benefits.map((benefit, index) => (
                   <li key={index} className="flex items-start space-x-2">
-                    <Icon name="CheckCircleIcon" size={18} variant="solid" className="text-success flex-shrink-0 mt-0.5" />
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={18}
+                      variant="solid"
+                      className="text-success flex-shrink-0 mt-0.5"
+                    />
                     <span className="text-sm text-muted-foreground">{benefit}</span>
                   </li>
                 ))}

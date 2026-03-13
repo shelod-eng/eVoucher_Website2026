@@ -49,7 +49,10 @@ export async function GET() {
     });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || 'Failed to load payment methods.', code: 'payment_methods_failed' },
+      {
+        error: error?.message || 'Failed to load payment methods.',
+        code: 'payment_methods_failed',
+      },
       { status: 500 }
     );
   }
@@ -109,9 +112,11 @@ export async function POST(request: Request) {
     );
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || 'Failed to add payment method.', code: 'payment_method_add_failed' },
+      {
+        error: error?.message || 'Failed to add payment method.',
+        code: 'payment_method_add_failed',
+      },
       { status: 500 }
     );
   }
 }
-

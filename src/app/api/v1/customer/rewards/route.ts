@@ -34,7 +34,7 @@ function round2(value: number) {
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const relation = relationName.toLowerCase();
-  const bareRelation = relation.includes('.') ? relation.split('.').at(-1) ?? relation : relation;
+  const bareRelation = relation.includes('.') ? (relation.split('.').at(-1) ?? relation) : relation;
   return (
     message.includes(`relation "${relation}" does not exist`) ||
     message.includes(`relation "${bareRelation}" does not exist`) ||
@@ -90,7 +90,9 @@ export async function GET() {
     );
 
     const merchantIds = Array.from(
-      new Set(completedTransactions.map((tx: RewardTxn) => String(tx.merchant_id ?? '')).filter(Boolean))
+      new Set(
+        completedTransactions.map((tx: RewardTxn) => String(tx.merchant_id ?? '')).filter(Boolean)
+      )
     );
     const merchantNames: Record<string, string> = {};
     if (merchantIds.length > 0) {
@@ -154,9 +156,7 @@ export async function GET() {
       .sort((a, b) => a.month.localeCompare(b.month));
 
     const averageMonthlySavings =
-      monthlySeries.length > 0
-        ? totalCashSaved / monthlySeries.length
-        : 0;
+      monthlySeries.length > 0 ? totalCashSaved / monthlySeries.length : 0;
     const averageAnnualSavings = averageMonthlySavings * 12;
 
     const savingsRatePct = OFFER_CONSUMER_SAVINGS_PCT;

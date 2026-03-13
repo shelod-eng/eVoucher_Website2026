@@ -20,7 +20,9 @@ const DEMO_MERCHANTS = [
 ] as const;
 
 function isDemoEmail(email: string) {
-  const normalized = String(email ?? '').trim().toLowerCase();
+  const normalized = String(email ?? '')
+    .trim()
+    .toLowerCase();
   return normalized.startsWith('demo-') && normalized.endsWith('@evoucher.co.za');
 }
 
@@ -31,16 +33,23 @@ async function ensureDemoProvisioned(email: string): Promise<{ ok: boolean; erro
     25000,
     'Demo provisioning timed out.'
   );
-  const payload = await response.json().catch(() => ({} as any));
+  const payload = await response.json().catch(() => ({}) as any);
   if (!response.ok) {
     // Never block login when seeding has a transient schema mismatch.
-    console.warn('[merchant-login][demo-seed][warn]', payload?.error || 'Demo provisioning failed.');
+    console.warn(
+      '[merchant-login][demo-seed][warn]',
+      payload?.error || 'Demo provisioning failed.'
+    );
     return { ok: true as const };
   }
   return { ok: true as const };
 }
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string
+): Promise<T> {
   return await new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
     promise.then(
@@ -62,7 +71,7 @@ async function fetchMerchantAuthState() {
     credentials: 'include',
     cache: 'no-store',
   });
-  const payload = await response.json().catch(() => ({} as any));
+  const payload = await response.json().catch(() => ({}) as any);
   if (!response.ok) {
     throw new Error(payload?.error || 'Failed to load merchant auth state.');
   }
@@ -85,7 +94,8 @@ export default function MerchantLogin() {
     }
   }, [user]);
   const router = useRouter();
-  const allowDemoSeed = String(process.env.NEXT_PUBLIC_ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase() === 'true';
+  const allowDemoSeed =
+    String(process.env.NEXT_PUBLIC_ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase() === 'true';
   const autoSeedOnLogin =
     String(process.env.NEXT_PUBLIC_FORCE_DEMO_SEED_ON_LOGIN ?? '').toLowerCase() === 'true';
 
@@ -148,7 +158,9 @@ export default function MerchantLogin() {
     setLoading(true);
 
     try {
-      const normalizedEmail = String(email ?? '').trim().toLowerCase();
+      const normalizedEmail = String(email ?? '')
+        .trim()
+        .toLowerCase();
       const normalizedPassword = String(password ?? '').trim();
       if (!normalizedEmail || !normalizedPassword) {
         setError('Email and password are required.');
@@ -166,7 +178,10 @@ export default function MerchantLogin() {
         signedInUser = await signIn(normalizedEmail, normalizedPassword);
       } catch (initialSignInError: any) {
         const message = String(initialSignInError?.message || '').toLowerCase();
-        if (isDemoEmail(normalizedEmail) && (message.includes('invalid login') || message.includes('invalid credentials'))) {
+        if (
+          isDemoEmail(normalizedEmail) &&
+          (message.includes('invalid login') || message.includes('invalid credentials'))
+        ) {
           try {
             const retryProvision = await ensureDemoProvisioned(normalizedEmail);
             if (!retryProvision.ok) {
@@ -221,33 +236,52 @@ export default function MerchantLogin() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.18),_transparent_45%),radial-gradient(circle_at_bottom_right,_rgba(20,184,166,0.16),_transparent_50%),#f4fbfa]">
       <Header />
-      
+
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-md mx-auto">
           <div className="mb-5 rounded-2xl border border-teal-300/40 bg-gradient-to-r from-teal-700 to-teal-600 px-6 py-5 text-white shadow-xl">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-teal-100 font-headline">eVoucher Merchant Platform</p>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-teal-100 font-headline">
+              eVoucher Merchant Platform
+            </p>
             <h1 className="mt-2 font-headline font-bold text-2xl">Business Portal Sign In</h1>
-            <p className="mt-1 text-sm text-teal-100">Secure access for chain and private merchants.</p>
+            <p className="mt-1 text-sm text-teal-100">
+              Secure access for chain and private merchants.
+            </p>
           </div>
           <div className="bg-card/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-border">
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Icon name="BuildingStorefrontIcon" size={32} variant="solid" className="text-secondary" />
+                <Icon
+                  name="BuildingStorefrontIcon"
+                  size={32}
+                  variant="solid"
+                  className="text-secondary"
+                />
               </div>
-              <h1 className="font-headline font-bold text-3xl text-foreground mb-2">Merchant Portal</h1>
+              <h1 className="font-headline font-bold text-3xl text-foreground mb-2">
+                Merchant Portal
+              </h1>
               <p className="text-muted-foreground font-body">Sign in to manage your business</p>
             </div>
 
             {error && (
               <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg flex items-start space-x-3">
-                <Icon name="ExclamationCircleIcon" size={20} variant="solid" className="text-error flex-shrink-0 mt-0.5" />
+                <Icon
+                  name="ExclamationCircleIcon"
+                  size={20}
+                  variant="solid"
+                  className="text-error flex-shrink-0 mt-0.5"
+                />
                 <p className="text-sm text-error font-body">{error}</p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
               <div>
-                <label htmlFor="email" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
                   Email Address
                 </label>
                 <input
@@ -267,7 +301,10 @@ export default function MerchantLogin() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
                   Password
                 </label>
                 <input
@@ -295,7 +332,10 @@ export default function MerchantLogin() {
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-center text-sm text-muted-foreground font-body">
                 New merchant?{' '}
-                <Link href="/merchant/onboarding" className="text-secondary font-semibold hover:underline">
+                <Link
+                  href="/merchant/onboarding"
+                  className="text-secondary font-semibold hover:underline"
+                >
                   Apply now
                 </Link>
               </p>
@@ -317,7 +357,9 @@ export default function MerchantLogin() {
                     }}
                     className="w-full text-left rounded-md border border-border bg-background px-3 py-2 hover:bg-muted transition-colors"
                   >
-                    <p className="text-xs font-headline font-semibold text-foreground">{merchant.label}</p>
+                    <p className="text-xs font-headline font-semibold text-foreground">
+                      {merchant.label}
+                    </p>
                     <p className="text-[11px] text-muted-foreground font-body">{merchant.email}</p>
                   </button>
                 ))}

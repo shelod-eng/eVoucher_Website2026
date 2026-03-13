@@ -11,12 +11,13 @@ export type BrandKey =
   | 'game'
   | 'woolworths'
   | 'dischem'
-  | 'superstore';
+  | 'superstore'
+  | 'superprecast';
 
 export interface MerchantBrandDefinition {
   brandKey: BrandKey;
   displayName: string;
-  category: 'Groceries' | 'Healthcare' | 'Clothing' | 'Fuel';
+  category: 'Groceries' | 'Healthcare' | 'Clothing' | 'Fuel' | 'Construction';
   assetPath: string;
   aliases: string[];
   estimatedLocationCount?: number;
@@ -130,6 +131,13 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     category: 'Groceries',
     assetPath: '/assets/images/merchants/superstore.png',
     aliases: ['super store', 'superstore', 'super-store'],
+  },
+  {
+    brandKey: 'superprecast',
+    displayName: 'Super Precast',
+    category: 'Construction',
+    assetPath: '/assets/images/merchants/super-precast.svg',
+    aliases: ['super precast', 'superprecast', 'super precast concrete', 'super-precast'],
   },
 ];
 

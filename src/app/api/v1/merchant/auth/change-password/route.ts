@@ -12,7 +12,7 @@ function validatePassword(password: string): string | null {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json().catch(() => ({} as any));
+    const body = await request.json().catch(() => ({}) as any);
     const password = String(body?.password ?? '').trim();
     const validationError = validatePassword(password);
     if (validationError) {
@@ -38,7 +38,10 @@ export async function POST(request: Request) {
       await completeMerchantPasswordReset(user.id);
     } catch (syncError: any) {
       // Password is already updated in Supabase Auth; do not strand user on this page due sync drift.
-      console.warn('[merchant-auth-change-password][sync-warning]', syncError?.message || syncError);
+      console.warn(
+        '[merchant-auth-change-password][sync-warning]',
+        syncError?.message || syncError
+      );
       return NextResponse.json({
         success: true,
         warning: 'Password updated, but merchant reset sync had a non-blocking issue.',

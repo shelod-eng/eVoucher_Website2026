@@ -17,14 +17,12 @@ export async function GET() {
 
     const { role } = await resolveUserRole(supabase, user);
     const admin = createAdminClient();
-    let merchant:
-      | {
-          id: string;
-          user_id: string | null;
-          must_reset_password: boolean | null;
-          status: string | null;
-        }
-      | null = null;
+    let merchant: {
+      id: string;
+      user_id: string | null;
+      must_reset_password: boolean | null;
+      status: string | null;
+    } | null = null;
     try {
       merchant = await resolveMerchantForUser<{
         id: string;
@@ -52,7 +50,10 @@ export async function GET() {
     }
 
     let effectiveMerchant = merchant;
-    if (Boolean(effectiveMerchant?.must_reset_password) || Boolean(user.user_metadata?.must_change_password)) {
+    if (
+      Boolean(effectiveMerchant?.must_reset_password) ||
+      Boolean(user.user_metadata?.must_change_password)
+    ) {
       try {
         await reconcileMerchantResetState(user.id);
         try {
@@ -79,7 +80,8 @@ export async function GET() {
     // Keep strict behavior for safety/tests: if auth metadata still requires reset, enforce it.
     // Merchant row is also considered, but metadata remains authoritative until refreshed.
     const mustResetPassword =
-      Boolean(effectiveMerchant?.must_reset_password) || Boolean(user.user_metadata?.must_change_password);
+      Boolean(effectiveMerchant?.must_reset_password) ||
+      Boolean(user.user_metadata?.must_change_password);
 
     return NextResponse.json(
       {

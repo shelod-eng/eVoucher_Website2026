@@ -45,9 +45,7 @@ export async function GET() {
     const investigatingAlerts = fraudAlerts.filter(
       (alert) => alert.status === 'investigating'
     ).length;
-    const highRiskAlerts = fraudAlerts.filter(
-      (alert) => toNumber(alert.risk_score) >= 70
-    ).length;
+    const highRiskAlerts = fraudAlerts.filter((alert) => toNumber(alert.risk_score) >= 70).length;
 
     return NextResponse.json({
       role,
@@ -71,4 +69,3 @@ export async function GET() {
     );
   }
 }
-

@@ -9,24 +9,24 @@ interface ImpactMetricsCardProps {
   description: string;
 }
 
-export default function ImpactMetricsCard({ 
-  title, 
-  value, 
-  change, 
-  trend, 
-  icon, 
-  description 
+export default function ImpactMetricsCard({
+  title,
+  value,
+  change,
+  trend,
+  icon,
+  description,
 }: ImpactMetricsCardProps) {
   const trendColors = {
     up: 'text-success',
     down: 'text-error',
-    stable: 'text-warning'
+    stable: 'text-warning',
   };
 
   const trendIcons = {
     up: 'ArrowTrendingUpIcon',
     down: 'ArrowTrendingDownIcon',
-    stable: 'MinusIcon'
+    stable: 'MinusIcon',
   };
 
   return (
@@ -40,7 +40,7 @@ export default function ImpactMetricsCard({
           <span className="text-sm font-body font-semibold">{change}</span>
         </div>
       </div>
-      
+
       <h3 className="font-body text-sm text-muted-foreground mb-2">{title}</h3>
       <p className="font-headline text-3xl font-bold text-foreground mb-2">{value}</p>
       <p className="text-xs text-muted-foreground font-body">{description}</p>

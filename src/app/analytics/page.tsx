@@ -122,7 +122,9 @@ export default function AnalyticsPage() {
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="rounded-2xl border border-teal-300/40 bg-gradient-to-r from-teal-700 to-teal-600 px-6 py-5 text-white shadow-xl">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-teal-100 font-headline">eVoucher Insights</p>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-teal-100 font-headline">
+              eVoucher Insights
+            </p>
             <h1 className="font-headline font-bold text-5xl text-white">Analytics</h1>
             <p className="text-teal-100">Track merchant performance, volume, and savings trends.</p>
           </div>
@@ -164,7 +166,9 @@ export default function AnalyticsPage() {
 
               <div className="grid lg:grid-cols-2 gap-6">
                 <div className="bg-card rounded-2xl border border-border p-5">
-                  <h2 className="font-headline font-bold text-3xl text-foreground mb-4">Monthly Spending</h2>
+                  <h2 className="font-headline font-bold text-3xl text-foreground mb-4">
+                    Monthly Spending
+                  </h2>
                   {payload.monthlySeries.length === 0 ? (
                     <p className="text-muted-foreground text-center py-16">No data yet</p>
                   ) : (
@@ -193,7 +197,9 @@ export default function AnalyticsPage() {
                 </div>
 
                 <div className="bg-card rounded-2xl border border-border p-5">
-                  <h2 className="font-headline font-bold text-3xl text-foreground mb-4">Spend by Merchant</h2>
+                  <h2 className="font-headline font-bold text-3xl text-foreground mb-4">
+                    Spend by Merchant
+                  </h2>
                   {payload.merchantSeries.length === 0 ? (
                     <p className="text-muted-foreground text-center py-16">No data yet</p>
                   ) : (
@@ -210,7 +216,9 @@ export default function AnalyticsPage() {
                             <div className="flex items-center gap-2">
                               <span
                                 className="inline-block w-3 h-3 rounded-full"
-                                style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                                style={{
+                                  backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
+                                }}
                               />
                               <span className="text-sm text-foreground">{row.merchantName}</span>
                             </div>
@@ -226,7 +234,9 @@ export default function AnalyticsPage() {
               </div>
 
               <div className="bg-card rounded-2xl border border-border p-5">
-                <h2 className="font-headline font-bold text-3xl text-foreground mb-4">Recent Transactions</h2>
+                <h2 className="font-headline font-bold text-3xl text-foreground mb-4">
+                  Recent Transactions
+                </h2>
                 {payload.recentTransactions.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No transactions yet</p>
                 ) : (
@@ -237,13 +247,17 @@ export default function AnalyticsPage() {
                         className="rounded-xl border border-border p-3 flex justify-between items-center"
                       >
                         <div>
-                          <p className="font-headline font-semibold text-foreground">{row.merchant_name}</p>
+                          <p className="font-headline font-semibold text-foreground">
+                            {row.merchant_name}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {new Date(row.created_at).toLocaleDateString()}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-headline font-semibold text-foreground">{toCurrency(row.amount)}</p>
+                          <p className="font-headline font-semibold text-foreground">
+                            {toCurrency(row.amount)}
+                          </p>
                           <p className="text-xs text-success">Saved: {toCurrency(row.savings)}</p>
                         </div>
                       </div>

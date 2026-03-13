@@ -10,6 +10,7 @@ import {
 import { isMerchantRole, resolveUserRole } from '@/server/utils/role';
 import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
 import { writeAuditEvent } from '@/server/utils/audit';
+import { getMerchantComplianceSnapshot } from '@/server/utils/compliance';
 
 interface UpdateMerchantProductRequest {
   productName?: string;
@@ -52,7 +53,9 @@ function canOperateMerchantProducts(role: string, merchant: any, userId: string)
 }
 
 function isMerchantStatusOperable(status: unknown) {
-  const normalized = String(status ?? '').trim().toLowerCase();
+  const normalized = String(status ?? '')
+    .trim()
+    .toLowerCase();
   if (process.env.NODE_ENV === 'test') {
     const testRaw = String(
       process.env.FORCE_MERCHANT_AUTO_APPROVAL ??
@@ -104,10 +107,7 @@ async function safeAuditProductEvent(
   }
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -135,6 +135,23 @@ export async function PATCH(
             'Merchant is not approved for product operations yet. Complete onboarding approval first.',
           code: 'merchant_not_approved',
           merchantStatus: merchant.status,
+        },
+        { status: 409 }
+      );
+    }
+    const complianceSnapshot = await getMerchantComplianceSnapshot(
+      admin,
+      merchant.id,
+      merchant.status
+    );
+    if (!complianceSnapshot.canIssueVouchers) {
+      return NextResponse.json(
+        {
+          error:
+            'Compliance verification is incomplete. Upload and verify all required compliance documents before updating products.',
+          code: 'compliance_not_verified',
+          overallStatus: complianceSnapshot.overallStatus,
+          missingDocuments: complianceSnapshot.missingDocuments,
         },
         { status: 409 }
       );
@@ -201,7 +218,8 @@ export async function PATCH(
           evoucher_benefit_amount: pricing.evoucherBenefitAmount,
           consumer_price: pricing.consumerPrice,
           merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
-          merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
+          merchant_receivable_after_evoucher_benefit:
+            pricing.merchantReceivableAfterEvoucherBenefit,
           is_active: body.isActive ?? current.is_active,
         })
         .eq('id', params.id)
@@ -237,7 +255,9 @@ export async function PATCH(
 
     if (
       body.redemptionScope &&
-      !['all_branches', 'specific_branch', 'province_wide', 'national'].includes(body.redemptionScope)
+      !['all_branches', 'specific_branch', 'province_wide', 'national'].includes(
+        body.redemptionScope
+      )
     ) {
       return NextResponse.json({ error: 'Redemption scope is invalid.' }, { status: 400 });
     }
@@ -262,7 +282,10 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    if (body.displayPriority !== undefined && (!Number.isFinite(body.displayPriority) || body.displayPriority < 0)) {
+    if (
+      body.displayPriority !== undefined &&
+      (!Number.isFinite(body.displayPriority) || body.displayPriority < 0)
+    ) {
       return NextResponse.json(
         { error: 'displayPriority must be a number greater than or equal to 0.' },
         { status: 400 }
@@ -275,14 +298,19 @@ export async function PATCH(
         body.totalDiscountPct > MAX_TOTAL_DISCOUNT_PCT)
     ) {
       return NextResponse.json(
-        { error: `Total discount percentage must be between ${MIN_TOTAL_DISCOUNT_PCT} and ${MAX_TOTAL_DISCOUNT_PCT}.` },
+        {
+          error: `Total discount percentage must be between ${MIN_TOTAL_DISCOUNT_PCT} and ${MAX_TOTAL_DISCOUNT_PCT}.`,
+        },
         { status: 400 }
       );
     }
 
     const nextFaceValue = Number(body.faceValue ?? existing.face_value);
     const nextTotalDiscountPct = Number(
-      body.totalDiscountPct ?? existing.total_discount_pct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+      body.totalDiscountPct ??
+        existing.total_discount_pct ??
+        merchant.default_total_discount_pct ??
+        DEFAULT_TOTAL_DISCOUNT_PCT
     );
     if (
       body.totalDiscountPct !== undefined &&
@@ -307,7 +335,10 @@ export async function PATCH(
         : String(existing.special_end_at ?? '').trim()
       : null;
     if (nextIsSpecial && !nextSpecialTitle) {
-      return NextResponse.json({ error: 'specialTitle is required when isSpecial is true.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'specialTitle is required when isSpecial is true.' },
+        { status: 400 }
+      );
     }
     const isUpdatingSpecialConfig =
       body.specialEndAt !== undefined ||
@@ -316,17 +347,25 @@ export async function PATCH(
       body.displayPriority !== undefined;
     if (nextIsSpecial && isUpdatingSpecialConfig) {
       if (!nextSpecialEndAtRaw) {
-        return NextResponse.json({ error: 'specialEndAt is required when isSpecial is true.' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'specialEndAt is required when isSpecial is true.' },
+          { status: 400 }
+        );
       }
       const endAt = new Date(nextSpecialEndAtRaw);
       if (Number.isNaN(endAt.getTime()) || endAt.getTime() <= Date.now()) {
-        return NextResponse.json({ error: 'specialEndAt must be a valid future date/time.' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'specialEndAt must be a valid future date/time.' },
+          { status: 400 }
+        );
       }
     }
     const nextSpecialEndAt = nextIsSpecial
       ? new Date(String(nextSpecialEndAtRaw)).toISOString()
       : null;
-    const nextDisplayPriority = Number(body.displayPriority ?? existing.display_priority ?? (nextIsSpecial ? 100 : 0));
+    const nextDisplayPriority = Number(
+      body.displayPriority ?? existing.display_priority ?? (nextIsSpecial ? 100 : 0)
+    );
 
     const pricing = calculateDiscountPricing(nextFaceValue, nextTotalDiscountPct);
     const { validateAllCriticalRules } = require('@/server/utils/business-rules-validator');
@@ -391,7 +430,8 @@ export async function PATCH(
           evoucher_benefit_amount: pricing.evoucherBenefitAmount,
           consumer_price: pricing.consumerPrice,
           merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
-          merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
+          merchant_receivable_after_evoucher_benefit:
+            pricing.merchantReceivableAfterEvoucherBenefit,
           is_active: body.isActive ?? existing.is_active,
         })
         .eq('id', params.id)
@@ -443,10 +483,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  _request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -470,6 +507,23 @@ export async function DELETE(
             'Merchant is not approved for product operations yet. Complete onboarding approval first.',
           code: 'merchant_not_approved',
           merchantStatus: merchant.status,
+        },
+        { status: 409 }
+      );
+    }
+    const complianceSnapshot = await getMerchantComplianceSnapshot(
+      admin,
+      merchant.id,
+      merchant.status
+    );
+    if (!complianceSnapshot.canIssueVouchers) {
+      return NextResponse.json(
+        {
+          error:
+            'Compliance verification is incomplete. Upload and verify all required compliance documents before managing products.',
+          code: 'compliance_not_verified',
+          overallStatus: complianceSnapshot.overallStatus,
+          missingDocuments: complianceSnapshot.missingDocuments,
         },
         { status: 409 }
       );

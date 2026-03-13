@@ -41,8 +41,7 @@ export async function POST(request: Request) {
       emailDeliveryError: result.emailDeliveryError,
       smsDeliveryError: result.smsDeliveryError,
       debug: result.debug,
-      message:
-        'Onboarding submitted. Confirm your email token to complete verification.',
+      message: 'Onboarding submitted. Confirm your email token to complete verification.',
     });
   } catch (error: any) {
     console.error('[api][merchant-onboarding][error]', {

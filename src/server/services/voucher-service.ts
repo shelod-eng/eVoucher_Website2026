@@ -1,10 +1,6 @@
 import { DiscountPricingBreakdown } from '@/lib/pricing';
 
-export type RedemptionScope =
-  | 'all_branches'
-  | 'specific_branch'
-  | 'province_wide'
-  | 'national';
+export type RedemptionScope = 'all_branches' | 'specific_branch' | 'province_wide' | 'national';
 
 export interface IssueVoucherInput {
   customerId: string;

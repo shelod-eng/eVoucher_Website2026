@@ -88,11 +88,36 @@ const PROMOTION_BADGES = [
 ] as const;
 
 const GROCERY_PRESETS = [
-  { label: 'R50 Essentials', productName: 'R50 Grocery Voucher', faceValue: 50, totalDiscountPct: 4 },
-  { label: 'R100 Basket', productName: 'R100 Grocery Voucher', faceValue: 100, totalDiscountPct: 4 },
-  { label: 'R200 Weekly Top-up', productName: 'R200 Grocery Voucher', faceValue: 200, totalDiscountPct: 4 },
-  { label: 'R500 Family Pack', productName: 'R500 Grocery Voucher', faceValue: 500, totalDiscountPct: 5 },
-  { label: 'R1000 Monthly Shop', productName: 'R1000 Grocery Voucher', faceValue: 1000, totalDiscountPct: 5 },
+  {
+    label: 'R50 Essentials',
+    productName: 'R50 Grocery Voucher',
+    faceValue: 50,
+    totalDiscountPct: 4,
+  },
+  {
+    label: 'R100 Basket',
+    productName: 'R100 Grocery Voucher',
+    faceValue: 100,
+    totalDiscountPct: 4,
+  },
+  {
+    label: 'R200 Weekly Top-up',
+    productName: 'R200 Grocery Voucher',
+    faceValue: 200,
+    totalDiscountPct: 4,
+  },
+  {
+    label: 'R500 Family Pack',
+    productName: 'R500 Grocery Voucher',
+    faceValue: 500,
+    totalDiscountPct: 5,
+  },
+  {
+    label: 'R1000 Monthly Shop',
+    productName: 'R1000 Grocery Voucher',
+    faceValue: 1000,
+    totalDiscountPct: 5,
+  },
 ] as const;
 
 function toFriendlyDashboardError(message: string) {
@@ -117,7 +142,9 @@ export default function MerchantDashboard() {
   const [error, setError] = useState('');
   const [productMessage, setProductMessage] = useState('');
   const [savingProduct, setSavingProduct] = useState(false);
-  const [activeMerchantTab, setActiveMerchantTab] = useState<'products' | 'studio' | 'payouts'>('studio');
+  const [activeMerchantTab, setActiveMerchantTab] = useState<'products' | 'studio' | 'payouts'>(
+    'studio'
+  );
   const [productsFilter, setProductsFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [productsSearch, setProductsSearch] = useState('');
   const [productsPage, setProductsPage] = useState(1);
@@ -127,7 +154,11 @@ export default function MerchantDashboard() {
     faceValue: 100,
     totalDiscountPct: 4,
     validityDays: 90,
-    redemptionScope: 'all_branches' as 'all_branches' | 'specific_branch' | 'province_wide' | 'national',
+    redemptionScope: 'all_branches' as
+      | 'all_branches'
+      | 'specific_branch'
+      | 'province_wide'
+      | 'national',
     isSpecial: false,
     specialTitle: 'Weekend Special',
     specialEndAt: '',
@@ -151,7 +182,7 @@ export default function MerchantDashboard() {
             credentials: 'include',
             cache: 'no-store',
           });
-          const statePayload = await stateResponse.json().catch(() => ({} as any));
+          const statePayload = await stateResponse.json().catch(() => ({}) as any);
           if (cancelled) return;
           if (!stateResponse.ok) {
             throw new Error(statePayload?.error || 'Failed to verify merchant access.');
@@ -264,7 +295,7 @@ export default function MerchantDashboard() {
         setProductMessage(productsData.error || 'Unable to load products.');
       }
 
-      const branchesData = await branchesRes.json().catch(() => ({} as any));
+      const branchesData = await branchesRes.json().catch(() => ({}) as any);
       if (branchesRes.ok) {
         setBranches(Array.isArray(branchesData?.branches) ? branchesData.branches : []);
       }
@@ -342,8 +373,12 @@ export default function MerchantDashboard() {
       if (!byFilter) return false;
       if (!query) return true;
       return (
-        String(product.product_name ?? '').toLowerCase().includes(query) ||
-        String(product.parent_brand ?? '').toLowerCase().includes(query)
+        String(product.product_name ?? '')
+          .toLowerCase()
+          .includes(query) ||
+        String(product.parent_brand ?? '')
+          .toLowerCase()
+          .includes(query)
       );
     });
   }, [merchantProducts, productsFilter, productsSearch]);
@@ -425,9 +460,7 @@ export default function MerchantDashboard() {
               ? [merchant.province]
               : [],
           validBranchIds:
-            productForm.redemptionScope === 'specific_branch'
-              ? productForm.validBranchIds
-              : [],
+            productForm.redemptionScope === 'specific_branch' ? productForm.validBranchIds : [],
         }),
       });
 
@@ -587,7 +620,8 @@ export default function MerchantDashboard() {
                 {merchant?.business_name || 'Merchant Dashboard'}
               </h1>
               <p className="text-muted-foreground font-body">
-                Merchant-only operations: onboarding status, product catalogue, discounts, payouts, and performance.
+                Merchant-only operations: onboarding status, product catalogue, discounts, payouts,
+                and performance.
               </p>
             </div>
             <button
@@ -625,7 +659,12 @@ export default function MerchantDashboard() {
             <div className="bg-card/95 backdrop-blur-sm rounded-2xl p-6 border border-border shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center">
-                  <Icon name="CheckBadgeIcon" size={24} variant="solid" className="text-secondary" />
+                  <Icon
+                    name="CheckBadgeIcon"
+                    size={24}
+                    variant="solid"
+                    className="text-secondary"
+                  />
                 </div>
                 <div
                   className={`px-3 py-1 rounded-full text-xs font-headline font-semibold ${getStatusColor(merchant?.status || 'pending')}`}
@@ -634,7 +673,9 @@ export default function MerchantDashboard() {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground font-body mb-1">Onboarding Status</p>
-              <p className="text-2xl font-headline font-bold text-foreground capitalize">{merchant?.status}</p>
+              <p className="text-2xl font-headline font-bold text-foreground capitalize">
+                {merchant?.status}
+              </p>
             </div>
 
             <div className="bg-gradient-to-br from-teal-600 to-teal-500 rounded-2xl p-6 text-white shadow-lg">
@@ -656,7 +697,9 @@ export default function MerchantDashboard() {
           {analyticsMetrics && (
             <div className="bg-card rounded-2xl shadow-lg p-6 border border-border mb-8">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-                <h2 className="font-headline font-bold text-2xl text-foreground">Performance KPIs</h2>
+                <h2 className="font-headline font-bold text-2xl text-foreground">
+                  Performance KPIs
+                </h2>
                 <div className="flex gap-3">
                   <a
                     href="/api/v1/analytics/export?type=monthly"
@@ -704,7 +747,9 @@ export default function MerchantDashboard() {
           <div className="grid xl:grid-cols-[1.2fr,1fr] gap-8 mb-8">
             <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-headline font-bold text-2xl text-foreground">Voucher Product Studio</h2>
+                <h2 className="font-headline font-bold text-2xl text-foreground">
+                  Voucher Product Studio
+                </h2>
                 <Icon name="TicketIcon" size={24} variant="solid" className="text-primary" />
               </div>
               <div className="mb-4 inline-flex rounded-lg border border-border bg-muted p-1">
@@ -746,12 +791,13 @@ export default function MerchantDashboard() {
               {activeMerchantTab === 'studio' && (
                 <>
                   <p className="text-sm text-muted-foreground font-body mb-4">
-                    Grocery recommendation: use a total discount between 3% and 15%. The 50/50 split is enforced:
-                    consumer benefit and platform margin each receive half of total discount.
+                    Grocery recommendation: use a total discount between 3% and 15%. The 50/50 split
+                    is enforced: consumer benefit and platform margin each receive half of total
+                    discount.
                   </p>
                   <p className="text-sm text-muted-foreground font-body mb-4">
-                    Example (R100 voucher @ 5%): consumer pays R97.50, platform retains R2.50, merchant settlement is
-                    R95.00.
+                    Example (R100 voucher @ 5%): consumer pays R97.50, platform retains R2.50,
+                    merchant settlement is R95.00.
                   </p>
 
                   <div className="flex flex-wrap gap-2 mb-5">
@@ -767,163 +813,177 @@ export default function MerchantDashboard() {
                   </div>
 
                   <div className="grid md:grid-cols-3 gap-3 mb-4">
-                <input
-                  type="text"
-                  value={productForm.productName}
-                  onChange={(event) =>
-                    setProductForm((prev) => ({ ...prev, productName: event.target.value }))
-                  }
-                  placeholder="Product name (e.g. R100 Grocery Voucher)"
-                  className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                />
-                <input
-                  type="number"
-                  min={10}
-                  value={productForm.faceValue}
-                  onChange={(event) =>
-                    setProductForm((prev) => ({ ...prev, faceValue: Number(event.target.value || 0) }))
-                  }
-                  placeholder="Face value"
-                  className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                />
-                <input
-                  type="number"
-                  min={3}
-                  max={15}
-                  step={0.1}
-                  value={productForm.totalDiscountPct}
-                  onChange={(event) =>
-                    setProductForm((prev) => ({
-                      ...prev,
-                      totalDiscountPct: Number(event.target.value || 0),
-                    }))
-                  }
-                  placeholder="Total discount %"
-                  className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                />
-                <div className="md:col-span-3 rounded-lg border border-border bg-background px-4 py-3">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                    <span>Discount slider ({Number(productForm.totalDiscountPct).toFixed(1)}%)</span>
-                    <span>3% - 15%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={3}
-                    max={15}
-                    step={0.5}
-                    value={productForm.totalDiscountPct}
-                    onChange={(event) =>
-                      setProductForm((prev) => ({
-                        ...prev,
-                        totalDiscountPct: Number(event.target.value || 0),
-                      }))
-                    }
-                    className="w-full accent-primary"
-                  />
-                </div>
-                <select
-                  value={productForm.redemptionScope}
-                  onChange={(event) =>
-                    setProductForm((prev) => ({
-                      ...prev,
-                      redemptionScope: event.target.value as
-                        | 'all_branches'
-                        | 'specific_branch'
-                        | 'province_wide'
-                        | 'national',
-                    }))
-                  }
-                  className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                >
-                  <option value="all_branches">All brand branches</option>
-                  <option value="specific_branch">This branch only</option>
-                  <option value="province_wide">Province-wide</option>
-                  <option value="national">National</option>
-                </select>
-                <select
-                  value={productForm.validityDays}
-                  onChange={(event) =>
-                    setProductForm((prev) => ({
-                      ...prev,
-                      validityDays: Number(event.target.value || 90),
-                    }))
-                  }
-                  className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                >
-                  <option value={30}>30 days validity</option>
-                  <option value={60}>60 days validity</option>
-                  <option value={90}>90 days validity</option>
-                  <option value={180}>180 days validity</option>
-                  <option value={365}>365 days validity</option>
-                </select>
-                {productForm.redemptionScope === 'specific_branch' && (
-                  <select
-                    value={productForm.validBranchIds[0] ?? ''}
-                    onChange={(event) =>
-                      setProductForm((prev) => ({
-                        ...prev,
-                        validBranchIds: event.target.value ? [event.target.value] : [],
-                      }))
-                    }
-                    className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                  >
-                    <option value="">Select branch</option>
-                    {branches.map((branch) => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.branch_name || branch.business_name || branch.email || branch.id}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <label className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-3 text-sm font-body text-foreground">
-                  <input
-                    type="checkbox"
-                    checked={productForm.isSpecial}
-                    onChange={(event) =>
-                      setProductForm((prev) => ({ ...prev, isSpecial: event.target.checked }))
-                    }
-                  />
-                  Mark as special offer
-                </label>
-                {productForm.isSpecial && (
-                  <>
-                    <select
-                      value={productForm.specialTitle}
-                      onChange={(event) =>
-                        setProductForm((prev) => ({ ...prev, specialTitle: event.target.value }))
-                      }
-                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                    >
-                      {PROMOTION_BADGES.map((badge) => (
-                        <option key={badge} value={badge}>
-                          {badge}
-                        </option>
-                      ))}
-                    </select>
                     <input
-                      type="datetime-local"
-                      value={productForm.specialEndAt}
+                      type="text"
+                      value={productForm.productName}
                       onChange={(event) =>
-                        setProductForm((prev) => ({ ...prev, specialEndAt: event.target.value }))
+                        setProductForm((prev) => ({ ...prev, productName: event.target.value }))
                       }
+                      placeholder="Product name (e.g. R100 Grocery Voucher)"
                       className="px-4 py-3 border border-border rounded-lg bg-background font-body"
                     />
                     <input
                       type="number"
-                      min={0}
-                      max={999}
-                      value={productForm.displayPriority}
+                      min={10}
+                      value={productForm.faceValue}
                       onChange={(event) =>
                         setProductForm((prev) => ({
                           ...prev,
-                          displayPriority: Number(event.target.value || 0),
+                          faceValue: Number(event.target.value || 0),
                         }))
                       }
-                      placeholder="Display priority"
+                      placeholder="Face value"
                       className="px-4 py-3 border border-border rounded-lg bg-background font-body"
                     />
-                  </>
-                )}
+                    <input
+                      type="number"
+                      min={3}
+                      max={15}
+                      step={0.1}
+                      value={productForm.totalDiscountPct}
+                      onChange={(event) =>
+                        setProductForm((prev) => ({
+                          ...prev,
+                          totalDiscountPct: Number(event.target.value || 0),
+                        }))
+                      }
+                      placeholder="Total discount %"
+                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                    />
+                    <div className="md:col-span-3 rounded-lg border border-border bg-background px-4 py-3">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                        <span>
+                          Discount slider ({Number(productForm.totalDiscountPct).toFixed(1)}%)
+                        </span>
+                        <span>3% - 15%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={3}
+                        max={15}
+                        step={0.5}
+                        value={productForm.totalDiscountPct}
+                        onChange={(event) =>
+                          setProductForm((prev) => ({
+                            ...prev,
+                            totalDiscountPct: Number(event.target.value || 0),
+                          }))
+                        }
+                        className="w-full accent-primary"
+                      />
+                    </div>
+                    <select
+                      value={productForm.redemptionScope}
+                      onChange={(event) =>
+                        setProductForm((prev) => ({
+                          ...prev,
+                          redemptionScope: event.target.value as
+                            | 'all_branches'
+                            | 'specific_branch'
+                            | 'province_wide'
+                            | 'national',
+                        }))
+                      }
+                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                    >
+                      <option value="all_branches">All brand branches</option>
+                      <option value="specific_branch">This branch only</option>
+                      <option value="province_wide">Province-wide</option>
+                      <option value="national">National</option>
+                    </select>
+                    <select
+                      value={productForm.validityDays}
+                      onChange={(event) =>
+                        setProductForm((prev) => ({
+                          ...prev,
+                          validityDays: Number(event.target.value || 90),
+                        }))
+                      }
+                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                    >
+                      <option value={30}>30 days validity</option>
+                      <option value={60}>60 days validity</option>
+                      <option value={90}>90 days validity</option>
+                      <option value={180}>180 days validity</option>
+                      <option value={365}>365 days validity</option>
+                    </select>
+                    {productForm.redemptionScope === 'specific_branch' && (
+                      <select
+                        value={productForm.validBranchIds[0] ?? ''}
+                        onChange={(event) =>
+                          setProductForm((prev) => ({
+                            ...prev,
+                            validBranchIds: event.target.value ? [event.target.value] : [],
+                          }))
+                        }
+                        className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                      >
+                        <option value="">Select branch</option>
+                        {branches.map((branch) => (
+                          <option key={branch.id} value={branch.id}>
+                            {branch.branch_name ||
+                              branch.business_name ||
+                              branch.email ||
+                              branch.id}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <label className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-3 text-sm font-body text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={productForm.isSpecial}
+                        onChange={(event) =>
+                          setProductForm((prev) => ({ ...prev, isSpecial: event.target.checked }))
+                        }
+                      />
+                      Mark as special offer
+                    </label>
+                    {productForm.isSpecial && (
+                      <>
+                        <select
+                          value={productForm.specialTitle}
+                          onChange={(event) =>
+                            setProductForm((prev) => ({
+                              ...prev,
+                              specialTitle: event.target.value,
+                            }))
+                          }
+                          className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                        >
+                          {PROMOTION_BADGES.map((badge) => (
+                            <option key={badge} value={badge}>
+                              {badge}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="datetime-local"
+                          value={productForm.specialEndAt}
+                          onChange={(event) =>
+                            setProductForm((prev) => ({
+                              ...prev,
+                              specialEndAt: event.target.value,
+                            }))
+                          }
+                          className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          max={999}
+                          value={productForm.displayPriority}
+                          onChange={(event) =>
+                            setProductForm((prev) => ({
+                              ...prev,
+                              displayPriority: Number(event.target.value || 0),
+                            }))
+                          }
+                          placeholder="Display priority"
+                          className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                        />
+                      </>
+                    )}
                   </div>
 
                   <button
@@ -944,16 +1004,28 @@ export default function MerchantDashboard() {
                 <div className="space-y-4">
                   <div className="grid md:grid-cols-3 gap-3">
                     <div className="rounded-xl border border-teal-200 bg-teal-50 p-4">
-                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-teal-700">Active Products</p>
-                      <p className="text-4xl font-headline font-bold text-teal-700 mt-1">{activeProducts}</p>
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-teal-700">
+                        Active Products
+                      </p>
+                      <p className="text-4xl font-headline font-bold text-teal-700 mt-1">
+                        {activeProducts}
+                      </p>
                     </div>
                     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-slate-300">Total Revenue</p>
-                      <p className="text-4xl font-headline font-bold text-emerald-300 mt-1">R{estimatedTotalRevenue.toFixed(0)}</p>
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-slate-300">
+                        Total Revenue
+                      </p>
+                      <p className="text-4xl font-headline font-bold text-emerald-300 mt-1">
+                        R{estimatedTotalRevenue.toFixed(0)}
+                      </p>
                     </div>
                     <div className="rounded-xl border border-border bg-background p-4">
-                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-muted-foreground">Vouchers Sold</p>
-                      <p className="text-4xl font-headline font-bold text-foreground mt-1">{estimatedVouchersSold}</p>
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-muted-foreground">
+                        Vouchers Sold
+                      </p>
+                      <p className="text-4xl font-headline font-bold text-foreground mt-1">
+                        {estimatedVouchersSold}
+                      </p>
                     </div>
                   </div>
 
@@ -1006,26 +1078,49 @@ export default function MerchantDashboard() {
                     ) : (
                       paginatedProducts.map((product) => {
                         const estimatedSold = product.is_active ? 12 : 4;
-                        const estimatedRevenue = Number(product.consumer_price ?? 0) * estimatedSold;
+                        const estimatedRevenue =
+                          Number(product.consumer_price ?? 0) * estimatedSold;
                         const estimatedRedemptionRate = product.is_active ? 92 : 61;
                         return (
-                          <div key={product.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                          <div
+                            key={product.id}
+                            className="rounded-xl border border-border bg-card p-4 shadow-sm"
+                          >
                             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <p className="font-headline font-semibold text-foreground text-lg">{product.product_name}</p>
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-headline font-semibold ${product.is_active ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                                  <p className="font-headline font-semibold text-foreground text-lg">
+                                    {product.product_name}
+                                  </p>
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-xs font-headline font-semibold ${product.is_active ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}
+                                  >
                                     {product.is_active ? 'Active' : 'Inactive'}
                                   </span>
                                 </div>
                                 <p className="text-sm text-muted-foreground font-body">
-                                  Scope: {String(product.redemption_scope ?? 'all_branches').replace('_', ' ')}
-                                  {product.special_title ? ` | Special: ${product.special_title}` : ''}
+                                  Scope:{' '}
+                                  {String(product.redemption_scope ?? 'all_branches').replace(
+                                    '_',
+                                    ' '
+                                  )}
+                                  {product.special_title
+                                    ? ` | Special: ${product.special_title}`
+                                    : ''}
                                 </p>
                                 <div className="flex flex-wrap items-center gap-4 text-sm font-body">
-                                  <span className="text-foreground font-headline">R{Number(product.face_value).toFixed(0)} <span className="text-muted-foreground font-body">face value</span></span>
-                                  <span className="text-primary font-headline">{Number(product.total_discount_pct).toFixed(1)}% discount</span>
-                                  <span className="text-muted-foreground">You pay R{Number(product.consumer_price).toFixed(2)}</span>
+                                  <span className="text-foreground font-headline">
+                                    R{Number(product.face_value).toFixed(0)}{' '}
+                                    <span className="text-muted-foreground font-body">
+                                      face value
+                                    </span>
+                                  </span>
+                                  <span className="text-primary font-headline">
+                                    {Number(product.total_discount_pct).toFixed(1)}% discount
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    You pay R{Number(product.consumer_price).toFixed(2)}
+                                  </span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
@@ -1038,7 +1133,12 @@ export default function MerchantDashboard() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => void handleInlineDiscountUpdate(product, Number(product.total_discount_pct))}
+                                  onClick={() =>
+                                    void handleInlineDiscountUpdate(
+                                      product,
+                                      Number(product.total_discount_pct)
+                                    )
+                                  }
                                   disabled={savingInlineEdit}
                                   className="rounded-lg border border-border px-2.5 py-2 text-xs font-headline font-semibold hover:bg-muted disabled:opacity-50"
                                 >
@@ -1046,7 +1146,9 @@ export default function MerchantDashboard() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => void handleDeleteProduct(product.id, product.product_name)}
+                                  onClick={() =>
+                                    void handleDeleteProduct(product.id, product.product_name)
+                                  }
                                   className="rounded-lg border border-error/30 px-2.5 py-2 text-xs font-headline font-semibold text-error hover:bg-error/10"
                                 >
                                   Delete
@@ -1063,8 +1165,16 @@ export default function MerchantDashboard() {
                                   defaultValue={Number(product.face_value)}
                                   onBlur={(event) => {
                                     const nextValue = Number(event.currentTarget.value || 0);
-                                    if (!Number.isFinite(nextValue) || nextValue <= 0 || nextValue === Number(product.face_value)) return;
-                                    void handleInlineDiscountUpdate({ ...product, face_value: nextValue }, Number(product.total_discount_pct));
+                                    if (
+                                      !Number.isFinite(nextValue) ||
+                                      nextValue <= 0 ||
+                                      nextValue === Number(product.face_value)
+                                    )
+                                      return;
+                                    void handleInlineDiscountUpdate(
+                                      { ...product, face_value: nextValue },
+                                      Number(product.total_discount_pct)
+                                    );
                                   }}
                                   className="rounded-lg border border-border bg-background px-2.5 py-1.5"
                                 />
@@ -1079,7 +1189,13 @@ export default function MerchantDashboard() {
                                   defaultValue={Number(product.total_discount_pct)}
                                   onBlur={(event) => {
                                     const nextDiscount = Number(event.currentTarget.value || 0);
-                                    if (!Number.isFinite(nextDiscount) || nextDiscount < 3 || nextDiscount > 15 || nextDiscount === Number(product.total_discount_pct)) return;
+                                    if (
+                                      !Number.isFinite(nextDiscount) ||
+                                      nextDiscount < 3 ||
+                                      nextDiscount > 15 ||
+                                      nextDiscount === Number(product.total_discount_pct)
+                                    )
+                                      return;
                                     void handleInlineDiscountUpdate(product, nextDiscount);
                                   }}
                                   className="rounded-lg border border-border bg-background px-2.5 py-1.5"
@@ -1087,15 +1203,22 @@ export default function MerchantDashboard() {
                               </label>
                               <div className="rounded-lg border border-border bg-muted/20 px-2.5 py-1.5">
                                 <p className="text-xs text-muted-foreground">Sold Count</p>
-                                <p className="font-headline font-bold text-foreground">{estimatedSold}</p>
+                                <p className="font-headline font-bold text-foreground">
+                                  {estimatedSold}
+                                </p>
                               </div>
                               <div className="rounded-lg border border-border bg-muted/20 px-2.5 py-1.5">
                                 <p className="text-xs text-muted-foreground">Revenue</p>
-                                <p className="font-headline font-bold text-primary">R{estimatedRevenue.toFixed(0)}</p>
+                                <p className="font-headline font-bold text-primary">
+                                  R{estimatedRevenue.toFixed(0)}
+                                </p>
                               </div>
                             </div>
                             <div className="mt-2 text-xs text-muted-foreground font-body">
-                              Redemption rate: <span className="font-headline font-semibold text-success">{estimatedRedemptionRate}%</span>
+                              Redemption rate:{' '}
+                              <span className="font-headline font-semibold text-success">
+                                {estimatedRedemptionRate}%
+                              </span>
                             </div>
                           </div>
                         );
@@ -1119,7 +1242,9 @@ export default function MerchantDashboard() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setProductsPage((prev) => Math.min(productsPageCount, prev + 1))}
+                          onClick={() =>
+                            setProductsPage((prev) => Math.min(productsPageCount, prev + 1))
+                          }
                           disabled={productsPage >= productsPageCount}
                           className="px-3 py-1.5 rounded-lg border border-border text-xs font-headline font-semibold disabled:opacity-50"
                         >
@@ -1141,7 +1266,9 @@ export default function MerchantDashboard() {
                       <p className="mt-1 text-2xl font-headline font-bold text-amber-700">
                         R{pendingPayouts.toFixed(2)}
                       </p>
-                      <p className="text-xs text-amber-700/80">{pendingPayoutItems.length} transactions</p>
+                      <p className="text-xs text-amber-700/80">
+                        {pendingPayoutItems.length} transactions
+                      </p>
                     </div>
                     <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
                       <p className="text-[11px] uppercase tracking-[0.16em] text-teal-700 font-headline">
@@ -1150,13 +1277,17 @@ export default function MerchantDashboard() {
                       <p className="mt-1 text-2xl font-headline font-bold text-teal-700">
                         R{totalPayouts.toFixed(2)}
                       </p>
-                      <p className="text-xs text-teal-700/80">{completedPayouts.length} completed</p>
+                      <p className="text-xs text-teal-700/80">
+                        {completedPayouts.length} completed
+                      </p>
                     </div>
                     <div className="rounded-xl border border-border bg-background px-4 py-3">
                       <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground font-headline">
                         Next Payout
                       </p>
-                      <p className="mt-1 text-lg font-headline font-bold text-foreground">{nextPayoutDateLabel}</p>
+                      <p className="mt-1 text-lg font-headline font-bold text-foreground">
+                        {nextPayoutDateLabel}
+                      </p>
                       <p className="text-xs text-muted-foreground">Weekly EFT cycle</p>
                     </div>
                   </div>
@@ -1165,27 +1296,38 @@ export default function MerchantDashboard() {
                     <div className="space-y-4">
                       <div className="rounded-xl border border-amber-200 overflow-hidden">
                         <div className="flex items-center justify-between bg-amber-50 px-4 py-2">
-                          <p className="font-headline font-semibold text-amber-800">Pending Payouts</p>
+                          <p className="font-headline font-semibold text-amber-800">
+                            Pending Payouts
+                          </p>
                           <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-headline font-semibold text-amber-800">
                             {pendingPayoutItems.length}
                           </span>
                         </div>
                         <div className="divide-y divide-border">
                           {pendingPayoutItems.length === 0 ? (
-                            <p className="px-4 py-3 text-sm text-muted-foreground font-body">No pending payouts.</p>
+                            <p className="px-4 py-3 text-sm text-muted-foreground font-body">
+                              No pending payouts.
+                            </p>
                           ) : (
                             pendingPayoutItems.map((payout, index) => (
-                              <div key={payout.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                              <div
+                                key={payout.id}
+                                className="px-4 py-3 flex items-center justify-between gap-3"
+                              >
                                 <div>
                                   <p className="font-headline font-semibold text-foreground">
-                                    PAY-{new Date(payout.created_at).getFullYear()}-{String(index + 1).padStart(3, '0')}
+                                    PAY-{new Date(payout.created_at).getFullYear()}-
+                                    {String(index + 1).padStart(3, '0')}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {new Date(payout.created_at).toLocaleDateString()} - status: {payout.status}
+                                    {new Date(payout.created_at).toLocaleDateString()} - status:{' '}
+                                    {payout.status}
                                   </p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="font-headline font-bold text-foreground">R{Number(payout.amount).toFixed(2)}</p>
+                                  <p className="font-headline font-bold text-foreground">
+                                    R{Number(payout.amount).toFixed(2)}
+                                  </p>
                                   <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-headline font-semibold text-amber-800">
                                     Awaiting
                                   </span>
@@ -1198,27 +1340,38 @@ export default function MerchantDashboard() {
 
                       <div className="rounded-xl border border-emerald-200 overflow-hidden">
                         <div className="flex items-center justify-between bg-emerald-50 px-4 py-2">
-                          <p className="font-headline font-semibold text-emerald-800">Completed Payouts</p>
+                          <p className="font-headline font-semibold text-emerald-800">
+                            Completed Payouts
+                          </p>
                           <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-xs font-headline font-semibold text-emerald-800">
                             {completedPayouts.length}
                           </span>
                         </div>
                         <div className="divide-y divide-border">
                           {completedPayouts.length === 0 ? (
-                            <p className="px-4 py-3 text-sm text-muted-foreground font-body">No completed payouts yet.</p>
+                            <p className="px-4 py-3 text-sm text-muted-foreground font-body">
+                              No completed payouts yet.
+                            </p>
                           ) : (
                             completedPayouts.map((payout, index) => (
-                              <div key={payout.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                              <div
+                                key={payout.id}
+                                className="px-4 py-3 flex items-center justify-between gap-3"
+                              >
                                 <div>
                                   <p className="font-headline font-semibold text-foreground">
-                                    PAY-{new Date(payout.created_at).getFullYear()}-{String(index + 1).padStart(3, '0')}
+                                    PAY-{new Date(payout.created_at).getFullYear()}-
+                                    {String(index + 1).padStart(3, '0')}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {new Date(payout.created_at).toLocaleDateString()} - EFT complete
+                                    {new Date(payout.created_at).toLocaleDateString()} - EFT
+                                    complete
                                   </p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="font-headline font-bold text-foreground">R{Number(payout.amount).toFixed(2)}</p>
+                                  <p className="font-headline font-bold text-foreground">
+                                    R{Number(payout.amount).toFixed(2)}
+                                  </p>
                                   <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-headline font-semibold text-emerald-800">
                                     Completed
                                   </span>
@@ -1233,25 +1386,35 @@ export default function MerchantDashboard() {
                     <div className="space-y-4">
                       <div className="rounded-xl border border-border p-4 bg-muted/20">
                         <div className="flex items-center justify-between">
-                          <p className="font-headline font-semibold text-foreground">Bank Details</p>
+                          <p className="font-headline font-semibold text-foreground">
+                            Bank Details
+                          </p>
                           <span className="text-xs text-primary font-headline">Edit</span>
                         </div>
                         <div className="mt-3 space-y-2 text-sm">
                           <div className="flex justify-between gap-3">
                             <span className="text-muted-foreground">Bank</span>
-                            <span className="font-headline font-semibold text-foreground">{merchant?.bank_name || 'Not set'}</span>
+                            <span className="font-headline font-semibold text-foreground">
+                              {merchant?.bank_name || 'Not set'}
+                            </span>
                           </div>
                           <div className="flex justify-between gap-3">
                             <span className="text-muted-foreground">Account Type</span>
-                            <span className="font-headline font-semibold text-foreground">Business Cheque</span>
+                            <span className="font-headline font-semibold text-foreground">
+                              Business Cheque
+                            </span>
                           </div>
                           <div className="flex justify-between gap-3">
                             <span className="text-muted-foreground">Account Number</span>
-                            <span className="font-headline font-semibold text-foreground">******5678</span>
+                            <span className="font-headline font-semibold text-foreground">
+                              ******5678
+                            </span>
                           </div>
                           <div className="flex justify-between gap-3">
                             <span className="text-muted-foreground">Branch Code</span>
-                            <span className="font-headline font-semibold text-foreground">{merchant?.branch_code || 'N/A'}</span>
+                            <span className="font-headline font-semibold text-foreground">
+                              {merchant?.branch_code || 'N/A'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1262,12 +1425,18 @@ export default function MerchantDashboard() {
                           Manually request an off-cycle payout. Processed within 1-2 business days.
                         </p>
                         <div className="mt-3 rounded-lg bg-slate-800 border border-slate-700 px-3 py-2">
-                          <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Available Balance</p>
-                          <p className="text-3xl font-headline font-bold text-emerald-300">R{pendingPayouts.toFixed(2)}</p>
+                          <p className="text-xs uppercase tracking-[0.14em] text-slate-400">
+                            Available Balance
+                          </p>
+                          <p className="text-3xl font-headline font-bold text-emerald-300">
+                            R{pendingPayouts.toFixed(2)}
+                          </p>
                         </div>
                         <button
                           type="button"
-                          onClick={() => setProductMessage('Payout request submitted (prototype mode).')}
+                          onClick={() =>
+                            setProductMessage('Payout request submitted (prototype mode).')
+                          }
                           className="mt-3 w-full rounded-lg bg-teal-500 px-4 py-2.5 font-headline font-semibold text-slate-950 hover:bg-teal-400"
                         >
                           Request Payout Now
@@ -1280,183 +1449,209 @@ export default function MerchantDashboard() {
             </div>
 
             {activeMerchantTab !== 'payouts' && (
-            <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
-              <div className="mb-6 rounded-xl bg-slate-900 text-white p-4">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-slate-300 font-headline">
-                  Live Price Calculator
-                </p>
-                <div className="mt-3 space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-300">Face Value</span>
-                    <span className="font-headline font-semibold">R{pricingPreview.faceValue.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-300">Total Discount</span>
-                    <span className="font-headline font-semibold">
-                      {pricingPreview.totalDiscountPct.toFixed(2)}%
-                    </span>
-                  </div>
-                  <div className="h-px bg-slate-700 my-2" />
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-300">Consumer Pays</span>
-                    <span className="font-headline font-semibold text-emerald-300">
-                      R{pricingPreview.consumerPrice.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-300">Merchant Receives</span>
-                    <span className="font-headline font-semibold text-amber-300">
-                      R{pricingPreview.merchantReceivable.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-300">Platform Earns</span>
-                    <span className="font-headline font-semibold text-cyan-300">
-                      R{pricingPreview.platformRevenue.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="mt-2 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] text-slate-200">
-                    50/50 split rule: Consumer benefit {pricingPreview.consumerBenefitPct.toFixed(2)}% |
-                    Platform margin {pricingPreview.platformBenefitPct.toFixed(2)}%
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-headline font-bold text-2xl text-foreground">Merchant Operations</h2>
-                <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-secondary" />
-              </div>
-
-              <div className="space-y-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm font-headline font-semibold text-foreground">Merchant Account</p>
-                  <p className="text-xs text-muted-foreground font-body mt-1">
-                    Business Name: {merchant?.business_name || 'N/A'}
+              <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
+                <div className="mb-6 rounded-xl bg-slate-900 text-white p-4">
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-slate-300 font-headline">
+                    Live Price Calculator
                   </p>
-                  <p className="text-xs text-muted-foreground font-body">
-                    Parent Brand: {merchant?.parent_brand || merchant?.business_name || 'N/A'}
-                  </p>
-                  <p className="text-xs text-muted-foreground font-body">
-                    Branch: {merchant?.branch_name || merchant?.business_name || 'N/A'}
-                  </p>
-                  <p className="text-xs text-muted-foreground font-body">
-                    Email: {merchant?.email || 'N/A'}
-                  </p>
-                  <p className="text-xs text-muted-foreground font-body">
-                    Merchant Type: {String(merchant?.merchant_type ?? 'private').toUpperCase()}
-                  </p>
-                </div>
-
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm font-headline font-semibold text-foreground">Compliance & Payout Setup</p>
-                  <p className="text-xs text-muted-foreground font-body mt-1">
-                    Onboarding fee: {merchant?.onboarding_fee_paid ? 'Paid' : 'Pending'}
-                  </p>
-                  <p className="text-xs text-muted-foreground font-body">
-                    Bank: {merchant?.bank_name || 'Not configured'}
-                  </p>
-                </div>
-
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm font-headline font-semibold text-foreground">Promotion Guidance</p>
-                  <p className="text-xs text-muted-foreground font-body mt-1">
-                    Keep discount budgets between 4% and 5% for grocery products to balance conversion and payout.
-                  </p>
-                </div>
-
-                {String(merchant?.merchant_type ?? '').toLowerCase() === 'chain' && (
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm font-headline font-semibold text-foreground">Branch Management</p>
-                    <p className="text-xs text-muted-foreground font-body mt-1">
-                      Parent/child branch hierarchy with branch-scoped product visibility.
-                    </p>
-                    <div className="mt-3 space-y-2 max-h-40 overflow-auto pr-1">
-                      {branches.length === 0 ? (
-                        <p className="text-xs text-muted-foreground font-body">No branches linked yet.</p>
-                      ) : (
-                        branches.map((branch) => (
-                          <div
-                            key={branch.id}
-                            className="rounded-md border border-border bg-background px-2 py-2"
-                          >
-                            <p className="text-xs font-headline font-semibold text-foreground">
-                              {branch.branch_name || branch.business_name || 'Branch'}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground font-body">
-                              {branch.city || 'City n/a'} | {branch.province || 'Province n/a'} |{' '}
-                              {String(branch.status ?? 'pending')}
-                            </p>
-                          </div>
-                        ))
-                      )}
+                  <div className="mt-3 space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300">Face Value</span>
+                      <span className="font-headline font-semibold">
+                        R{pricingPreview.faceValue.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300">Total Discount</span>
+                      <span className="font-headline font-semibold">
+                        {pricingPreview.totalDiscountPct.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="h-px bg-slate-700 my-2" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300">Consumer Pays</span>
+                      <span className="font-headline font-semibold text-emerald-300">
+                        R{pricingPreview.consumerPrice.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300">Merchant Receives</span>
+                      <span className="font-headline font-semibold text-amber-300">
+                        R{pricingPreview.merchantReceivable.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300">Platform Earns</span>
+                      <span className="font-headline font-semibold text-cyan-300">
+                        R{pricingPreview.platformRevenue.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="mt-2 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] text-slate-200">
+                      50/50 split rule: Consumer benefit{' '}
+                      {pricingPreview.consumerBenefitPct.toFixed(2)}% | Platform margin{' '}
+                      {pricingPreview.platformBenefitPct.toFixed(2)}%
                     </div>
                   </div>
-                )}
+                </div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-headline font-bold text-2xl text-foreground">
+                    Merchant Operations
+                  </h2>
+                  <Icon
+                    name="BuildingStorefrontIcon"
+                    size={24}
+                    variant="solid"
+                    className="text-secondary"
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm font-headline font-semibold text-foreground">
+                      Merchant Account
+                    </p>
+                    <p className="text-xs text-muted-foreground font-body mt-1">
+                      Business Name: {merchant?.business_name || 'N/A'}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-body">
+                      Parent Brand: {merchant?.parent_brand || merchant?.business_name || 'N/A'}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-body">
+                      Branch: {merchant?.branch_name || merchant?.business_name || 'N/A'}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-body">
+                      Email: {merchant?.email || 'N/A'}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-body">
+                      Merchant Type: {String(merchant?.merchant_type ?? 'private').toUpperCase()}
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm font-headline font-semibold text-foreground">
+                      Compliance & Payout Setup
+                    </p>
+                    <p className="text-xs text-muted-foreground font-body mt-1">
+                      Onboarding fee: {merchant?.onboarding_fee_paid ? 'Paid' : 'Pending'}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-body">
+                      Bank: {merchant?.bank_name || 'Not configured'}
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm font-headline font-semibold text-foreground">
+                      Promotion Guidance
+                    </p>
+                    <p className="text-xs text-muted-foreground font-body mt-1">
+                      Keep discount budgets between 4% and 5% for grocery products to balance
+                      conversion and payout.
+                    </p>
+                  </div>
+
+                  {String(merchant?.merchant_type ?? '').toLowerCase() === 'chain' && (
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm font-headline font-semibold text-foreground">
+                        Branch Management
+                      </p>
+                      <p className="text-xs text-muted-foreground font-body mt-1">
+                        Parent/child branch hierarchy with branch-scoped product visibility.
+                      </p>
+                      <div className="mt-3 space-y-2 max-h-40 overflow-auto pr-1">
+                        {branches.length === 0 ? (
+                          <p className="text-xs text-muted-foreground font-body">
+                            No branches linked yet.
+                          </p>
+                        ) : (
+                          branches.map((branch) => (
+                            <div
+                              key={branch.id}
+                              className="rounded-md border border-border bg-background px-2 py-2"
+                            >
+                              <p className="text-xs font-headline font-semibold text-foreground">
+                                {branch.branch_name || branch.business_name || 'Branch'}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground font-body">
+                                {branch.city || 'City n/a'} | {branch.province || 'Province n/a'} |{' '}
+                                {String(branch.status ?? 'pending')}
+                              </p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
             )}
           </div>
 
           {activeMerchantTab !== 'payouts' && (
-          <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-headline font-bold text-2xl text-foreground">Payout Status</h2>
-              <Icon name="BanknotesIcon" size={24} variant="solid" className="text-success" />
-            </div>
+            <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="font-headline font-bold text-2xl text-foreground">Payout Status</h2>
+                <Icon name="BanknotesIcon" size={24} variant="solid" className="text-success" />
+              </div>
 
-            <div className="space-y-4">
-              {payouts.length === 0 ? (
-                <div className="text-center py-12">
-                  <Icon
-                    name="BanknotesIcon"
-                    size={48}
-                    variant="outline"
-                    className="text-muted-foreground mx-auto mb-4"
-                  />
-                  <p className="text-muted-foreground font-body">No payouts yet</p>
-                </div>
-              ) : (
-                payouts.map((payout) => (
-                  <div
-                    key={payout.id}
-                    className="flex items-center justify-between p-4 bg-muted/50 rounded-xl hover:bg-muted transition-all duration-200"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          payout.status === 'completed' ? 'bg-success/10' : 'bg-warning/10'
-                        }`}
-                      >
-                        <Icon
-                          name={payout.status === 'completed' ? 'CheckCircleIcon' : 'ClockIcon'}
-                          size={20}
-                          variant="solid"
-                          className={payout.status === 'completed' ? 'text-success' : 'text-warning'}
-                        />
+              <div className="space-y-4">
+                {payouts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Icon
+                      name="BanknotesIcon"
+                      size={48}
+                      variant="outline"
+                      className="text-muted-foreground mx-auto mb-4"
+                    />
+                    <p className="text-muted-foreground font-body">No payouts yet</p>
+                  </div>
+                ) : (
+                  payouts.map((payout) => (
+                    <div
+                      key={payout.id}
+                      className="flex items-center justify-between p-4 bg-muted/50 rounded-xl hover:bg-muted transition-all duration-200"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            payout.status === 'completed' ? 'bg-success/10' : 'bg-warning/10'
+                          }`}
+                        >
+                          <Icon
+                            name={payout.status === 'completed' ? 'CheckCircleIcon' : 'ClockIcon'}
+                            size={20}
+                            variant="solid"
+                            className={
+                              payout.status === 'completed' ? 'text-success' : 'text-warning'
+                            }
+                          />
+                        </div>
+                        <div>
+                          <p className="font-headline font-semibold text-foreground capitalize">
+                            {payout.status}
+                          </p>
+                          <p className="text-sm text-muted-foreground font-body">
+                            {payout.payout_date
+                              ? new Date(payout.payout_date).toLocaleDateString()
+                              : 'Processing'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-headline font-semibold text-foreground capitalize">{payout.status}</p>
-                        <p className="text-sm text-muted-foreground font-body">
-                          {payout.payout_date ? new Date(payout.payout_date).toLocaleDateString() : 'Processing'}
+                      <div className="text-right">
+                        <p className="font-headline font-bold text-lg text-foreground">
+                          R{Number(payout.amount).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground font-body">
+                          {new Date(payout.created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-headline font-bold text-lg text-foreground">
-                        R{Number(payout.amount).toFixed(2)}
-                      </p>
-                      <p className="text-xs text-muted-foreground font-body">
-                        {new Date(payout.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
-          </div>
           )}
         </div>
       </div>
     </div>
   );
 }
-

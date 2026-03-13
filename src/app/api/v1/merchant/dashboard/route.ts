@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
+import { getMerchantComplianceSnapshot } from '@/server/utils/compliance';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -12,8 +13,10 @@ function isMissingColumn(error: any, columnName: string) {
   return (
     (message.includes(`column "${normalizedColumn}"`) && message.includes('does not exist')) ||
     (message.includes(`column ${normalizedColumn}`) && message.includes('does not exist')) ||
-    (message.includes(`column merchants.${normalizedColumn}`) && message.includes('does not exist')) ||
-    (message.includes(`column "merchants.${normalizedColumn}"`) && message.includes('does not exist')) ||
+    (message.includes(`column merchants.${normalizedColumn}`) &&
+      message.includes('does not exist')) ||
+    (message.includes(`column "merchants.${normalizedColumn}"`) &&
+      message.includes('does not exist')) ||
     message.includes(`could not find the '${normalizedColumn}' column`) ||
     message.includes(`could not find the column '${normalizedColumn}'`)
   );
@@ -92,11 +95,22 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     if (payoutsError) throw payoutsError;
+    const complianceSnapshot = await getMerchantComplianceSnapshot(
+      admin,
+      merchant.id,
+      merchant.status
+    );
 
     return NextResponse.json(
       {
         merchant,
         payouts: payouts ?? [],
+        compliance: {
+          overallStatus: complianceSnapshot.overallStatus,
+          complianceApproved: complianceSnapshot.complianceApproved,
+          canReceivePayouts: complianceSnapshot.canReceivePayouts,
+          missingDocuments: complianceSnapshot.missingDocuments,
+        },
       },
       {
         headers: {

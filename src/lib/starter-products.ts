@@ -95,6 +95,12 @@ const STARTER_PRODUCTS: Record<BrandKey, StarterProductTemplate[]> = {
     { name: 'Super Store Voucher R500', faceValue: 500 },
     { name: 'Super Store Voucher R1000', faceValue: 1000 },
   ],
+  superprecast: [
+    { name: 'Concrete Materials Voucher R200', faceValue: 200 },
+    { name: 'Concrete Materials Voucher R500', faceValue: 500 },
+    { name: 'Concrete Materials Voucher R1000', faceValue: 1000 },
+    { name: 'Building Supplies Voucher R2000', faceValue: 2000 },
+  ],
 };
 
 interface BuildStarterProductsInput {

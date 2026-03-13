@@ -161,7 +161,11 @@ export default function WalletPage() {
   const displayedVouchers = voucherStatusBuckets[tab];
 
   const totalBalance = useMemo(
-    () => voucherStatusBuckets.active.reduce((sum, voucher) => sum + Number(voucher.current_balance ?? 0), 0),
+    () =>
+      voucherStatusBuckets.active.reduce(
+        (sum, voucher) => sum + Number(voucher.current_balance ?? 0),
+        0
+      ),
     [voucherStatusBuckets]
   );
 
@@ -359,14 +363,21 @@ export default function WalletPage() {
                 const face = Number(voucher.face_value ?? 0);
                 const paid = Number(voucher.consumer_price ?? face);
                 const saved = Number(voucher.consumer_benefit_amount ?? Math.max(0, face - paid));
-                const paymentMethod = formatPaymentMethod(voucherPaymentMap.get(voucher.voucher_code));
+                const paymentMethod = formatPaymentMethod(
+                  voucherPaymentMap.get(voucher.voucher_code)
+                );
                 const status = classifyVoucher(voucher);
 
                 return (
-                  <article key={voucher.id} className="rounded-2xl border border-border bg-card p-5">
+                  <article
+                    key={voucher.id}
+                    className="rounded-2xl border border-border bg-card p-5"
+                  >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-headline font-bold text-3xl text-foreground">{voucher.voucher_code}</h3>
+                        <h3 className="font-headline font-bold text-3xl text-foreground">
+                          {voucher.voucher_code}
+                        </h3>
                         <p className="text-primary font-headline font-semibold">
                           {voucher.parent_brand || voucher.merchant_name}
                         </p>
@@ -395,13 +406,16 @@ export default function WalletPage() {
 
                     <div className="mt-4 pt-3 border-t border-border grid md:grid-cols-2 gap-3">
                       <p className="text-sm text-muted-foreground">
-                        Savings: <span className="font-headline text-success">- {toCurrency(saved)}</span>
+                        Savings:{' '}
+                        <span className="font-headline text-success">- {toCurrency(saved)}</span>
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Expires: {new Date(voucher.expires_at).toLocaleDateString()}
                       </p>
                       <p className="text-sm text-muted-foreground">Status: {status}</p>
-                      <p className="text-sm text-muted-foreground">Payment Method: {paymentMethod}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Payment Method: {paymentMethod}
+                      </p>
                       <p className="text-sm text-muted-foreground md:col-span-2">
                         Redemption: {getScopeLabel(voucher)}
                       </p>
@@ -444,7 +458,9 @@ export default function WalletPage() {
 
           <section className="grid lg:grid-cols-2 gap-6">
             <div className="bg-card border border-border rounded-2xl p-5">
-              <h2 className="font-headline font-bold text-2xl text-foreground mb-4">Recent Activity</h2>
+              <h2 className="font-headline font-bold text-2xl text-foreground mb-4">
+                Recent Activity
+              </h2>
               {recentActivity.length === 0 ? (
                 <p className="text-muted-foreground">No transactions yet.</p>
               ) : (
@@ -453,7 +469,9 @@ export default function WalletPage() {
                     <div key={activity.id} className="rounded-xl border border-border p-3">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="font-headline font-semibold text-foreground">{activity.merchant}</p>
+                          <p className="font-headline font-semibold text-foreground">
+                            {activity.merchant}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {activity.type} - {new Date(activity.createdAt).toLocaleString()}
                           </p>
@@ -475,12 +493,15 @@ export default function WalletPage() {
 
             <div className="bg-card border border-border rounded-2xl p-5 space-y-5">
               <div>
-                <h2 className="font-headline font-bold text-2xl text-foreground mb-2">Savings Insights</h2>
+                <h2 className="font-headline font-bold text-2xl text-foreground mb-2">
+                  Savings Insights
+                </h2>
                 <p className="text-sm text-muted-foreground">
                   Every R100 spent = instant savings on voucher checkout.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  This month saved: <span className="font-headline text-success">{toCurrency(thisMonthSavings)}</span>
+                  This month saved:{' '}
+                  <span className="font-headline text-success">{toCurrency(thisMonthSavings)}</span>
                 </p>
               </div>
 
@@ -493,25 +514,37 @@ export default function WalletPage() {
                       key={entry.merchant}
                       className="rounded-lg border border-border px-3 py-2 flex items-center justify-between"
                     >
-                      <span className="font-headline font-semibold text-foreground">{entry.merchant}</span>
-                      <span className="font-headline font-bold text-success">{toCurrency(entry.savings)}</span>
+                      <span className="font-headline font-semibold text-foreground">
+                        {entry.merchant}
+                      </span>
+                      <span className="font-headline font-bold text-success">
+                        {toCurrency(entry.savings)}
+                      </span>
                     </div>
                   ))
                 )}
               </div>
 
               <div>
-                <h3 className="font-headline font-bold text-xl text-foreground mb-2">Achievements</h3>
+                <h3 className="font-headline font-bold text-xl text-foreground mb-2">
+                  Achievements
+                </h3>
                 <div className="grid gap-2">
                   {achievements.map((achievement) => (
                     <div
                       key={achievement.id}
                       className={`rounded-lg border px-3 py-2 flex items-center justify-between ${
-                        achievement.achieved ? 'border-success/30 bg-success/10' : 'border-border bg-muted/20'
+                        achievement.achieved
+                          ? 'border-success/30 bg-success/10'
+                          : 'border-border bg-muted/20'
                       }`}
                     >
-                      <span className="font-headline font-semibold text-foreground">{achievement.label}</span>
-                      <span className={`text-xs font-headline ${achievement.achieved ? 'text-success' : 'text-muted-foreground'}`}>
+                      <span className="font-headline font-semibold text-foreground">
+                        {achievement.label}
+                      </span>
+                      <span
+                        className={`text-xs font-headline ${achievement.achieved ? 'text-success' : 'text-muted-foreground'}`}
+                      >
                         {achievement.achieved ? 'Achieved' : 'Pending'}
                       </span>
                     </div>

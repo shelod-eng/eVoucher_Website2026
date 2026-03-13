@@ -29,7 +29,7 @@ function toCurrency(value: number) {
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const relation = relationName.toLowerCase();
-  const bareRelation = relation.includes('.') ? relation.split('.').at(-1) ?? relation : relation;
+  const bareRelation = relation.includes('.') ? (relation.split('.').at(-1) ?? relation) : relation;
   return (
     message.includes(`relation "${relation}" does not exist`) ||
     message.includes(`relation "${bareRelation}" does not exist`) ||
@@ -47,7 +47,10 @@ function buildMonthlySeries(
     evoucher_benefit_amount?: number | null;
   }>
 ) {
-  const byMonth = new Map<string, { month: string; volume: number; savings: number; margin: number }>();
+  const byMonth = new Map<
+    string,
+    { month: string; volume: number; savings: number; margin: number }
+  >();
 
   transactions.forEach((transaction) => {
     const month = new Date(transaction.created_at).toISOString().slice(0, 7);
@@ -76,7 +79,10 @@ function buildMerchantSeries(
   }>,
   merchantNames: Record<string, string>
 ) {
-  const byMerchant = new Map<string, { merchantId: string; merchantName: string; spent: number; savings: number }>();
+  const byMerchant = new Map<
+    string,
+    { merchantId: string; merchantName: string; spent: number; savings: number }
+  >();
   transactions.forEach((transaction) => {
     const merchantId = String(transaction.merchant_id ?? 'unknown');
     const existing = byMerchant.get(merchantId) ?? {
@@ -117,7 +123,9 @@ export async function GET() {
     if (!isMerchantRole(safeRole)) {
       const { data: customerTransactions, error: customerTransactionsError } = await supabase
         .from('payment_transactions')
-        .select('created_at,merchant_id,amount,consumer_benefit_amount,evoucher_benefit_amount,payment_status')
+        .select(
+          'created_at,merchant_id,amount,consumer_benefit_amount,evoucher_benefit_amount,payment_status'
+        )
         .eq('customer_id', user.id)
         .eq('payment_status', 'completed')
         .order('created_at', { ascending: false })
@@ -155,7 +163,9 @@ export async function GET() {
         metrics: {
           totalVolume: toCurrency(totalVolume),
           totalSavings: toCurrency(totalSavings),
-          totalMargin: toCurrency(sumBy(completed, (row) => Number(row.evoucher_benefit_amount ?? 0))),
+          totalMargin: toCurrency(
+            sumBy(completed, (row) => Number(row.evoucher_benefit_amount ?? 0))
+          ),
           pendingSettlements: 0,
           paidSettlements: 0,
           transactionCount: completed.length,

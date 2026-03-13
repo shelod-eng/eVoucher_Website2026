@@ -35,7 +35,9 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
   const [payload, setPayload] = useState<ProfilePayload | null>(null);
   const [rewardData, setRewardData] = useState<RewardPayload | null>(null);
-  const [activeTab, setActiveTab] = useState<'transactions' | 'activity' | 'settings'>('transactions');
+  const [activeTab, setActiveTab] = useState<'transactions' | 'activity' | 'settings'>(
+    'transactions'
+  );
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -96,12 +98,11 @@ export default function ProfilePage() {
     ).trim();
   }, [payload?.profile?.full_name, user?.email, user?.user_metadata]);
 
-  const displayEmail =
-    payload?.profile?.email ||
-    user?.email ||
-    'consumer@evoucher.local';
+  const displayEmail = payload?.profile?.email || user?.email || 'consumer@evoucher.local';
   const profileInitial = displayName?.charAt(0)?.toUpperCase() || 'E';
-  const joinedDate = user?.created_at ? new Date(user.created_at).toLocaleDateString() : new Date().toLocaleDateString();
+  const joinedDate = user?.created_at
+    ? new Date(user.created_at).toLocaleDateString()
+    : new Date().toLocaleDateString();
 
   if (authLoading || loading) {
     return (
@@ -148,7 +149,9 @@ export default function ProfilePage() {
                   <p className="text-xs text-muted-foreground">Saved</p>
                 </div>
                 <div className="rounded-xl bg-muted/40 border border-border p-4 text-center">
-                  <p className="font-headline font-bold text-2xl text-foreground">{payload?.transactions.length ?? 0}</p>
+                  <p className="font-headline font-bold text-2xl text-foreground">
+                    {payload?.transactions.length ?? 0}
+                  </p>
                   <p className="text-xs text-muted-foreground">Transactions</p>
                 </div>
                 <div className="rounded-xl bg-muted/40 border border-border p-4 text-center">
@@ -162,29 +165,43 @@ export default function ProfilePage() {
           </div>
 
           <div className="grid md:grid-cols-4 gap-3">
-            <button onClick={() => router.push('/wallet')} className="rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors">
+            <button
+              onClick={() => router.push('/wallet')}
+              className="rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
+            >
               <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center mx-auto mb-2">
                 <Icon name="WalletIcon" size={18} variant="outline" />
               </div>
-              <p className="text-sm font-headline font-semibold text-foreground text-center">Add Funds</p>
+              <p className="text-sm font-headline font-semibold text-foreground text-center">
+                Add Funds
+              </p>
             </button>
             <button className="rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors">
               <div className="w-10 h-10 rounded-full bg-secondary/15 text-secondary flex items-center justify-center mx-auto mb-2">
                 <Icon name="GiftIcon" size={18} variant="outline" />
               </div>
-              <p className="text-sm font-headline font-semibold text-foreground text-center">Refer</p>
+              <p className="text-sm font-headline font-semibold text-foreground text-center">
+                Refer
+              </p>
             </button>
-            <button onClick={() => router.push('/support')} className="rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors">
+            <button
+              onClick={() => router.push('/support')}
+              className="rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
+            >
               <div className="w-10 h-10 rounded-full bg-warning/15 text-warning flex items-center justify-center mx-auto mb-2">
                 <Icon name="QuestionMarkCircleIcon" size={18} variant="outline" />
               </div>
-              <p className="text-sm font-headline font-semibold text-foreground text-center">Support</p>
+              <p className="text-sm font-headline font-semibold text-foreground text-center">
+                Support
+              </p>
             </button>
             <button className="rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors">
               <div className="w-10 h-10 rounded-full bg-success/15 text-success flex items-center justify-center mx-auto mb-2">
                 <Icon name="StarIcon" size={18} variant="outline" />
               </div>
-              <p className="text-sm font-headline font-semibold text-foreground text-center">Rate</p>
+              <p className="text-sm font-headline font-semibold text-foreground text-center">
+                Rate
+              </p>
             </button>
           </div>
 
@@ -193,7 +210,9 @@ export default function ProfilePage() {
               <button
                 onClick={() => setActiveTab('transactions')}
                 className={`rounded-lg px-4 py-2 text-sm font-headline font-semibold ${
-                  activeTab === 'transactions' ? 'bg-muted text-foreground' : 'text-muted-foreground'
+                  activeTab === 'transactions'
+                    ? 'bg-muted text-foreground'
+                    : 'text-muted-foreground'
                 }`}
               >
                 Transactions
@@ -224,12 +243,21 @@ export default function ProfilePage() {
                   ) : (
                     <div className="space-y-3">
                       {(payload?.transactions ?? []).map((transaction) => (
-                        <div key={transaction.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                        <div
+                          key={transaction.id}
+                          className="flex items-center justify-between rounded-lg border border-border p-3"
+                        >
                           <div>
-                            <p className="font-headline font-semibold text-foreground">{transaction.merchant_name}</p>
-                            <p className="text-xs text-muted-foreground">{new Date(transaction.created_at).toLocaleString()}</p>
+                            <p className="font-headline font-semibold text-foreground">
+                              {transaction.merchant_name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(transaction.created_at).toLocaleString()}
+                            </p>
                           </div>
-                          <p className="font-headline font-semibold text-foreground">R{Number(transaction.amount).toFixed(2)}</p>
+                          <p className="font-headline font-semibold text-foreground">
+                            R{Number(transaction.amount).toFixed(2)}
+                          </p>
                         </div>
                       ))}
                     </div>

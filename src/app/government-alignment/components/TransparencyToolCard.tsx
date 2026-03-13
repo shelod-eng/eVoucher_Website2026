@@ -11,12 +11,12 @@ interface TransparencyToolCardProps {
   updateFrequency: string;
 }
 
-export default function TransparencyToolCard({ 
-  title, 
-  description, 
-  icon, 
-  dataPoints, 
-  updateFrequency 
+export default function TransparencyToolCard({
+  title,
+  description,
+  icon,
+  dataPoints,
+  updateFrequency,
 }: TransparencyToolCardProps) {
   return (
     <div className="bg-card rounded-lg shadow-md p-6 border border-border hover:shadow-lg transition-shadow duration-300">
@@ -27,16 +27,18 @@ export default function TransparencyToolCard({
         <div className="flex-1">
           <h3 className="font-headline font-semibold text-lg text-foreground mb-2">{title}</h3>
           <p className="text-sm text-muted-foreground font-body mb-3">{description}</p>
-          
+
           <div className="space-y-3 mb-4">
             {dataPoints.map((point, index) => (
               <div key={index} className="flex items-center justify-between">
                 <span className="text-sm font-body text-muted-foreground">{point.label}</span>
-                <span className="text-sm font-body font-semibold text-foreground">{point.value}</span>
+                <span className="text-sm font-body font-semibold text-foreground">
+                  {point.value}
+                </span>
               </div>
             ))}
           </div>
-          
+
           <div className="flex items-center space-x-2 text-xs text-muted-foreground">
             <Icon name="ClockIcon" size={14} variant="outline" />
             <span className="font-body">Updated {updateFrequency}</span>

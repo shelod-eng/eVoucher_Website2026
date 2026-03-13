@@ -49,7 +49,9 @@ function getScopeLabel(voucher: RedeemVoucher) {
 }
 
 function normalizeCode(value: string) {
-  return String(value ?? '').trim().toUpperCase();
+  return String(value ?? '')
+    .trim()
+    .toUpperCase();
 }
 
 function createIdempotencyKey() {
@@ -64,6 +66,8 @@ function RedeemPageContent() {
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
 
+  const [merchantId, setMerchantId] = useState<string | null>(null);
+  const [isMerchant, setIsMerchant] = useState(false);
   const [code, setCode] = useState('');
   const [searching, setSearching] = useState(false);
   const [voucher, setVoucher] = useState<RedeemVoucher | null>(null);
@@ -79,14 +83,40 @@ function RedeemPageContent() {
   }, [authLoading, user, router]);
 
   useEffect(() => {
+    if (!user) return;
+    void (async () => {
+      try {
+        const response = await fetch('/api/v1/merchant/auth-state', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          setIsMerchant(false);
+          setMerchantId(null);
+          return;
+        }
+        const data = await response.json();
+        setIsMerchant(Boolean(data?.isMerchant));
+        setMerchantId(data?.merchantId ? String(data.merchantId) : null);
+      } catch {
+        setIsMerchant(false);
+        setMerchantId(null);
+      }
+    })();
+  }, [user]);
+
+  useEffect(() => {
     const prefillCode = normalizeCode(searchParams.get('code') ?? '');
     if (!prefillCode) return;
     setCode(prefillCode);
   }, [searchParams]);
 
   const canRedeemVoucher = useMemo(
-    () => voucher && (voucher.status === 'active' || voucher.status === 'partial'),
-    [voucher]
+    () =>
+      Boolean(voucher) &&
+      isMerchant &&
+      (voucher?.status === 'active' || voucher?.status === 'partial'),
+    [voucher, isMerchant]
   );
   const showVoucherCard = Boolean(voucher) && !Boolean(result?.success);
 
@@ -103,10 +133,13 @@ function RedeemPageContent() {
     setResult(null);
 
     try {
-      const response = await fetch(`/api/v1/vouchers/redeem?code=${encodeURIComponent(formattedCode)}`, {
-        method: 'GET',
-        credentials: 'include',
-      });
+      const response = await fetch(
+        `/api/v1/vouchers/redeem?code=${encodeURIComponent(formattedCode)}`,
+        {
+          method: 'GET',
+          credentials: 'include',
+        }
+      );
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'No voucher found with this code.');
@@ -154,6 +187,7 @@ function RedeemPageContent() {
 
   const handleRedeem = async () => {
     if (!voucher) return;
+    if (!isMerchant) return;
 
     const amount = Number(redeemAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -188,7 +222,7 @@ function RedeemPageContent() {
         body: JSON.stringify({
           voucherCode: voucher.code,
           amount,
-          merchantId: voucher.merchant_id ?? undefined,
+          merchantId: merchantId ?? undefined,
           idempotencyKey: createIdempotencyKey(),
         }),
       });
@@ -199,7 +233,9 @@ function RedeemPageContent() {
       }
 
       const newBalance = Number(payload.newBalance ?? payload.remainingBalance ?? 0);
-      const newStatus = (String(payload.status ?? (newBalance <= 0 ? 'used' : 'partial')) as VoucherStatus);
+      const newStatus = String(
+        payload.status ?? (newBalance <= 0 ? 'used' : 'partial')
+      ) as VoucherStatus;
 
       setVoucher((current) =>
         current
@@ -260,7 +296,9 @@ function RedeemPageContent() {
               </button>
               <div>
                 <h1 className="font-headline font-bold text-5xl text-foreground">Redeem Voucher</h1>
-                <p className="text-muted-foreground">Enter your voucher code to redeem at a merchant</p>
+                <p className="text-muted-foreground">
+                  Enter your voucher code to redeem at a merchant
+                </p>
               </div>
             </div>
           </section>
@@ -273,14 +311,16 @@ function RedeemPageContent() {
               <div>
                 <p className="font-headline font-semibold text-success text-xl">QR Code Scanning</p>
                 <p className="text-sm text-success/90">
-                  In-store QR scanning coming soon. Enter your voucher code manually below.
+                  In-store QR scanning coming soon. Enter the voucher code manually below.
                 </p>
               </div>
             </div>
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-5">
-            <h2 className="font-headline font-bold text-3xl text-foreground mb-3">Enter Voucher Code</h2>
+            <h2 className="font-headline font-bold text-3xl text-foreground mb-3">
+              Enter Voucher Code
+            </h2>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -316,7 +356,9 @@ function RedeemPageContent() {
                   </h3>
                   <p className="text-muted-foreground">{voucher.product_name}</p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-headline font-semibold ${getStatusClass(voucher.status)}`}>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-headline font-semibold ${getStatusClass(voucher.status)}`}
+                >
                   {voucher.status}
                 </span>
               </div>
@@ -324,22 +366,38 @@ function RedeemPageContent() {
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="rounded-xl bg-muted p-4">
                   <p className="text-sm text-muted-foreground">Available Balance</p>
-                  <p className="font-headline font-bold text-5xl text-foreground">{toCurrency(voucher.balance)}</p>
+                  <p className="font-headline font-bold text-5xl text-foreground">
+                    {toCurrency(voucher.balance)}
+                  </p>
                 </div>
                 <div className="rounded-xl bg-success/10 p-4">
                   <p className="text-sm text-muted-foreground">Face Value</p>
-                  <p className="font-headline font-bold text-5xl text-success">{toCurrency(voucher.face_value)}</p>
+                  <p className="font-headline font-bold text-5xl text-success">
+                    {toCurrency(voucher.face_value)}
+                  </p>
                 </div>
               </div>
 
               <p className="text-sm text-muted-foreground">{getScopeLabel(voucher)}</p>
               <p className="text-sm text-muted-foreground mb-4">
-                Expires: {voucher.expiry_date ? new Date(voucher.expiry_date).toLocaleDateString() : 'N/A'}
+                Expires:{' '}
+                {voucher.expiry_date ? new Date(voucher.expiry_date).toLocaleDateString() : 'N/A'}
               </p>
 
-              {canRedeemVoucher ? (
+              {!isMerchant ? (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <p className="font-headline font-semibold text-foreground mb-1">Customer view</p>
+                  <p className="text-sm text-muted-foreground">
+                    Show this voucher code/QR to the cashier. Only merchant accounts can process the
+                    redemption.
+                  </p>
+                </div>
+              ) : canRedeemVoucher ? (
                 <>
-                  <label htmlFor="redeem-amount" className="block text-sm font-headline font-semibold text-foreground mb-2">
+                  <label
+                    htmlFor="redeem-amount"
+                    className="block text-sm font-headline font-semibold text-foreground mb-2"
+                  >
                     Amount to Redeem (R)
                   </label>
                   <input
@@ -352,14 +410,17 @@ function RedeemPageContent() {
                     className="w-full px-3 py-3 border border-border rounded-lg bg-background font-body mb-2"
                   />
                   <p className="text-xs text-muted-foreground mb-3">
-                    Enter full amount to fully redeem, or a partial amount to keep remaining balance.
+                    Enter full amount to fully redeem, or a partial amount to keep remaining
+                    balance.
                   </p>
                   <button
                     onClick={() => void handleRedeem()}
                     disabled={processing}
                     className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-headline font-semibold disabled:opacity-60"
                   >
-                    {processing ? 'Processing at POS...' : `Redeem ${toCurrency(Number(redeemAmount || 0))}`}
+                    {processing
+                      ? 'Processing at POS...'
+                      : `Redeem ${toCurrency(Number(redeemAmount || 0))}`}
                   </button>
                 </>
               ) : (
@@ -372,8 +433,8 @@ function RedeemPageContent() {
             </section>
           )}
 
-          {result && (
-            result.success ? (
+          {result &&
+            (result.success ? (
               <section className="rounded-2xl border border-success/20 bg-success/10 p-10 text-center">
                 <div className="w-16 h-16 rounded-full bg-success/20 text-success mx-auto mb-4 flex items-center justify-center">
                   <Icon name="CheckCircleIcon" size={34} variant="outline" />
@@ -409,8 +470,7 @@ function RedeemPageContent() {
                   New balance: {toCurrency(result.newBalance)}
                 </p>
               </section>
-            )
-          )}
+            ))}
         </div>
       </div>
     </div>

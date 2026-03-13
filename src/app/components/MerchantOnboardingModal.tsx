@@ -23,10 +23,17 @@ export default function MerchantOnboardingModal({ isOpen, onClose }: MerchantOnb
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center">
-              <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-secondary" />
+              <Icon
+                name="BuildingStorefrontIcon"
+                size={24}
+                variant="solid"
+                className="text-secondary"
+              />
             </div>
             <div>
-              <h2 className="font-headline font-bold text-2xl text-foreground">Merchant Onboarding</h2>
+              <h2 className="font-headline font-bold text-2xl text-foreground">
+                Merchant Onboarding
+              </h2>
               <p className="text-sm text-muted-foreground">
                 Chain and private merchants complete one secure onboarding journey.
               </p>

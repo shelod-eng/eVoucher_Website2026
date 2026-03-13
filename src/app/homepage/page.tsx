@@ -21,9 +21,9 @@ export default function Homepage() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="pt-16">
-        <HeroSection 
+        <HeroSection
           onOpenMerchantModal={() => setIsMerchantModalOpen(true)}
           onOpenCustomerModal={() => setIsCustomerModalOpen(true)}
         />
@@ -33,21 +33,21 @@ export default function Homepage() {
         <HowItWorks />
         <SocialProofCarousel />
         <PartnerLogos />
-        <CTASection 
+        <CTASection
           onOpenCustomerModal={() => setIsCustomerModalOpen(true)}
           onOpenMerchantModal={() => setIsMerchantModalOpen(true)}
         />
       </main>
 
       <Footer />
-      
-      <MerchantOnboardingModal 
-        isOpen={isMerchantModalOpen} 
-        onClose={() => setIsMerchantModalOpen(false)} 
+
+      <MerchantOnboardingModal
+        isOpen={isMerchantModalOpen}
+        onClose={() => setIsMerchantModalOpen(false)}
       />
-      <CustomerRegistrationModal 
-        isOpen={isCustomerModalOpen} 
-        onClose={() => setIsCustomerModalOpen(false)} 
+      <CustomerRegistrationModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
       />
     </div>
   );

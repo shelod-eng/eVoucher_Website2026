@@ -15,9 +15,7 @@ function normalizeText(value: unknown) {
 
 function normalizeTextArray(value: unknown) {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((entry) => normalizeText(entry))
-    .filter((entry) => entry.length > 0);
+  return value.map((entry) => normalizeText(entry)).filter((entry) => entry.length > 0);
 }
 
 function normalizeUuidArray(value: unknown) {
@@ -26,7 +24,9 @@ function normalizeUuidArray(value: unknown) {
 }
 
 function resolveVoucherScope(voucher: any): RedemptionScope {
-  const scope = String(voucher?.redemption_scope ?? '').trim().toLowerCase();
+  const scope = String(voucher?.redemption_scope ?? '')
+    .trim()
+    .toLowerCase();
   if (
     scope === 'all_branches' ||
     scope === 'specific_branch' ||
@@ -79,7 +79,10 @@ function validateVoucherScopeForMerchant(voucher: any, input: RedeemVoucherInput
     return { valid: true };
   }
 
-  return { valid: voucher?.merchant_name === input.merchantName, message: 'Voucher is not valid for this merchant.' };
+  return {
+    valid: voucher?.merchant_name === input.merchantName,
+    message: 'Voucher is not valid for this merchant.',
+  };
 }
 
 export class DefaultVoucherService implements VoucherService {
@@ -108,7 +111,8 @@ export class DefaultVoucherService implements VoucherService {
         consumer_benefit_amount: input.pricing.consumerBenefitAmount,
         evoucher_benefit_amount: input.pricing.evoucherBenefitAmount,
         consumer_price: input.pricing.consumerPrice,
-        merchant_receivable_after_total_discount: input.pricing.merchantReceivableAfterTotalDiscount,
+        merchant_receivable_after_total_discount:
+          input.pricing.merchantReceivableAfterTotalDiscount,
         merchant_receivable_after_evoucher_benefit:
           input.pricing.merchantReceivableAfterEvoucherBenefit,
         current_balance: input.faceValue,

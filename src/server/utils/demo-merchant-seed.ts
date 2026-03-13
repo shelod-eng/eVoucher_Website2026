@@ -13,14 +13,6 @@ type DemoMerchantSeed = {
 
 const DEMO_MERCHANTS: DemoMerchantSeed[] = [
   {
-    brandKey: 'boxer',
-    businessName: 'Boxer',
-    email: 'demo-boxer@evoucher.co.za',
-    phone: '0101000001',
-    businessType: 'Supermarket',
-    seedPortalAuth: true,
-  },
-  {
     brandKey: 'shoprite',
     businessName: 'Shoprite',
     email: 'demo-shoprite@evoucher.co.za',
@@ -28,100 +20,11 @@ const DEMO_MERCHANTS: DemoMerchantSeed[] = [
     businessType: 'Supermarket',
     seedPortalAuth: true,
   },
-  {
-    brandKey: 'pep',
-    businessName: 'Pep',
-    email: 'demo-pep@evoucher.co.za',
-    phone: '0101000003',
-    businessType: 'Retail',
-    seedPortalAuth: true,
-  },
-  {
-    brandKey: 'game',
-    businessName: 'Game',
-    email: 'demo-game@evoucher.co.za',
-    phone: '0101000004',
-    businessType: 'Retail',
-  },
-  {
-    brandKey: 'usave',
-    businessName: 'uSave',
-    email: 'demo-usave@evoucher.co.za',
-    phone: '0101000005',
-    businessType: 'Supermarket',
-  },
-  {
-    brandKey: 'checkers',
-    businessName: 'Checkers',
-    email: 'demo-checkers@evoucher.co.za',
-    phone: '0101000006',
-    businessType: 'Supermarket',
-    seedPortalAuth: true,
-  },
-  {
-    brandKey: 'engen',
-    businessName: 'Engen',
-    email: 'demo-engen@evoucher.co.za',
-    phone: '0101000007',
-    businessType: 'Fuel',
-    seedPortalAuth: true,
-  },
-  {
-    brandKey: 'picknpay',
-    businessName: 'Pick n Pay',
-    email: 'demo-picknpay@evoucher.co.za',
-    phone: '0101000008',
-    businessType: 'Supermarket',
-    seedPortalAuth: true,
-  },
-  {
-    brandKey: 'superstore',
-    businessName: 'Kalapeng Demo Store',
-    email: 'demo-kalapeng@evoucher.co.za',
-    phone: '0101000099',
-    businessType: 'Supermarket',
-    merchantType: 'private',
-    seedPortalAuth: true,
-  },
-  {
-    brandKey: 'woolworths',
-    businessName: 'Woolworths',
-    email: 'demo-woolworths@evoucher.co.za',
-    phone: '0101000009',
-    businessType: 'Supermarket',
-  },
-  {
-    brandKey: 'mrprice',
-    businessName: 'Mr Price',
-    email: 'demo-mrprice@evoucher.co.za',
-    phone: '0101000010',
-    businessType: 'Retail',
-  },
-  {
-    brandKey: 'dischem',
-    businessName: 'Dischem',
-    email: 'demo-dischem@evoucher.co.za',
-    phone: '0101000011',
-    businessType: 'Pharmacy',
-  },
-  {
-    brandKey: 'clicks',
-    businessName: 'Clicks',
-    email: 'demo-clicks@evoucher.co.za',
-    phone: '0101000012',
-    businessType: 'Pharmacy',
-    seedPortalAuth: true,
-  },
-  {
-    brandKey: 'superstore',
-    businessName: 'Super Store',
-    email: 'demo-superstore@evoucher.co.za',
-    phone: '0101000013',
-    businessType: 'Retail',
-  },
 ];
 
-const DEMO_PRODUCTS_BY_BRAND: Partial<Record<BrandKey, Array<{ name: string; faceValue: number }>>> = {
+const DEMO_PRODUCTS_BY_BRAND: Partial<
+  Record<BrandKey, Array<{ name: string; faceValue: number }>>
+> = {
   checkers: [
     { name: 'Checkers Grocery Voucher R200', faceValue: 200 },
     { name: 'Checkers Weekly Basket R500', faceValue: 500 },
@@ -188,14 +91,21 @@ const DEMO_PRODUCTS_BY_BRAND: Partial<Record<BrandKey, Array<{ name: string; fac
 };
 
 function shouldSeedDemoData() {
-  // Prototype/UAT requirement: demo merchants must always be seedable.
+  // Keep production clean: only auto-seed demo merchants in non-production environments.
+  // You can still force seeding by setting `SEED_DEMO_MERCHANTS=true`.
+  if (process.env.NODE_ENV === 'production') {
+    const override = String(process.env.SEED_DEMO_MERCHANTS ?? '')
+      .trim()
+      .toLowerCase();
+    return ['true', '1', 'yes', 'on'].includes(override);
+  }
   return true;
 }
 
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const relation = relationName.toLowerCase();
-  const bareRelation = relation.includes('.') ? relation.split('.').at(-1) ?? relation : relation;
+  const bareRelation = relation.includes('.') ? (relation.split('.').at(-1) ?? relation) : relation;
   return (
     message.includes(`relation "${relation}" does not exist`) ||
     message.includes(`relation "${bareRelation}" does not exist`) ||
@@ -205,7 +115,9 @@ function isMissingRelation(error: any, relationName: string) {
 }
 
 function isUserIdTypeMismatch(error: any) {
-  const code = String(error?.code ?? '').trim().toLowerCase();
+  const code = String(error?.code ?? '')
+    .trim()
+    .toLowerCase();
   const message = String(error?.message ?? '').toLowerCase();
   return (
     code === '22p02' ||
@@ -249,7 +161,9 @@ async function findAuthUserByEmail(admin: any, email: string) {
 }
 
 async function ensureDemoMerchantAuthUser(admin: any, seed: DemoMerchantSeed) {
-  const email = String(seed.email ?? '').trim().toLowerCase();
+  const email = String(seed.email ?? '')
+    .trim()
+    .toLowerCase();
   const password = resolveDemoMerchantPassword();
   const metadata = {
     role: 'merchant',
@@ -373,7 +287,10 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
       onboarding_completed_at: nowIso,
     };
 
-    const promotionResult = await admin.from('merchants').update(promotedFields).eq('id', merchant.id);
+    const promotionResult = await admin
+      .from('merchants')
+      .update(promotedFields)
+      .eq('id', merchant.id);
     if (promotionResult.error && !isUserIdTypeMismatch(promotionResult.error)) {
       if (isKycApprovalGate(promotionResult.error)) {
         continue;
@@ -417,7 +334,10 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
       },
       { onConflict: 'merchant_id' }
     );
-    if (verificationUpsert.error && !isMissingRelation(verificationUpsert.error, 'public.merchant_onboarding_verifications')) {
+    if (
+      verificationUpsert.error &&
+      !isMissingRelation(verificationUpsert.error, 'public.merchant_onboarding_verifications')
+    ) {
       throw verificationUpsert.error;
     }
   }
@@ -431,7 +351,10 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
     .in('merchant_id', merchantIds)
     .eq('is_active', true);
 
-  if (existingProductsError && !isMissingRelation(existingProductsError, 'public.merchant_products')) {
+  if (
+    existingProductsError &&
+    !isMissingRelation(existingProductsError, 'public.merchant_products')
+  ) {
     throw existingProductsError;
   }
 
@@ -462,7 +385,9 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
       );
       productsToInsert.push({
         merchant_id: merchant.id,
-        product_name: template.name || buildDemoProductName(brand?.displayName ?? seed.businessName, template.faceValue),
+        product_name:
+          template.name ||
+          buildDemoProductName(brand?.displayName ?? seed.businessName, template.faceValue),
         face_value: pricing.faceValue,
         total_discount_pct: pricing.totalDiscountPct,
         consumer_benefit_pct: pricing.consumerBenefitPct,
@@ -481,8 +406,13 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
   });
 
   if (productsToInsert.length > 0) {
-    const { error: insertProductsError } = await admin.from('merchant_products').insert(productsToInsert);
-    if (insertProductsError && !isMissingRelation(insertProductsError, 'public.merchant_products')) {
+    const { error: insertProductsError } = await admin
+      .from('merchant_products')
+      .insert(productsToInsert);
+    if (
+      insertProductsError &&
+      !isMissingRelation(insertProductsError, 'public.merchant_products')
+    ) {
       throw insertProductsError;
     }
   }

@@ -21,7 +21,7 @@ async function fetchMerchantAuthState() {
     credentials: 'include',
     cache: 'no-store',
   });
-  const payload = await response.json().catch(() => ({} as any));
+  const payload = await response.json().catch(() => ({}) as any);
   if (!response.ok) {
     throw new Error(payload?.error || 'Failed to load merchant auth state.');
   }
@@ -107,7 +107,7 @@ export default function MerchantChangePasswordPage() {
         });
         clearTimeout(timeoutId);
         if (!resetResponse.ok) {
-          const payload = await resetResponse.json().catch(() => ({} as any));
+          const payload = await resetResponse.json().catch(() => ({}) as any);
           const message = payload?.error || 'Failed to update password.';
           setError(message);
           console.error('[MerchantChangePassword][server-change-password][error]', message);
@@ -129,7 +129,9 @@ export default function MerchantChangePasswordPage() {
 
       setSuccess('Password updated successfully. Redirecting to dashboard...');
       // Force fresh session/user metadata to avoid stale must_change_password loops.
-      const email = String(user?.email ?? '').trim().toLowerCase();
+      const email = String(user?.email ?? '')
+        .trim()
+        .toLowerCase();
       if (email) {
         try {
           await supabase.auth.signOut({ scope: 'local' });
@@ -154,67 +156,84 @@ export default function MerchantChangePasswordPage() {
       <main className="pt-24 pb-16 px-4">
         <div className="max-w-lg mx-auto">
           <div className="mb-5 rounded-2xl border border-teal-300/40 bg-gradient-to-r from-teal-700 to-teal-600 px-6 py-5 text-white shadow-xl">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-teal-100 font-headline">eVoucher Security</p>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-teal-100 font-headline">
+              eVoucher Security
+            </p>
             <h1 className="mt-2 font-headline font-bold text-2xl">Set your permanent password</h1>
-            <p className="mt-1 text-sm text-teal-100">One-time step before entering the merchant portal.</p>
-          </div>
-          <div className="bg-card/95 backdrop-blur-sm border border-border rounded-2xl shadow-lg p-8">
-          <div className="mb-6">
-            <h1 className="font-headline text-2xl font-bold text-foreground">Set a New Password</h1>
-            <p className="mt-2 text-sm text-muted-foreground font-body">
-              For security, your temporary password must be changed before using the merchant dashboard.
+            <p className="mt-1 text-sm text-teal-100">
+              One-time step before entering the merchant portal.
             </p>
           </div>
+          <div className="bg-card/95 backdrop-blur-sm border border-border rounded-2xl shadow-lg p-8">
+            <div className="mb-6">
+              <h1 className="font-headline text-2xl font-bold text-foreground">
+                Set a New Password
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground font-body">
+                For security, your temporary password must be changed before using the merchant
+                dashboard.
+              </p>
+            </div>
 
-          {error && (
-            <div className="mb-4 p-3 rounded-lg bg-error/10 border border-error/20 flex items-start gap-2">
-              <Icon name="ExclamationCircleIcon" size={18} variant="solid" className="text-error mt-0.5" />
-              <p className="text-sm text-error font-body">{error}</p>
-            </div>
-          )}
+            {error && (
+              <div className="mb-4 p-3 rounded-lg bg-error/10 border border-error/20 flex items-start gap-2">
+                <Icon
+                  name="ExclamationCircleIcon"
+                  size={18}
+                  variant="solid"
+                  className="text-error mt-0.5"
+                />
+                <p className="text-sm text-error font-body">{error}</p>
+              </div>
+            )}
 
-          {success && (
-            <div className="mb-4 p-3 rounded-lg bg-success/10 border border-success/20 flex items-start gap-2">
-              <Icon name="CheckCircleIcon" size={18} variant="solid" className="text-success mt-0.5" />
-              <p className="text-sm text-success font-body">{success}</p>
-            </div>
-          )}
+            {success && (
+              <div className="mb-4 p-3 rounded-lg bg-success/10 border border-success/20 flex items-start gap-2">
+                <Icon
+                  name="CheckCircleIcon"
+                  size={18}
+                  variant="solid"
+                  className="text-success mt-0.5"
+                />
+                <p className="text-sm text-success font-body">{success}</p>
+              </div>
+            )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-headline font-semibold text-foreground mb-2">
-                New Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-                className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                placeholder="Use 8+ chars with upper/lowercase and number"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-headline font-semibold text-foreground mb-2">
-                Confirm New Password
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                required
-                className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
-                placeholder="Re-enter password"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-headline font-semibold hover:bg-secondary/90 transition-all disabled:opacity-50"
-            >
-              {submitting ? 'Updating password...' : 'Update Password'}
-            </button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-headline font-semibold text-foreground mb-2">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                  placeholder="Use 8+ chars with upper/lowercase and number"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-headline font-semibold text-foreground mb-2">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  required
+                  className="w-full px-4 py-3 border-2 border-border rounded-lg font-body bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/15 transition-all"
+                  placeholder="Re-enter password"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-3 bg-secondary text-secondary-foreground rounded-lg font-headline font-semibold hover:bg-secondary/90 transition-all disabled:opacity-50"
+              >
+                {submitting ? 'Updating password...' : 'Update Password'}
+              </button>
+            </form>
           </div>
         </div>
       </main>

@@ -32,7 +32,10 @@ export async function POST(request: Request) {
     }
 
     if (!isAuthorized(request, actorRole)) {
-      return NextResponse.json({ error: 'Unauthorized credentials resend attempt.' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized credentials resend attempt.' },
+        { status: 401 }
+      );
     }
 
     const result = await resendMerchantCredentials({
@@ -47,8 +50,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       sent: result.sent,
-      credentialsEmailRecipient: 'credentialsEmailRecipient' in result ? result.credentialsEmailRecipient : undefined,
-      credentialsEmailProvider: 'credentialsEmailProvider' in result ? result.credentialsEmailProvider : undefined,
+      credentialsEmailRecipient:
+        'credentialsEmailRecipient' in result ? result.credentialsEmailRecipient : undefined,
+      credentialsEmailProvider:
+        'credentialsEmailProvider' in result ? result.credentialsEmailProvider : undefined,
       message: result.message,
       error: result.error,
       statusData: result.statusData,

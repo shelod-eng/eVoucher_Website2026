@@ -34,10 +34,7 @@ export default function ConsumerExperiencePage() {
         <CTASection onJoinClick={() => setIsModalOpen(true)} />
       </main>
       <Footer />
-      <CustomerRegistrationModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
+      <CustomerRegistrationModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 }

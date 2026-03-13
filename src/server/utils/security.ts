@@ -19,10 +19,7 @@ export function verifyHmacSha256(params: {
   signature: string;
   secret: string;
 }): boolean {
-  const expected = crypto
-    .createHmac('sha256', params.secret)
-    .update(params.payload)
-    .digest('hex');
+  const expected = crypto.createHmac('sha256', params.secret).update(params.payload).digest('hex');
 
   const expectedBuffer = Buffer.from(expected, 'utf-8');
   const signatureBuffer = Buffer.from(params.signature, 'utf-8');

@@ -4,8 +4,10 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { RedeemVoucherRequest } from '@/types/domain';
 import { getAuthenticatedUser } from '@/server/utils/auth';
+import { resolveUserRole } from '@/server/utils/role';
 import { writeAuditEvent, writeFraudAlert } from '@/server/utils/audit';
 import { sha256 } from '@/server/utils/security';
+import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
 
 type VoucherRow = {
   id: string;
@@ -39,7 +41,7 @@ type VoucherStatus = 'active' | 'partial' | 'used' | 'expired';
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const relation = relationName.toLowerCase();
-  const bareRelation = relation.includes('.') ? relation.split('.').at(-1) ?? relation : relation;
+  const bareRelation = relation.includes('.') ? (relation.split('.').at(-1) ?? relation) : relation;
   return (
     message.includes(`relation "${relation}" does not exist`) ||
     message.includes(`relation "${bareRelation}" does not exist`) ||
@@ -60,7 +62,9 @@ function isMissingColumn(error: any, columnName: string) {
 }
 
 function toUpperCode(value: string) {
-  return String(value ?? '').trim().toUpperCase();
+  return String(value ?? '')
+    .trim()
+    .toUpperCase();
 }
 
 function parseAmount(value: unknown) {
@@ -69,8 +73,12 @@ function parseAmount(value: unknown) {
   return Number(numberValue.toFixed(2));
 }
 
-function normalizeScope(value: unknown): 'all_branches' | 'specific_branch' | 'province_wide' | 'national' {
-  const scope = String(value ?? '').trim().toLowerCase();
+function normalizeScope(
+  value: unknown
+): 'all_branches' | 'specific_branch' | 'province_wide' | 'national' {
+  const scope = String(value ?? '')
+    .trim()
+    .toLowerCase();
   if (
     scope === 'all_branches' ||
     scope === 'specific_branch' ||
@@ -99,7 +107,11 @@ function getVoucherBalance(voucher: VoucherRow) {
   return Number(balance.toFixed(2));
 }
 
-async function fetchVoucherByCode(admin: any, customerId: string, voucherCode: string): Promise<VoucherRow | null> {
+async function fetchVoucherByCode(
+  admin: any,
+  customerId: string,
+  voucherCode: string
+): Promise<VoucherRow | null> {
   const fieldSets = [
     'id,customer_id,merchant_id,merchant_name,parent_brand,product_id,voucher_code,face_value,current_balance,is_active,expires_at,redemption_scope,valid_provinces,valid_branch_ids',
     'id,customer_id,merchant_id,merchant_name,product_id,voucher_code,face_value,current_balance,is_active,expires_at',
@@ -110,6 +122,29 @@ async function fetchVoucherByCode(admin: any, customerId: string, voucherCode: s
       .from('customer_vouchers')
       .select(fields)
       .eq('customer_id', customerId)
+      .eq('voucher_code', voucherCode)
+      .maybeSingle();
+    if (!response.error) {
+      return (response.data as VoucherRow | null) ?? null;
+    }
+  }
+
+  return null;
+}
+
+async function fetchVoucherByCodeGlobal(
+  admin: any,
+  voucherCode: string
+): Promise<VoucherRow | null> {
+  const fieldSets = [
+    'id,customer_id,merchant_id,merchant_name,parent_brand,product_id,voucher_code,face_value,current_balance,is_active,expires_at,redemption_scope,valid_provinces,valid_branch_ids',
+    'id,customer_id,merchant_id,merchant_name,product_id,voucher_code,face_value,current_balance,is_active,expires_at',
+  ];
+
+  for (const fields of fieldSets) {
+    const response = await admin
+      .from('customer_vouchers')
+      .select(fields)
       .eq('voucher_code', voucherCode)
       .maybeSingle();
     if (!response.error) {
@@ -183,7 +218,11 @@ async function fetchActiveMerchantByBrand(admin: any, brandName: string | null) 
       .in('status', ['active', 'approved'])
       .order('approved_at', { ascending: false })
       .limit(1);
-    if (!byBusinessName.error && Array.isArray(byBusinessName.data) && byBusinessName.data.length > 0) {
+    if (
+      !byBusinessName.error &&
+      Array.isArray(byBusinessName.data) &&
+      byBusinessName.data.length > 0
+    ) {
       return byBusinessName.data[0] as MerchantRow;
     }
   }
@@ -237,7 +276,10 @@ function validateScope(voucher: VoucherRow, merchant: MerchantRow | null) {
   if (scope === 'province_wide') {
     const validProvinces = normalizeTextArray(voucher.valid_provinces);
     const merchantProvince = normalizeText(merchant.province);
-    if (validProvinces.length > 0 && (!merchantProvince || !validProvinces.includes(merchantProvince))) {
+    if (
+      validProvinces.length > 0 &&
+      (!merchantProvince || !validProvinces.includes(merchantProvince))
+    ) {
       return { valid: false, message: 'Voucher is not valid in this province.' };
     }
     return { valid: true };
@@ -266,19 +308,25 @@ function buildVoucherPayload(voucher: VoucherRow, userEmail: string, productName
 
 function validatePostBody(body: Partial<RedeemVoucherRequest> & { voucherCode?: string }) {
   if (!toUpperCode(body.voucherCode ?? '')) return 'Voucher code is required.';
-  if (!Number.isFinite(Number(body.amount)) || Number(body.amount) <= 0) return 'Amount must be greater than zero.';
+  if (!Number.isFinite(Number(body.amount)) || Number(body.amount) <= 0)
+    return 'Amount must be greater than zero.';
   return null;
 }
 
-async function createWalletTransaction(admin: any, input: {
-  customerId: string;
-  customerEmail: string;
-  voucherId: string;
-  voucherCode: string;
-  merchantName: string;
-  amount: number;
-}) {
+async function createWalletTransaction(
+  admin: any,
+  input: {
+    customerId: string;
+    customerEmail: string;
+    voucherId: string;
+    voucherCode: string;
+    merchantName: string;
+    amount: number;
+  }
+) {
   const walletTxResponse = await admin.from('wallet_transactions').insert({
+    customer_id: input.customerId,
+    voucher_id: input.voucherId,
     user_email: input.customerEmail,
     type: 'redemption',
     amount: input.amount,
@@ -310,7 +358,7 @@ async function createWalletTransaction(admin: any, input: {
 
 export async function GET(request: Request) {
   try {
-    const { user } = await getAuthenticatedUser();
+    const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -321,8 +369,22 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Voucher code is required.' }, { status: 400 });
     }
 
+    const { role } = await resolveUserRole(supabase, user);
     const admin = createAdminClient();
-    const voucher = await fetchVoucherByCode(admin, user.id, code);
+
+    let merchantContext: MerchantRow | null = null;
+    if (role === 'merchant') {
+      merchantContext = await resolveMerchantForUser<MerchantRow>(
+        admin,
+        user,
+        'id,business_name,parent_brand,branch_name,province,status,default_total_discount_pct'
+      );
+    }
+
+    const voucher =
+      role === 'merchant'
+        ? await fetchVoucherByCodeGlobal(admin, code)
+        : await fetchVoucherByCode(admin, user.id, code);
     if (!voucher) {
       return NextResponse.json({ error: 'No voucher found with this code.' }, { status: 404 });
     }
@@ -330,7 +392,21 @@ export async function GET(request: Request) {
     const productName = await fetchProductName(admin, voucher.product_id);
 
     return NextResponse.json({
-      voucher: buildVoucherPayload(voucher, user.email ?? '', productName),
+      voucher: buildVoucherPayload(
+        voucher,
+        role === 'merchant' ? 'Hidden' : (user.email ?? ''),
+        productName
+      ),
+      actorRole: role,
+      merchantContext: merchantContext
+        ? {
+            id: merchantContext.id,
+            businessName: merchantContext.business_name,
+            parentBrand: merchantContext.parent_brand,
+            branchName: merchantContext.branch_name,
+            province: merchantContext.province,
+          }
+        : null,
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -342,9 +418,17 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await getAuthenticatedUser();
+    const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { role } = await resolveUserRole(supabase, user);
+    if (role !== 'merchant') {
+      return NextResponse.json(
+        { error: 'Only merchant accounts can redeem vouchers.', code: 'merchant_only_redemption' },
+        { status: 403 }
+      );
     }
 
     const body = (await request.json()) as Partial<RedeemVoucherRequest> & {
@@ -360,7 +444,23 @@ export async function POST(request: Request) {
     }
 
     const admin = createAdminClient();
-    const voucher = await fetchVoucherByCode(admin, user.id, voucherCode);
+
+    const merchantContext = await resolveMerchantForUser<MerchantRow>(
+      admin,
+      user,
+      'id,business_name,parent_brand,branch_name,province,status,default_total_discount_pct'
+    );
+    if (!merchantContext?.id) {
+      return NextResponse.json(
+        {
+          error: 'Merchant account is not linked to a merchant profile.',
+          code: 'merchant_profile_missing',
+        },
+        { status: 403 }
+      );
+    }
+
+    const voucher = await fetchVoucherByCodeGlobal(admin, voucherCode);
     if (!voucher) {
       return NextResponse.json({ error: 'No voucher found with this code.' }, { status: 404 });
     }
@@ -369,7 +469,10 @@ export async function POST(request: Request) {
     const currentStatus = deriveVoucherStatus(voucher);
 
     if (currentStatus === 'used') {
-      return NextResponse.json({ error: 'Voucher has already been redeemed.', code: 'already_redeemed' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Voucher has already been redeemed.', code: 'already_redeemed' },
+        { status: 400 }
+      );
     }
     if (currentStatus === 'expired') {
       return NextResponse.json({ error: 'Voucher has expired.', code: 'expired' }, { status: 400 });
@@ -382,13 +485,19 @@ export async function POST(request: Request) {
     }
 
     const merchant =
-      (await fetchActiveMerchantById(admin, String(body.merchantId ?? '').trim() || voucher.merchant_id)) ??
-      (await fetchActiveMerchantByBrand(admin, voucher.parent_brand ?? voucher.merchant_name));
+      (await fetchActiveMerchantById(admin, String(merchantContext.id).trim())) ??
+      (await fetchActiveMerchantByBrand(
+        admin,
+        merchantContext.parent_brand ?? merchantContext.business_name
+      ));
 
     const scopeValidation = validateScope(voucher, merchant);
     if (!scopeValidation.valid) {
       return NextResponse.json(
-        { error: scopeValidation.message ?? 'Voucher is not valid for this merchant.', code: 'scope_invalid' },
+        {
+          error: scopeValidation.message ?? 'Voucher is not valid for this merchant.',
+          code: 'scope_invalid',
+        },
         { status: 400 }
       );
     }
@@ -405,14 +514,17 @@ export async function POST(request: Request) {
     const idempotencyRes = await admin
       .from('voucher_redemption_idempotency')
       .select('response_payload,request_hash')
-      .eq('customer_id', user.id)
+      .eq('customer_id', voucher.customer_id)
       .eq('idempotency_key', idempotencyKey)
       .maybeSingle();
 
     if (!idempotencyRes.error && idempotencyRes.data?.response_payload) {
       return NextResponse.json(idempotencyRes.data.response_payload);
     }
-    if (idempotencyRes.error && !isMissingRelation(idempotencyRes.error, 'public.voucher_redemption_idempotency')) {
+    if (
+      idempotencyRes.error &&
+      !isMissingRelation(idempotencyRes.error, 'public.voucher_redemption_idempotency')
+    ) {
       throw idempotencyRes.error;
     }
 
@@ -424,7 +536,11 @@ export async function POST(request: Request) {
       current_balance: newBalance,
       is_active: newBalance > 0,
       redeemed_at_merchant_id: merchant?.id ?? null,
-      redeemed_at_branch: merchant?.branch_name ?? merchant?.business_name ?? (voucher.parent_brand ?? voucher.merchant_name),
+      redeemed_at_branch:
+        merchant?.branch_name ??
+        merchant?.business_name ??
+        voucher.parent_brand ??
+        voucher.merchant_name,
       redeemed_at: redeemedAt,
     };
 
@@ -432,32 +548,38 @@ export async function POST(request: Request) {
       .from('customer_vouchers')
       .update({ ...updatePayload, status: newStatus })
       .eq('id', voucher.id)
-      .eq('customer_id', user.id);
+      .eq('customer_id', voucher.customer_id);
 
     if (updateRes.error && isMissingColumn(updateRes.error, 'status')) {
       updateRes = await admin
         .from('customer_vouchers')
         .update(updatePayload)
         .eq('id', voucher.id)
-        .eq('customer_id', user.id);
+        .eq('customer_id', voucher.customer_id);
     }
     if (updateRes.error) {
       throw updateRes.error;
     }
 
     await createWalletTransaction(admin, {
-      customerId: user.id,
-      customerEmail: user.email ?? '',
+      customerId: voucher.customer_id,
+      customerEmail: 'Hidden',
       voucherId: voucher.id,
       voucherCode,
-      merchantName: voucher.parent_brand ?? voucher.merchant_name,
+      merchantName:
+        merchant?.parent_brand ??
+        merchant?.business_name ??
+        voucher.parent_brand ??
+        voucher.merchant_name,
       amount,
     });
 
     let merchantPayoutAmount = 0;
     let merchantPayoutQueued = false;
     if (merchant?.id) {
-      const totalDiscountPct = Number(merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT);
+      const totalDiscountPct = Number(
+        merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+      );
       const payoutMultiplier = Math.max(0, 1 - totalDiscountPct / 100);
       merchantPayoutAmount = Number((amount * payoutMultiplier).toFixed(2));
       const payoutRes = await admin.from('merchant_payouts').insert({
@@ -485,13 +607,16 @@ export async function POST(request: Request) {
     };
 
     const idempotencyInsert = await admin.from('voucher_redemption_idempotency').insert({
-      customer_id: user.id,
+      customer_id: voucher.customer_id,
       voucher_id: voucher.id,
       idempotency_key: idempotencyKey,
       request_hash: requestHash,
       response_payload: responsePayload,
     });
-    if (idempotencyInsert.error && !isMissingRelation(idempotencyInsert.error, 'public.voucher_redemption_idempotency')) {
+    if (
+      idempotencyInsert.error &&
+      !isMissingRelation(idempotencyInsert.error, 'public.voucher_redemption_idempotency')
+    ) {
       // Ignore duplicate idempotency insert conflicts but raise non-duplicate failures.
       const message = String(idempotencyInsert.error.message ?? '').toLowerCase();
       if (!message.includes('duplicate key value')) {
@@ -501,14 +626,18 @@ export async function POST(request: Request) {
 
     await writeAuditEvent(admin, {
       actorId: user.id,
-      actorRole: 'customer',
+      actorRole: 'merchant',
       entityType: 'voucher_redemption',
       entityId: idempotencyKey,
       action: 'voucher_redeemed',
       metadata: {
         voucherCode,
         merchantId: merchant?.id ?? null,
-        merchantBrand: voucher.parent_brand ?? voucher.merchant_name,
+        merchantBrand:
+          merchant?.parent_brand ??
+          merchant?.business_name ??
+          voucher.parent_brand ??
+          voucher.merchant_name,
         amount,
         status: newStatus,
         newBalance,

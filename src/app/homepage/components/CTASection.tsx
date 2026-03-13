@@ -21,7 +21,8 @@ const CTASection = ({ onOpenCustomerModal, onOpenMerchantModal }: CTASectionProp
             Ready to Make an Impact?
           </h2>
           <p className="font-body text-lg text-white/90 max-w-3xl mx-auto mb-8">
-            Join thousands of consumers, merchants, and government partners creating meaningful change through dignified digital commerce.
+            Join thousands of consumers, merchants, and government partners creating meaningful
+            change through dignified digital commerce.
           </p>
         </div>
 
@@ -34,9 +35,7 @@ const CTASection = ({ onOpenCustomerModal, onOpenMerchantModal }: CTASectionProp
             <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors duration-300">
               <Icon name="UserIcon" size={32} variant="solid" className="text-primary" />
             </div>
-            <h3 className="font-headline font-bold text-xl text-foreground mb-3">
-              Start Saving
-            </h3>
+            <h3 className="font-headline font-bold text-xl text-foreground mb-3">Start Saving</h3>
             <p className="font-body text-sm text-muted-foreground mb-6">
               Access up to 30% savings on essential goods through simple USSD technology.
             </p>
@@ -52,7 +51,12 @@ const CTASection = ({ onOpenCustomerModal, onOpenMerchantModal }: CTASectionProp
             className="bg-white rounded-xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group text-left w-full"
           >
             <div className="bg-secondary/10 w-16 h-16 rounded-full flex items-center justify-center mb-6 group-hover:bg-secondary/20 transition-colors duration-300">
-              <Icon name="BuildingStorefrontIcon" size={32} variant="solid" className="text-secondary" />
+              <Icon
+                name="BuildingStorefrontIcon"
+                size={32}
+                variant="solid"
+                className="text-secondary"
+              />
             </div>
             <h3 className="font-headline font-bold text-xl text-foreground mb-3">
               Grow Your Business
@@ -72,7 +76,12 @@ const CTASection = ({ onOpenCustomerModal, onOpenMerchantModal }: CTASectionProp
             className="bg-white rounded-xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group"
           >
             <div className="bg-trust-builder/10 w-16 h-16 rounded-full flex items-center justify-center mb-6 group-hover:bg-trust-builder/20 transition-colors duration-300">
-              <Icon name="BuildingLibraryIcon" size={32} variant="solid" className="text-trust-builder" />
+              <Icon
+                name="BuildingLibraryIcon"
+                size={32}
+                variant="solid"
+                className="text-trust-builder"
+              />
             </div>
             <h3 className="font-headline font-bold text-xl text-foreground mb-3">
               Partner with Us

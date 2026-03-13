@@ -8,7 +8,7 @@ import { DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const relation = relationName.toLowerCase();
-  const bareRelation = relation.includes('.') ? relation.split('.').at(-1) ?? relation : relation;
+  const bareRelation = relation.includes('.') ? (relation.split('.').at(-1) ?? relation) : relation;
   return (
     message.includes(`relation "${relation}" does not exist`) ||
     message.includes(`relation "${bareRelation}" does not exist`) ||
@@ -43,7 +43,11 @@ function generateDemoVouchers() {
       defaultTotalDiscountPct: DEFAULT_TOTAL_DISCOUNT_PCT,
     })[0];
 
-    const prefix = brand.displayName.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 4) || 'DEMO';
+    const prefix =
+      brand.displayName
+        .replace(/[^A-Za-z0-9]/g, '')
+        .toUpperCase()
+        .slice(0, 4) || 'DEMO';
     const voucherCode = `${prefix}-${(index + 1).toString().padStart(2, '0')}EH4`;
     const issuedAt = new Date(now - index * dayMs).toISOString();
 
@@ -67,8 +71,10 @@ function generateDemoVouchers() {
       consumer_benefit_amount: starterProduct.consumer_benefit_amount,
       evoucher_benefit_amount: starterProduct.evoucher_benefit_amount,
       consumer_price: starterProduct.consumer_price,
-      merchant_receivable_after_total_discount: starterProduct.merchant_receivable_after_total_discount,
-      merchant_receivable_after_evoucher_benefit: starterProduct.merchant_receivable_after_evoucher_benefit,
+      merchant_receivable_after_total_discount:
+        starterProduct.merchant_receivable_after_total_discount,
+      merchant_receivable_after_evoucher_benefit:
+        starterProduct.merchant_receivable_after_evoucher_benefit,
       redemption_scope: 'all_branches',
       valid_provinces: [],
       valid_branch_ids: [],
@@ -80,7 +86,9 @@ function generateDemoVouchers() {
   });
 }
 
-function generateDemoPaymentTransactions(vouchers: Array<{ voucher_code: string; consumer_price: number }>) {
+function generateDemoPaymentTransactions(
+  vouchers: Array<{ voucher_code: string; consumer_price: number }>
+) {
   const now = Date.now();
   const hourMs = 60 * 60 * 1000;
   return vouchers.map((voucher, index) => ({
@@ -120,7 +128,11 @@ export async function GET() {
     }
 
     const [profileRes, vouchersRes, transactionsRes, paymentsRes] = await Promise.all([
-      supabase.from('user_profiles').select('full_name,email,phone,role').eq('id', user.id).maybeSingle(),
+      supabase
+        .from('user_profiles')
+        .select('full_name,email,phone,role')
+        .eq('id', user.id)
+        .maybeSingle(),
       supabase
         .from('customer_vouchers')
         .select(
@@ -148,7 +160,8 @@ export async function GET() {
         ? vouchersRes.error
         : null;
     const transactionsError =
-      transactionsRes.error && !isMissingRelation(transactionsRes.error, 'public.redemption_history')
+      transactionsRes.error &&
+      !isMissingRelation(transactionsRes.error, 'public.redemption_history')
         ? transactionsRes.error
         : null;
     const paymentsError =
@@ -195,13 +208,12 @@ export async function GET() {
       throw methodsRes.error;
     }
 
-    const profile =
-      profileRes.data ?? {
-        full_name: String(user.user_metadata?.full_name ?? user.user_metadata?.name ?? ''),
-        email: user.email ?? '',
-        phone: user.phone ?? '',
-        role,
-      };
+    const profile = profileRes.data ?? {
+      full_name: String(user.user_metadata?.full_name ?? user.user_metadata?.name ?? ''),
+      email: user.email ?? '',
+      phone: user.phone ?? '',
+      role,
+    };
 
     const liveVouchers = vouchersRes.data ?? [];
     const livePaymentTransactions = paymentsRes.data ?? [];
@@ -234,7 +246,10 @@ export async function GET() {
     });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error?.message || 'Failed to load customer dashboard.', code: 'customer_dashboard_failed' },
+      {
+        error: error?.message || 'Failed to load customer dashboard.',
+        code: 'customer_dashboard_failed',
+      },
       { status: 500 }
     );
   }

@@ -45,14 +45,17 @@ export class DefaultSettlementService implements SettlementService {
 
       if (vouchersError) throw vouchersError;
       (vouchers ?? []).forEach((voucher) => {
-        voucherDiscountMap.set(voucher.id, Number(voucher.total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT));
+        voucherDiscountMap.set(
+          voucher.id,
+          Number(voucher.total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT)
+        );
       });
     }
 
     const payouts = pendingRedemptions
       .map((row) => {
         const totalDiscountPct = row.voucher_id
-          ? voucherDiscountMap.get(row.voucher_id) ?? DEFAULT_TOTAL_DISCOUNT_PCT
+          ? (voucherDiscountMap.get(row.voucher_id) ?? DEFAULT_TOTAL_DISCOUNT_PCT)
           : DEFAULT_TOTAL_DISCOUNT_PCT;
         const payoutMultiplier = Math.max(0, 1 - totalDiscountPct / 100);
         return {

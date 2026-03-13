@@ -67,7 +67,8 @@ const FinancialModelInteractive = () => {
               Ready to Discuss Partnership Opportunities?
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Connect with our investment team to explore how eVoucher can deliver both financial returns and measurable social impact
+              Connect with our investment team to explore how eVoucher can deliver both financial
+              returns and measurable social impact
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button className="w-full sm:w-auto px-8 py-4 bg-action text-action-foreground rounded-lg font-headline font-semibold hover:bg-action/90 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2">
@@ -92,11 +93,17 @@ const FinancialModelInteractive = () => {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <div className="relative">
-                  <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="40" height="40" rx="8" fill="#20B2AA"/>
-                    <path d="M20 10L28 16V24L20 30L12 24V16L20 10Z" fill="white" opacity="0.9"/>
-                    <path d="M20 15L24 18V22L20 25L16 22V18L20 15Z" fill="#FF7A00"/>
-                    <circle cx="20" cy="20" r="3" fill="white"/>
+                  <svg
+                    width="32"
+                    height="32"
+                    viewBox="0 0 40 40"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <rect width="40" height="40" rx="8" fill="#20B2AA" />
+                    <path d="M20 10L28 16V24L20 30L12 24V16L20 10Z" fill="white" opacity="0.9" />
+                    <path d="M20 15L24 18V22L20 25L16 22V18L20 15Z" fill="#FF7A00" />
+                    <circle cx="20" cy="20" r="3" fill="white" />
                   </svg>
                 </div>
                 <div className="flex flex-col">
@@ -112,18 +119,60 @@ const FinancialModelInteractive = () => {
             <div>
               <h4 className="font-headline font-bold text-foreground mb-3">Platform</h4>
               <ul className="space-y-2">
-                <li><Link href="/consumer-experience" className="text-sm text-muted-foreground hover:text-primary transition-colors">Consumer Experience</Link></li>
-                <li><Link href="/merchant-partnership" className="text-sm text-muted-foreground hover:text-primary transition-colors">Merchant Partnership</Link></li>
-                <li><Link href="/government-alignment" className="text-sm text-muted-foreground hover:text-primary transition-colors">Government Alignment</Link></li>
+                <li>
+                  <Link
+                    href="/consumer-experience"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Consumer Experience
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/merchant-partnership"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Merchant Partnership
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/government-alignment"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Government Alignment
+                  </Link>
+                </li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-headline font-bold text-foreground mb-3">Resources</h4>
               <ul className="space-y-2">
-                <li><Link href="/security-compliance" className="text-sm text-muted-foreground hover:text-primary transition-colors">Security & Compliance</Link></li>
-                <li><Link href="/financial-model" className="text-sm text-muted-foreground hover:text-primary transition-colors">Financial Model</Link></li>
-                <li><Link href="/homepage" className="text-sm text-muted-foreground hover:text-primary transition-colors">About Us</Link></li>
+                <li>
+                  <Link
+                    href="/security-compliance"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Security & Compliance
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/financial-model"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Financial Model
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/homepage"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    About Us
+                  </Link>
+                </li>
               </ul>
             </div>
 
@@ -142,9 +191,24 @@ const FinancialModelInteractive = () => {
               © {new Date()?.getFullYear()} eVoucher Platform. All rights reserved.
             </p>
             <div className="flex items-center space-x-6">
-              <Link href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link>
-              <Link href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Terms of Service</Link>
-              <Link href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Compliance</Link>
+              <Link
+                href="#"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                href="#"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Terms of Service
+              </Link>
+              <Link
+                href="#"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Compliance
+              </Link>
             </div>
           </div>
         </div>

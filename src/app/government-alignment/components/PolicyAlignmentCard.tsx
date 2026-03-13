@@ -8,12 +8,12 @@ interface PolicyAlignmentCardProps {
   programs: string[];
 }
 
-export default function PolicyAlignmentCard({ 
-  title, 
-  description, 
-  icon, 
-  alignmentScore, 
-  programs 
+export default function PolicyAlignmentCard({
+  title,
+  description,
+  icon,
+  alignmentScore,
+  programs,
 }: PolicyAlignmentCardProps) {
   return (
     <div className="bg-card rounded-lg shadow-md p-6 border border-border hover:shadow-lg transition-shadow duration-300">
@@ -32,12 +32,12 @@ export default function PolicyAlignmentCard({
           <span className="text-xs text-muted-foreground">Alignment</span>
         </div>
       </div>
-      
+
       <div className="space-y-2">
         <p className="text-sm font-body font-medium text-foreground">Aligned Programs:</p>
         <div className="flex flex-wrap gap-2">
           {programs.map((program, index) => (
-            <span 
+            <span
               key={index}
               className="px-3 py-1 bg-muted rounded-full text-xs font-body text-foreground"
             >

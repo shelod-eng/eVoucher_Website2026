@@ -17,23 +17,23 @@ const Footer = () => {
     platform: [
       { label: 'Consumer Experience', href: '/consumer-experience' },
       { label: 'Merchant Partnership', href: '/merchant-partnership' },
-      { label: 'Government Alignment', href: '/government-alignment' }
+      { label: 'Government Alignment', href: '/government-alignment' },
     ],
     company: [
       { label: 'Security & Compliance', href: '/security-compliance' },
       { label: 'Financial Model', href: '/financial-model' },
-      { label: 'About Us', href: '/homepage' }
+      { label: 'About Us', href: '/homepage' },
     ],
     support: [
       { label: 'Help Center', href: '/homepage' },
       { label: 'Contact Us', href: '/homepage' },
-      { label: 'FAQs', href: '/homepage' }
-    ]
+      { label: 'FAQs', href: '/homepage' },
+    ],
   };
 
   const socialLinks = [
     { icon: 'EnvelopeIcon', href: 'mailto:info@evoucher.co.za', label: 'Email' },
-    { icon: 'PhoneIcon', href: 'tel:+27123456789', label: 'Phone' }
+    { icon: 'PhoneIcon', href: 'tel:+27123456789', label: 'Phone' },
   ];
 
   return (
@@ -44,23 +44,39 @@ const Footer = () => {
           <div className="lg:col-span-2">
             <Link href="/homepage" className="flex items-center space-x-2 mb-4">
               <div className="relative">
-                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="40" height="40" rx="8" fill="#20B2AA"/>
-                  <path d="M20 10L28 16V24L20 30L12 24V16L20 10Z" fill="white" opacity="0.9"/>
-                  <path d="M20 15L24 18V22L20 25L16 22V18L20 15Z" fill="#FF7A00"/>
-                  <circle cx="20" cy="20" r="3" fill="white"/>
+                <svg
+                  width="40"
+                  height="40"
+                  viewBox="0 0 40 40"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect width="40" height="40" rx="8" fill="#20B2AA" />
+                  <path d="M20 10L28 16V24L20 30L12 24V16L20 10Z" fill="white" opacity="0.9" />
+                  <path d="M20 15L24 18V22L20 25L16 22V18L20 15Z" fill="#FF7A00" />
+                  <circle cx="20" cy="20" r="3" fill="white" />
                 </svg>
               </div>
               <div className="flex flex-col">
-                <span className="font-headline font-bold text-lg text-foreground leading-tight">eVoucher</span>
-                <span className="font-body text-xs text-muted-foreground leading-tight">Dignified Impact</span>
+                <span className="font-headline font-bold text-lg text-foreground leading-tight">
+                  eVoucher
+                </span>
+                <span className="font-body text-xs text-muted-foreground leading-tight">
+                  Dignified Impact
+                </span>
               </div>
             </Link>
             <p className="font-body text-sm text-muted-foreground mb-4 max-w-sm">
-              Digital commerce that serves the poorest of the poor with dignity and transparency. Real savings, real impact, real accountability.
+              Digital commerce that serves the poorest of the poor with dignity and transparency.
+              Real savings, real impact, real accountability.
             </p>
             <div className="flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-lg inline-flex">
-              <Icon name="DevicePhoneMobileIcon" size={20} variant="solid" className="text-primary" />
+              <Icon
+                name="DevicePhoneMobileIcon"
+                size={20}
+                variant="solid"
+                className="text-primary"
+              />
               <span className="font-accent text-lg font-bold text-foreground">*134*2468#</span>
             </div>
           </div>

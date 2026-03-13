@@ -21,7 +21,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Header forcePublic />
-      
+
       <main className="pt-16">
         {/* Hero Section */}
         <section className="relative bg-gradient-to-br from-primary/10 via-background to-secondary/10 py-20 lg:py-28">
@@ -34,7 +34,8 @@ export default function Home() {
 
               {/* Subcopy */}
               <p className="font-body text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">
-                Save up to 30% on essentials — groceries, airtime, transport — with or without a smartphone.
+                Save up to 30% on essentials — groceries, airtime, transport — with or without a
+                smartphone.
               </p>
 
               {/* Two Clear CTAs */}
@@ -66,17 +67,31 @@ export default function Home() {
               <div className="group bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-8 border-2 border-emerald-200 hover:border-emerald-300 transition-all duration-300 hover:shadow-xl">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <Icon name="CurrencyDollarIcon" size={24} variant="solid" className="text-white" />
+                    <Icon
+                      name="CurrencyDollarIcon"
+                      size={24}
+                      variant="solid"
+                      className="text-white"
+                    />
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Total Savings</p>
+                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
+                      Total Savings
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-headline text-5xl font-extrabold text-slate-900 tracking-tight">R 2.4M</p>
+                  <p className="font-headline text-5xl font-extrabold text-slate-900 tracking-tight">
+                    R 2.4M
+                  </p>
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center space-x-1 px-2 py-1 bg-emerald-100 rounded-full">
-                      <Icon name="ArrowUpIcon" size={12} variant="solid" className="text-emerald-700" />
+                      <Icon
+                        name="ArrowUpIcon"
+                        size={12}
+                        variant="solid"
+                        className="text-emerald-700"
+                      />
                       <span className="text-xs font-bold text-emerald-700">+18%</span>
                     </div>
                     <span className="text-xs text-emerald-700 font-medium">this month</span>
@@ -91,14 +106,23 @@ export default function Home() {
                     <Icon name="UserGroupIcon" size={24} variant="solid" className="text-white" />
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Active Users</p>
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                      Active Users
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-headline text-5xl font-extrabold text-slate-900 tracking-tight">12,847</p>
+                  <p className="font-headline text-5xl font-extrabold text-slate-900 tracking-tight">
+                    12,847
+                  </p>
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center space-x-1 px-2 py-1 bg-blue-100 rounded-full">
-                      <Icon name="ArrowUpIcon" size={12} variant="solid" className="text-blue-700" />
+                      <Icon
+                        name="ArrowUpIcon"
+                        size={12}
+                        variant="solid"
+                        className="text-blue-700"
+                      />
                       <span className="text-xs font-bold text-blue-700">+24%</span>
                     </div>
                     <span className="text-xs text-blue-700 font-medium">this month</span>
@@ -110,17 +134,31 @@ export default function Home() {
               <div className="group bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-8 border-2 border-orange-200 hover:border-orange-300 transition-all duration-300 hover:shadow-xl">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-12 h-12 bg-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <Icon name="BuildingStorefrontIcon" size={24} variant="solid" className="text-white" />
+                    <Icon
+                      name="BuildingStorefrontIcon"
+                      size={24}
+                      variant="solid"
+                      className="text-white"
+                    />
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-semibold text-orange-700 uppercase tracking-wider">Partner Merchants</p>
+                    <p className="text-xs font-semibold text-orange-700 uppercase tracking-wider">
+                      Partner Merchants
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-headline text-5xl font-extrabold text-slate-900 tracking-tight">487</p>
+                  <p className="font-headline text-5xl font-extrabold text-slate-900 tracking-tight">
+                    487
+                  </p>
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center space-x-1 px-2 py-1 bg-orange-100 rounded-full">
-                      <Icon name="ArrowUpIcon" size={12} variant="solid" className="text-orange-700" />
+                      <Icon
+                        name="ArrowUpIcon"
+                        size={12}
+                        variant="solid"
+                        className="text-orange-700"
+                      />
                       <span className="text-xs font-bold text-orange-700">+31%</span>
                     </div>
                     <span className="text-xs text-orange-700 font-medium">this month</span>
@@ -135,14 +173,23 @@ export default function Home() {
                     <Icon name="ChartBarIcon" size={24} variant="solid" className="text-white" />
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider">Transactions</p>
+                    <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider">
+                      Transactions
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-headline text-5xl font-extrabold text-slate-900 tracking-tight">34.2K</p>
+                  <p className="font-headline text-5xl font-extrabold text-slate-900 tracking-tight">
+                    34.2K
+                  </p>
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center space-x-1 px-2 py-1 bg-purple-100 rounded-full">
-                      <Icon name="ArrowUpIcon" size={12} variant="solid" className="text-purple-700" />
+                      <Icon
+                        name="ArrowUpIcon"
+                        size={12}
+                        variant="solid"
+                        className="text-purple-700"
+                      />
                       <span className="text-xs font-bold text-purple-700">+42%</span>
                     </div>
                     <span className="text-xs text-purple-700 font-medium">this month</span>
@@ -168,7 +215,12 @@ export default function Home() {
             <div className="grid md:grid-cols-4 gap-8">
               <div className="text-center space-y-4">
                 <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  <Icon name="MagnifyingGlassIcon" size={40} variant="solid" className="text-primary" />
+                  <Icon
+                    name="MagnifyingGlassIcon"
+                    size={40}
+                    variant="solid"
+                    className="text-primary"
+                  />
                 </div>
                 <h3 className="font-headline font-bold text-xl text-foreground">Browse Deals</h3>
                 <p className="font-body text-muted-foreground text-sm">
@@ -178,7 +230,12 @@ export default function Home() {
 
               <div className="text-center space-y-4">
                 <div className="w-20 h-20 bg-secondary/10 rounded-full flex items-center justify-center mx-auto">
-                  <Icon name="ShoppingCartIcon" size={40} variant="solid" className="text-secondary" />
+                  <Icon
+                    name="ShoppingCartIcon"
+                    size={40}
+                    variant="solid"
+                    className="text-secondary"
+                  />
                 </div>
                 <h3 className="font-headline font-bold text-xl text-foreground">Buy Vouchers</h3>
                 <p className="font-body text-muted-foreground text-sm">
@@ -188,7 +245,12 @@ export default function Home() {
 
               <div className="text-center space-y-4">
                 <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto">
-                  <Icon name="BuildingStorefrontIcon" size={40} variant="solid" className="text-success" />
+                  <Icon
+                    name="BuildingStorefrontIcon"
+                    size={40}
+                    variant="solid"
+                    className="text-success"
+                  />
                 </div>
                 <h3 className="font-headline font-bold text-xl text-foreground">Redeem In-Store</h3>
                 <p className="font-body text-muted-foreground text-sm">
@@ -233,7 +295,8 @@ export default function Home() {
                   Goes to Consumers
                 </h3>
                 <p className="font-body text-muted-foreground">
-                  The majority of every discount goes directly to you — real savings on essential goods that make a difference in your daily life.
+                  The majority of every discount goes directly to you — real savings on essential
+                  goods that make a difference in your daily life.
                 </p>
               </div>
 
@@ -248,7 +311,8 @@ export default function Home() {
                   Platform Operations
                 </h3>
                 <p className="font-body text-muted-foreground">
-                  Supports platform maintenance, merchant settlements, social initiatives, and ensuring the system remains sustainable and dignified.
+                  Supports platform maintenance, merchant settlements, social initiatives, and
+                  ensuring the system remains sustainable and dignified.
                 </p>
               </div>
             </div>
@@ -270,27 +334,47 @@ export default function Home() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {/* Merchant Partners */}
               <div className="bg-background rounded-xl p-6 border-2 border-border text-center hover:shadow-lg transition-all duration-300">
-                <Icon name="BuildingStorefrontIcon" size={48} variant="solid" className="text-secondary mx-auto mb-3" />
+                <Icon
+                  name="BuildingStorefrontIcon"
+                  size={48}
+                  variant="solid"
+                  className="text-secondary mx-auto mb-3"
+                />
                 <p className="font-headline font-semibold text-foreground">Shoprite</p>
                 <p className="font-body text-xs text-muted-foreground">Retail Partner</p>
               </div>
 
               <div className="bg-background rounded-xl p-6 border-2 border-border text-center hover:shadow-lg transition-all duration-300">
-                <Icon name="BuildingStorefrontIcon" size={48} variant="solid" className="text-secondary mx-auto mb-3" />
+                <Icon
+                  name="BuildingStorefrontIcon"
+                  size={48}
+                  variant="solid"
+                  className="text-secondary mx-auto mb-3"
+                />
                 <p className="font-headline font-semibold text-foreground">Pick n Pay</p>
                 <p className="font-body text-xs text-muted-foreground">Retail Partner</p>
               </div>
 
               {/* NGO Partners */}
               <div className="bg-background rounded-xl p-6 border-2 border-border text-center hover:shadow-lg transition-all duration-300">
-                <Icon name="HeartIcon" size={48} variant="solid" className="text-accent mx-auto mb-3" />
+                <Icon
+                  name="HeartIcon"
+                  size={48}
+                  variant="solid"
+                  className="text-accent mx-auto mb-3"
+                />
                 <p className="font-headline font-semibold text-foreground">Gift of the Givers</p>
                 <p className="font-body text-xs text-muted-foreground">NGO Partner</p>
               </div>
 
               {/* Government Partners */}
               <div className="bg-background rounded-xl p-6 border-2 border-border text-center hover:shadow-lg transition-all duration-300">
-                <Icon name="BuildingLibraryIcon" size={48} variant="solid" className="text-primary mx-auto mb-3" />
+                <Icon
+                  name="BuildingLibraryIcon"
+                  size={48}
+                  variant="solid"
+                  className="text-primary mx-auto mb-3"
+                />
                 <p className="font-headline font-semibold text-foreground">SASSA</p>
                 <p className="font-body text-xs text-muted-foreground">Government Partner</p>
               </div>
@@ -357,13 +441,13 @@ export default function Home() {
       </main>
 
       {/* Modals */}
-      <CustomerRegistrationModal 
-        isOpen={showCustomerModal} 
-        onClose={() => setShowCustomerModal(false)} 
+      <CustomerRegistrationModal
+        isOpen={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
       />
-      <MerchantOnboardingModal 
-        isOpen={showMerchantModal} 
-        onClose={() => setShowMerchantModal(false)} 
+      <MerchantOnboardingModal
+        isOpen={showMerchantModal}
+        onClose={() => setShowMerchantModal(false)}
       />
     </div>
   );

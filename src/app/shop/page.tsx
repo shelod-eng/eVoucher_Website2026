@@ -148,10 +148,13 @@ export default function ShopPage() {
         if (selectedBrandKey) params.set('brandKey', selectedBrandKey);
         if (debouncedSearch) params.set('q', debouncedSearch);
         const queryString = params.toString();
-        const response = await fetch(`/api/v1/shop/catalog${queryString ? `?${queryString}` : ''}`, {
-          method: 'GET',
-          credentials: 'include',
-        });
+        const response = await fetch(
+          `/api/v1/shop/catalog${queryString ? `?${queryString}` : ''}`,
+          {
+            method: 'GET',
+            credentials: 'include',
+          }
+        );
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error || 'Failed to load shop catalog.');
@@ -307,7 +310,8 @@ export default function ShopPage() {
                 />
               </div>
               <div className="inline-flex items-center px-3 py-2 rounded-lg border border-border text-sm text-foreground bg-background">
-                Offline access (USSD): <span className="ml-1 font-headline font-semibold">{ussdAccessCode}</span>
+                Offline access (USSD):{' '}
+                <span className="ml-1 font-headline font-semibold">{ussdAccessCode}</span>
               </div>
             </div>
           </section>
@@ -345,7 +349,11 @@ export default function ShopPage() {
                 >
                   <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center mb-2 overflow-hidden">
                     {failedLogos.has(brand.brandKey) || !brand.assetPath ? (
-                      <Icon name={getCategoryIcon(brand.category) as any} size={24} variant="outline" />
+                      <Icon
+                        name={getCategoryIcon(brand.category) as any}
+                        size={24}
+                        variant="outline"
+                      />
                     ) : (
                       <img
                         src={brand.assetPath}
@@ -369,9 +377,12 @@ export default function ShopPage() {
             {selectedBrand && selectedBrand.locations.length > 0 && (
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4 bg-background">
                 <div>
-                  <p className="font-headline font-semibold text-foreground">{selectedBrand.displayName}</p>
+                  <p className="font-headline font-semibold text-foreground">
+                    {selectedBrand.displayName}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {selectedBrand.merchantCount} locations across {selectedBrand.provinceCount} provinces
+                    {selectedBrand.merchantCount} locations across {selectedBrand.provinceCount}{' '}
+                    provinces
                   </p>
                   {selectedBrand.merchantCount > selectedBrand.locations.length && (
                     <p className="text-xs text-muted-foreground mt-1">
@@ -527,15 +538,21 @@ export default function ShopPage() {
 
             <div className="space-y-3">
               {selectedBrand.locations.map((location) => (
-                <div key={location.id} className="rounded-xl border border-border p-4 bg-background">
+                <div
+                  key={location.id}
+                  className="rounded-xl border border-border p-4 bg-background"
+                >
                   <p className="font-headline font-semibold text-foreground">
                     {location.branch_name || location.business_name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {location.city || 'Unknown City'} {location.province ? `, ${location.province}` : ''}
+                    {location.city || 'Unknown City'}{' '}
+                    {location.province ? `, ${location.province}` : ''}
                   </p>
                   {location.physical_address && (
-                    <p className="text-xs text-muted-foreground mt-1">{location.physical_address}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {location.physical_address}
+                    </p>
                   )}
                   {location.branch_code && (
                     <p className="text-xs text-primary mt-1">Branch Code: {location.branch_code}</p>
