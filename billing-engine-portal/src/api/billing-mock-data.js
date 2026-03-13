@@ -1,0 +1,90 @@
+export const mockBanks = [
+  { id: 'bank_fnb', bankName: 'FNB', transactionFeePercentage: 0.005, status: 'active' },
+];
+
+export const mockMerchants = [
+  {
+    id: 'm_shoprite',
+    name: 'Shoprite',
+    status: 'active',
+    bankName: 'FNB',
+    branchCode: '250655',
+    accountNumber: '0000123456',
+    accountHolder: 'Shoprite Checkers',
+    kycStatus: 'verified',
+  },
+  {
+    id: 'm_pnp',
+    name: 'Pick n Pay',
+    status: 'active',
+    bankName: 'FNB',
+    branchCode: '250655',
+    accountNumber: '0000654321',
+    accountHolder: 'Pick n Pay',
+    kycStatus: 'pending',
+  },
+  {
+    id: 'm_superprecast',
+    name: 'Super Precast',
+    status: 'active',
+    bankName: 'FNB',
+    branchCode: '250655',
+    accountNumber: '0000987654',
+    accountHolder: 'Super Precast Concrete',
+    kycStatus: 'verified',
+  },
+];
+
+export const mockTransactions = [
+  // Purchases (amount here represents consumer pays, aligned with earlier 0.96 payout base)
+  { id: 't1', merchantId: 'm_shoprite', type: 'purchase', amount: 972, created_date: '2026-03-01T09:10:00.000Z' },
+  { id: 't2', merchantId: 'm_shoprite', type: 'purchase', amount: 486, created_date: '2026-03-02T10:10:00.000Z' },
+  { id: 't3', merchantId: 'm_pnp', type: 'purchase', amount: 1944, created_date: '2026-03-03T11:10:00.000Z' },
+  { id: 't4', merchantId: 'm_superprecast', type: 'purchase', amount: 975, created_date: '2026-03-04T08:10:00.000Z' },
+];
+
+export const mockInvoices = [
+  {
+    id: 'inv_1',
+    invoiceNumber: 'INV-202603-0001',
+    merchantId: 'm_shoprite',
+    merchantName: 'Shoprite',
+    billingPeriodStart: '2026-03-01',
+    billingPeriodEnd: '2026-03-07',
+    totalVouchersSold: 2,
+    totalFaceValue: 1500,
+    merchantPayoutAmount: 1440,
+    platformRevenue: 18,
+    consumerDiscount: 42,
+    bankFees: 7.2,
+    netPayable: 1432.8,
+    bankName: 'FNB',
+    status: 'pending',
+    dueDate: '2026-03-14',
+  },
+  {
+    id: 'inv_2',
+    invoiceNumber: 'INV-202603-0002',
+    merchantId: 'm_superprecast',
+    merchantName: 'Super Precast',
+    billingPeriodStart: '2026-03-01',
+    billingPeriodEnd: '2026-03-07',
+    totalVouchersSold: 1,
+    totalFaceValue: 1000,
+    merchantPayoutAmount: 960,
+    platformRevenue: 12,
+    consumerDiscount: 28,
+    bankFees: 4.8,
+    netPayable: 955.2,
+    bankName: 'FNB',
+    status: 'paid',
+    dueDate: '2026-03-14',
+    paidDate: '2026-03-08T10:00:00.000Z',
+    paymentReference: 'PAY-20260308-0001',
+  },
+];
+
+export const mockSettlements = [
+  { id: 'set_1', status: 'pending', created_date: '2026-03-08T12:00:00.000Z', totalAmount: 1432.8, bankName: 'FNB' },
+  { id: 'set_2', status: 'paid', created_date: '2026-03-08T12:10:00.000Z', totalAmount: 955.2, bankName: 'FNB' },
+];
