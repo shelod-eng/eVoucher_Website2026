@@ -145,13 +145,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRole(null);
     setLoading(false);
 
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.warn('AuthContext: signOut warning:', error.message);
-      const fallback = await supabase.auth.signOut({ scope: 'local' });
-      if (fallback.error) {
-        console.warn('AuthContext: local signOut fallback warning:', fallback.error.message);
+    const localResult = await supabase.auth.signOut({ scope: 'local' });
+    if (localResult.error) {
+      console.warn('AuthContext: local signOut warning:', localResult.error.message);
+    }
+
+    const globalResult = await supabase.auth.signOut({ scope: 'global' });
+    if (globalResult.error) {
+      console.warn('AuthContext: global signOut warning:', globalResult.error.message);
+    }
+
+    // Clear any persisted auth tokens to avoid sticky sessions after logout.
+    try {
+      if (typeof window !== 'undefined') {
+        Object.keys(window.localStorage)
+          .filter((key) => key.includes('auth-token'))
+          .forEach((key) => window.localStorage.removeItem(key));
+        Object.keys(window.sessionStorage)
+          .filter((key) => key.includes('auth-token'))
+          .forEach((key) => window.sessionStorage.removeItem(key));
       }
+    } catch (storageError) {
+      console.warn('AuthContext: failed to clear auth storage:', storageError);
     }
   };
 
