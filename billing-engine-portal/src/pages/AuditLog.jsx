@@ -1,11 +1,25 @@
 import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { listAuditEvents } from '@/audit/audit-log';
+import { listAuditEvents as listLocalAuditEvents } from '@/audit/audit-log';
 import { FileText } from 'lucide-react';
+import { listAuditEvents } from '@/api/portal-api';
+import { useAdminAuth } from '@/auth/admin-auth';
 
 export default function AuditLog() {
-  const events = useMemo(() => listAuditEvents(), []);
+  const { session, role } = useAdminAuth();
+  const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
+  const usePortalApi = dataMode === 'portal';
+
+  const { data: portalEventsResponse, error: portalError } = useQuery({
+    queryKey: ['portalAuditEvents'],
+    queryFn: () => listAuditEvents(session, role, { limit: 100 }),
+    enabled: usePortalApi && Boolean(session?.email),
+  });
+
+  const localEvents = useMemo(() => listLocalAuditEvents(), []);
+  const events = usePortalApi ? portalEventsResponse?.events ?? [] : localEvents;
 
   return (
     <div className="max-w-6xl mx-auto space-y-4">
@@ -19,6 +33,12 @@ export default function AuditLog() {
         </div>
       </div>
 
+      {usePortalApi && portalError ? (
+        <Card className="bg-red-500/10 border border-red-500/30 text-red-100 p-3 text-sm">
+          {portalError instanceof Error ? portalError.message : 'Failed to load audit events.'}
+        </Card>
+      ) : null}
+
       <Card className="bg-white/5 border-white/10 text-white p-4">
         {events.length === 0 ? (
           <div className="text-sm text-white/70">No events yet.</div>
@@ -29,10 +49,10 @@ export default function AuditLog() {
                 <div>
                   <div className="flex items-center gap-2">
                     <Badge className="bg-white/10 border-white/10 text-white">{evt.action}</Badge>
-                    <span className="text-xs text-white/60">{evt.createdAt}</span>
+                    <span className="text-xs text-white/60">{evt.created_at || evt.createdAt}</span>
                   </div>
                   <pre className="text-xs text-white/70 mt-2 whitespace-pre-wrap">
-                    {JSON.stringify(evt.details || {}, null, 2)}
+                    {JSON.stringify(evt.metadata || evt.details || {}, null, 2)}
                   </pre>
                 </div>
               </div>
@@ -43,4 +63,3 @@ export default function AuditLog() {
     </div>
   );
 }
-

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
-import { requirePortalRole } from '@/server/utils/portal-auth';
+import { getPortalUserFromHeaders, requirePortalRole } from '@/server/utils/portal-auth';
 import { writeAuditEvent } from '@/server/utils/audit';
 
 export const dynamic = 'force-dynamic';
@@ -34,9 +34,10 @@ function toCsv(rows: Array<Record<string, any>>) {
   return lines.join('\n');
 }
 
-export async function POST(_request: Request, context: { params: { id: string } }) {
+export async function POST(request: Request, context: { params: { id: string } }) {
   try {
-    const { user } = await getAuthenticatedUser();
+    const { user: sessionUser } = await getAuthenticatedUser();
+    const user = sessionUser ?? (await getPortalUserFromHeaders(request));
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { allowed, role } = await requirePortalRole(user, ['admin', 'finance_approver']);

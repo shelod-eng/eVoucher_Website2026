@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
-import { requirePortalRole } from '@/server/utils/portal-auth';
+import { getPortalUserFromHeaders, requirePortalRole } from '@/server/utils/portal-auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
-    const { user } = await getAuthenticatedUser();
+    const { user: sessionUser } = await getAuthenticatedUser();
+    const user = sessionUser ?? (await getPortalUserFromHeaders(request));
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
