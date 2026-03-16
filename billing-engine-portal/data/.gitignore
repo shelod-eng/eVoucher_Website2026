@@ -1,0 +1,5 @@
+# Local-only inputs (spreadsheets/exports). Keep out of git.
+*.xlsx
+*.xls
+*.csv
+*.tsv
