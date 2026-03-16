@@ -15,6 +15,7 @@ import {
   getStarterProductsForBrand,
 } from '@/lib/starter-products';
 import { ensureDemoMerchantsSeeded } from '@/server/utils/demo-merchant-seed';
+import { isLikelyServiceRoleKey } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -122,6 +123,8 @@ const DEMO_BRAND_KEYS = new Set<BrandKey>([
   'mrprice',
   'superprecast',
 ]);
+
+const SUPERPRECAST_MERCHANT_ID = '463acd04-aa4f-46d4-a12c-bd2948de4bd0';
 
 function resolveDataClient(supabase: any) {
   try {
@@ -261,15 +264,19 @@ async function fetchMerchants(dataClient: any, activeOnly: boolean): Promise<Mer
     const query = dataClient
       .from('merchants')
       .select(fields)
-      .order('business_name', { ascending: true })
-      .limit(4000);
+      .order('business_name', { ascending: true });
+
+    // In some Supabase/RLS configurations, filtering by status server-side yields
+    // consistent results vs filtering in-memory post-query.
+    if (activeOnly) {
+      query.in('status', ['approved', 'active']);
+    }
+
+    query.limit(4000);
     const result = await query;
     if (!result.error) {
       const mapped = ((result.data ?? []) as MerchantRow[]).map((row) => toMerchantRow(row));
-      if (!activeOnly) return mapped;
-      return mapped.filter((merchant) =>
-        ['approved', 'active'].includes(String(merchant.status ?? '').toLowerCase())
-      );
+      return mapped;
     }
     lastError = result.error;
   }
@@ -448,6 +455,8 @@ export async function GET(request: Request) {
         .toLowerCase()
     );
     const { client: dataClient, hasAdminEnv } = resolveDataClient(supabase);
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const hasValidServiceRoleKey = isLikelyServiceRoleKey(serviceRoleKey);
     const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '');
     const supabaseHost = supabaseUrl.replace(/^https?:\/\//, '').split('/')[0] ?? '';
     const supabaseProjectRef = supabaseHost.split('.')[0] ?? '';
@@ -466,6 +475,14 @@ export async function GET(request: Request) {
       merchants = await fetchMerchants(dataClient, false);
     }
     const merchantCountTotal = merchants.length;
+    const merchantStatusCounts = merchants.reduce(
+      (acc: Record<string, number>, merchant) => {
+        const key = String(merchant.status ?? 'unknown').toLowerCase() || 'unknown';
+        acc[key] = (acc[key] ?? 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     const merchantById = new Map<string, MerchantRow>();
     const brandMap = new Map<string, BrandAggregation>();
@@ -786,6 +803,33 @@ export async function GET(request: Request) {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
 
+    const debugMerchantSample = debugEnabled
+      ? merchants.slice(0, 30).map((merchant) => ({
+          id: merchant.id,
+          business_name: merchant.business_name,
+          status: merchant.status,
+          parent_brand: merchant.parent_brand ?? null,
+        }))
+      : undefined;
+
+    let superprecastVisible = false;
+    let superprecastDbProductCount: number | null = null;
+    if (debugEnabled) {
+      superprecastVisible = merchantById.has(SUPERPRECAST_MERCHANT_ID);
+      try {
+        const { count, error } = await dataClient
+          .from('merchant_products')
+          .select('id', { count: 'exact', head: true })
+          .eq('merchant_id', SUPERPRECAST_MERCHANT_ID)
+          .eq('is_active', true);
+        if (!error) {
+          superprecastDbProductCount = typeof count === 'number' ? count : 0;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     return NextResponse.json(
       {
         brands: brandSummaries,
@@ -797,14 +841,19 @@ export async function GET(request: Request) {
           ? {
               hasAdminEnv,
               supabaseProjectRef,
+              hasValidServiceRoleKey,
               merchantCountActiveOnly,
               merchantCountTotal,
+              merchantStatusCounts,
               brandCount: brandSummaries.length,
               merchantIdsCount: merchantIds.length,
               productRowCount,
               selectedBrandKey: defaultBrandKey,
               selectedDbProductCount,
+              superprecastVisible,
+              superprecastDbProductCount,
               usedStarterFallback,
+              merchantSample: debugMerchantSample,
             }
           : undefined,
       },
