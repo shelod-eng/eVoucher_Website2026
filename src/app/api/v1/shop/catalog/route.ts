@@ -448,6 +448,9 @@ export async function GET(request: Request) {
         .toLowerCase()
     );
     const { client: dataClient, hasAdminEnv } = resolveDataClient(supabase);
+    const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '');
+    const supabaseHost = supabaseUrl.replace(/^https?:\/\//, '').split('/')[0] ?? '';
+    const supabaseProjectRef = supabaseHost.split('.')[0] ?? '';
 
     // Keep local demo data usable even when only a subset of merchants has been onboarded.
     try {
@@ -793,6 +796,7 @@ export async function GET(request: Request) {
         diagnostics: debugEnabled
           ? {
               hasAdminEnv,
+              supabaseProjectRef,
               merchantCountActiveOnly,
               merchantCountTotal,
               brandCount: brandSummaries.length,
