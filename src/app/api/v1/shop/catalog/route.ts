@@ -16,6 +16,9 @@ import {
 } from '@/lib/starter-products';
 import { ensureDemoMerchantsSeeded } from '@/server/utils/demo-merchant-seed';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type MerchantRow = {
   id: string;
   business_name: string;
@@ -122,9 +125,9 @@ const DEMO_BRAND_KEYS = new Set<BrandKey>([
 
 function resolveDataClient(supabase: any) {
   try {
-    return createAdminClient();
+    return { client: createAdminClient(), hasAdminEnv: true };
   } catch {
-    return supabase;
+    return { client: supabase, hasAdminEnv: false };
   }
 }
 
@@ -439,7 +442,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const requestedBrandRaw = searchParams.get('brandKey')?.trim() ?? '';
     const searchTerm = searchParams.get('q')?.trim().toLowerCase() ?? '';
-    const dataClient = resolveDataClient(supabase);
+    const debugEnabled = ['1', 'true', 'yes', 'on'].includes(
+      String(searchParams.get('debug') ?? '')
+        .trim()
+        .toLowerCase()
+    );
+    const { client: dataClient, hasAdminEnv } = resolveDataClient(supabase);
 
     // Keep local demo data usable even when only a subset of merchants has been onboarded.
     try {
@@ -450,9 +458,11 @@ export async function GET(request: Request) {
     }
 
     let merchants = await fetchMerchants(dataClient, true);
+    const merchantCountActiveOnly = merchants.length;
     if (merchants.length === 0) {
       merchants = await fetchMerchants(dataClient, false);
     }
+    const merchantCountTotal = merchants.length;
 
     const merchantById = new Map<string, MerchantRow>();
     const brandMap = new Map<string, BrandAggregation>();
@@ -551,6 +561,7 @@ export async function GET(request: Request) {
     );
 
     const productRows = await fetchProductsForMerchantIds(dataClient, merchantIds);
+    const productRowCount = productRows.length;
 
     const representativeByCategory = new Map<string, MerchantRow>();
     let globalRepresentative: MerchantRow | null = null;
@@ -722,7 +733,10 @@ export async function GET(request: Request) {
     const selectedDbProducts = dedupedProductsByBrand.get(defaultBrandKey) ?? [];
 
     let selectedProducts: CatalogProduct[] = selectedDbProducts;
+    const selectedDbProductCount = selectedDbProducts.length;
+    let usedStarterFallback = false;
     if (selectedProducts.length === 0 && selectedBrand?.mappedBrandKey) {
+      usedStarterFallback = true;
       selectedProducts = buildStarterProductsForBrand({
         brandKey: selectedBrand.mappedBrandKey,
         merchantId: selectedCheckoutMerchant?.id ?? null,
@@ -769,13 +783,33 @@ export async function GET(request: Request) {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
 
-    return NextResponse.json({
-      brands: brandSummaries,
-      products: selectedProducts,
-      selectedBrandKey: defaultBrandKey,
-      ussdAccessCode: '*120*384#',
-      mode: 'brand_catalog',
-    });
+    return NextResponse.json(
+      {
+        brands: brandSummaries,
+        products: selectedProducts,
+        selectedBrandKey: defaultBrandKey,
+        ussdAccessCode: '*120*384#',
+        mode: 'brand_catalog',
+        diagnostics: debugEnabled
+          ? {
+              hasAdminEnv,
+              merchantCountActiveOnly,
+              merchantCountTotal,
+              brandCount: brandSummaries.length,
+              merchantIdsCount: merchantIds.length,
+              productRowCount,
+              selectedBrandKey: defaultBrandKey,
+              selectedDbProductCount,
+              usedStarterFallback,
+            }
+          : undefined,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to load shop catalog.', code: 'shop_catalog_failed' },
