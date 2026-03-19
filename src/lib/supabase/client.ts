@@ -6,8 +6,9 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        // Keep sessions stable across login, password reset, and redirects in local and deployed envs.
-        persistSession: true,
+        // Avoid sticky sessions on shared devices (POPIA/security requirement).
+        // Users will need to sign in again after a full page refresh.
+        persistSession: false,
       },
     }
   );
