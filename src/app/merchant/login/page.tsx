@@ -7,64 +7,6 @@ import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
 
-const DEMO_PASSWORD = 'demo123';
-const DEMO_MERCHANTS = [
-  { label: 'Shoprite', email: 'demo-shoprite@evoucher.co.za' },
-  { label: 'Pick n Pay', email: 'demo-picknpay@evoucher.co.za' },
-  { label: 'Boxer', email: 'demo-boxer@evoucher.co.za' },
-  { label: 'Checkers', email: 'demo-checkers@evoucher.co.za' },
-  { label: 'Clicks', email: 'demo-clicks@evoucher.co.za' },
-  { label: 'Pep', email: 'demo-pep@evoucher.co.za' },
-  { label: 'Engen', email: 'demo-engen@evoucher.co.za' },
-  { label: 'Kalapeng Private', email: 'demo-kalapeng@evoucher.co.za' },
-] as const;
-
-function isDemoEmail(email: string) {
-  const normalized = String(email ?? '')
-    .trim()
-    .toLowerCase();
-  return normalized.startsWith('demo-') && normalized.endsWith('@evoucher.co.za');
-}
-
-async function ensureDemoProvisioned(email: string): Promise<{ ok: boolean; error?: string }> {
-  if (!isDemoEmail(email)) return { ok: true as const };
-  const response = await withTimeout(
-    fetch('/api/v1/merchant/demo-seed', { method: 'POST' }),
-    25000,
-    'Demo provisioning timed out.'
-  );
-  const payload = await response.json().catch(() => ({}) as any);
-  if (!response.ok) {
-    // Never block login when seeding has a transient schema mismatch.
-    console.warn(
-      '[merchant-login][demo-seed][warn]',
-      payload?.error || 'Demo provisioning failed.'
-    );
-    return { ok: true as const };
-  }
-  return { ok: true as const };
-}
-
-async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  timeoutMessage: string
-): Promise<T> {
-  return await new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        reject(error);
-      }
-    );
-  });
-}
-
 async function fetchMerchantAuthState() {
   const response = await fetch('/api/v1/merchant/auth-state', {
     method: 'GET',
@@ -94,10 +36,6 @@ export default function MerchantLogin() {
     }
   }, [user]);
   const router = useRouter();
-  const allowDemoSeed =
-    String(process.env.NEXT_PUBLIC_ENABLE_DEMO_MERCHANT_SEED ?? '').toLowerCase() === 'true';
-  const autoSeedOnLogin =
-    String(process.env.NEXT_PUBLIC_FORCE_DEMO_SEED_ON_LOGIN ?? '').toLowerCase() === 'true';
 
   useEffect(() => {
     setEmail('');
@@ -134,24 +72,6 @@ export default function MerchantLogin() {
     };
   }, [user, role, router]);
 
-  useEffect(() => {
-    if (!allowDemoSeed || !autoSeedOnLogin) return;
-    let cancelled = false;
-    const seedDemoMerchants = async () => {
-      try {
-        const response = await fetch('/api/v1/merchant/demo-seed', { method: 'POST' });
-        if (!response.ok) return;
-        if (cancelled) return;
-      } catch {
-        // Demo seeding is best-effort and should never block merchant login.
-      }
-    };
-    void seedDemoMerchants();
-    return () => {
-      cancelled = true;
-    };
-  }, [allowDemoSeed, autoSeedOnLogin]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -167,43 +87,12 @@ export default function MerchantLogin() {
         setLoading(false);
         return;
       }
-      const demoProvision = await ensureDemoProvisioned(normalizedEmail);
-      if (!demoProvision.ok) {
-        setError(demoProvision.error || 'Demo provisioning failed.');
-        setLoading(false);
-        return;
-      }
       let signedInUser;
       try {
         signedInUser = await signIn(normalizedEmail, normalizedPassword);
       } catch (initialSignInError: any) {
         const message = String(initialSignInError?.message || '').toLowerCase();
-        if (
-          isDemoEmail(normalizedEmail) &&
-          (message.includes('invalid login') || message.includes('invalid credentials'))
-        ) {
-          try {
-            const retryProvision = await ensureDemoProvisioned(normalizedEmail);
-            if (!retryProvision.ok) {
-              throw new Error(retryProvision.error || 'Demo provisioning failed.');
-            }
-            signedInUser = await signIn(normalizedEmail, normalizedPassword);
-          } catch (retryError) {
-            throw retryError;
-          }
-        } else {
-          throw initialSignInError;
-        }
-      }
-      if (
-        normalizedEmail === 'demo-shoprite@evoucher.co.za' ||
-        normalizedEmail === 'demo-picknpay@evoucher.co.za'
-      ) {
-        try {
-          await fetch('/api/v1/merchant/demo-seed', { method: 'POST' });
-        } catch {
-          // Best effort seeding to keep login resilient.
-        }
+        throw initialSignInError;
       }
       // First-login routing must be immediate: use fresh auth metadata first.
       const metadataRole = String(signedInUser?.user_metadata?.role ?? '').toLowerCase();
@@ -341,36 +230,6 @@ export default function MerchantLogin() {
               </p>
             </div>
 
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground font-body mb-2 font-semibold">
-                Demo Merchant Credentials (click to autofill):
-              </p>
-              <div className="space-y-2">
-                {DEMO_MERCHANTS.map((merchant) => (
-                  <button
-                    key={merchant.email}
-                    type="button"
-                    onClick={() => {
-                      setEmail(merchant.email);
-                      setPassword(DEMO_PASSWORD);
-                      setError('');
-                    }}
-                    className="w-full text-left rounded-md border border-border bg-background px-3 py-2 hover:bg-muted transition-colors"
-                  >
-                    <p className="text-xs font-headline font-semibold text-foreground">
-                      {merchant.label}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground font-body">{merchant.email}</p>
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-foreground font-body mt-2">Password: {DEMO_PASSWORD}</p>
-              {!allowDemoSeed && (
-                <p className="text-[11px] text-warning font-body mt-1">
-                  Demo seeding endpoint is currently disabled by env flags.
-                </p>
-              )}
-            </div>
           </div>
         </div>
       </div>

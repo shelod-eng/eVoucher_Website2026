@@ -67,10 +67,15 @@ export type MerchantComplianceSnapshot = {
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const code = String(error?.code ?? '').toLowerCase();
+  const normalizedRelation = relationName.toLowerCase();
   return (
     code === '42p01' ||
-    message.includes(`relation "${relationName.toLowerCase()}" does not exist`) ||
-    message.includes(`relation '${relationName.toLowerCase()}' does not exist`)
+    code.startsWith('pgrst') ||
+    message.includes('schema cache') ||
+    message.includes('could not find the table') ||
+    message.includes(`relation "${normalizedRelation}" does not exist`) ||
+    message.includes(`relation '${normalizedRelation}' does not exist`) ||
+    message.includes(`could not find the "${normalizedRelation}" table`)
   );
 }
 
