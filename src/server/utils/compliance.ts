@@ -35,13 +35,12 @@ type ComplianceDocumentRow = {
   id: string;
   merchant_id: string;
   document_type: string;
-  file_name: string | null;
-  file_url: string | null;
-  status: string | null;
+  document_url: string | null;
+  verification_status: string | null;
+  uploaded_by: string | null;
   uploaded_at: string | null;
-  reviewed_by: string | null;
   reviewed_at: string | null;
-  expires_at: string | null;
+  reviewer_notes: string | null;
 };
 
 export type MerchantComplianceSnapshot = {
@@ -79,14 +78,27 @@ function isMissingRelation(error: any, relationName: string) {
   );
 }
 
-function normalizeComplianceStatus(value: unknown): ComplianceStatusValue {
+function mapVerificationStatus(value: unknown): ComplianceStatusValue {
   const normalized = String(value ?? '')
     .trim()
-    .toUpperCase();
-  if (normalized === 'VERIFIED') return 'VERIFIED';
-  if (normalized === 'FAILED') return 'FAILED';
-  if (normalized === 'EXPIRED') return 'EXPIRED';
+    .toLowerCase();
+  if (normalized === 'approved') return 'VERIFIED';
+  if (normalized === 'rejected') return 'FAILED';
+  if (normalized === 'under_review') return 'PENDING';
+  if (normalized === 'submitted') return 'PENDING';
   return 'PENDING';
+}
+
+function inferFileNameFromUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const last = parsed.pathname.split('/').filter(Boolean).pop();
+    return last ? decodeURIComponent(last) : null;
+  } catch {
+    const last = String(url).split('/').filter(Boolean).pop();
+    return last ? decodeURIComponent(last) : null;
+  }
 }
 
 function isMerchantStatusApproved(status: unknown) {
@@ -133,14 +145,14 @@ export async function getMerchantComplianceSnapshot(
   }));
 
   const { data, error } = await admin
-    .from('compliance_documents')
+    .from('merchant_kyc_documents')
     .select(
-      'id,merchant_id,document_type,file_name,file_url,status,uploaded_at,reviewed_by,reviewed_at,expires_at'
+      'id,merchant_id,document_type,document_url,verification_status,uploaded_by,uploaded_at,reviewed_at,reviewer_notes'
     )
     .eq('merchant_id', merchantId)
     .order('uploaded_at', { ascending: false });
 
-  if (error && isMissingRelation(error, 'compliance_documents')) {
+  if (error && isMissingRelation(error, 'merchant_kyc_documents')) {
     return {
       overallStatus: merchantApproved ? 'VERIFIED' : 'PENDING',
       complianceApproved: merchantApproved,
@@ -167,13 +179,13 @@ export async function getMerchantComplianceSnapshot(
       documentType: doc.type,
       label: doc.label,
       description: doc.description,
-      status: row ? normalizeComplianceStatus(row.status) : ('PENDING' as ComplianceStatusValue),
-      fileName: row?.file_name ?? null,
-      fileUrl: row?.file_url ?? null,
+      status: row ? mapVerificationStatus(row.verification_status) : ('PENDING' as ComplianceStatusValue),
+      fileName: row ? inferFileNameFromUrl(row.document_url) : null,
+      fileUrl: row?.document_url ?? null,
       uploadedAt: row?.uploaded_at ?? null,
-      reviewedBy: row?.reviewed_by ?? null,
+      reviewedBy: null,
       reviewedAt: row?.reviewed_at ?? null,
-      expiresAt: row?.expires_at ?? null,
+      expiresAt: null,
     };
   });
 

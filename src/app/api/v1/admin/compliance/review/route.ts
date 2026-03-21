@@ -9,6 +9,23 @@ export const revalidate = 0;
 const ALLOWED_REVIEW_ROLES = new Set(['admin', 'compliance_officer', 'devops']);
 const ALLOWED_STATUSES = new Set(['VERIFIED', 'FAILED', 'EXPIRED', 'PENDING']);
 
+function mapComplianceToVerification(status: string) {
+  const normalized = String(status).trim().toUpperCase();
+  if (normalized === 'VERIFIED') return 'approved';
+  if (normalized === 'FAILED') return 'rejected';
+  if (normalized === 'EXPIRED') return 'rejected';
+  return 'under_review';
+}
+
+function mapVerificationToCompliance(status: string) {
+  const normalized = String(status).trim().toLowerCase();
+  if (normalized === 'approved') return 'VERIFIED';
+  if (normalized === 'rejected') return 'FAILED';
+  if (normalized === 'under_review') return 'PENDING';
+  if (normalized === 'submitted') return 'PENDING';
+  return 'PENDING';
+}
+
 export async function PATCH(request: Request) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
@@ -43,15 +60,16 @@ export async function PATCH(request: Request) {
 
     const admin = createAdminClient();
     const reviewedAt = new Date().toISOString();
+    const verificationStatus = mapComplianceToVerification(status);
     const { data, error } = await admin
-      .from('compliance_documents')
+      .from('merchant_kyc_documents')
       .update({
-        status,
-        reviewed_by: user.id,
+        verification_status: verificationStatus,
         reviewed_at: reviewedAt,
+        reviewer_notes: body.notes ? String(body.notes).slice(0, 500) : null,
       })
       .eq('id', documentId)
-      .select('id,merchant_id,document_type,status,reviewed_by,reviewed_at')
+      .select('id,merchant_id,document_type,document_url,verification_status,reviewed_at,reviewer_notes')
       .single();
 
     if (error) {
@@ -64,7 +82,15 @@ export async function PATCH(request: Request) {
     return NextResponse.json({
       message: 'Document review updated.',
       notes: body.notes ? String(body.notes).slice(0, 500) : null,
-      document: data,
+      document: {
+        id: data?.id ?? null,
+        merchant_id: data?.merchant_id ?? null,
+        document_type: data?.document_type ?? null,
+        file_url: data?.document_url ?? null,
+        status: mapVerificationToCompliance(data?.verification_status ?? ''),
+        reviewed_by: user.id,
+        reviewed_at: data?.reviewed_at ?? reviewedAt,
+      },
     });
   } catch (error: any) {
     return NextResponse.json(

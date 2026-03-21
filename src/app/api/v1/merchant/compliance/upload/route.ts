@@ -20,6 +20,29 @@ function inferContentType(file: File) {
   return file.type || 'application/octet-stream';
 }
 
+function inferFileNameFromUrl(url: string | null) {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const last = parsed.pathname.split('/').filter(Boolean).pop();
+    return last ? decodeURIComponent(last) : null;
+  } catch {
+    const last = String(url).split('/').filter(Boolean).pop();
+    return last ? decodeURIComponent(last) : null;
+  }
+}
+
+function mapVerificationStatus(value: unknown) {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
+  if (normalized === 'approved') return 'VERIFIED';
+  if (normalized === 'rejected') return 'FAILED';
+  if (normalized === 'under_review') return 'PENDING';
+  if (normalized === 'submitted') return 'PENDING';
+  return 'PENDING';
+}
+
 function isMerchantContext(
   role: string,
   merchant: { user_id?: string | null } | null,
@@ -98,17 +121,24 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!fileUrl) {
+      return NextResponse.json(
+        { error: 'File upload failed. Please try again.' },
+        { status: 500 }
+      );
+    }
+
     const { data, error } = await admin
-      .from('compliance_documents')
+      .from('merchant_kyc_documents')
       .insert({
         merchant_id: merchant.id,
         document_type: documentType,
-        file_name: safeName,
-        file_url: fileUrl,
-        status: 'PENDING',
+        document_url: fileUrl,
+        verification_status: 'submitted',
+        uploaded_by: user.id,
       })
       .select(
-        'id,merchant_id,document_type,file_name,file_url,status,uploaded_at,reviewed_by,reviewed_at,expires_at'
+        'id,merchant_id,document_type,document_url,verification_status,uploaded_by,uploaded_at,reviewed_at,reviewer_notes'
       )
       .single();
 
@@ -125,7 +155,18 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         message: 'Document uploaded successfully.',
-        document: data,
+        document: {
+          id: data?.id ?? null,
+          merchant_id: data?.merchant_id ?? merchant.id,
+          document_type: data?.document_type ?? documentType,
+          file_name: inferFileNameFromUrl(data?.document_url ?? fileUrl),
+          file_url: data?.document_url ?? fileUrl,
+          status: mapVerificationStatus(data?.verification_status),
+          uploaded_at: data?.uploaded_at ?? null,
+          reviewed_by: null,
+          reviewed_at: data?.reviewed_at ?? null,
+          expires_at: null,
+        },
       },
       { status: 201 }
     );
