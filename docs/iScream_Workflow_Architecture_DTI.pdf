@@ -1,0 +1,147 @@
+%PDF-1.4
+%????
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+3 0 obj
+<< /Length 1378 >>
+stream
+q 0.05 0.15 0.33 rg 0 800 595 42 re f Q
+BT /F2 20 Tf 32 812 Td
+(iScream Safety App) Tj
+ET
+BT /F1 10 Tf 360 812 Td
+(DTI + Sponsor Technical Workflow) Tj
+ET
+BT /F2 16 Tf 32 760 Td
+(End?to?End Workflow \(How iScream Works\)) Tj
+ET
+BT /F1 12 Tf 40 730 Td
+(1. Onboarding & POPIA Consent) Tj
+0 -16 Td
+(2. Voice Calibration \(3 screams\) + Sensitivity) Tj
+0 -16 Td
+(3. Always?on Listening \(Android foreground service\)) Tj
+0 -16 Td
+(4. SOS Trigger + GPS Location) Tj
+0 -16 Td
+(5. Guardian Alerts \(SMS/WhatsApp/Push\)) Tj
+0 -16 Td
+(6. Evidence Capture \(Phase 2\) + Audit Log) Tj
+0 -16 Td
+(7. Resolution + Reporting) Tj
+ET
+BT /F2 14 Tf 32 600 Td
+(MVP Highlights) Tj
+ET
+BT /F1 12 Tf 40 578 Td
+(? Locked?phone detection on Android \(foreground service\)) Tj
+0 -16 Td
+(? 3?sample scream calibration) Tj
+0 -16 Td
+(? SOS + GPS + guardian alerts) Tj
+0 -16 Td
+(? POPIA?aligned consent & auditability) Tj
+ET
+BT /F2 14 Tf 32 500 Td
+(Impact Focus) Tj
+ET
+BT /F1 12 Tf 40 478 Td
+(Designed for GBV response in South Africa: rapid alerts, location visibility,) Tj
+0 -16 Td
+(and privacy?first handling of sensitive data.) Tj
+ET
+BT /F2 14 Tf 32 420 Td
+(Revenue Model \(DTI?ready\)) Tj
+ET
+BT /F1 12 Tf 40 398 Td
+(? Subscriptions \(individual/family/community\)) Tj
+0 -16 Td
+(? Sponsored safety programs \(NGO/corporate/municipal\)) Tj
+0 -16 Td
+(? Enterprise licensing + premium evidence storage) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Length 1125 >>
+stream
+BT /F2 16 Tf 32 800 Td
+(Technical Architecture \(Build + Data Flow\)) Tj
+ET
+BT /F1 12 Tf 40 770 Td
+(Mobile: React Native + Expo) Tj
+0 -16 Td
+(Voice: On?device calibration + thresholds \(MVP\)) Tj
+0 -16 Td
+(Backend: Firebase Auth + Firestore + Storage + FCM) Tj
+0 -16 Td
+(Maps: GPS + reverse geocode) Tj
+0 -16 Td
+(Notifications: FCM + SMS/WhatsApp \(Phase 2\)) Tj
+ET
+BT /F2 14 Tf 32 680 Td
+(Security & Compliance) Tj
+ET
+BT /F1 12 Tf 40 658 Td
+(? POPIA consent at onboarding) Tj
+0 -16 Td
+(? Data minimisation & encrypted storage) Tj
+0 -16 Td
+(? Audit logging on sensitive events) Tj
+0 -16 Td
+(? Role?based access for staff portals) Tj
+ET
+BT /F2 14 Tf 32 580 Td
+(Phase Roadmap) Tj
+ET
+BT /F1 12 Tf 40 558 Td
+(Phase 1: Locked?phone Android MVP + SOS flow) Tj
+0 -16 Td
+(Phase 2: Evidence recording + Support Centre) Tj
+0 -16 Td
+(Phase 3: Watch integration + SAPS/EMS workflows) Tj
+ET
+BT /F2 14 Tf 32 490 Td
+(DTI Proof Points) Tj
+ET
+BT /F1 12 Tf 40 468 Td
+(? Safety impact \(GBV response, faster alerting\)) Tj
+0 -16 Td
+(? Local jobs: operators, support, onboarding) Tj
+0 -16 Td
+(? Local data residency & compliance readiness) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 595 842] /Contents 3 0 R /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> >>
+endobj
+6 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> >>
+endobj
+7 0 obj
+<< /Type /Pages /Kids [5 0 R 6 0 R] /Count 2 >>
+endobj
+8 0 obj
+<< /Type /Catalog /Pages 7 0 R >>
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000015 00000 n 
+0000000085 00000 n 
+0000000160 00000 n 
+0000001590 00000 n 
+0000002767 00000 n 
+0000002903 00000 n 
+0000003039 00000 n 
+0000003102 00000 n 
+trailer
+<< /Size 9 /Root 8 0 R >>
+startxref
+3151
+%%EOF
