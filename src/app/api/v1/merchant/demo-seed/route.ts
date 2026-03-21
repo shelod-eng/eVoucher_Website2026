@@ -21,12 +21,6 @@ export async function POST() {
       merchantLogins: [
         { merchant: 'Shoprite', email: 'demo-shoprite@evoucher.co.za' },
         { merchant: 'Pick n Pay', email: 'demo-picknpay@evoucher.co.za' },
-        { merchant: 'Boxer', email: 'demo-boxer@evoucher.co.za' },
-        { merchant: 'Checkers', email: 'demo-checkers@evoucher.co.za' },
-        { merchant: 'Clicks', email: 'demo-clicks@evoucher.co.za' },
-        { merchant: 'Pep', email: 'demo-pep@evoucher.co.za' },
-        { merchant: 'Engen', email: 'demo-engen@evoucher.co.za' },
-        { merchant: 'Kalapeng (Private)', email: 'demo-kalapeng@evoucher.co.za' },
       ],
       password: 'demo123',
     });

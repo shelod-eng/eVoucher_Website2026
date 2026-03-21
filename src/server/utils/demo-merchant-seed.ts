@@ -20,6 +20,14 @@ const DEMO_MERCHANTS: DemoMerchantSeed[] = [
     businessType: 'Supermarket',
     seedPortalAuth: true,
   },
+  {
+    brandKey: 'picknpay',
+    businessName: 'Pick n Pay',
+    email: 'demo-picknpay@evoucher.co.za',
+    phone: '0101000003',
+    businessType: 'Supermarket',
+    seedPortalAuth: true,
+  },
 ];
 
 const DEMO_PRODUCTS_BY_BRAND: Partial<
