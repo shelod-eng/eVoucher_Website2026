@@ -79,6 +79,31 @@ interface MerchantBranch {
   status: string | null;
 }
 
+interface LogisticsInventoryItem {
+  id: string;
+  name: string;
+  sku: string;
+  stock: number;
+  reorderLevel: number;
+  unitPrice: number;
+  sourceProductId?: string;
+}
+
+interface LogisticsOrderItem {
+  inventoryId: string;
+  name: string;
+  quantity: number;
+}
+
+interface LogisticsOrder {
+  id: string;
+  status: 'pending' | 'packed' | 'in_transit' | 'delivered';
+  created_at: string;
+  destination: string;
+  reference: string;
+  items: LogisticsOrderItem[];
+}
+
 const PROMOTION_BADGES = [
   'Weekend Special',
   'Flash Sale',
@@ -142,9 +167,9 @@ export default function MerchantDashboard() {
   const [error, setError] = useState('');
   const [productMessage, setProductMessage] = useState('');
   const [savingProduct, setSavingProduct] = useState(false);
-  const [activeMerchantTab, setActiveMerchantTab] = useState<'products' | 'studio' | 'payouts'>(
-    'studio'
-  );
+  const [activeMerchantTab, setActiveMerchantTab] = useState<
+    'products' | 'studio' | 'payouts' | 'logistics'
+  >('studio');
   const [productsFilter, setProductsFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [productsSearch, setProductsSearch] = useState('');
   const [productsPage, setProductsPage] = useState(1);
@@ -165,7 +190,24 @@ export default function MerchantDashboard() {
     displayPriority: 0,
     validBranchIds: [] as string[],
   });
+  const [logisticsInventory, setLogisticsInventory] = useState<LogisticsInventoryItem[]>([]);
+  const [logisticsOrders, setLogisticsOrders] = useState<LogisticsOrder[]>([]);
+  const [logisticsMessage, setLogisticsMessage] = useState('');
+  const [logisticsForm, setLogisticsForm] = useState({
+    inventoryId: '',
+    quantity: 1,
+    destination: '',
+    reference: '',
+  });
   const router = useRouter();
+  const logisticsInventoryKey = useMemo(() => {
+    return merchant?.id
+      ? `evoucher_logistics_inventory_${merchant.id}`
+      : 'evoucher_logistics_inventory_default';
+  }, [merchant?.id]);
+  const logisticsOrdersKey = useMemo(() => {
+    return merchant?.id ? `evoucher_logistics_orders_${merchant.id}` : 'evoucher_logistics_orders_default';
+  }, [merchant?.id]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -224,6 +266,10 @@ export default function MerchantDashboard() {
       setActiveMerchantTab('payouts');
       return;
     }
+    if (requestedTab === 'logistics') {
+      setActiveMerchantTab('logistics');
+      return;
+    }
     if (requestedTab === 'products') {
       setActiveMerchantTab('products');
       return;
@@ -236,7 +282,9 @@ export default function MerchantDashboard() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const handler = (event: Event) => {
-      const customEvent = event as CustomEvent<{ tab?: 'products' | 'studio' | 'payouts' }>;
+      const customEvent = event as CustomEvent<{
+        tab?: 'products' | 'studio' | 'payouts' | 'logistics';
+      }>;
       const requestedTab = customEvent?.detail?.tab;
       if (!requestedTab) return;
       setActiveMerchantTab(requestedTab);
@@ -246,6 +294,71 @@ export default function MerchantDashboard() {
       window.removeEventListener('merchant-tab-change', handler as EventListener);
     };
   }, []);
+
+  useEffect(() => {
+    if (merchantProducts.length > 0 && activeMerchantTab === 'studio') {
+      setActiveMerchantTab('products');
+    }
+  }, [merchantProducts.length, activeMerchantTab]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!merchant?.id) return;
+    const storedInventory = window.localStorage.getItem(logisticsInventoryKey);
+    if (storedInventory) {
+      try {
+        const parsed = JSON.parse(storedInventory) as LogisticsInventoryItem[];
+        setLogisticsInventory(parsed);
+        return;
+      } catch {
+        // ignore parse errors and re-seed
+      }
+    }
+    if (logisticsInventory.length > 0) return;
+    if (merchantProducts.length === 0) {
+      setLogisticsInventory([]);
+      return;
+    }
+    const seeded = merchantProducts.slice(0, 12).map((product, index) => ({
+      id: product.id,
+      name: product.product_name,
+      sku: `SPC-${String(index + 1).padStart(3, '0')}`,
+      stock: 25 + index * 3,
+      reorderLevel: 12,
+      unitPrice: Number(product.face_value ?? 0),
+      sourceProductId: product.id,
+    }));
+    setLogisticsInventory(seeded);
+  }, [
+    merchant?.id,
+    merchantProducts,
+    logisticsInventoryKey,
+    logisticsInventory.length,
+  ]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!merchant?.id) return;
+    const storedOrders = window.localStorage.getItem(logisticsOrdersKey);
+    if (storedOrders) {
+      try {
+        const parsed = JSON.parse(storedOrders) as LogisticsOrder[];
+        setLogisticsOrders(parsed);
+      } catch {
+        setLogisticsOrders([]);
+      }
+    }
+  }, [merchant?.id, logisticsOrdersKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(logisticsInventoryKey, JSON.stringify(logisticsInventory));
+  }, [logisticsInventory, logisticsInventoryKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(logisticsOrdersKey, JSON.stringify(logisticsOrders));
+  }, [logisticsOrders, logisticsOrdersKey]);
 
   const fetchDashboardData = async () => {
     try {
@@ -421,6 +534,81 @@ export default function MerchantDashboard() {
       platformRevenue,
     };
   }, [productForm.faceValue, productForm.totalDiscountPct]);
+
+  const logisticsSummary = useMemo(() => {
+    const totalItems = logisticsInventory.reduce((sum, item) => sum + item.stock, 0);
+    const lowStock = logisticsInventory.filter((item) => item.stock <= item.reorderLevel).length;
+    const onHandValue = logisticsInventory.reduce(
+      (sum, item) => sum + item.stock * item.unitPrice,
+      0
+    );
+    return { totalItems, lowStock, onHandValue };
+  }, [logisticsInventory]);
+
+  const handleRestockItem = (inventoryId: string, amount = 10) => {
+    setLogisticsInventory((prev) =>
+      prev.map((item) =>
+        item.id === inventoryId ? { ...item, stock: item.stock + amount } : item
+      )
+    );
+    setLogisticsMessage('Inventory updated.');
+  };
+
+  const handleCreateLogisticsOrder = () => {
+    setLogisticsMessage('');
+    const selectedItem = logisticsInventory.find(
+      (item) => item.id === logisticsForm.inventoryId
+    );
+    if (!selectedItem) {
+      setLogisticsMessage('Select a product to dispatch.');
+      return;
+    }
+    if (!logisticsForm.destination.trim()) {
+      setLogisticsMessage('Add a delivery destination.');
+      return;
+    }
+    if (logisticsForm.quantity <= 0) {
+      setLogisticsMessage('Quantity must be at least 1.');
+      return;
+    }
+    if (logisticsForm.quantity > selectedItem.stock) {
+      setLogisticsMessage('Not enough stock available for that quantity.');
+      return;
+    }
+
+    const newOrder: LogisticsOrder = {
+      id: `ORD-${Date.now()}`,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      destination: logisticsForm.destination.trim(),
+      reference:
+        logisticsForm.reference.trim() ||
+        `${merchant?.business_name ?? 'Merchant'}-${new Date().getFullYear()}`,
+      items: [
+        {
+          inventoryId: selectedItem.id,
+          name: selectedItem.name,
+          quantity: logisticsForm.quantity,
+        },
+      ],
+    };
+
+    setLogisticsOrders((prev) => [newOrder, ...prev]);
+    setLogisticsInventory((prev) =>
+      prev.map((item) =>
+        item.id === selectedItem.id
+          ? { ...item, stock: item.stock - logisticsForm.quantity }
+          : item
+      )
+    );
+    setLogisticsForm({
+      inventoryId: selectedItem.id,
+      quantity: 1,
+      destination: '',
+      reference: '',
+    });
+    setLogisticsMessage('Dispatch order created.');
+  };
 
   const applyPreset = (preset: (typeof GROCERY_PRESETS)[number]) => {
     setProductForm({
@@ -774,6 +962,17 @@ export default function MerchantDashboard() {
                   }`}
                 >
                   Product Studio
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMerchantTab('logistics')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-headline font-semibold transition-colors ${
+                    activeMerchantTab === 'logistics'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Logistics
                 </button>
                 <button
                   type="button"
@@ -1253,6 +1452,239 @@ export default function MerchantDashboard() {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {activeMerchantTab === 'logistics' && (
+                <div className="space-y-4">
+                  <div className="grid md:grid-cols-3 gap-3">
+                    <div className="rounded-xl border border-teal-200 bg-teal-50 p-4">
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-teal-700">
+                        Stock On Hand
+                      </p>
+                      <p className="text-4xl font-headline font-bold text-teal-700 mt-1">
+                        {logisticsSummary.totalItems}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-amber-700">
+                        Low Stock
+                      </p>
+                      <p className="text-4xl font-headline font-bold text-amber-700 mt-1">
+                        {logisticsSummary.lowStock}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background p-4">
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-muted-foreground">
+                        Inventory Value
+                      </p>
+                      <p className="text-4xl font-headline font-bold text-foreground mt-1">
+                        R{logisticsSummary.onHandValue.toFixed(0)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid xl:grid-cols-[1.4fr,1fr] gap-4">
+                    <div className="rounded-xl border border-border bg-card p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="font-headline font-semibold text-foreground">
+                            Inventory (SuperPrecast catalogue)
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Synced from merchant products for demo logistics workflows.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRestockItem(logisticsInventory[0]?.id ?? '', 25)}
+                          className="px-3 py-1.5 rounded-lg border border-border text-xs font-headline font-semibold"
+                          disabled={logisticsInventory.length === 0}
+                        >
+                          Quick Restock +25
+                        </button>
+                      </div>
+
+                      {logisticsInventory.length === 0 ? (
+                        <p className="text-sm text-muted-foreground font-body">
+                          No inventory available yet. Add products to populate logistics.
+                        </p>
+                      ) : (
+                        <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
+                          {logisticsInventory.map((item) => {
+                            const isLow = item.stock <= item.reorderLevel;
+                            return (
+                              <div
+                                key={item.id}
+                                className={`rounded-lg border px-3 py-3 ${
+                                  isLow
+                                    ? 'border-amber-300 bg-amber-50'
+                                    : 'border-border bg-background'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="font-headline font-semibold text-foreground">
+                                      {item.name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      SKU: {item.sku} · Unit R{item.unitPrice.toFixed(2)}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xl font-headline font-bold text-foreground">
+                                      {item.stock}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      Reorder @{item.reorderLevel}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="mt-3 flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRestockItem(item.id, 10)}
+                                    className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-headline font-semibold"
+                                  >
+                                    Restock +10
+                                  </button>
+                                  {isLow && (
+                                    <span className="text-xs font-headline font-semibold text-amber-700">
+                                      Low stock alert
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-card p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="font-headline font-semibold text-foreground">
+                            Dispatch Order
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Create a shipment for sponsor review.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <select
+                          value={logisticsForm.inventoryId}
+                          onChange={(event) =>
+                            setLogisticsForm((prev) => ({
+                              ...prev,
+                              inventoryId: event.target.value,
+                            }))
+                          }
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="">Select product</option>
+                          {logisticsInventory.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          min={1}
+                          value={logisticsForm.quantity}
+                          onChange={(event) =>
+                            setLogisticsForm((prev) => ({
+                              ...prev,
+                              quantity: Number(event.target.value || 1),
+                            }))
+                          }
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          placeholder="Quantity"
+                        />
+                        <input
+                          type="text"
+                          value={logisticsForm.destination}
+                          onChange={(event) =>
+                            setLogisticsForm((prev) => ({
+                              ...prev,
+                              destination: event.target.value,
+                            }))
+                          }
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          placeholder="Delivery destination"
+                        />
+                        <input
+                          type="text"
+                          value={logisticsForm.reference}
+                          onChange={(event) =>
+                            setLogisticsForm((prev) => ({
+                              ...prev,
+                              reference: event.target.value,
+                            }))
+                          }
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          placeholder="Reference (optional)"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCreateLogisticsOrder}
+                          className="w-full rounded-lg bg-emerald-500 px-4 py-2 text-sm font-headline font-semibold text-white"
+                        >
+                          Create Dispatch Order
+                        </button>
+                        {logisticsMessage && (
+                          <p className="text-xs text-muted-foreground">{logisticsMessage}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="font-headline font-semibold text-foreground">Recent Orders</p>
+                      <span className="text-xs text-muted-foreground">
+                        {logisticsOrders.length} tracked
+                      </span>
+                    </div>
+                    {logisticsOrders.length === 0 ? (
+                      <p className="text-sm text-muted-foreground font-body">
+                        No dispatch orders yet. Create one to start tracking logistics.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {logisticsOrders.slice(0, 5).map((order) => (
+                          <div
+                            key={order.id}
+                            className="rounded-lg border border-border bg-background px-3 py-3"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <p className="font-headline font-semibold text-foreground">
+                                  {order.reference}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(order.created_at).toLocaleString()} ·{' '}
+                                  {order.destination}
+                                </p>
+                              </div>
+                              <span className="text-xs font-headline font-semibold text-primary">
+                                {order.status.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              {order.items.map((item) => (
+                                <div key={item.inventoryId}>
+                                  {item.name} · Qty {item.quantity}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

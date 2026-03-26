@@ -18,6 +18,7 @@ export default function Layout({ children }) {
     path.startsWith('/userroles') ||
     path.startsWith('/banklinkage') ||
     path.startsWith('/bankserv') ||
+    path.startsWith('/logistics') ||
     path.startsWith('/bulkupload') ||
     path.startsWith('/controls');
 
@@ -135,6 +136,7 @@ export default function Layout({ children }) {
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/TransactionHistory">Voucher Ledger</Link>
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/BankLinkage">Bank Linkage</Link>
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/BankServ">BankServ</Link>
+              <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/Logistics">Logistics</Link>
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/SettlementPayouts?tab=reconciliation">Reconciliation</Link>
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/BulkUpload">Bulk Upload</Link>
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/AuditLog">Audit Log</Link>

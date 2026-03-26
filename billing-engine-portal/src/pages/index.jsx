@@ -101,6 +101,7 @@ import HowWeBuilt from "./HowWeBuilt";
 import Website from "./Website";
 
 import MerchantAnalytics from "./MerchantAnalytics";
+import Logistics from "./Logistics";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import AdminLogin from "./AdminLogin";
@@ -215,6 +216,8 @@ const PAGES = {
     Website: Website,
     
     MerchantAnalytics: MerchantAnalytics,
+
+    Logistics: Logistics,
 
     AuditLog: AuditLog,
 
@@ -365,6 +368,8 @@ function PagesContent() {
                 <Route path="/Website" element={<Website />} />
                 
                 <Route path="/MerchantAnalytics" element={<MerchantAnalytics />} />
+
+                <Route path="/Logistics" element={<RequireAdmin><Logistics /></RequireAdmin>} />
 
                 <Route path="/AuditLog" element={<RequireAdmin><AuditLog /></RequireAdmin>} />
 

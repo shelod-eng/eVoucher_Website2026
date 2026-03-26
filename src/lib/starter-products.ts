@@ -101,6 +101,12 @@ const STARTER_PRODUCTS: Record<BrandKey, StarterProductTemplate[]> = {
     { name: 'Concrete Materials Voucher R1000', faceValue: 1000 },
     { name: 'Building Supplies Voucher R2000', faceValue: 2000 },
   ],
+  siliconvalley: [
+    { name: 'Silicon Valley Grocery Voucher R100', faceValue: 100 },
+    { name: 'Silicon Valley Grocery Voucher R250', faceValue: 250 },
+    { name: 'Silicon Valley Grocery Voucher R500', faceValue: 500 },
+    { name: 'Silicon Valley Grocery Voucher R1000', faceValue: 1000 },
+  ],
 };
 
 interface BuildStarterProductsInput {

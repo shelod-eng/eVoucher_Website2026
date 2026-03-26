@@ -12,7 +12,8 @@ export type BrandKey =
   | 'woolworths'
   | 'dischem'
   | 'superstore'
-  | 'superprecast';
+  | 'superprecast'
+  | 'siliconvalley';
 
 export interface MerchantBrandDefinition {
   brandKey: BrandKey;
@@ -138,6 +139,15 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     category: 'Construction',
     assetPath: '/assets/images/merchants/super-precast.svg',
     aliases: ['super precast', 'superprecast', 'super precast concrete', 'super-precast'],
+  },
+  {
+    brandKey: 'siliconvalley',
+    displayName: 'Silicon Valley eVoucher',
+    category: 'Groceries',
+    assetPath: '/assets/images/merchants/superstore.png',
+    aliases: ['silicon valley', 'silicon valley evoucher', 'sv evoucher', 'sv chain'],
+    estimatedLocationCount: 220,
+    estimatedProvinceCount: 9,
   },
 ];
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { mockBanks, mockInvoices, mockMerchants, mockSettlements, mockTransactions } from '@/api/billing-mock-data';
@@ -28,6 +28,50 @@ import { logAuditEvent } from '@/audit/audit-log';
 export default function BillingEngine() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
+  const [stockRows, setStockRows] = useState([
+    { sku: 'SPC-WASH-DOUBLE', merchant: 'SuperPrecast', onHand: 42, reserved: 6, reorderLevel: 20 },
+    { sku: 'SPC-WASH-SINGLE', merchant: 'SuperPrecast', onHand: 27, reserved: 4, reorderLevel: 18 },
+    { sku: 'PNP-GROC-200', merchant: 'Pick n Pay', onHand: 120, reserved: 10, reorderLevel: 40 },
+    { sku: 'SHOP-FOOD-500', merchant: 'Shoprite', onHand: 88, reserved: 12, reorderLevel: 35 },
+  ]);
+  const [orders, setOrders] = useState([
+    {
+      id: 'ORD-24001',
+      merchant: 'SuperPrecast',
+      sku: 'SPC-WASH-DOUBLE',
+      qty: 5,
+      status: 'pending',
+      settlementGate: 'awaiting_delivery',
+      createdAt: '2026-03-23',
+      eta: '2026-03-24',
+    },
+    {
+      id: 'ORD-24002',
+      merchant: 'Pick n Pay',
+      sku: 'PNP-GROC-200',
+      qty: 12,
+      status: 'picked',
+      settlementGate: 'awaiting_delivery',
+      createdAt: '2026-03-23',
+      eta: '2026-03-24',
+    },
+    {
+      id: 'ORD-24003',
+      merchant: 'Shoprite',
+      sku: 'SHOP-FOOD-500',
+      qty: 8,
+      status: 'in_transit',
+      settlementGate: 'awaiting_delivery',
+      createdAt: '2026-03-22',
+      eta: '2026-03-23',
+    },
+  ]);
+  const [newOrder, setNewOrder] = useState({
+    merchant: 'SuperPrecast',
+    sku: 'SPC-WASH-DOUBLE',
+    qty: 1,
+    eta: moment().add(1, 'day').format('YYYY-MM-DD'),
+  });
 
   const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
   const useMock = dataMode !== 'base44';
@@ -153,6 +197,68 @@ export default function BillingEngine() {
     }
   };
 
+  const statusClassMap = {
+    pending: 'bg-yellow-100 text-yellow-800',
+    picked: 'bg-blue-100 text-blue-800',
+    in_transit: 'bg-purple-100 text-purple-800',
+    delivered: 'bg-green-100 text-green-800',
+    cancelled: 'bg-red-100 text-red-800',
+  };
+
+  const logisticsKpis = useMemo(() => {
+    const totalStock = stockRows.reduce((sum, row) => sum + row.onHand, 0);
+    const lowStockCount = stockRows.filter((row) => row.onHand <= row.reorderLevel).length;
+    const openOrders = orders.filter((order) => !['delivered', 'cancelled'].includes(order.status)).length;
+    const settlementReady = orders.filter((order) => order.settlementGate === 'ready_for_settlement').length;
+    return { totalStock, lowStockCount, openOrders, settlementReady };
+  }, [stockRows, orders]);
+
+  const markOrderStatus = (orderId, nextStatus) => {
+    setOrders((prev) =>
+      prev.map((order) => {
+        if (order.id !== orderId) return order;
+        const settlementGate = nextStatus === 'delivered' ? 'ready_for_settlement' : nextStatus === 'cancelled' ? 'blocked' : 'awaiting_delivery';
+        return { ...order, status: nextStatus, settlementGate };
+      })
+    );
+  };
+
+  const receiveStock = (sku, qty) => {
+    const amount = Number(qty);
+    if (!amount || amount <= 0) return;
+    setStockRows((prev) =>
+      prev.map((row) => (row.sku === sku ? { ...row, onHand: row.onHand + amount } : row))
+    );
+  };
+
+  const createOrder = () => {
+    const qty = Number(newOrder.qty);
+    if (!newOrder.merchant || !newOrder.sku || !qty || qty <= 0) return;
+
+    const orderId = `ORD-${Date.now()}`;
+    setOrders((prev) => [
+      {
+        id: orderId,
+        merchant: newOrder.merchant,
+        sku: newOrder.sku,
+        qty,
+        status: 'pending',
+        settlementGate: 'awaiting_delivery',
+        createdAt: moment().format('YYYY-MM-DD'),
+        eta: newOrder.eta || moment().add(1, 'day').format('YYYY-MM-DD'),
+      },
+      ...prev,
+    ]);
+
+    setStockRows((prev) =>
+      prev.map((row) => {
+        if (row.sku !== newOrder.sku) return row;
+        const nextOnHand = Math.max(0, row.onHand - qty);
+        return { ...row, onHand: nextOnHand, reserved: row.reserved + qty };
+      })
+    );
+  };
+
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -244,6 +350,7 @@ export default function BillingEngine() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
             <TabsTrigger value="banks">Bank Sponsors</TabsTrigger>
+            <TabsTrigger value="logistics">Logistics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -314,6 +421,166 @@ export default function BillingEngine() {
                       Stakeholder Tips
                     </GoldButton>
                   </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="logistics">
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="bg-white/5 border-white/10 text-white">
+                  <CardHeader className="pb-2"><CardTitle className="text-sm text-white/70">Total Stock Units</CardTitle></CardHeader>
+                  <CardContent><p className="text-2xl font-bold">{logisticsKpis.totalStock}</p></CardContent>
+                </Card>
+                <Card className="bg-white/5 border-white/10 text-white">
+                  <CardHeader className="pb-2"><CardTitle className="text-sm text-white/70">Low Stock SKUs</CardTitle></CardHeader>
+                  <CardContent><p className="text-2xl font-bold text-yellow-300">{logisticsKpis.lowStockCount}</p></CardContent>
+                </Card>
+                <Card className="bg-white/5 border-white/10 text-white">
+                  <CardHeader className="pb-2"><CardTitle className="text-sm text-white/70">Open Orders</CardTitle></CardHeader>
+                  <CardContent><p className="text-2xl font-bold text-blue-300">{logisticsKpis.openOrders}</p></CardContent>
+                </Card>
+                <Card className="bg-white/5 border-white/10 text-white">
+                  <CardHeader className="pb-2"><CardTitle className="text-sm text-white/70">Settlement Ready</CardTitle></CardHeader>
+                  <CardContent><p className="text-2xl font-bold text-emerald-300">{logisticsKpis.settlementReady}</p></CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Create Logistics Order</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                  <input
+                    className="h-10 rounded-md border border-gray-300 px-3 text-sm"
+                    placeholder="Merchant"
+                    value={newOrder.merchant}
+                    onChange={(event) => setNewOrder((prev) => ({ ...prev, merchant: event.target.value }))}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-gray-300 px-3 text-sm"
+                    placeholder="SKU"
+                    value={newOrder.sku}
+                    onChange={(event) => setNewOrder((prev) => ({ ...prev, sku: event.target.value }))}
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    className="h-10 rounded-md border border-gray-300 px-3 text-sm"
+                    placeholder="Qty"
+                    value={newOrder.qty}
+                    onChange={(event) => setNewOrder((prev) => ({ ...prev, qty: event.target.value }))}
+                  />
+                  <input
+                    type="date"
+                    className="h-10 rounded-md border border-gray-300 px-3 text-sm"
+                    value={newOrder.eta}
+                    onChange={(event) => setNewOrder((prev) => ({ ...prev, eta: event.target.value }))}
+                  />
+                  <Button className="bg-[#00A89D] hover:bg-[#009488] text-white" onClick={createOrder}>
+                    Create Order
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Stock Tracker</CardTitle>
+                </CardHeader>
+                <CardContent className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left border-b">
+                        <th className="py-2">SKU</th>
+                        <th className="py-2">Merchant</th>
+                        <th className="py-2">On Hand</th>
+                        <th className="py-2">Reserved</th>
+                        <th className="py-2">Reorder Level</th>
+                        <th className="py-2">Status</th>
+                        <th className="py-2">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stockRows.map((row) => {
+                        const lowStock = row.onHand <= row.reorderLevel;
+                        return (
+                          <tr key={row.sku} className="border-b">
+                            <td className="py-2 font-medium">{row.sku}</td>
+                            <td className="py-2">{row.merchant}</td>
+                            <td className="py-2">{row.onHand}</td>
+                            <td className="py-2">{row.reserved}</td>
+                            <td className="py-2">{row.reorderLevel}</td>
+                            <td className="py-2">
+                              <Badge className={lowStock ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}>
+                                {lowStock ? 'Low stock' : 'Healthy'}
+                              </Badge>
+                            </td>
+                            <td className="py-2">
+                              <Button size="sm" variant="outline" onClick={() => receiveStock(row.sku, 10)}>
+                                +10 Receive
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Order Tracking</CardTitle>
+                </CardHeader>
+                <CardContent className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left border-b">
+                        <th className="py-2">Order ID</th>
+                        <th className="py-2">Merchant</th>
+                        <th className="py-2">SKU</th>
+                        <th className="py-2">Qty</th>
+                        <th className="py-2">ETA</th>
+                        <th className="py-2">Status</th>
+                        <th className="py-2">Settlement Gate</th>
+                        <th className="py-2">Next Step</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order) => (
+                        <tr key={order.id} className="border-b">
+                          <td className="py-2 font-medium">{order.id}</td>
+                          <td className="py-2">{order.merchant}</td>
+                          <td className="py-2">{order.sku}</td>
+                          <td className="py-2">{order.qty}</td>
+                          <td className="py-2">{order.eta}</td>
+                          <td className="py-2">
+                            <Badge className={statusClassMap[order.status] || 'bg-gray-100 text-gray-800'}>
+                              {order.status.replace('_', ' ')}
+                            </Badge>
+                          </td>
+                          <td className="py-2">{order.settlementGate.replaceAll('_', ' ')}</td>
+                          <td className="py-2">
+                            <div className="flex gap-2 flex-wrap">
+                              {order.status === 'pending' && (
+                                <Button size="sm" variant="outline" onClick={() => markOrderStatus(order.id, 'picked')}>Mark Picked</Button>
+                              )}
+                              {order.status === 'picked' && (
+                                <Button size="sm" variant="outline" onClick={() => markOrderStatus(order.id, 'in_transit')}>Ship</Button>
+                              )}
+                              {order.status === 'in_transit' && (
+                                <Button size="sm" className="bg-[#00A89D] hover:bg-[#009488] text-white" onClick={() => markOrderStatus(order.id, 'delivered')}>Deliver</Button>
+                              )}
+                              {!['delivered', 'cancelled'].includes(order.status) && (
+                                <Button size="sm" variant="ghost" onClick={() => markOrderStatus(order.id, 'cancelled')}>Cancel</Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </CardContent>
               </Card>
             </div>
