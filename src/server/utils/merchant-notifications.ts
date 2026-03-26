@@ -75,6 +75,14 @@ function resolveApprovalConfirmationRecipients() {
   return configured.length > 0 ? configured : ['shelod@gmail.com'];
 }
 
+function resolveCredentialsCcRecipients() {
+  const configured = String(process.env.MERCHANT_CREDENTIALS_CC ?? '')
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  return configured;
+}
+
 function resolveMaskedAccountNumber(accountNumber?: string | null) {
   const value = String(accountNumber ?? '').trim();
   if (!value) return 'Not provided';
@@ -218,11 +226,13 @@ async function sendEmailToMerchant(
   email: string,
   subject: string,
   text: string,
-  html: string
+  html: string,
+  ccRecipients: string[] = []
 ): Promise<MerchantEmailDispatchResult> {
   const recipient = resolveMerchantEmailRecipient(email);
   try {
-    const resendSent = await sendViaResend([recipient], subject, text, html);
+    const allRecipients = Array.from(new Set([recipient, ...ccRecipients].filter(Boolean)));
+    const resendSent = await sendViaResend(allRecipients, subject, text, html);
     if (resendSent) {
       return { sent: true, provider: 'resend', recipient };
     }
@@ -358,7 +368,8 @@ export async function sendMerchantCredentialsEmail(payload: MerchantCredentialsP
     </div>
   `.trim();
 
-  return sendEmailToMerchant(payload.email, subject, text, html);
+  const ccRecipients = resolveCredentialsCcRecipients();
+  return sendEmailToMerchant(payload.email, subject, text, html, ccRecipients);
 }
 
 export async function sendMerchantApprovalConfirmationEmail(
