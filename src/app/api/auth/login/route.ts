@@ -1,0 +1,71 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
+
+function getSupabasePublicClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+  }
+  return createClient(url, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const email = String(body?.email ?? body?.username ?? '').trim().toLowerCase();
+    const password = String(body?.password ?? '');
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: 'Email/username and password are required.' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getSupabasePublicClient();
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data?.session || !data?.user) {
+      return NextResponse.json(
+        { error: error?.message || 'Invalid login credentials.' },
+        { status: 401 }
+      );
+    }
+
+    let role: string | null = null;
+    try {
+      const admin = createAdminClient();
+      const { data: profile } = await admin
+        .from('user_profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+      role = profile?.role ?? null;
+    } catch {
+      role = null;
+    }
+
+    return NextResponse.json({
+      success: true,
+      token: data.session.access_token,
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      expiresIn: data.session.expires_in,
+      user: {
+        id: data.user.id,
+        email: data.user.email ?? email,
+        role,
+      },
+      session: data.session,
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || 'Login failed.' },
+      { status: 500 }
+    );
+  }
+}
+
