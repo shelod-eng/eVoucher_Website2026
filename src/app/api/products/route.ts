@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     let query = resolveClient()
       .from('merchant_products')
       .select(
-        'id,merchant_id,product_name,face_value,total_discount_pct,is_active,status,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,display_priority,created_at'
+        'id,merchant_id,product_name,face_value,total_discount_pct,is_active,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,display_priority,created_at'
       )
       .order('display_priority', { ascending: false })
       .order('created_at', { ascending: false });
@@ -39,11 +39,7 @@ export async function GET(request: Request) {
     if (error) throw error;
 
     const products = (data ?? [])
-      .filter((product: any) => {
-        const activeByFlag = product?.is_active === true;
-        const activeByStatus = String(product?.status ?? '').toLowerCase() === 'active';
-        return activeByFlag || activeByStatus || product?.status == null;
-      })
+      .filter((product: any) => product?.is_active !== false)
       .map((product: any) => ({
         id: product.id,
         merchant_id: product.merchant_id,
@@ -60,7 +56,6 @@ export async function GET(request: Request) {
         valid_provinces: Array.isArray(product.valid_provinces) ? product.valid_provinces : [],
         valid_branch_ids: Array.isArray(product.valid_branch_ids) ? product.valid_branch_ids : [],
         is_active: Boolean(product.is_active ?? true),
-        status: product.status ?? null,
       }));
 
     return NextResponse.json({
@@ -76,4 +71,3 @@ export async function GET(request: Request) {
     );
   }
 }
-
