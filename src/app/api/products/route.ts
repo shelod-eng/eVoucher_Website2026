@@ -26,9 +26,8 @@ export async function GET(request: Request) {
     let query = resolveClient()
       .from('merchant_products')
       .select(
-        'id,merchant_id,product_name,face_value,total_discount_pct,is_active,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,display_priority,created_at'
+        'id,merchant_id,product_name,face_value,total_discount_pct,is_active,parent_brand,redemption_scope,valid_provinces,valid_branch_ids,created_at'
       )
-      .order('display_priority', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (merchantId) {
