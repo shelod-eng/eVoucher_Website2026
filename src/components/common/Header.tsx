@@ -42,6 +42,7 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
 
   const publicNavItems: NavItem[] = [
     { label: 'Home', href: '/', icon: 'HomeIcon' },
+    { label: 'USSD Sim', href: '/ussd-console', icon: 'DevicePhoneMobileIcon' },
     { label: 'Consumer', href: '/consumer-experience', icon: 'UserIcon' },
     { label: 'Merchants', href: '/merchants', icon: 'BuildingStorefrontIcon' },
     { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
@@ -49,6 +50,7 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
 
   const consumerNavItems: NavItem[] = [
     { label: 'Home', href: '/customer/dashboard', icon: 'HomeIcon' },
+    { label: 'USSD Sim', href: '/ussd-console', icon: 'DevicePhoneMobileIcon' },
     { label: 'Shop', href: '/shop', icon: 'BuildingStorefrontIcon' },
     { label: 'Wallet', href: '/wallet', icon: 'WalletIcon' },
     { label: 'Redeem', href: '/redeem', icon: 'QrCodeIcon' },
@@ -60,6 +62,7 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
 
   const merchantNavItems: NavItem[] = [
     { label: 'Home', href: '/merchant/dashboard', icon: 'HomeIcon' },
+    { label: 'USSD Sim', href: '/ussd-console', icon: 'DevicePhoneMobileIcon' },
     {
       label: 'Dashboard',
       href: '/merchant/dashboard?tab=studio',
