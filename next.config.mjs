@@ -59,6 +59,46 @@ const nextConfig = {
     ];
   },
 
+  async headers() {
+    const privateNoStoreHeaders = [
+      { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
+      { key: 'Pragma', value: 'no-cache' },
+      { key: 'Expires', value: '0' },
+      { key: 'Vary', value: 'Cookie, Authorization' },
+    ];
+
+    return [
+      {
+        source: '/customer/:path*',
+        headers: privateNoStoreHeaders,
+      },
+      {
+        source: '/profile',
+        headers: privateNoStoreHeaders,
+      },
+      {
+        source: '/wallet',
+        headers: privateNoStoreHeaders,
+      },
+      {
+        source: '/cart',
+        headers: privateNoStoreHeaders,
+      },
+      {
+        source: '/shop',
+        headers: privateNoStoreHeaders,
+      },
+      {
+        source: '/api/auth/:path*',
+        headers: privateNoStoreHeaders,
+      },
+      {
+        source: '/api/v1/customer/:path*',
+        headers: privateNoStoreHeaders,
+      },
+    ];
+  },
+
   webpack: (config, { dev }) => {
     // Windows + endpoint security can lock webpack cache artifacts during dev.
     // Disable filesystem cache in dev to avoid intermittent UNKNOWN/ENOENT errors.

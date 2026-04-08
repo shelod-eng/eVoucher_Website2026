@@ -2,6 +2,26 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function noStoreHeaders(existing?: HeadersInit): HeadersInit {
+  return {
+    ...(existing ?? {}),
+    'Cache-Control': 'private, no-store, max-age=0, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+    Vary: 'Cookie, Authorization',
+  };
+}
+
+function jsonNoStore(body: unknown, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...(init ?? {}),
+    headers: noStoreHeaders(init?.headers),
+  });
+}
+
 function getSupabasePublicClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -20,7 +40,7 @@ export async function POST(request: Request) {
     const password = String(body?.password ?? '');
 
     if (!email || !password) {
-      return NextResponse.json(
+      return jsonNoStore(
         { error: 'Email/username and password are required.' },
         { status: 400 }
       );
@@ -29,7 +49,7 @@ export async function POST(request: Request) {
     const supabase = getSupabasePublicClient();
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error || !data?.session || !data?.user) {
-      return NextResponse.json(
+      return jsonNoStore(
         { error: error?.message || 'Invalid login credentials.' },
         { status: 401 }
       );
@@ -48,7 +68,7 @@ export async function POST(request: Request) {
       role = null;
     }
 
-    return NextResponse.json({
+    return jsonNoStore({
       success: true,
       token: data.session.access_token,
       accessToken: data.session.access_token,
@@ -62,10 +82,9 @@ export async function POST(request: Request) {
       session: data.session,
     });
   } catch (error: any) {
-    return NextResponse.json(
+    return jsonNoStore(
       { error: error?.message || 'Login failed.' },
       { status: 500 }
     );
   }
 }
-

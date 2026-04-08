@@ -2,6 +2,26 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function noStoreHeaders(existing?: HeadersInit): HeadersInit {
+  return {
+    ...(existing ?? {}),
+    'Cache-Control': 'private, no-store, max-age=0, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+    Vary: 'Cookie, Authorization',
+  };
+}
+
+function jsonNoStore(body: unknown, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...(init ?? {}),
+    headers: noStoreHeaders(init?.headers),
+  });
+}
+
 interface UpdatePaymentMethodRequest {
   isDefault?: boolean;
   isActive?: boolean;
@@ -11,7 +31,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
-      return NextResponse.json(
+      return jsonNoStore(
         { error: 'You must be signed in as a consumer.', code: 'unauthenticated' },
         { status: 401 }
       );
@@ -19,7 +39,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     const { role } = await resolveUserRole(supabase, user);
     if (!isConsumerRole(role)) {
-      return NextResponse.json(
+      return jsonNoStore(
         { error: 'Payment methods are available to consumers only.', code: 'consumer_only' },
         { status: 403 }
       );
@@ -39,7 +59,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (body.isActive !== undefined) updatePayload.is_active = Boolean(body.isActive);
 
     if (Object.keys(updatePayload).length === 0) {
-      return NextResponse.json(
+      return jsonNoStore(
         { error: 'No updates provided.', code: 'no_updates' },
         { status: 400 }
       );
@@ -55,12 +75,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     if (error) throw error;
 
-    return NextResponse.json({
+    return jsonNoStore({
       message: 'Payment method updated.',
       paymentMethod: data,
     });
   } catch (error: any) {
-    return NextResponse.json(
+    return jsonNoStore(
       {
         error: error?.message || 'Failed to update payment method.',
         code: 'payment_method_update_failed',
@@ -74,7 +94,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
-      return NextResponse.json(
+      return jsonNoStore(
         { error: 'You must be signed in as a consumer.', code: 'unauthenticated' },
         { status: 401 }
       );
@@ -82,7 +102,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
 
     const { role } = await resolveUserRole(supabase, user);
     if (!isConsumerRole(role)) {
-      return NextResponse.json(
+      return jsonNoStore(
         { error: 'Payment methods are available to consumers only.', code: 'consumer_only' },
         { status: 403 }
       );
@@ -96,11 +116,11 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
 
     if (error) throw error;
 
-    return NextResponse.json({
+    return jsonNoStore({
       message: 'Payment method removed.',
     });
   } catch (error: any) {
-    return NextResponse.json(
+    return jsonNoStore(
       {
         error: error?.message || 'Failed to remove payment method.',
         code: 'payment_method_remove_failed',

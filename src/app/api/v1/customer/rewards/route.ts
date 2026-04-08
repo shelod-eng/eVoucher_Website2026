@@ -3,6 +3,26 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function noStoreHeaders(existing?: HeadersInit): HeadersInit {
+  return {
+    ...(existing ?? {}),
+    'Cache-Control': 'private, no-store, max-age=0, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+    Vary: 'Cookie, Authorization',
+  };
+}
+
+function jsonNoStore(body: unknown, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...(init ?? {}),
+    headers: noStoreHeaders(init?.headers),
+  });
+}
+
 type RewardTxn = {
   id: string;
   merchant_id?: string | null;
@@ -47,12 +67,12 @@ export async function GET() {
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return jsonNoStore({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { role } = await resolveUserRole(supabase, user);
     if (!isConsumerRole(role)) {
-      return NextResponse.json(
+      return jsonNoStore(
         { error: 'Rewards are available to consumer accounts only.', code: 'consumer_only' },
         { status: 403 }
       );
@@ -165,7 +185,7 @@ export async function GET() {
       (voucher: VoucherRow) => voucher.is_active && Number(voucher.current_balance ?? 0) > 0
     ).length;
 
-    return NextResponse.json({
+    return jsonNoStore({
       totalCashSaved: round2(totalCashSaved),
       thisMonthSavings: round2(thisMonthSavings),
       averageAnnualSavings: round2(averageAnnualSavings),
@@ -189,7 +209,7 @@ export async function GET() {
       })),
     });
   } catch (error: any) {
-    return NextResponse.json(
+    return jsonNoStore(
       { error: error?.message || 'Failed to load rewards summary.' },
       { status: 500 }
     );

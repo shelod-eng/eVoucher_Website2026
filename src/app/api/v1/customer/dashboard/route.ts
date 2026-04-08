@@ -5,6 +5,26 @@ import { BrandKey, listMerchantBrands } from '@/lib/merchant-brand-catalog';
 import { buildStarterProductsForBrand } from '@/lib/starter-products';
 import { DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+function noStoreHeaders(existing?: HeadersInit): HeadersInit {
+  return {
+    ...(existing ?? {}),
+    'Cache-Control': 'private, no-store, max-age=0, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+    Vary: 'Cookie, Authorization',
+  };
+}
+
+function jsonNoStore(body: unknown, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...(init ?? {}),
+    headers: noStoreHeaders(init?.headers),
+  });
+}
+
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const relation = relationName.toLowerCase();
@@ -106,7 +126,7 @@ export async function GET() {
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
-      return NextResponse.json(
+      return jsonNoStore(
         {
           error: 'You must be signed in as a consumer to view this dashboard.',
           code: 'unauthenticated',
@@ -117,7 +137,7 @@ export async function GET() {
 
     const { role } = await resolveUserRole(supabase, user);
     if (!isConsumerRole(role)) {
-      return NextResponse.json(
+      return jsonNoStore(
         {
           error: 'This dashboard is only available to consumer accounts.',
           code: 'consumer_only_dashboard',
@@ -229,7 +249,7 @@ export async function GET() {
             }))
           );
 
-    return NextResponse.json({
+    return jsonNoStore({
       profile,
       vouchers: vouchersPayload,
       transactions: transactionsRes.data ?? [],
@@ -245,7 +265,7 @@ export async function GET() {
       },
     });
   } catch (error: any) {
-    return NextResponse.json(
+    return jsonNoStore(
       {
         error: error?.message || 'Failed to load customer dashboard.',
         code: 'customer_dashboard_failed',

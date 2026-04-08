@@ -55,3 +55,7 @@ export function isConsumerRole(role: string) {
 export function isMerchantRole(role: string) {
   return role === 'merchant';
 }
+
+export function isAdminRole(role: string) {
+  return role === 'admin';
+}

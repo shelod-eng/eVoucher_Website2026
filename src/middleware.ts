@@ -16,6 +16,14 @@ type CookieToSet = {
 };
 
 export async function middleware(request: NextRequest) {
+  const applyNoStoreHeaders = (response: NextResponse) => {
+    response.headers.set('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    response.headers.set('Vary', 'Cookie, Authorization');
+    return response;
+  };
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -59,15 +67,20 @@ export async function middleware(request: NextRequest) {
     path.startsWith('/merchant/create-product') ||
     path.startsWith('/merchant/change-password');
 
+  const portalArea = path.startsWith('/portal');
+  const portalLogin = path.startsWith('/portal/login');
+
   // Redirect to login if accessing protected routes without auth
-  if (!user && (customerArea || merchantProtectedArea)) {
+  if (!user && (customerArea || merchantProtectedArea || (portalArea && !portalLogin))) {
     const url = request.nextUrl.clone();
-    if (merchantProtectedArea) {
+    if (portalArea) {
+      url.pathname = '/portal/login';
+    } else if (merchantProtectedArea) {
       url.pathname = '/merchant/login';
     } else {
       url.pathname = '/signin';
     }
-    return NextResponse.redirect(url);
+    return applyNoStoreHeaders(NextResponse.redirect(url));
   }
 
   // Role-aware route protections.
@@ -75,17 +88,23 @@ export async function middleware(request: NextRequest) {
     if (customerArea && role === 'merchant') {
       const url = request.nextUrl.clone();
       url.pathname = '/merchant/dashboard';
-      return NextResponse.redirect(url);
+      return applyNoStoreHeaders(NextResponse.redirect(url));
     }
 
     if (merchantProtectedArea && role && role !== 'merchant') {
       const url = request.nextUrl.clone();
       url.pathname = '/shop';
-      return NextResponse.redirect(url);
+      return applyNoStoreHeaders(NextResponse.redirect(url));
+    }
+
+    if (portalArea && role !== 'admin') {
+      const url = request.nextUrl.clone();
+      url.pathname = role === 'merchant' ? '/merchant/dashboard' : '/shop';
+      return applyNoStoreHeaders(NextResponse.redirect(url));
     }
   }
 
-  return supabaseResponse;
+  return applyNoStoreHeaders(supabaseResponse);
 }
 
 export const config = {
