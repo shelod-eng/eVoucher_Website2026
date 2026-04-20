@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { getWalletBalance } from '@/server/services/wallet/ledger';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -60,6 +61,8 @@ export async function GET() {
       );
     }
 
+    const admin = createAdminClient();
+
     const [profileRes, vouchersRes, transactionsRes, paymentsRes] = await Promise.all([
       supabase
         .from('user_profiles')
@@ -79,7 +82,7 @@ export async function GET() {
         .eq('customer_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10),
-      supabase
+      admin
         .from('payment_transactions')
         .select('id,merchant_id,voucher_code,amount,card_brand,card_last_four,payment_status,created_at')
         .eq('customer_id', user.id)
@@ -150,7 +153,7 @@ export async function GET() {
 
     const vouchersPayload = vouchersRes.data ?? [];
     const paymentTransactionsPayload = paymentsRes.data ?? [];
-    const walletBalanceFromLedger = (await getWalletBalance(supabase, user.id)) ?? 0;
+    const walletBalanceFromLedger = (await getWalletBalance(admin, user.id)) ?? 0;
     const walletTopupCredits = paymentTransactionsPayload.reduce((sum: number, tx: any) => {
       const status = String(tx?.payment_status ?? '')
         .toLowerCase()
