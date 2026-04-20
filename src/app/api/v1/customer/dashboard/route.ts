@@ -160,8 +160,8 @@ export async function GET() {
         .trim();
       const isCompleted = !status || status === 'completed' || status === 'paid' || status === 'success';
       if (!isCompleted) return sum;
-      const hasNoVoucher = !tx?.voucher_code;
-      if (!hasNoVoucher) return sum;
+      const isWalletTopup = !tx?.voucher_code && !tx?.merchant_id;
+      if (!isWalletTopup) return sum;
       const amount = Number(tx?.amount ?? 0);
       return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
     }, 0);

@@ -58,8 +58,7 @@ export async function POST(request: Request) {
       reference: transactionReference,
     });
 
-    // Wallet top-up is synchronous for demo/compliance flow.
-    const paymentStatus = 'completed' as const;
+    const paymentStatus = payment.status;
 
     const admin = createAdminClient();
     const cardBrand =
@@ -87,12 +86,14 @@ export async function POST(request: Request) {
     });
     if (txRes.error) throw txRes.error;
 
-    await recordWalletCredit(admin, {
-      customerId: user.id,
-      userEmail: user.email ?? null,
-      amount,
-      description: `Wallet top-up ${transactionReference}`,
-    });
+    if (paymentStatus === 'completed') {
+      await recordWalletCredit(admin, {
+        customerId: user.id,
+        userEmail: user.email ?? null,
+        amount,
+        description: `Wallet top-up ${transactionReference}`,
+      });
+    }
 
     const walletBalance = (await getWalletBalance(admin, user.id)) ?? 0;
 

@@ -38,7 +38,7 @@ export async function getWalletBalance(admin: any, customerId: string): Promise<
       const credits = rows.reduce((sum: number, row: any) => {
         const status = String(row?.payment_status ?? '').toLowerCase();
         if (status && status !== 'completed') return sum;
-        const isTopup = !row?.voucher_code;
+        const isTopup = !row?.voucher_code && !row?.merchant_id;
         if (!isTopup) return sum;
         const amount = Number(row?.amount ?? 0);
         return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;

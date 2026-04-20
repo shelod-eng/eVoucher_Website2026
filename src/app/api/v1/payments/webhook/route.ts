@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { MockPaymentProvider } from '@/server/services/payment/mock-payment-provider';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
+import { recordWalletCredit } from '@/server/services/wallet/ledger';
 import { writeAuditEvent } from '@/server/utils/audit';
 import { generateSecureVoucherCode, sha256 } from '@/server/utils/security';
 import {
@@ -14,6 +15,8 @@ interface WebhookPayload {
   eventId?: string;
   transactionReference?: string;
   status?: string;
+  amount?: number | string;
+  settledAmount?: number | string;
 }
 
 export async function POST(request: Request) {
@@ -70,8 +73,19 @@ export async function POST(request: Request) {
     if (transactionError || !transaction) {
       return NextResponse.json({ error: 'Transaction not found.' }, { status: 404 });
     }
+    const previousStatus = String(transaction.payment_status ?? '')
+      .toLowerCase()
+      .trim();
+    const settledAmountCandidate = Number(
+      payload.settledAmount ?? payload.amount ?? transaction.amount ?? 0
+    );
+    const settledAmount =
+      Number.isFinite(settledAmountCandidate) && settledAmountCandidate > 0
+        ? Number(settledAmountCandidate.toFixed(2))
+        : Number(transaction.amount ?? 0);
+    const isWalletTopupTransaction = !transaction.merchant_id && !transaction.voucher_code;
 
-    const faceValue = Number(transaction.face_value ?? transaction.amount);
+    const faceValue = Number(transaction.face_value ?? settledAmount);
     const rawTotalDiscountPct = transaction.total_discount_pct ?? null;
     const rawConsumerBenefitPct = transaction.consumer_benefit_pct ?? null;
     const rawEvoucherBenefitPct = transaction.evoucher_benefit_pct ?? null;
@@ -92,7 +106,16 @@ export async function POST(request: Request) {
     const pricing = calculateDiscountPricing(faceValue, totalDiscountPct);
 
     let voucherCode: string | null = transaction.voucher_code;
-    if (normalizedStatus === 'completed' && !voucherCode) {
+    if (normalizedStatus === 'completed' && isWalletTopupTransaction) {
+      if (previousStatus !== 'completed') {
+        await recordWalletCredit(admin, {
+          customerId: transaction.customer_id,
+          userEmail: null,
+          amount: settledAmount,
+          description: `Wallet top-up ${payload.transactionReference}`,
+        });
+      }
+    } else if (normalizedStatus === 'completed' && !voucherCode) {
       const { data: merchant, error: merchantError } = await admin
         .from('merchants')
         .select('id,business_name')
@@ -121,6 +144,7 @@ export async function POST(request: Request) {
     await admin
       .from('payment_transactions')
       .update({
+        amount: settledAmount,
         payment_status: normalizedStatus,
         voucher_code: voucherCode,
       })
@@ -135,6 +159,8 @@ export async function POST(request: Request) {
       metadata: {
         provider,
         normalizedStatus,
+        settledAmount,
+        isWalletTopupTransaction,
         voucherCode,
         faceValue: pricing.faceValue,
         consumerPrice: pricing.consumerPrice,
