@@ -20,7 +20,41 @@ export async function getWalletBalance(admin: any, customerId: string): Promise<
     .eq('customer_id', customerId);
 
   if (res.error) {
-    if (isMissingRelation(res.error, 'public.wallet_transactions')) return null;
+    if (isMissingRelation(res.error, 'public.wallet_transactions')) {
+      // Fallback for environments where wallet_transactions migration is not deployed yet.
+      // Credits: wallet top-ups are stored as payment transactions with merchant_id + voucher_code null.
+      // Debits: wallet-funded voucher purchases are stored with card_brand='WALLET'.
+      const paymentsRes = await admin
+        .from('payment_transactions')
+        .select('amount,merchant_id,voucher_code,card_brand,payment_status')
+        .eq('customer_id', customerId);
+
+      if (paymentsRes.error) {
+        if (isMissingRelation(paymentsRes.error, 'public.payment_transactions')) return 0;
+        throw paymentsRes.error;
+      }
+
+      const rows = Array.isArray(paymentsRes.data) ? paymentsRes.data : [];
+      const credits = rows.reduce((sum: number, row: any) => {
+        const status = String(row?.payment_status ?? '').toLowerCase();
+        if (status && status !== 'completed') return sum;
+        const isTopup = !row?.merchant_id && !row?.voucher_code;
+        if (!isTopup) return sum;
+        const amount = Number(row?.amount ?? 0);
+        return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+      }, 0);
+
+      const debits = rows.reduce((sum: number, row: any) => {
+        const status = String(row?.payment_status ?? '').toLowerCase();
+        if (status && status !== 'completed') return sum;
+        const brand = String(row?.card_brand ?? '').toUpperCase().trim();
+        if (brand !== 'WALLET') return sum;
+        const amount = Number(row?.amount ?? 0);
+        return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+      }, 0);
+
+      return Number(Math.max(credits - debits, 0).toFixed(2));
+    }
     throw res.error;
   }
 
