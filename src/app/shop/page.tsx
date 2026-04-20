@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import { addCartItem, getCartItems } from '@/lib/cart';
+import { addCartItem, getCartItems, saveCartItems } from '@/lib/cart';
 
 interface BrandLocation {
   id: string;
@@ -110,7 +110,7 @@ export default function ShopPage() {
   useEffect(() => {
     if (!user) return;
     const refreshCartCount = () => {
-      const count = getCartItems().reduce((sum, item) => sum + item.quantity, 0);
+      const count = getCartItems(user.id).reduce((sum, item) => sum + item.quantity, 0);
       setCartCount(count);
     };
 
@@ -202,6 +202,19 @@ export default function ShopPage() {
       return;
     }
 
+    const scopedUserId = user?.id;
+    const existingItems = getCartItems(scopedUserId);
+    const hasOtherMerchantItems = existingItems.some(
+      (item) => String(item.merchantId) !== String(product.merchant_id)
+    );
+
+    if (hasOtherMerchantItems) {
+      saveCartItems([], scopedUserId);
+      setStatusMessage(
+        `Cart switched to ${product.merchant_name}. You can only checkout one merchant at a time.`
+      );
+    }
+
     addCartItem({
       id: product.id,
       merchantId: product.merchant_id,
@@ -215,7 +228,7 @@ export default function ShopPage() {
       quantity: 1,
       parentBrand: product.parent_brand,
       redemptionScope: product.redemption_scope,
-    });
+    }, scopedUserId);
     setStatusMessage(`${product.product_name} added to cart.`);
     window.setTimeout(() => setStatusMessage(''), 1600);
   };

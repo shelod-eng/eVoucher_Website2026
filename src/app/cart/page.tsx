@@ -24,18 +24,18 @@ export default function CartPage() {
       router.push('/signin');
       return;
     }
-    setItems(getCartItems());
+    setItems(getCartItems(user?.id));
   }, [authLoading, user, router]);
 
   const summary = getCartSummary(items);
   const itemCount = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
 
   const handleRemove = (productId: string) => {
-    setItems(removeCartItem(productId));
+    setItems(removeCartItem(productId, user?.id));
   };
 
   const handleQuantityChange = (productId: string, quantity: number) => {
-    setItems(updateCartQuantity(productId, quantity));
+    setItems(updateCartQuantity(productId, quantity, user?.id));
   };
 
   const handleCheckout = () => {
@@ -141,7 +141,7 @@ export default function CartPage() {
                 ))}
                 <button
                   onClick={() => {
-                    clearCart();
+                    clearCart(user?.id);
                     setItems([]);
                   }}
                   className="px-4 py-2 rounded-lg border border-border text-sm font-headline font-semibold"

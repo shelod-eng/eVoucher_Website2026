@@ -309,7 +309,7 @@ function BuyVouchersContent() {
       setCheckoutUrl(data.checkoutUrl || null);
       setPricingResult(data.pricing ?? previewPricing);
       if (data.status === 'completed') {
-        clearCart();
+        clearCart(user?.id);
       }
     } catch (purchaseError: any) {
       setPurchaseStatus('failed');

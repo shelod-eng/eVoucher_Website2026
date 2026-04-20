@@ -175,6 +175,13 @@ function toFriendlyDashboardError(message: string) {
   return message || 'Failed to load merchant dashboard.';
 }
 
+function isDemoMerchantEmail(email: string | null | undefined) {
+  const normalized = String(email ?? '')
+    .trim()
+    .toLowerCase();
+  return normalized.startsWith('demo-') && normalized.endsWith('@evoucher.co.za');
+}
+
 export default function MerchantDashboard() {
   const { user, role, loading: authLoading, signOut } = useAuth();
   const [merchant, setMerchant] = useState<Merchant | null>(null);
@@ -203,6 +210,7 @@ export default function MerchantDashboard() {
     destination: '',
     reference: '',
   });
+  const [seedingDemoData, setSeedingDemoData] = useState(false);
   const router = useRouter();
   const logisticsInventoryKey = useMemo(() => {
     return merchant?.id
@@ -306,8 +314,10 @@ export default function MerchantDashboard() {
     if (storedInventory) {
       try {
         const parsed = JSON.parse(storedInventory) as LogisticsInventoryItem[];
-        setLogisticsInventory(parsed);
-        return;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setLogisticsInventory(parsed);
+          return;
+        }
       } catch {
         // ignore parse errors and re-seed
       }
@@ -333,6 +343,30 @@ export default function MerchantDashboard() {
     logisticsInventoryKey,
     logisticsInventory.length,
   ]);
+
+  useEffect(() => {
+    if (!merchant?.id || merchantProducts.length === 0) return;
+    setLogisticsInventory((prev) => {
+      const existingSourceIds = new Set(
+        prev.map((item) => String(item.sourceProductId ?? item.id))
+      );
+      const missingProducts = merchantProducts.filter(
+        (product) => !existingSourceIds.has(String(product.id))
+      );
+      if (missingProducts.length === 0) return prev;
+      const startIndex = prev.length;
+      const additions = missingProducts.map((product, index) => ({
+        id: String(product.id),
+        name: String(product.product_name ?? 'Voucher Product'),
+        sku: `SPC-${String(startIndex + index + 1).padStart(3, '0')}`,
+        stock: 20 + index * 2,
+        reorderLevel: 10,
+        unitPrice: Number(product.face_value ?? 0),
+        sourceProductId: String(product.id),
+      }));
+      return [...prev, ...additions];
+    });
+  }, [merchant?.id, merchantProducts]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -383,14 +417,17 @@ export default function MerchantDashboard() {
         fetch('/api/v1/analytics/overview', {
           method: 'GET',
           credentials: 'include',
+          cache: 'no-store',
         }),
         fetch('/api/v1/merchant/products', {
           method: 'GET',
           credentials: 'include',
+          cache: 'no-store',
         }),
         fetch('/api/v1/merchant/branches', {
           method: 'GET',
           credentials: 'include',
+          cache: 'no-store',
         }),
       ]);
 
@@ -550,6 +587,25 @@ export default function MerchantDashboard() {
       )
     );
     setLogisticsMessage('Inventory updated.');
+  };
+
+  const seedDemoMerchantActivity = async () => {
+    if (!isDemoMerchantEmail(merchant?.email)) return;
+    try {
+      setSeedingDemoData(true);
+      setProductMessage('Refreshing demo KPI and logistics seed...');
+      await fetch('/api/v1/merchant/demo-seed', {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      await fetchDashboardData();
+      setProductMessage('Demo data refreshed for this merchant dashboard.');
+    } catch (seedError: any) {
+      setProductMessage(seedError?.message || 'Failed to refresh demo data.');
+    } finally {
+      setSeedingDemoData(false);
+    }
   };
 
   const handleCreateLogisticsOrder = () => {
@@ -880,6 +936,16 @@ export default function MerchantDashboard() {
                   Performance KPIs
                 </h2>
                 <div className="flex gap-3">
+                  {isDemoMerchantEmail(merchant?.email) && (
+                    <button
+                      type="button"
+                      onClick={() => void seedDemoMerchantActivity()}
+                      disabled={seedingDemoData}
+                      className="px-4 py-2 rounded-lg border border-border font-headline font-semibold hover:bg-muted disabled:opacity-60"
+                    >
+                      {seedingDemoData ? 'Loading Demo Data...' : 'Load Demo Data'}
+                    </button>
+                  )}
                   <a
                     href="/api/v1/analytics/export?type=monthly"
                     className="px-4 py-2 rounded-lg border border-border font-headline font-semibold hover:bg-muted"

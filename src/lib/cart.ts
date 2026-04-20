@@ -15,13 +15,20 @@ export interface CartItem {
 
 const CART_KEY = 'evoucher_cart_items';
 
+function resolveCartKey(scopeKey?: string | null) {
+  const normalizedScope = String(scopeKey ?? '')
+    .trim()
+    .toLowerCase();
+  return normalizedScope ? `${CART_KEY}_${normalizedScope}` : CART_KEY;
+}
+
 function isBrowser() {
   return typeof window !== 'undefined';
 }
 
-export function getCartItems(): CartItem[] {
+export function getCartItems(scopeKey?: string | null): CartItem[] {
   if (!isBrowser()) return [];
-  const raw = window.localStorage.getItem(CART_KEY);
+  const raw = window.localStorage.getItem(resolveCartKey(scopeKey));
   if (!raw) return [];
 
   try {
@@ -33,32 +40,32 @@ export function getCartItems(): CartItem[] {
   }
 }
 
-export function saveCartItems(items: CartItem[]) {
+export function saveCartItems(items: CartItem[], scopeKey?: string | null) {
   if (!isBrowser()) return;
-  window.localStorage.setItem(CART_KEY, JSON.stringify(items));
+  window.localStorage.setItem(resolveCartKey(scopeKey), JSON.stringify(items));
   window.dispatchEvent(new Event('evoucher-cart-updated'));
 }
 
-export function addCartItem(item: CartItem) {
-  const items = getCartItems();
+export function addCartItem(item: CartItem, scopeKey?: string | null) {
+  const items = getCartItems(scopeKey);
   const existing = items.find((cartItem) => cartItem.productId === item.productId);
   if (existing) {
     existing.quantity += item.quantity;
   } else {
     items.push(item);
   }
-  saveCartItems(items);
+  saveCartItems(items, scopeKey);
   return items;
 }
 
-export function removeCartItem(productId: string) {
-  const items = getCartItems().filter((item) => item.productId !== productId);
-  saveCartItems(items);
+export function removeCartItem(productId: string, scopeKey?: string | null) {
+  const items = getCartItems(scopeKey).filter((item) => item.productId !== productId);
+  saveCartItems(items, scopeKey);
   return items;
 }
 
-export function updateCartQuantity(productId: string, quantity: number) {
-  const items = getCartItems().map((item) =>
+export function updateCartQuantity(productId: string, quantity: number, scopeKey?: string | null) {
+  const items = getCartItems(scopeKey).map((item) =>
     item.productId === productId
       ? {
           ...item,
@@ -66,13 +73,13 @@ export function updateCartQuantity(productId: string, quantity: number) {
         }
       : item
   );
-  saveCartItems(items);
+  saveCartItems(items, scopeKey);
   return items;
 }
 
-export function clearCart() {
+export function clearCart(scopeKey?: string | null) {
   if (!isBrowser()) return;
-  window.localStorage.removeItem(CART_KEY);
+  window.localStorage.removeItem(resolveCartKey(scopeKey));
   window.dispatchEvent(new Event('evoucher-cart-updated'));
 }
 

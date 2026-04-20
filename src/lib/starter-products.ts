@@ -9,10 +9,18 @@ interface StarterProductTemplate {
 
 const STARTER_PRODUCTS: Record<BrandKey, StarterProductTemplate[]> = {
   picknpay: [
-    { name: 'Grocery Voucher R500', faceValue: 500 },
-    { name: 'Grocery Voucher R1000', faceValue: 1000 },
-    { name: 'Family Basket Voucher R200', faceValue: 200 },
-    { name: 'Top Up Voucher R100', faceValue: 100 },
+    { name: 'Pick n Pay Smart Shopper Top-Up', faceValue: 100 },
+    { name: 'Pick n Pay Family Grocery Basket', faceValue: 200 },
+    { name: 'Pick n Pay Monthly Pantry Bundle', faceValue: 500 },
+    { name: 'Pick n Pay Bulk Saver Combo', faceValue: 1000 },
+    { name: 'No Name Long Life Milk 6 x 1L', faceValue: 79.99 },
+    { name: 'Pick n Pay Maize Meal 10kg', faceValue: 129.99 },
+    { name: 'Pick n Pay Sunflower Oil 2L', faceValue: 69.99 },
+    { name: 'Pick n Pay Brown Bread 700g', faceValue: 17.49 },
+    { name: 'Pick n Pay Large Eggs 18-Pack', faceValue: 69.99 },
+    { name: 'Pick n Pay Frozen Chicken IQF 2kg', faceValue: 114.99 },
+    { name: 'Pick n Pay Rice 5kg', faceValue: 99.99 },
+    { name: 'Pick n Pay Sugar 2.5kg', faceValue: 57.99 },
   ],
   clicks: [
     { name: 'Healthcare Voucher R100', faceValue: 100 },
