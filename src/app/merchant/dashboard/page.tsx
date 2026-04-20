@@ -104,6 +104,25 @@ interface LogisticsOrder {
   items: LogisticsOrderItem[];
 }
 
+function buildDefaultProductForm(defaultDiscountPct = 4) {
+  return {
+    productName: '',
+    faceValue: 100,
+    totalDiscountPct: Number(defaultDiscountPct),
+    validityDays: 90,
+    redemptionScope: 'all_branches' as
+      | 'all_branches'
+      | 'specific_branch'
+      | 'province_wide'
+      | 'national',
+    isSpecial: false,
+    specialTitle: 'Weekend Special',
+    specialEndAt: '',
+    displayPriority: 0,
+    validBranchIds: [] as string[],
+  };
+}
+
 const PROMOTION_BADGES = [
   'Weekend Special',
   'Flash Sale',
@@ -174,22 +193,7 @@ export default function MerchantDashboard() {
   const [productsSearch, setProductsSearch] = useState('');
   const [productsPage, setProductsPage] = useState(1);
   const [savingInlineEdit, setSavingInlineEdit] = useState(false);
-  const [productForm, setProductForm] = useState({
-    productName: '',
-    faceValue: 100,
-    totalDiscountPct: 4,
-    validityDays: 90,
-    redemptionScope: 'all_branches' as
-      | 'all_branches'
-      | 'specific_branch'
-      | 'province_wide'
-      | 'national',
-    isSpecial: false,
-    specialTitle: 'Weekend Special',
-    specialEndAt: '',
-    displayPriority: 0,
-    validBranchIds: [] as string[],
-  });
+  const [productForm, setProductForm] = useState(buildDefaultProductForm(4));
   const [logisticsInventory, setLogisticsInventory] = useState<LogisticsInventoryItem[]>([]);
   const [logisticsOrders, setLogisticsOrders] = useState<LogisticsOrder[]>([]);
   const [logisticsMessage, setLogisticsMessage] = useState('');
@@ -294,12 +298,6 @@ export default function MerchantDashboard() {
       window.removeEventListener('merchant-tab-change', handler as EventListener);
     };
   }, []);
-
-  useEffect(() => {
-    if (merchantProducts.length > 0 && activeMerchantTab === 'studio') {
-      setActiveMerchantTab('products');
-    }
-  }, [merchantProducts.length, activeMerchantTab]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -658,18 +656,11 @@ export default function MerchantDashboard() {
       }
 
       setProductMessage('Voucher product created.');
-      setProductForm({
-        productName: '',
-        faceValue: 100,
-        totalDiscountPct: 4,
-        validityDays: 90,
-        redemptionScope: 'all_branches',
-        isSpecial: false,
-        specialTitle: 'Weekend Special',
-        specialEndAt: '',
-        displayPriority: 0,
-        validBranchIds: [],
-      });
+      setProductForm(
+        buildDefaultProductForm(
+          Number(merchant?.default_total_discount_pct ?? 4)
+        )
+      );
       await fetchDashboardData();
     } catch (productError: any) {
       setProductMessage(productError?.message || 'Failed to create product.');
@@ -1193,6 +1184,10 @@ export default function MerchantDashboard() {
                     {savingProduct ? 'Saving Product...' : 'Create Product'}
                   </button>
 
+                  <p className="text-xs text-muted-foreground font-body">
+                    Merchant-controlled setup: set your own discount %, specials, scope, and priority before creating each product.
+                  </p>
+
                   {productMessage && (
                     <p className="mt-3 text-sm text-muted-foreground font-body">{productMessage}</p>
                   )}
@@ -1261,7 +1256,12 @@ export default function MerchantDashboard() {
                       />
                       <button
                         type="button"
-                        onClick={() => setActiveMerchantTab('studio')}
+                        onClick={() => {
+                          setActiveMerchantTab('studio');
+                          setProductMessage(
+                            'Tip: Use Product Studio to set discount %, specials, and scope, then click Create Product.'
+                          );
+                        }}
                         className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-headline font-semibold"
                       >
                         Add Product
