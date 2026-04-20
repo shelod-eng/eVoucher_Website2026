@@ -9,6 +9,8 @@ import { generateSecureVoucherCode, generateTransactionReference } from '@/serve
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { resolveBrandFromMerchantName, getBrandByKey } from '@/lib/merchant-brand-catalog';
+import { getWalletBalance, recordWalletDebit } from '@/server/services/wallet/ledger';
+import { recordVoucherPurchaseBillingEvent } from '@/server/services/billing/billing-events';
 
 const SUPPORTED_PAYMENT_METHODS = new Set([
   'visa_secure',
@@ -17,6 +19,15 @@ const SUPPORTED_PAYMENT_METHODS = new Set([
   'eft',
   'wallet',
 ]);
+
+function isMissingRelation(error: any, relationName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const relation = relationName.toLowerCase();
+  return (
+    message.includes(`relation "${relation}" does not exist`) ||
+    message.includes(`could not find the table '${relation}' in the schema cache`)
+  );
+}
 
 function validate(body: PurchaseVoucherRequest): string | null {
   if (!body.merchantId?.trim()) return 'Merchant is required.';
@@ -375,15 +386,19 @@ export async function POST(request: Request) {
     }
 
     if (body.paymentMethod === 'wallet') {
-      const { data: walletVoucherRows, error: walletBalanceError } = await admin
-        .from('customer_vouchers')
-        .select('current_balance,is_active')
-        .eq('customer_id', user.id);
-      if (walletBalanceError) throw walletBalanceError;
-      const walletBalance = (walletVoucherRows ?? []).reduce((sum: number, voucher: any) => {
-        const balance = Number(voucher.current_balance ?? 0);
-        return voucher.is_active && Number.isFinite(balance) ? sum + balance : sum;
-      }, 0);
+      let walletBalance = await getWalletBalance(admin, user.id);
+      if (walletBalance === null) {
+        // Backward-compatible fallback when wallet ledger table is not deployed yet.
+        const { data: walletVoucherRows, error: walletBalanceError } = await admin
+          .from('customer_vouchers')
+          .select('current_balance,is_active')
+          .eq('customer_id', user.id);
+        if (walletBalanceError) throw walletBalanceError;
+        walletBalance = (walletVoucherRows ?? []).reduce((sum: number, voucher: any) => {
+          const balance = Number(voucher.current_balance ?? 0);
+          return voucher.is_active && Number.isFinite(balance) ? sum + balance : sum;
+        }, 0);
+      }
       if (pricing.consumerPrice > walletBalance) {
         return NextResponse.json(
           { error: 'Insufficient wallet balance.', code: 'insufficient_wallet_balance' },
@@ -428,6 +443,15 @@ export async function POST(request: Request) {
     });
 
     if (transactionError) throw transactionError;
+
+    if (paymentStatus === 'completed' && body.paymentMethod === 'wallet') {
+      await recordWalletDebit(admin, {
+        customerId: user.id,
+        userEmail: user.email ?? null,
+        amount: pricing.consumerPrice,
+        description: `Wallet debit for voucher purchase ${transactionReference}`,
+      });
+    }
 
     let issuedVouchers: Array<{ code: string; faceValue: number; expiresAt?: string | null }> = [];
     if (paymentStatus === 'completed' && voucherCode) {
@@ -478,6 +502,38 @@ export async function POST(request: Request) {
           expiry: issuedVouchers[0]?.expiresAt ?? null,
           paymentMethod: body.paymentMethod,
         });
+      }
+
+      // Finance-grade billing: record purchase event + ledger posting (idempotent, safe to retry).
+      try {
+        await recordVoucherPurchaseBillingEvent(admin, {
+          eventKey: transactionReference,
+          merchantId: merchant.id,
+          customerId: user.id,
+          voucherId: issued.voucherId ?? undefined,
+          consumerPrice: pricing.consumerPrice,
+          faceValue: pricing.faceValue,
+          totalDiscountPct: pricing.totalDiscountPct,
+          occurredAt: new Date().toISOString(),
+          metadata: {
+            voucherCode,
+            paymentMethod: body.paymentMethod,
+            consumerBenefitPct: pricing.consumerBenefitPct,
+            evoucherBenefitPct: pricing.evoucherBenefitPct,
+            platformRevenuePct: 0.012, // 1.2% default
+          },
+        });
+      } catch (error: any) {
+        // Do not break voucher purchase if billing schema is not deployed yet.
+        if (
+          isMissingRelation(error, 'public.billing_events') ||
+          isMissingRelation(error, 'public.billing_ledger_entries')
+        ) {
+          // Gracefully handle missing tables during dev/migration
+          console.warn('[purchase-billing][schema-not-ready]', error?.message);
+        } else {
+          throw error;
+        }
       }
     }
 

@@ -104,6 +104,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .trim()
       .toLowerCase();
     const normalizedPassword = String(password ?? '').trim();
+
+    // Compliance hardening: clear any previous browser session before new sign-in.
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+      await supabase.auth.signOut({ scope: 'global' });
+      if (typeof window !== 'undefined') {
+        Object.keys(window.localStorage)
+          .filter((key) => key.includes('auth-token'))
+          .forEach((key) => window.localStorage.removeItem(key));
+        Object.keys(window.sessionStorage)
+          .filter((key) => key.includes('auth-token'))
+          .forEach((key) => window.sessionStorage.removeItem(key));
+      }
+    } catch (preSignInClearError) {
+      console.warn('AuthContext: pre-signin session clear warning:', preSignInClearError);
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password: normalizedPassword,

@@ -147,10 +147,14 @@ function BuyVouchersContent() {
 
   useEffect(() => {
     if (user) {
-      void fetchMerchants();
+      if (walletTopupMode) {
+        setLoading(false);
+      } else {
+        void fetchMerchants();
+      }
       void fetchWalletBalance();
     }
-  }, [user]);
+  }, [user, walletTopupMode]);
 
   useEffect(() => {
     if (!user) return;
@@ -250,13 +254,7 @@ function BuyVouchersContent() {
       });
       if (!response.ok) return;
       const data = await response.json();
-      const vouchers = Array.isArray(data?.vouchers) ? data.vouchers : [];
-      const balance = vouchers.reduce((sum: number, voucher: any) => {
-        const isActive = Boolean(voucher?.is_active);
-        const currentBalance = Number(voucher?.current_balance ?? 0);
-        return isActive && Number.isFinite(currentBalance) ? sum + currentBalance : sum;
-      }, 0);
-      setWalletBalanceMock(Number(balance.toFixed(2)));
+      setWalletBalanceMock(Number(data?.walletBalance ?? 0));
     } catch {
       setWalletBalanceMock(0);
     }
@@ -291,7 +289,7 @@ function BuyVouchersContent() {
       id: 'wallet' as PaymentMethod,
       name: 'eVoucher Wallet',
       icon: 'WalletIcon',
-      description: 'Use wallet balance (mocked for demo)',
+      description: 'Use your wallet cash balance',
     },
   ];
 
@@ -329,7 +327,7 @@ function BuyVouchersContent() {
 
   const handlePurchase = async () => {
     if (!selectedPaymentMethod || blockingReason) return;
-    if (!cartCheckout && !selectedMerchant) return;
+    if (!cartCheckout && !walletTopupMode && !selectedMerchant) return;
     if (cartCheckout && checkoutCartItems.length === 0) {
       setError('Your cart is empty. Add items from Shop before checkout.');
       return;
@@ -385,7 +383,46 @@ function BuyVouchersContent() {
         return data;
       };
 
-      if (cartCheckout) {
+      if (walletTopupMode) {
+        const topupResponse = await fetch('/api/v1/wallet/topup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            amount: voucherAmount,
+            paymentMethod: selectedPaymentMethod,
+            cardLastFour: cardNumber.slice(-4),
+            cardBrand: selectedPaymentMethod === 'visa_secure' ? 'VISA' : 'CARD',
+            eftReference,
+            payfastEmail,
+            billingAddress,
+            eftProofName,
+          }),
+        });
+        const topupData = await topupResponse.json();
+        if (!topupResponse.ok) {
+          throw new Error(topupData.error || 'Failed to top up wallet');
+        }
+
+        setPurchaseStatus(topupData.status);
+        setVoucherCode(null);
+        setIssuedVouchers([]);
+        setTransactionReference(topupData.transactionReference || null);
+        setCheckoutUrl(topupData.checkoutUrl || null);
+        setWalletBalanceMock(Number(topupData.walletBalance ?? walletBalanceMock));
+        setPricingResult({
+          faceValue: Number(voucherAmount.toFixed(2)),
+          totalDiscountPct: 0,
+          consumerBenefitPct: 0,
+          evoucherBenefitPct: 0,
+          totalDiscountAmount: 0,
+          consumerBenefitAmount: 0,
+          evoucherBenefitAmount: 0,
+          consumerPrice: Number(voucherAmount.toFixed(2)),
+          merchantReceivableAfterTotalDiscount: Number(voucherAmount.toFixed(2)),
+          merchantReceivableAfterEvoucherBenefit: Number(voucherAmount.toFixed(2)),
+        });
+      } else if (cartCheckout) {
         const expandedItems = checkoutCartItems.flatMap((item) =>
           Array.from({ length: Math.max(1, Number(item.quantity) || 1) }, () => item)
         );
@@ -545,9 +582,13 @@ function BuyVouchersContent() {
               </h2>
               <p className="text-muted-foreground font-body mb-6">
                 {purchaseStatus === 'completed' &&
-                  'Your voucher has been issued and is ready to use.'}
+                  (walletTopupMode
+                    ? 'Your wallet top-up completed successfully.'
+                    : 'Your voucher has been issued and is ready to use.')}
                 {purchaseStatus === 'pending' &&
-                  'Your payment is pending confirmation. Your voucher will be issued once confirmed.'}
+                  (walletTopupMode
+                    ? 'Your top-up payment is pending confirmation.'
+                    : 'Your payment is pending confirmation. Your voucher will be issued once confirmed.')}
                 {purchaseStatus === 'failed' && 'Your payment could not be processed.'}
               </p>
 
@@ -642,10 +683,10 @@ function BuyVouchersContent() {
                 )}
 
                 <button
-                  onClick={() => router.push('/customer/dashboard')}
+                  onClick={() => router.push(walletTopupMode ? '/wallet' : '/customer/dashboard')}
                   className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-headline font-semibold hover:bg-primary/90 transition-all duration-300"
                 >
-                  Go to Customer Dashboard
+                  {walletTopupMode ? 'Go to Wallet' : 'Go to Customer Dashboard'}
                 </button>
               </div>
             </div>
@@ -702,10 +743,14 @@ function BuyVouchersContent() {
                   className="text-primary"
                 />
                 <h2 className="font-headline font-bold text-2xl text-foreground">
-                  {cartCheckout ? 'Checkout Cart' : 'Select Merchant'}
+                  {walletTopupMode ? 'Top-Up Amount' : cartCheckout ? 'Checkout Cart' : 'Select Merchant'}
                 </h2>
               </div>
-              {cartCheckout ? (
+              {walletTopupMode ? (
+                <p className="text-sm text-muted-foreground">
+                  Choose the top-up amount, then select a payment method to fund your wallet balance.
+                </p>
+              ) : cartCheckout ? (
                 <div className="space-y-3">
                   {checkoutCartItems.length === 0 ? (
                     <p className="text-sm text-muted-foreground font-body">
@@ -1160,7 +1205,7 @@ function BuyVouchersContent() {
               <button
                 onClick={handlePurchase}
                 disabled={
-                  (!cartCheckout && !selectedMerchant) ||
+                  (!cartCheckout && !walletTopupMode && !selectedMerchant) ||
                   (cartCheckout && checkoutCartItems.length === 0) ||
                   !selectedPaymentMethod ||
                   processing ||

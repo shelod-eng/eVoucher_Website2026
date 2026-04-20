@@ -35,6 +35,7 @@ interface WalletTransaction {
 
 interface PaymentTransaction {
   id: string;
+  merchant_id?: string | null;
   voucher_code: string | null;
   amount: number | null;
   card_brand: string | null;
@@ -95,6 +96,7 @@ export default function WalletPage() {
   const [error, setError] = useState('');
   const [tab, setTab] = useState<WalletTab>('active');
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [paymentTransactions, setPaymentTransactions] = useState<PaymentTransaction[]>([]);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
@@ -121,6 +123,7 @@ export default function WalletPage() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to load wallet.');
         setVouchers(data.vouchers ?? []);
+        setWalletBalance(Number(data.walletBalance ?? 0));
         setTransactions(data.transactions ?? []);
         setPaymentTransactions(data.paymentTransactions ?? []);
       } catch (walletError: any) {
@@ -148,7 +151,7 @@ export default function WalletPage() {
 
   const displayedVouchers = voucherStatusBuckets[tab];
 
-  const totalBalance = useMemo(
+  const totalVoucherBalance = useMemo(
     () =>
       voucherStatusBuckets.active.reduce(
         (sum, voucher) => sum + Number(voucher.current_balance ?? 0),
@@ -192,8 +195,8 @@ export default function WalletPage() {
       .filter((tx) => String(tx.payment_status ?? '').toLowerCase() === 'completed')
       .map((tx) => ({
         id: `purchase-${tx.id}`,
-        merchant: 'Voucher Purchase',
-        type: 'purchase',
+        merchant: tx.voucher_code ? 'Voucher Purchase' : 'Wallet Top-Up',
+        type: tx.voucher_code ? 'purchase' : 'wallet_topup',
         amount: Number(tx.amount ?? 0),
         savings: 0,
         createdAt: tx.created_at,
@@ -292,12 +295,12 @@ export default function WalletPage() {
 
             <div className="grid md:grid-cols-2 gap-4 mb-4">
               <div className="rounded-2xl bg-white/22 p-5 border border-white/25">
-                <p className="text-sm text-white/95">Total Balance</p>
-                <p className="font-headline font-bold text-5xl mt-1">{toCurrency(totalBalance)}</p>
+                <p className="text-sm text-white/95">Wallet Cash Balance</p>
+                <p className="font-headline font-bold text-5xl mt-1">{toCurrency(walletBalance)}</p>
               </div>
               <div className="rounded-2xl bg-white/22 p-5 border border-white/25">
-                <p className="text-sm text-white/95">Total Saved</p>
-                <p className="font-headline font-bold text-5xl mt-1">{toCurrency(totalSaved)}</p>
+                <p className="text-sm text-white/95">Voucher Balance</p>
+                <p className="font-headline font-bold text-5xl mt-1">{toCurrency(totalVoucherBalance)}</p>
               </div>
             </div>
 
@@ -340,7 +343,7 @@ export default function WalletPage() {
               <div>
                 <h2 className="font-headline font-bold text-2xl text-foreground">Top Up Wallet</h2>
                 <p className="text-sm text-muted-foreground">
-                  Add value using card, PayFast, EFT, or eVoucher wallet flow.
+                  Add value using card, PayFast, or EFT payment options.
                 </p>
               </div>
               <button
