@@ -10,7 +10,6 @@ import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pric
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { resolveBrandFromMerchantName, getBrandByKey } from '@/lib/merchant-brand-catalog';
 import { getWalletBalance, recordWalletDebit } from '@/server/services/wallet/ledger';
-import { recordVoucherPurchaseBillingEvent } from '@/server/services/billing/billing-events';
 
 const SUPPORTED_PAYMENT_METHODS = new Set([
   'visa_secure',
@@ -504,37 +503,6 @@ export async function POST(request: Request) {
         });
       }
 
-      // Finance-grade billing: record purchase event + ledger posting (idempotent, safe to retry).
-      try {
-        await recordVoucherPurchaseBillingEvent(admin, {
-          eventKey: transactionReference,
-          merchantId: merchant.id,
-          customerId: user.id,
-          voucherId: issued.voucherId ?? undefined,
-          consumerPrice: pricing.consumerPrice,
-          faceValue: pricing.faceValue,
-          totalDiscountPct: pricing.totalDiscountPct,
-          occurredAt: new Date().toISOString(),
-          metadata: {
-            voucherCode,
-            paymentMethod: body.paymentMethod,
-            consumerBenefitPct: pricing.consumerBenefitPct,
-            evoucherBenefitPct: pricing.evoucherBenefitPct,
-            platformRevenuePct: 0.012, // 1.2% default
-          },
-        });
-      } catch (error: any) {
-        // Do not break voucher purchase if billing schema is not deployed yet.
-        if (
-          isMissingRelation(error, 'public.billing_events') ||
-          isMissingRelation(error, 'public.billing_ledger_entries')
-        ) {
-          // Gracefully handle missing tables during dev/migration
-          console.warn('[purchase-billing][schema-not-ready]', error?.message);
-        } else {
-          throw error;
-        }
-      }
     }
 
     await writeAuditEvent(admin, {
