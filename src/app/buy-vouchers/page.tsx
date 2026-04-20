@@ -22,6 +22,30 @@ interface MerchantOption {
 
 type PaymentMethod = 'visa_secure' | 'debit_credit' | 'payfast' | 'eft' | 'wallet';
 type PurchaseStatus = 'pending' | 'completed' | 'failed' | null;
+const WALLET_TOPUP_HINT_KEY = 'evoucher.wallet.topup.hint.v1';
+
+function persistWalletTopupHint(payload: {
+  userId: string;
+  transactionReference: string | null;
+  walletBalance: number;
+  amount: number;
+}) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      WALLET_TOPUP_HINT_KEY,
+      JSON.stringify({
+        userId: payload.userId,
+        transactionReference: payload.transactionReference,
+        walletBalance: Number(payload.walletBalance.toFixed(2)),
+        amount: Number(payload.amount.toFixed(2)),
+        createdAt: new Date().toISOString(),
+      })
+    );
+  } catch {
+    // Ignore localStorage failures (private mode/quota) and continue.
+  }
+}
 
 function BuyVouchersContent() {
   const { user, loading: authLoading } = useAuth();
@@ -409,7 +433,16 @@ function BuyVouchersContent() {
         setIssuedVouchers([]);
         setTransactionReference(topupData.transactionReference || null);
         setCheckoutUrl(topupData.checkoutUrl || null);
-        setWalletBalanceMock(Number(topupData.walletBalance ?? walletBalanceMock));
+        const resolvedTopupBalance = Number(topupData.walletBalance ?? walletBalanceMock);
+        setWalletBalanceMock(resolvedTopupBalance);
+        if (user?.id && topupData.status === 'completed') {
+          persistWalletTopupHint({
+            userId: user.id,
+            transactionReference: topupData.transactionReference ?? null,
+            walletBalance: resolvedTopupBalance,
+            amount: Number(voucherAmount),
+          });
+        }
         setPricingResult({
           faceValue: Number(voucherAmount.toFixed(2)),
           totalDiscountPct: 0,

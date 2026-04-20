@@ -45,6 +45,16 @@ interface PaymentTransaction {
 }
 
 type WalletTab = 'active' | 'partial' | 'used' | 'expired';
+const WALLET_TOPUP_HINT_KEY = 'evoucher.wallet.topup.hint.v1';
+const TOPUP_HINT_MAX_AGE_MS = 1000 * 60 * 30; // 30 minutes
+
+interface WalletTopupHint {
+  userId: string;
+  transactionReference: string | null;
+  walletBalance: number;
+  amount: number;
+  createdAt: string;
+}
 
 function toCurrency(value: number) {
   return `R${Number(value).toFixed(2)}`;
@@ -89,6 +99,66 @@ function getVoucherQrUrl(voucher: Voucher) {
   )}`;
 }
 
+function getPaymentDerivedWalletBalance(paymentTransactions: PaymentTransaction[]) {
+  const credits = paymentTransactions.reduce((sum, tx) => {
+    const status = String(tx.payment_status ?? '')
+      .toLowerCase()
+      .trim();
+    const isCompleted = !status || status === 'completed' || status === 'paid' || status === 'success';
+    if (!isCompleted) return sum;
+    if (tx.voucher_code) return sum;
+    const amount = Number(tx.amount ?? 0);
+    return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+  }, 0);
+
+  const debits = paymentTransactions.reduce((sum, tx) => {
+    const status = String(tx.payment_status ?? '')
+      .toLowerCase()
+      .trim();
+    const isCompleted = !status || status === 'completed' || status === 'paid' || status === 'success';
+    if (!isCompleted) return sum;
+    const cardBrand = String(tx.card_brand ?? '')
+      .toUpperCase()
+      .trim();
+    if (cardBrand !== 'WALLET') return sum;
+    const amount = Number(tx.amount ?? 0);
+    return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+  }, 0);
+
+  return Number(Math.max(credits - debits, 0).toFixed(2));
+}
+
+function readWalletTopupHint(userId: string): WalletTopupHint | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(WALLET_TOPUP_HINT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as WalletTopupHint;
+    if (!parsed || parsed.userId !== userId) return null;
+    const createdAtMs = new Date(parsed.createdAt).getTime();
+    if (!Number.isFinite(createdAtMs) || Date.now() - createdAtMs > TOPUP_HINT_MAX_AGE_MS) {
+      return null;
+    }
+    const walletBalance = Number(parsed.walletBalance ?? 0);
+    if (!Number.isFinite(walletBalance) || walletBalance < 0) return null;
+    return {
+      ...parsed,
+      walletBalance: Number(walletBalance.toFixed(2)),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function clearWalletTopupHint() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(WALLET_TOPUP_HINT_KEY);
+  } catch {
+    // Ignore localStorage failures.
+  }
+}
+
 export default function WalletPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -101,6 +171,7 @@ export default function WalletPage() {
   const [paymentTransactions, setPaymentTransactions] = useState<PaymentTransaction[]>([]);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [copyMessage, setCopyMessage] = useState('');
+  const [topupHintBalance, setTopupHintBalance] = useState<number>(0);
   const topUpHref = '/buy-vouchers?walletTopup=1';
 
   useEffect(() => {
@@ -116,16 +187,26 @@ export default function WalletPage() {
       try {
         setLoading(true);
         setError('');
-        const response = await fetch('/api/v1/customer/dashboard', {
+        const response = await fetch(`/api/v1/customer/dashboard?_ts=${Date.now()}`, {
           method: 'GET',
           credentials: 'include',
+          cache: 'no-store',
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to load wallet.');
+        const walletBalanceFromServer = Number(data.walletBalance ?? 0);
+        const paymentDerivedBalance = getPaymentDerivedWalletBalance(data.paymentTransactions ?? []);
+        const resolvedWalletBalance = Number(
+          Math.max(walletBalanceFromServer, paymentDerivedBalance, topupHintBalance).toFixed(2)
+        );
         setVouchers(data.vouchers ?? []);
-        setWalletBalance(Number(data.walletBalance ?? 0));
+        setWalletBalance(resolvedWalletBalance);
         setTransactions(data.transactions ?? []);
         setPaymentTransactions(data.paymentTransactions ?? []);
+        if (resolvedWalletBalance >= topupHintBalance && topupHintBalance > 0) {
+          clearWalletTopupHint();
+          setTopupHintBalance(0);
+        }
       } catch (walletError: any) {
         setError(walletError?.message || 'Failed to load wallet.');
       } finally {
@@ -134,7 +215,18 @@ export default function WalletPage() {
     };
 
     void loadWallet();
-  }, [user]);
+  }, [user, topupHintBalance]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const hint = readWalletTopupHint(user.id);
+    if (hint) {
+      setTopupHintBalance(hint.walletBalance);
+      setWalletBalance((previous) => Math.max(previous, hint.walletBalance));
+    } else {
+      setTopupHintBalance(0);
+    }
+  }, [user?.id]);
 
   const voucherStatusBuckets = useMemo(() => {
     const buckets: Record<WalletTab, Voucher[]> = {
