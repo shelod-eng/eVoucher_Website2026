@@ -62,6 +62,7 @@ function BuyVouchersContent() {
   const merchantIdFromQuery = searchParams.get('merchantId');
   const brandKeyFromQuery = searchParams.get('brandKey');
   const productIdFromQuery = searchParams.get('productId');
+  const walletTopupMode = searchParams.get('walletTopup') === '1';
   const cartCheckout = searchParams.get('cartCheckout') === '1';
   const merchantLocked = Boolean(merchantIdFromQuery);
   const selectedMerchantDetails =
@@ -662,11 +663,12 @@ function BuyVouchersContent() {
         <div className="max-w-5xl mx-auto">
           <div className="mb-8">
             <h1 className="font-headline font-bold text-3xl lg:text-4xl text-foreground mb-2">
-              Buy Vouchers
+              {walletTopupMode ? 'Top Up Wallet' : 'Buy Vouchers'}
             </h1>
             <p className="text-muted-foreground font-body">
-              Secure purchase with server-side billing. You only see safe payment status and voucher
-              output.
+              {walletTopupMode
+                ? 'Choose amount, merchant, and payment method to add new voucher value to your wallet.'
+                : 'Secure purchase with server-side billing. You only see safe payment status and voucher output.'}
             </p>
           </div>
 

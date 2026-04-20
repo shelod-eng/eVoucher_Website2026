@@ -77,21 +77,8 @@ function formatPaymentMethod(tx?: PaymentTransaction) {
 
 function getScopeLabel(voucher: Voucher) {
   const scope = String(voucher.redemption_scope ?? 'all_branches').toLowerCase();
-  const brand = voucher.parent_brand || voucher.merchant_name;
-  if (scope === 'national') return 'Valid nationwide';
-  if (scope === 'province_wide') {
-    const provinces = Array.isArray(voucher.valid_provinces) ? voucher.valid_provinces : [];
-    return provinces.length > 0
-      ? `Valid in ${provinces.join(', ')}`
-      : `Valid province-wide for ${brand}`;
-  }
-  if (scope === 'specific_branch') {
-    const branches = Array.isArray(voucher.valid_branch_ids) ? voucher.valid_branch_ids : [];
-    return branches.length > 0
-      ? `Valid at ${branches.length} selected branch${branches.length === 1 ? '' : 'es'}`
-      : 'Valid at selected branches';
-  }
-  return `Valid at all ${brand} locations`;
+  if (scope === 'national') return 'Redeemable at any participating eVoucher store nationwide';
+  return 'Redeemable at any participating eVoucher store';
 }
 
 function getVoucherQrUrl(voucher: Voucher) {
@@ -112,6 +99,7 @@ export default function WalletPage() {
   const [paymentTransactions, setPaymentTransactions] = useState<PaymentTransaction[]>([]);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [copyMessage, setCopyMessage] = useState('');
+  const topUpHref = '/buy-vouchers?walletTopup=1';
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -291,50 +279,75 @@ export default function WalletPage() {
             </div>
           )}
 
-          <section className="rounded-2xl p-6 bg-gradient-to-r from-primary to-primary/85 text-white shadow-lg">
+          <section className="rounded-3xl p-6 md:p-7 bg-[linear-gradient(120deg,#0f766e_0%,#0d9488_58%,#14b8a6_100%)] text-white shadow-xl border border-teal-300/40">
             <div className="flex items-start justify-between mb-5">
               <div>
                 <h1 className="font-headline font-bold text-4xl">Wallet</h1>
-                <p className="text-sm opacity-90 mt-1">{deriveSavingsBadge(totalSaved)}</p>
+                <p className="text-sm text-white/95 mt-1">{deriveSavingsBadge(totalSaved)}</p>
               </div>
-              <Icon name="QrCodeIcon" size={22} variant="outline" className="text-white" />
+              <div className="rounded-xl bg-white/20 p-2.5 border border-white/20">
+                <Icon name="QrCodeIcon" size={20} variant="outline" className="text-white" />
+              </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 mb-4">
-              <div className="rounded-xl bg-white/15 p-5">
-                <p className="text-sm opacity-90">Total Balance</p>
+              <div className="rounded-2xl bg-white/22 p-5 border border-white/25">
+                <p className="text-sm text-white/95">Total Balance</p>
                 <p className="font-headline font-bold text-5xl mt-1">{toCurrency(totalBalance)}</p>
               </div>
-              <div className="rounded-xl bg-white/15 p-5">
-                <p className="text-sm opacity-90">Total Saved</p>
+              <div className="rounded-2xl bg-white/22 p-5 border border-white/25">
+                <p className="text-sm text-white/95">Total Saved</p>
                 <p className="font-headline font-bold text-5xl mt-1">{toCurrency(totalSaved)}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <button
                 onClick={() => router.push('/shop')}
-                className="rounded-lg bg-white text-primary font-headline font-semibold py-2 hover:bg-white/90"
+                className="rounded-xl bg-white text-primary font-headline font-semibold py-2.5 hover:bg-white/95"
               >
                 Add Voucher
               </button>
               <button
                 onClick={() => router.push('/shop')}
-                className="rounded-lg bg-white text-primary font-headline font-semibold py-2 hover:bg-white/90"
+                className="rounded-xl bg-white text-primary font-headline font-semibold py-2.5 hover:bg-white/95"
               >
                 Buy More
               </button>
               <button
+                onClick={() => router.push(topUpHref)}
+                className="rounded-xl bg-white text-primary font-headline font-semibold py-2.5 hover:bg-white/95"
+              >
+                Top Up Wallet
+              </button>
+              <button
                 onClick={() => router.push('/redeem')}
-                className="rounded-lg bg-white/20 text-white font-headline font-semibold py-2"
+                className="rounded-xl bg-white/30 text-white font-headline font-semibold py-2.5 border border-white/30 hover:bg-white/35"
               >
                 Redeem
               </button>
               <button
                 onClick={() => router.push('/benefits')}
-                className="rounded-lg bg-white/20 text-white font-headline font-semibold py-2"
+                className="rounded-xl bg-white/30 text-white font-headline font-semibold py-2.5 border border-white/30 hover:bg-white/35"
               >
                 Benefits
+              </button>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h2 className="font-headline font-bold text-2xl text-foreground">Top Up Wallet</h2>
+                <p className="text-sm text-muted-foreground">
+                  Add value using card, PayFast, EFT, or eVoucher wallet flow.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push(topUpHref)}
+                className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
+              >
+                Top Up Now
               </button>
             </div>
           </section>
@@ -369,10 +382,7 @@ export default function WalletPage() {
                 const status = classifyVoucher(voucher);
 
                 return (
-                  <article
-                    key={voucher.id}
-                    className="rounded-2xl border border-border bg-card p-5"
-                  >
+                  <article key={voucher.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="font-headline font-bold text-3xl text-foreground">
