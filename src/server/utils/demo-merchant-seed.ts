@@ -141,6 +141,19 @@ function isKycApprovalGate(error: any) {
   return message.includes('cannot be moved to approved without approved kyc review');
 }
 
+function isMissingColumn(error: any, columnName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const normalizedColumn = String(columnName ?? '')
+    .trim()
+    .toLowerCase();
+  return (
+    (message.includes(`column "${normalizedColumn}"`) && message.includes('does not exist')) ||
+    (message.includes(`column ${normalizedColumn}`) && message.includes('does not exist')) ||
+    message.includes(`could not find the '${normalizedColumn}' column`) ||
+    message.includes(`could not find the column '${normalizedColumn}'`)
+  );
+}
+
 function buildDemoProductName(merchantName: string, faceValue: number) {
   return `${merchantName} Voucher R${faceValue}`;
 }
@@ -204,6 +217,150 @@ async function ensureDemoMerchantAuthUser(admin: any, seed: DemoMerchantSeed) {
   const createdId = data?.user?.id;
   if (!createdId) throw new Error(`Failed to create auth user for ${seed.businessName}.`);
   return createdId as string;
+}
+
+function buildDemoKpiRows(seed: DemoMerchantSeed, merchantId: string) {
+  const brandPrefix = seed.brandKey.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'DEMO';
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const rows = [
+    { faceValue: 200, totalDiscountPct: 4, daysAgo: 1 },
+    { faceValue: 500, totalDiscountPct: 5, daysAgo: 4 },
+    { faceValue: 1000, totalDiscountPct: 5, daysAgo: 9 },
+    { faceValue: 350, totalDiscountPct: 4, daysAgo: 14 },
+    { faceValue: 150, totalDiscountPct: 3, daysAgo: 21 },
+    { faceValue: 800, totalDiscountPct: 5, daysAgo: 28 },
+  ].map((entry, index) => {
+    const pricing = calculateDiscountPricing(entry.faceValue, entry.totalDiscountPct);
+    const createdAt = new Date(now - entry.daysAgo * dayMs + index * 1000).toISOString();
+    const reference = `DEMO-${brandPrefix}-${String(index + 1).padStart(3, '0')}`;
+    return {
+      id: `demo-kpi-${seed.brandKey}-${index + 1}`,
+      merchant_id: merchantId,
+      amount: Number(pricing.consumerPrice.toFixed(2)),
+      card_last_four: String(1200 + index),
+      card_brand: index % 2 === 0 ? 'VISA' : 'MASTERCARD',
+      payment_status: 'completed',
+      voucher_code: `${brandPrefix}-VCH-${String(index + 1).padStart(3, '0')}`,
+      transaction_reference: reference,
+      created_at: createdAt,
+      total_discount_pct: Number(pricing.totalDiscountPct.toFixed(2)),
+      consumer_benefit_amount: Number(pricing.consumerBenefitAmount.toFixed(2)),
+      evoucher_benefit_amount: Number(pricing.evoucherBenefitAmount.toFixed(2)),
+      consumer_price: Number(pricing.consumerPrice.toFixed(2)),
+      face_value: Number(pricing.faceValue.toFixed(2)),
+      consumer_benefit_pct: Number(pricing.consumerBenefitPct.toFixed(2)),
+      evoucher_benefit_pct: Number(pricing.evoucherBenefitPct.toFixed(2)),
+      total_discount_amount: Number(pricing.totalDiscountAmount.toFixed(2)),
+      merchant_receivable_after_total_discount: Number(
+        pricing.merchantReceivableAfterTotalDiscount.toFixed(2)
+      ),
+      merchant_receivable_after_evoucher_benefit: Number(
+        pricing.merchantReceivableAfterEvoucherBenefit.toFixed(2)
+      ),
+    };
+  });
+  return rows;
+}
+
+async function seedDemoKpiData(admin: any, seed: DemoMerchantSeed, merchantId: string) {
+  const transactionRows = buildDemoKpiRows(seed, merchantId);
+  if (transactionRows.length === 0) return;
+
+  const referencePrefix = `DEMO-${seed.brandKey.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)}-`;
+  const existingTx = await admin
+    .from('payment_transactions')
+    .select('id,transaction_reference', { count: 'exact' })
+    .eq('merchant_id', merchantId)
+    .like('transaction_reference', `${referencePrefix}%`);
+
+  if (!existingTx.error && Number(existingTx.count ?? 0) < 3) {
+    const richInsert = await admin.from('payment_transactions').insert(
+      transactionRows.map((row) => ({
+        merchant_id: row.merchant_id,
+        amount: row.amount,
+        card_last_four: row.card_last_four,
+        card_brand: row.card_brand,
+        payment_status: row.payment_status,
+        voucher_code: row.voucher_code,
+        transaction_reference: row.transaction_reference,
+        created_at: row.created_at,
+        total_discount_pct: row.total_discount_pct,
+        consumer_benefit_amount: row.consumer_benefit_amount,
+        evoucher_benefit_amount: row.evoucher_benefit_amount,
+        consumer_price: row.consumer_price,
+        face_value: row.face_value,
+        consumer_benefit_pct: row.consumer_benefit_pct,
+        evoucher_benefit_pct: row.evoucher_benefit_pct,
+        total_discount_amount: row.total_discount_amount,
+        merchant_receivable_after_total_discount: row.merchant_receivable_after_total_discount,
+        merchant_receivable_after_evoucher_benefit:
+          row.merchant_receivable_after_evoucher_benefit,
+      }))
+    );
+
+    if (richInsert.error) {
+      const missingOptionalColumn = [
+        'total_discount_pct',
+        'consumer_benefit_amount',
+        'evoucher_benefit_amount',
+        'consumer_price',
+        'face_value',
+        'consumer_benefit_pct',
+        'evoucher_benefit_pct',
+        'total_discount_amount',
+        'merchant_receivable_after_total_discount',
+        'merchant_receivable_after_evoucher_benefit',
+      ].some((column) => isMissingColumn(richInsert.error, column));
+
+      if (!missingOptionalColumn) throw richInsert.error;
+
+      const fallbackInsert = await admin.from('payment_transactions').insert(
+        transactionRows.map((row) => ({
+          merchant_id: row.merchant_id,
+          amount: row.amount,
+          card_last_four: row.card_last_four,
+          card_brand: row.card_brand,
+          payment_status: row.payment_status,
+          voucher_code: row.voucher_code,
+          transaction_reference: row.transaction_reference,
+          created_at: row.created_at,
+        }))
+      );
+      if (fallbackInsert.error) throw fallbackInsert.error;
+    }
+  }
+
+  const payoutRows = [
+    {
+      merchant_id: merchantId,
+      amount: Number(
+        transactionRows.slice(0, 3).reduce((sum, row) => sum + row.amount, 0).toFixed(2)
+      ),
+      status: 'completed',
+      payout_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      merchant_id: merchantId,
+      amount: Number(
+        transactionRows.slice(3).reduce((sum, row) => sum + row.amount, 0).toFixed(2)
+      ),
+      status: 'pending',
+      payout_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ];
+
+  const existingPayouts = await admin
+    .from('merchant_payouts')
+    .select('id', { count: 'exact' })
+    .eq('merchant_id', merchantId);
+
+  if (!existingPayouts.error && Number(existingPayouts.count ?? 0) < 2) {
+    const payoutInsert = await admin.from('merchant_payouts').insert(payoutRows);
+    if (payoutInsert.error) throw payoutInsert.error;
+  }
 }
 
 export async function ensureDemoMerchantsSeeded(admin: any) {
@@ -423,5 +580,11 @@ export async function ensureDemoMerchantsSeeded(admin: any) {
     ) {
       throw insertProductsError;
     }
+  }
+
+  for (const seed of DEMO_MERCHANTS) {
+    const merchant = merchantByEmail.get(seed.email.toLowerCase());
+    if (!merchant?.id) continue;
+    await seedDemoKpiData(admin, seed, String(merchant.id));
   }
 }

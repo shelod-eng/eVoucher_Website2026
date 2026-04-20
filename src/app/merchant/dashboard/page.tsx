@@ -1003,43 +1003,56 @@ export default function MerchantDashboard() {
                   </div>
 
                   <div className="grid md:grid-cols-3 gap-3 mb-4">
-                    <input
-                      type="text"
-                      value={productForm.productName}
-                      onChange={(event) =>
-                        setProductForm((prev) => ({ ...prev, productName: event.target.value }))
-                      }
-                      placeholder="Product name (e.g. R100 Grocery Voucher)"
-                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                    />
-                    <input
-                      type="number"
-                      min={10}
-                      value={productForm.faceValue}
-                      onChange={(event) =>
-                        setProductForm((prev) => ({
-                          ...prev,
-                          faceValue: Number(event.target.value || 0),
-                        }))
-                      }
-                      placeholder="Face value"
-                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                    />
-                    <input
-                      type="number"
-                      min={3}
-                      max={15}
-                      step={0.1}
-                      value={productForm.totalDiscountPct}
-                      onChange={(event) =>
-                        setProductForm((prev) => ({
-                          ...prev,
-                          totalDiscountPct: Number(event.target.value || 0),
-                        }))
-                      }
-                      placeholder="Total discount %"
-                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                    />
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs font-headline font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        Product Name
+                      </span>
+                      <input
+                        type="text"
+                        value={productForm.productName}
+                        onChange={(event) =>
+                          setProductForm((prev) => ({ ...prev, productName: event.target.value }))
+                        }
+                        placeholder="e.g. R100 Grocery Voucher"
+                        className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs font-headline font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        Face Value (ZAR)
+                      </span>
+                      <input
+                        type="number"
+                        min={10}
+                        value={productForm.faceValue}
+                        onChange={(event) =>
+                          setProductForm((prev) => ({
+                            ...prev,
+                            faceValue: Number(event.target.value || 0),
+                          }))
+                        }
+                        className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs font-headline font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        Total Discount (%)
+                      </span>
+                      <input
+                        type="number"
+                        min={3}
+                        max={15}
+                        step={0.1}
+                        value={productForm.totalDiscountPct}
+                        onChange={(event) =>
+                          setProductForm((prev) => ({
+                            ...prev,
+                            totalDiscountPct: Number(event.target.value || 0),
+                          }))
+                        }
+                        className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                      />
+                    </label>
                     <div className="md:col-span-3 rounded-lg border border-border bg-background px-4 py-3">
                       <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
                         <span>
@@ -1062,62 +1075,77 @@ export default function MerchantDashboard() {
                         className="w-full accent-primary"
                       />
                     </div>
-                    <select
-                      value={productForm.redemptionScope}
-                      onChange={(event) =>
-                        setProductForm((prev) => ({
-                          ...prev,
-                          redemptionScope: event.target.value as
-                            | 'all_branches'
-                            | 'specific_branch'
-                            | 'province_wide'
-                            | 'national',
-                        }))
-                      }
-                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                    >
-                      <option value="all_branches">All brand branches</option>
-                      <option value="specific_branch">This branch only</option>
-                      <option value="province_wide">Province-wide</option>
-                      <option value="national">National</option>
-                    </select>
-                    <select
-                      value={productForm.validityDays}
-                      onChange={(event) =>
-                        setProductForm((prev) => ({
-                          ...prev,
-                          validityDays: Number(event.target.value || 90),
-                        }))
-                      }
-                      className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                    >
-                      <option value={30}>30 days validity</option>
-                      <option value={60}>60 days validity</option>
-                      <option value={90}>90 days validity</option>
-                      <option value={180}>180 days validity</option>
-                      <option value={365}>365 days validity</option>
-                    </select>
-                    {productForm.redemptionScope === 'specific_branch' && (
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs font-headline font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        Redemption Scope
+                      </span>
                       <select
-                        value={productForm.validBranchIds[0] ?? ''}
+                        value={productForm.redemptionScope}
                         onChange={(event) =>
                           setProductForm((prev) => ({
                             ...prev,
-                            validBranchIds: event.target.value ? [event.target.value] : [],
+                            redemptionScope: event.target.value as
+                              | 'all_branches'
+                              | 'specific_branch'
+                              | 'province_wide'
+                              | 'national',
                           }))
                         }
                         className="px-4 py-3 border border-border rounded-lg bg-background font-body"
                       >
-                        <option value="">Select branch</option>
-                        {branches.map((branch) => (
-                          <option key={branch.id} value={branch.id}>
-                            {branch.branch_name ||
-                              branch.business_name ||
-                              branch.email ||
-                              branch.id}
-                          </option>
-                        ))}
+                        <option value="all_branches">All brand branches</option>
+                        <option value="specific_branch">This branch only</option>
+                        <option value="province_wide">Province-wide</option>
+                        <option value="national">National</option>
                       </select>
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-xs font-headline font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        Validity Period
+                      </span>
+                      <select
+                        value={productForm.validityDays}
+                        onChange={(event) =>
+                          setProductForm((prev) => ({
+                            ...prev,
+                            validityDays: Number(event.target.value || 90),
+                          }))
+                        }
+                        className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                      >
+                        <option value={30}>30 days validity</option>
+                        <option value={60}>60 days validity</option>
+                        <option value={90}>90 days validity</option>
+                        <option value={180}>180 days validity</option>
+                        <option value={365}>365 days validity</option>
+                      </select>
+                    </label>
+                    {productForm.redemptionScope === 'specific_branch' && (
+                      <label className="flex flex-col gap-1">
+                        <span className="text-xs font-headline font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                          Branch Selection
+                        </span>
+                        <select
+                          value={productForm.validBranchIds[0] ?? ''}
+                          onChange={(event) =>
+                            setProductForm((prev) => ({
+                              ...prev,
+                              validBranchIds: event.target.value ? [event.target.value] : [],
+                            }))
+                          }
+                          className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                        >
+                          <option value="">Select branch</option>
+                          {branches.map((branch) => (
+                            <option key={branch.id} value={branch.id}>
+                              {branch.branch_name ||
+                                branch.business_name ||
+                                branch.email ||
+                                branch.id}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     )}
                     <label className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-3 text-sm font-body text-foreground">
                       <input
@@ -1131,47 +1159,61 @@ export default function MerchantDashboard() {
                     </label>
                     {productForm.isSpecial && (
                       <>
-                        <select
-                          value={productForm.specialTitle}
-                          onChange={(event) =>
-                            setProductForm((prev) => ({
-                              ...prev,
-                              specialTitle: event.target.value,
-                            }))
-                          }
-                          className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                        >
-                          {PROMOTION_BADGES.map((badge) => (
-                            <option key={badge} value={badge}>
-                              {badge}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="datetime-local"
-                          value={productForm.specialEndAt}
-                          onChange={(event) =>
-                            setProductForm((prev) => ({
-                              ...prev,
-                              specialEndAt: event.target.value,
-                            }))
-                          }
-                          className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                        />
-                        <input
-                          type="number"
-                          min={0}
-                          max={999}
-                          value={productForm.displayPriority}
-                          onChange={(event) =>
-                            setProductForm((prev) => ({
-                              ...prev,
-                              displayPriority: Number(event.target.value || 0),
-                            }))
-                          }
-                          placeholder="Display priority"
-                          className="px-4 py-3 border border-border rounded-lg bg-background font-body"
-                        />
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs font-headline font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                            Special Offer Label
+                          </span>
+                          <select
+                            value={productForm.specialTitle}
+                            onChange={(event) =>
+                              setProductForm((prev) => ({
+                                ...prev,
+                                specialTitle: event.target.value,
+                              }))
+                            }
+                            className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                          >
+                            {PROMOTION_BADGES.map((badge) => (
+                              <option key={badge} value={badge}>
+                                {badge}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs font-headline font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                            Special Offer Ends
+                          </span>
+                          <input
+                            type="datetime-local"
+                            value={productForm.specialEndAt}
+                            onChange={(event) =>
+                              setProductForm((prev) => ({
+                                ...prev,
+                                specialEndAt: event.target.value,
+                              }))
+                            }
+                            className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs font-headline font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                            Display Priority
+                          </span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={999}
+                            value={productForm.displayPriority}
+                            onChange={(event) =>
+                              setProductForm((prev) => ({
+                                ...prev,
+                                displayPriority: Number(event.target.value || 0),
+                              }))
+                            }
+                            className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+                          />
+                        </label>
                       </>
                     )}
                   </div>
