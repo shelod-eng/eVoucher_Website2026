@@ -30,25 +30,19 @@ export default function CartPage() {
   const summary = getCartSummary(items);
   const itemCount = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
 
-  const handleRemove = (productId: string) => {
-    setItems(removeCartItem(productId, user?.id));
+  const handleRemove = (productId: string, merchantId: string) => {
+    setItems(removeCartItem(productId, user?.id, merchantId));
   };
 
-  const handleQuantityChange = (productId: string, quantity: number) => {
-    setItems(updateCartQuantity(productId, quantity, user?.id));
+  const handleQuantityChange = (productId: string, merchantId: string, quantity: number) => {
+    setItems(updateCartQuantity(productId, quantity, user?.id, merchantId));
   };
 
   const handleCheckout = () => {
     if (items.length === 0) return;
-
-    const first = items[0];
     const params = new URLSearchParams({
-      merchantId: first.merchantId,
-      faceValue: String(first.faceValue),
+      cartCheckout: '1',
     });
-    if (!first.productId.startsWith('fallback-') && !first.productId.startsWith('starter-')) {
-      params.set('productId', first.productId);
-    }
     router.push(`/buy-vouchers?${params.toString()}`);
   };
 
@@ -91,7 +85,7 @@ export default function CartPage() {
               <div className="space-y-4">
                 {items.map((item) => (
                   <div
-                    key={item.productId}
+                    key={`${item.merchantId}:${item.productId}`}
                     className="bg-card rounded-2xl border border-border p-5"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -108,7 +102,7 @@ export default function CartPage() {
                         </p>
                       </div>
                       <button
-                        onClick={() => handleRemove(item.productId)}
+                        onClick={() => handleRemove(item.productId, item.merchantId)}
                         className="text-error hover:bg-error/10 rounded-lg p-2"
                       >
                         <Icon name="TrashIcon" size={16} variant="outline" />
@@ -118,7 +112,9 @@ export default function CartPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleQuantityChange(item.productId, item.quantity - 1)}
+                          onClick={() =>
+                            handleQuantityChange(item.productId, item.merchantId, item.quantity - 1)
+                          }
                           className="w-8 h-8 rounded-lg border border-border"
                         >
                           -
@@ -127,7 +123,9 @@ export default function CartPage() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}
+                          onClick={() =>
+                            handleQuantityChange(item.productId, item.merchantId, item.quantity + 1)
+                          }
                           className="w-8 h-8 rounded-lg border border-border"
                         >
                           +

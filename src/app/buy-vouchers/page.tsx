@@ -10,7 +10,7 @@ import {
   DEFAULT_TOTAL_DISCOUNT_PCT,
   DiscountPricingBreakdown,
 } from '@/lib/pricing';
-import { clearCart } from '@/lib/cart';
+import { CartItem, clearCart, getCartItems, getCartSummary } from '@/lib/cart';
 
 interface MerchantOption {
   id: string;
@@ -31,6 +31,7 @@ function BuyVouchersContent() {
   const [selectedMerchant, setSelectedMerchant] = useState<string | null>(null);
   const [voucherAmount, setVoucherAmount] = useState<number>(100);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [checkoutCartItems, setCheckoutCartItems] = useState<CartItem[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [processing, setProcessing] = useState(false);
   const [refreshingStatus, setRefreshingStatus] = useState(false);
@@ -61,6 +62,7 @@ function BuyVouchersContent() {
   const merchantIdFromQuery = searchParams.get('merchantId');
   const brandKeyFromQuery = searchParams.get('brandKey');
   const productIdFromQuery = searchParams.get('productId');
+  const cartCheckout = searchParams.get('cartCheckout') === '1';
   const merchantLocked = Boolean(merchantIdFromQuery);
   const selectedMerchantDetails =
     merchants.find((merchant) => merchant.id === selectedMerchant) ?? null;
@@ -75,6 +77,57 @@ function BuyVouchersContent() {
     voucherAmount,
     selectedMerchantDetails?.defaultTotalDiscountPct ?? DEFAULT_TOTAL_DISCOUNT_PCT
   );
+  const cartSummary = useMemo(() => getCartSummary(checkoutCartItems), [checkoutCartItems]);
+  const checkoutPricing = useMemo<DiscountPricingBreakdown>(() => {
+    if (!cartCheckout) return previewPricing;
+    const totalFaceValue = checkoutCartItems.reduce(
+      (sum, item) => sum + Number(item.faceValue) * Number(item.quantity),
+      0
+    );
+    const totalDiscountAmount = checkoutCartItems.reduce((sum, item) => {
+      const lineFaceValue = Number(item.faceValue) * Number(item.quantity);
+      return sum + lineFaceValue * (Number(item.totalDiscountPct) / 100);
+    }, 0);
+    const consumerPrice = cartSummary.totalConsumerPrice;
+    const consumerBenefitAmount = cartSummary.totalSavings;
+    const evoucherBenefitAmount = Number(
+      Math.max(totalDiscountAmount - consumerBenefitAmount, 0).toFixed(2)
+    );
+    const merchantReceivableAfterTotalDiscount = Number(
+      Math.max(totalFaceValue - totalDiscountAmount, 0).toFixed(2)
+    );
+    const merchantReceivableAfterEvoucherBenefit = Number(
+      Math.max(merchantReceivableAfterTotalDiscount - evoucherBenefitAmount, 0).toFixed(2)
+    );
+
+    if (totalFaceValue <= 0) {
+      return {
+        faceValue: 0,
+        totalDiscountPct: 0,
+        consumerBenefitPct: 0,
+        evoucherBenefitPct: 0,
+        totalDiscountAmount: 0,
+        consumerBenefitAmount: 0,
+        evoucherBenefitAmount: 0,
+        consumerPrice: 0,
+        merchantReceivableAfterTotalDiscount: 0,
+        merchantReceivableAfterEvoucherBenefit: 0,
+      };
+    }
+
+    return {
+      faceValue: Number(totalFaceValue.toFixed(2)),
+      totalDiscountPct: Number(((totalDiscountAmount / totalFaceValue) * 100).toFixed(2)),
+      consumerBenefitPct: Number(((consumerBenefitAmount / totalFaceValue) * 100).toFixed(2)),
+      evoucherBenefitPct: Number(((evoucherBenefitAmount / totalFaceValue) * 100).toFixed(2)),
+      totalDiscountAmount: Number(totalDiscountAmount.toFixed(2)),
+      consumerBenefitAmount: Number(consumerBenefitAmount.toFixed(2)),
+      evoucherBenefitAmount,
+      consumerPrice: Number(consumerPrice.toFixed(2)),
+      merchantReceivableAfterTotalDiscount,
+      merchantReceivableAfterEvoucherBenefit,
+    };
+  }, [cartCheckout, previewPricing, checkoutCartItems, cartSummary.totalConsumerPrice, cartSummary.totalSavings]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -99,6 +152,27 @@ function BuyVouchersContent() {
   }, [user]);
 
   useEffect(() => {
+    if (!user) return;
+    if (!cartCheckout) {
+      setCheckoutCartItems([]);
+      return;
+    }
+
+    const refreshCart = () => {
+      setCheckoutCartItems(getCartItems(user.id));
+    };
+
+    refreshCart();
+    window.addEventListener('evoucher-cart-updated', refreshCart);
+    window.addEventListener('storage', refreshCart);
+    return () => {
+      window.removeEventListener('evoucher-cart-updated', refreshCart);
+      window.removeEventListener('storage', refreshCart);
+    };
+  }, [cartCheckout, user]);
+
+  useEffect(() => {
+    if (cartCheckout) return;
     if (!merchants.length) return;
 
     if (merchantLocked) {
@@ -126,6 +200,7 @@ function BuyVouchersContent() {
     productIdFromQuery,
     selectedMerchant,
     merchantLocked,
+    cartCheckout,
   ]);
 
   const fetchMerchants = async () => {
@@ -243,7 +318,7 @@ function BuyVouchersContent() {
       if (!eftProofName) errs.eftProofName = 'Proof of payment is required.';
     }
     if (selectedPaymentMethod === 'wallet') {
-      if (previewPricing.consumerPrice > walletBalanceMock) {
+      if (checkoutPricing.consumerPrice > walletBalanceMock) {
         errs.wallet = 'Insufficient wallet balance for this payment.';
       }
     }
@@ -252,7 +327,12 @@ function BuyVouchersContent() {
   };
 
   const handlePurchase = async () => {
-    if (!selectedMerchant || !selectedPaymentMethod || blockingReason) return;
+    if (!selectedPaymentMethod || blockingReason) return;
+    if (!cartCheckout && !selectedMerchant) return;
+    if (cartCheckout && checkoutCartItems.length === 0) {
+      setError('Your cart is empty. Add items from Shop before checkout.');
+      return;
+    }
 
     setProcessing(true);
     setError('');
@@ -267,54 +347,109 @@ function BuyVouchersContent() {
     }
 
     try {
-      const response = await fetch('/api/v1/vouchers/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          merchantId: selectedMerchant,
+      const submitPurchase = async (payload: {
+        merchantId: string;
+        productId?: string;
+        faceValue?: number;
+      }) => {
+        const response = await fetch('/api/v1/vouchers/purchase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            ...payload,
+            paymentMethod: selectedPaymentMethod,
+            cardLastFour: cardNumber.slice(-4),
+            cardBrand: selectedPaymentMethod === 'visa_secure' ? 'VISA' : 'CARD',
+            eftReference,
+            payfastEmail,
+            billingAddress,
+            eftProofName,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setBlockingCode(data.code ?? null);
+          if (data.code === 'consumer_only_purchase') {
+            setBlockingReason(
+              'This route is consumer-only. Sign in as a consumer account to continue.'
+            );
+          } else if (data.code === 'missing_admin_env') {
+            setBlockingReason(
+              'Server configuration is incomplete. Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL.'
+            );
+          }
+          throw new Error(data.error || 'Failed to process purchase');
+        }
+        return data;
+      };
+
+      if (cartCheckout) {
+        const expandedItems = checkoutCartItems.flatMap((item) =>
+          Array.from({ length: Math.max(1, Number(item.quantity) || 1) }, () => item)
+        );
+
+        const results = [];
+        for (const item of expandedItems) {
+          const result = await submitPurchase({
+            merchantId: item.merchantId,
+            productId:
+              item.productId &&
+              !item.productId.startsWith('fallback-') &&
+              !item.productId.startsWith('starter-')
+                ? item.productId
+                : undefined,
+            faceValue: Number(item.faceValue),
+          });
+          results.push(result);
+        }
+
+        const hasFailed = results.some((result: any) => String(result.status) === 'failed');
+        const hasPending = results.some((result: any) => String(result.status) === 'pending');
+        const mergedIssuedVouchers = results.flatMap((result: any) =>
+          Array.isArray(result.issuedVouchers) ? result.issuedVouchers : []
+        );
+        const firstTransactionRef =
+          (results.find((result: any) => result?.transactionReference)?.transactionReference as
+            | string
+            | null) ?? null;
+        const firstCheckoutUrl =
+          (results.find((result: any) => result?.checkoutUrl)?.checkoutUrl as string | null) ??
+          null;
+
+        setPurchaseStatus(hasFailed ? 'failed' : hasPending ? 'pending' : 'completed');
+        setVoucherCode(mergedIssuedVouchers[0]?.code ?? null);
+        setIssuedVouchers(mergedIssuedVouchers);
+        setTransactionReference(firstTransactionRef);
+        setCheckoutUrl(firstCheckoutUrl);
+        setPricingResult(checkoutPricing);
+        if (!hasPending && !hasFailed) {
+          clearCart(user?.id);
+        }
+      } else {
+        const data = await submitPurchase({
+          merchantId: selectedMerchant as string,
           productId:
             selectedProductId && !selectedProductId.startsWith('fallback-')
               ? selectedProductId
               : undefined,
           faceValue: voucherAmount,
-          paymentMethod: selectedPaymentMethod,
-          cardLastFour: cardNumber.slice(-4),
-          cardBrand: selectedPaymentMethod === 'visa_secure' ? 'VISA' : 'CARD',
-          eftReference,
-          payfastEmail,
-          billingAddress,
-          eftProofName,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setBlockingCode(data.code ?? null);
-        if (data.code === 'consumer_only_purchase') {
-          setBlockingReason(
-            'This route is consumer-only. Sign in as a consumer account to continue.'
-          );
-        } else if (data.code === 'missing_admin_env') {
-          setBlockingReason(
-            'Server configuration is incomplete. Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL.'
-          );
-        }
-        throw new Error(data.error || 'Failed to process purchase');
-      }
+        });
 
-      setPurchaseStatus(data.status);
-      setVoucherCode(data.voucherCode || null);
-      if (Array.isArray(data.issuedVouchers)) setIssuedVouchers(data.issuedVouchers);
-      setTransactionReference(data.transactionReference || null);
-      setCheckoutUrl(data.checkoutUrl || null);
-      setPricingResult(data.pricing ?? previewPricing);
-      if (data.status === 'completed') {
-        clearCart(user?.id);
+        setPurchaseStatus(data.status);
+        setVoucherCode(data.voucherCode || null);
+        if (Array.isArray(data.issuedVouchers)) setIssuedVouchers(data.issuedVouchers);
+        setTransactionReference(data.transactionReference || null);
+        setCheckoutUrl(data.checkoutUrl || null);
+        setPricingResult(data.pricing ?? previewPricing);
+        if (data.status === 'completed') {
+          clearCart(user?.id);
+        }
       }
     } catch (purchaseError: any) {
       setPurchaseStatus('failed');
       setError(purchaseError?.message || 'Failed to process payment. Please try again.');
-      setPricingResult(previewPricing);
+      setPricingResult(checkoutPricing);
     } finally {
       setProcessing(false);
     }
@@ -565,10 +700,36 @@ function BuyVouchersContent() {
                   className="text-primary"
                 />
                 <h2 className="font-headline font-bold text-2xl text-foreground">
-                  Select Merchant
+                  {cartCheckout ? 'Checkout Cart' : 'Select Merchant'}
                 </h2>
               </div>
-              {merchantLocked ? (
+              {cartCheckout ? (
+                <div className="space-y-3">
+                  {checkoutCartItems.length === 0 ? (
+                    <p className="text-sm text-muted-foreground font-body">
+                      Your cart is empty. Add products from Shop to continue.
+                    </p>
+                  ) : (
+                    checkoutCartItems.map((item) => (
+                      <div
+                        key={`${item.merchantId}:${item.productId}`}
+                        className="rounded-xl border border-border p-3 bg-background"
+                      >
+                        <p className="text-xs uppercase tracking-wide text-primary font-headline font-semibold">
+                          {item.merchantName}
+                        </p>
+                        <p className="font-headline font-semibold text-foreground">
+                          {item.productName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Qty {item.quantity} x R{Number(item.consumerPrice).toFixed(2)} = R
+                          {(Number(item.consumerPrice) * Number(item.quantity)).toFixed(2)}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : merchantLocked ? (
                 <div className="rounded-xl border-2 border-primary bg-primary/5 p-4">
                   {selectedMerchantDetails ? (
                     <div className="flex items-center space-x-3">
@@ -670,31 +831,33 @@ function BuyVouchersContent() {
                 </div>
               )}
 
-              <div className="mt-6">
-                <label
-                  htmlFor="voucher-amount-select"
-                  className="block text-sm font-headline font-semibold text-foreground mb-2"
-                >
-                  Voucher Amount (R)
-                </label>
-                <select
-                  id="voucher-amount-select"
-                  value={voucherAmount}
-                  onChange={(e) => setVoucherAmount(Number(e.target.value))}
-                  className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-body"
-                >
-                  {amountOptions.map((amount) => (
-                    <option key={amount} value={amount}>
-                      R{amount}
-                    </option>
-                  ))}
-                </select>
-                {selectedProductId && (
-                  <p className="mt-2 text-xs text-muted-foreground font-body">
-                    Product-based checkout preselected from Shop/Cart.
-                  </p>
-                )}
-              </div>
+              {!cartCheckout && (
+                <div className="mt-6">
+                  <label
+                    htmlFor="voucher-amount-select"
+                    className="block text-sm font-headline font-semibold text-foreground mb-2"
+                  >
+                    Voucher Amount (R)
+                  </label>
+                  <select
+                    id="voucher-amount-select"
+                    value={voucherAmount}
+                    onChange={(e) => setVoucherAmount(Number(e.target.value))}
+                    className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-body"
+                  >
+                    {amountOptions.map((amount) => (
+                      <option key={amount} value={amount}>
+                        R{amount}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedProductId && (
+                    <p className="mt-2 text-xs text-muted-foreground font-body">
+                      Product-based checkout preselected from Shop/Cart.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
@@ -945,38 +1108,38 @@ function BuyVouchersContent() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground font-body">Face Value</span>
                   <span className="font-headline font-bold text-foreground">
-                    R{previewPricing.faceValue.toFixed(2)}
+                    R{checkoutPricing.faceValue.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground font-body">
-                    Total Discount Budget ({previewPricing.totalDiscountPct.toFixed(2)}%)
+                    Total Discount Budget ({checkoutPricing.totalDiscountPct.toFixed(2)}%)
                   </span>
                   <span className="font-headline font-bold text-success">
-                    -R{previewPricing.totalDiscountAmount.toFixed(2)}
+                    -R{checkoutPricing.totalDiscountAmount.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground font-body">
-                    Your Savings ({previewPricing.consumerBenefitPct.toFixed(2)}%)
+                    Your Savings ({checkoutPricing.consumerBenefitPct.toFixed(2)}%)
                   </span>
                   <span className="font-headline font-bold text-success">
-                    -R{previewPricing.consumerBenefitAmount.toFixed(2)}
+                    -R{checkoutPricing.consumerBenefitAmount.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground font-body">
-                    Platform Fee ({previewPricing.evoucherBenefitPct.toFixed(2)}%)
+                    Platform Fee ({checkoutPricing.evoucherBenefitPct.toFixed(2)}%)
                   </span>
                   <span className="font-headline font-bold text-primary">
-                    R{previewPricing.evoucherBenefitAmount.toFixed(2)}
+                    R{checkoutPricing.evoucherBenefitAmount.toFixed(2)}
                   </span>
                 </div>
                 <div className="border-t border-border pt-2 mt-2">
                   <div className="flex items-center justify-between">
                     <span className="font-headline font-semibold text-foreground">You Pay</span>
                     <span className="font-headline font-bold text-2xl text-primary">
-                      R{previewPricing.consumerPrice.toFixed(2)}
+                      R{checkoutPricing.consumerPrice.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -986,7 +1149,7 @@ function BuyVouchersContent() {
                       Merchant Receivable (FV - Total Discount)
                     </span>
                     <span className="font-headline font-semibold text-foreground">
-                      R{previewPricing.merchantReceivableAfterTotalDiscount.toFixed(2)}
+                      R{checkoutPricing.merchantReceivableAfterTotalDiscount.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -995,7 +1158,8 @@ function BuyVouchersContent() {
               <button
                 onClick={handlePurchase}
                 disabled={
-                  !selectedMerchant ||
+                  (!cartCheckout && !selectedMerchant) ||
+                  (cartCheckout && checkoutCartItems.length === 0) ||
                   !selectedPaymentMethod ||
                   processing ||
                   Boolean(blockingReason)

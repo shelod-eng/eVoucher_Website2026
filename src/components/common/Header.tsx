@@ -130,7 +130,7 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
     if (!effectiveSignedIn || effectiveMerchantUser) return;
 
     const refreshCartCount = () => {
-      const items = getCartItems();
+      const items = getCartItems(user?.id);
       const total = items.reduce((sum, item) => sum + item.quantity, 0);
       setCartCount(total);
     };
@@ -142,7 +142,7 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
       window.removeEventListener('evoucher-cart-updated', refreshCartCount);
       window.removeEventListener('storage', refreshCartCount);
     };
-  }, [effectiveSignedIn, effectiveMerchantUser]);
+  }, [effectiveSignedIn, effectiveMerchantUser, user?.id]);
 
   const handleMerchantTabIntent = (item: NavItem) => {
     if (!effectiveMerchantUser || !item.dashboardTab || typeof window === 'undefined') return;

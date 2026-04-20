@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import { addCartItem, getCartItems, saveCartItems } from '@/lib/cart';
+import { addCartItem, getCartItems } from '@/lib/cart';
 
 interface BrandLocation {
   id: string;
@@ -203,17 +203,6 @@ export default function ShopPage() {
     }
 
     const scopedUserId = user?.id;
-    const existingItems = getCartItems(scopedUserId);
-    const hasOtherMerchantItems = existingItems.some(
-      (item) => String(item.merchantId) !== String(product.merchant_id)
-    );
-
-    if (hasOtherMerchantItems) {
-      saveCartItems([], scopedUserId);
-      setStatusMessage(
-        `Cart switched to ${product.merchant_name}. You can only checkout one merchant at a time.`
-      );
-    }
 
     addCartItem({
       id: product.id,
