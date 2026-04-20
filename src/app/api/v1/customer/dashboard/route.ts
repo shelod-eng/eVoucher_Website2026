@@ -84,7 +84,7 @@ export async function GET() {
         .select('id,merchant_id,voucher_code,amount,card_brand,card_last_four,payment_status,created_at')
         .eq('customer_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(20),
+        .limit(200),
     ]);
 
     if (profileRes.error) throw profileRes.error;
@@ -150,7 +150,38 @@ export async function GET() {
 
     const vouchersPayload = vouchersRes.data ?? [];
     const paymentTransactionsPayload = paymentsRes.data ?? [];
-    const walletBalance = (await getWalletBalance(supabase, user.id)) ?? 0;
+    const walletBalanceFromLedger = (await getWalletBalance(supabase, user.id)) ?? 0;
+    const walletTopupCredits = paymentTransactionsPayload.reduce((sum: number, tx: any) => {
+      const status = String(tx?.payment_status ?? '')
+        .toLowerCase()
+        .trim();
+      const isCompleted = !status || status === 'completed' || status === 'paid' || status === 'success';
+      if (!isCompleted) return sum;
+      const hasNoMerchant = !tx?.merchant_id;
+      const hasNoVoucher = !tx?.voucher_code;
+      if (!hasNoMerchant || !hasNoVoucher) return sum;
+      const amount = Number(tx?.amount ?? 0);
+      return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+    }, 0);
+    const walletDebitsFromPurchases = paymentTransactionsPayload.reduce((sum: number, tx: any) => {
+      const status = String(tx?.payment_status ?? '')
+        .toLowerCase()
+        .trim();
+      const isCompleted = !status || status === 'completed' || status === 'paid' || status === 'success';
+      if (!isCompleted) return sum;
+      const brand = String(tx?.card_brand ?? '')
+        .toUpperCase()
+        .trim();
+      if (brand !== 'WALLET') return sum;
+      const amount = Number(tx?.amount ?? 0);
+      return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+    }, 0);
+    const walletBalanceFromPayments = Number(
+      Math.max(walletTopupCredits - walletDebitsFromPurchases, 0).toFixed(2)
+    );
+    const walletBalance = Number(
+      Math.max(walletBalanceFromLedger, walletBalanceFromPayments).toFixed(2)
+    );
 
     return jsonNoStore({
       profile,
