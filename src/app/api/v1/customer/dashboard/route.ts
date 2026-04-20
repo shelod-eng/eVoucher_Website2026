@@ -157,9 +157,8 @@ export async function GET() {
         .trim();
       const isCompleted = !status || status === 'completed' || status === 'paid' || status === 'success';
       if (!isCompleted) return sum;
-      const hasNoMerchant = !tx?.merchant_id;
       const hasNoVoucher = !tx?.voucher_code;
-      if (!hasNoMerchant || !hasNoVoucher) return sum;
+      if (!hasNoVoucher) return sum;
       const amount = Number(tx?.amount ?? 0);
       return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
     }, 0);
