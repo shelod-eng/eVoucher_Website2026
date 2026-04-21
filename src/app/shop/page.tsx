@@ -608,7 +608,7 @@ export default function ShopPage() {
                     <button
                       onClick={() =>
                         router.push(
-                          `/rewards?network=kalapeng${
+                          `/benefits?merchant=kalapeng${
                             selectedKalapengBranch?.id
                               ? `&branchId=${encodeURIComponent(selectedKalapengBranch.id)}`
                               : ''

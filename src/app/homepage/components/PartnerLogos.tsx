@@ -135,7 +135,7 @@ const PartnerLogos = () => {
                 Shop Kalapeng
               </Link>
               <Link
-                href="/rewards?network=kalapeng"
+                href="/benefits?merchant=kalapeng"
                 className="px-4 py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
               >
                 Join Kalapeng Loyalty
