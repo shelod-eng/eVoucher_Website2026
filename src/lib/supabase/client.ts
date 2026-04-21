@@ -6,9 +6,10 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        // Avoid sticky sessions on shared devices (POPIA/security requirement).
-        // Users will need to sign in again after a full page refresh.
-        persistSession: false,
+        // Keep browser sessions stable across refreshes and tabs.
+        // Session isolation remains per-browser/device.
+        persistSession: true,
+        autoRefreshToken: true,
       },
     }
   );

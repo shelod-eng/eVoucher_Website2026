@@ -21,6 +21,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabase = useMemo(() => createClient(), []);
 
+  const clearLocalAuthArtifacts = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const shouldClearKey = (key: string) =>
+        key.includes('auth-token') || (key.startsWith('sb-') && key.includes('-auth-token'));
+
+      Object.keys(window.localStorage)
+        .filter(shouldClearKey)
+        .forEach((key) => window.localStorage.removeItem(key));
+
+      Object.keys(window.sessionStorage)
+        .filter(shouldClearKey)
+        .forEach((key) => window.sessionStorage.removeItem(key));
+    } catch (storageError) {
+      console.warn('AuthContext: failed to clear local auth artifacts:', storageError);
+    }
+  };
+
   const resolveUserRole = async (currentUser: User | null): Promise<string | null> => {
     if (!currentUser) return null;
 
@@ -105,18 +123,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .toLowerCase();
     const normalizedPassword = String(password ?? '').trim();
 
-    // Compliance hardening: clear any previous browser session before new sign-in.
+    // Clear only the current browser session before a role/account switch.
+    // Do not revoke global sessions so other devices/users remain signed in.
     try {
       await supabase.auth.signOut({ scope: 'local' });
-      await supabase.auth.signOut({ scope: 'global' });
-      if (typeof window !== 'undefined') {
-        Object.keys(window.localStorage)
-          .filter((key) => key.includes('auth-token'))
-          .forEach((key) => window.localStorage.removeItem(key));
-        Object.keys(window.sessionStorage)
-          .filter((key) => key.includes('auth-token'))
-          .forEach((key) => window.sessionStorage.removeItem(key));
-      }
+      clearLocalAuthArtifacts();
     } catch (preSignInClearError) {
       console.warn('AuthContext: pre-signin session clear warning:', preSignInClearError);
     }
@@ -162,29 +173,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRole(null);
     setLoading(false);
 
-    const localResult = await supabase.auth.signOut({ scope: 'local' });
-    if (localResult.error) {
-      console.warn('AuthContext: local signOut warning:', localResult.error.message);
+    const result = await supabase.auth.signOut({ scope: 'local' });
+    if (result.error) {
+      console.warn('AuthContext: local signOut warning:', result.error.message);
     }
-
-    const globalResult = await supabase.auth.signOut({ scope: 'global' });
-    if (globalResult.error) {
-      console.warn('AuthContext: global signOut warning:', globalResult.error.message);
-    }
-
-    // Clear any persisted auth tokens to avoid sticky sessions after logout.
-    try {
-      if (typeof window !== 'undefined') {
-        Object.keys(window.localStorage)
-          .filter((key) => key.includes('auth-token'))
-          .forEach((key) => window.localStorage.removeItem(key));
-        Object.keys(window.sessionStorage)
-          .filter((key) => key.includes('auth-token'))
-          .forEach((key) => window.sessionStorage.removeItem(key));
-      }
-    } catch (storageError) {
-      console.warn('AuthContext: failed to clear auth storage:', storageError);
-    }
+    clearLocalAuthArtifacts();
   };
 
   return (
