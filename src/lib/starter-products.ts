@@ -8,6 +8,12 @@ interface StarterProductTemplate {
 }
 
 const STARTER_PRODUCTS: Record<BrandKey, StarterProductTemplate[]> = {
+  kalapeng: [
+    { name: 'Kalapeng OTC Basket R100', faceValue: 100 },
+    { name: 'Kalapeng Family Wellness Basket R250', faceValue: 250 },
+    { name: 'Kalapeng Chronic Refill Support R500', faceValue: 500 },
+    { name: 'Kalapeng Pharmacy Essentials R1000', faceValue: 1000 },
+  ],
   picknpay: [
     { name: 'Pick n Pay Smart Shopper Top-Up', faceValue: 100 },
     { name: 'Pick n Pay Family Grocery Basket', faceValue: 200 },
