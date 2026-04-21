@@ -2,6 +2,11 @@ export interface CartItem {
   id: string;
   merchantId: string;
   merchantName: string;
+  selectedBranchId?: string;
+  selectedBranchName?: string;
+  selectedBranchCity?: string;
+  selectedBranchProvince?: string;
+  branchSelectionMode?: 'nearest' | 'manual';
   productId: string;
   productName: string;
   parentBrand?: string;

@@ -53,6 +53,13 @@ function validate(body: PurchaseVoucherRequest): string | null {
     const lastFour = String(body.cardLastFour ?? '').trim();
     if (lastFour && !/^\d{4}$/.test(lastFour)) return 'Card last four must be 4 digits.';
   }
+  if (
+    body.branchSelectionMode &&
+    body.branchSelectionMode !== 'nearest' &&
+    body.branchSelectionMode !== 'manual'
+  ) {
+    return 'Invalid branchSelectionMode.';
+  }
   return null;
 }
 
@@ -285,6 +292,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const resolvedBranchName = String(
+      body.selectedBranchName ?? merchant.branch_name ?? merchant.business_name
+    ).trim();
+    const resolvedBranchCity =
+      String(body.selectedBranchCity ?? merchant.city ?? '').trim() || null;
+    const resolvedBranchProvince =
+      String(body.selectedBranchProvince ?? merchant.province ?? '').trim() || null;
+    const resolvedBranchSelectionMode =
+      body.branchSelectionMode === 'manual' ? 'manual' : 'nearest';
+
     let productId: string | null = null;
     let productParentBrand: string | null = null;
     let productRedemptionScope: 'all_branches' | 'specific_branch' | 'province_wide' | 'national' =
@@ -502,7 +519,6 @@ export async function POST(request: Request) {
           paymentMethod: body.paymentMethod,
         });
       }
-
     }
 
     await writeAuditEvent(admin, {
@@ -514,6 +530,11 @@ export async function POST(request: Request) {
         paymentStatus === 'completed' ? 'voucher_purchase_completed' : 'voucher_purchase_pending',
       metadata: {
         merchantId: merchant.id,
+        selectedBranchId: body.selectedBranchId ?? merchant.id,
+        selectedBranchName: resolvedBranchName,
+        selectedBranchCity: resolvedBranchCity,
+        selectedBranchProvince: resolvedBranchProvince,
+        branchSelectionMode: resolvedBranchSelectionMode,
         faceValue: pricing.faceValue,
         consumerPrice: pricing.consumerPrice,
         totalDiscountPct: pricing.totalDiscountPct,
@@ -533,6 +554,13 @@ export async function POST(request: Request) {
       voucherCode,
       issuedVouchers,
       pricing,
+      selectedBranch: {
+        id: body.selectedBranchId ?? merchant.id,
+        name: resolvedBranchName,
+        city: resolvedBranchCity,
+        province: resolvedBranchProvince,
+        selectionMode: resolvedBranchSelectionMode,
+      },
     });
   } catch (error: any) {
     return NextResponse.json(

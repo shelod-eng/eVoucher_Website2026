@@ -1,4 +1,5 @@
 export type BrandKey =
+  | 'kalapeng'
   | 'picknpay'
   | 'clicks'
   | 'pep'
@@ -26,6 +27,15 @@ export interface MerchantBrandDefinition {
 }
 
 const BRAND_CATALOG: MerchantBrandDefinition[] = [
+  {
+    brandKey: 'kalapeng',
+    displayName: 'Kalapeng Pharmacy Group',
+    category: 'Healthcare',
+    assetPath: '/assets/images/merchants/dischem.png',
+    aliases: ['kalapeng', 'kalapeng pharmacy', 'kalapeng pharmacy group'],
+    estimatedLocationCount: 35,
+    estimatedProvinceCount: 9,
+  },
   {
     brandKey: 'picknpay',
     displayName: 'Pick n Pay',

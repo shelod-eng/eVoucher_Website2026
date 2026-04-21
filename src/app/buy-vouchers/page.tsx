@@ -86,6 +86,11 @@ function BuyVouchersContent() {
   const merchantIdFromQuery = searchParams.get('merchantId');
   const brandKeyFromQuery = searchParams.get('brandKey');
   const productIdFromQuery = searchParams.get('productId');
+  const selectedBranchIdFromQuery = searchParams.get('selectedBranchId');
+  const selectedBranchNameFromQuery = searchParams.get('selectedBranchName');
+  const selectedBranchCityFromQuery = searchParams.get('selectedBranchCity');
+  const selectedBranchProvinceFromQuery = searchParams.get('selectedBranchProvince');
+  const branchSelectionModeFromQuery = searchParams.get('branchSelectionMode');
   const walletTopupMode = searchParams.get('walletTopup') === '1';
   const cartCheckout = searchParams.get('cartCheckout') === '1';
   const merchantLocked = Boolean(merchantIdFromQuery);
@@ -152,7 +157,13 @@ function BuyVouchersContent() {
       merchantReceivableAfterTotalDiscount,
       merchantReceivableAfterEvoucherBenefit,
     };
-  }, [cartCheckout, previewPricing, checkoutCartItems, cartSummary.totalConsumerPrice, cartSummary.totalSavings]);
+  }, [
+    cartCheckout,
+    previewPricing,
+    checkoutCartItems,
+    cartSummary.totalConsumerPrice,
+    cartSummary.totalSavings,
+  ]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -374,6 +385,11 @@ function BuyVouchersContent() {
         merchantId: string;
         productId?: string;
         faceValue?: number;
+        selectedBranchId?: string;
+        selectedBranchName?: string;
+        selectedBranchCity?: string;
+        selectedBranchProvince?: string;
+        branchSelectionMode?: 'nearest' | 'manual';
       }) => {
         const response = await fetch('/api/v1/vouchers/purchase', {
           method: 'POST',
@@ -388,6 +404,11 @@ function BuyVouchersContent() {
             payfastEmail,
             billingAddress,
             eftProofName,
+            selectedBranchId: payload.selectedBranchId,
+            selectedBranchName: payload.selectedBranchName,
+            selectedBranchCity: payload.selectedBranchCity,
+            selectedBranchProvince: payload.selectedBranchProvince,
+            branchSelectionMode: payload.branchSelectionMode,
           }),
         });
         const data = await response.json();
@@ -471,6 +492,11 @@ function BuyVouchersContent() {
                 ? item.productId
                 : undefined,
             faceValue: Number(item.faceValue),
+            selectedBranchId: item.selectedBranchId,
+            selectedBranchName: item.selectedBranchName,
+            selectedBranchCity: item.selectedBranchCity,
+            selectedBranchProvince: item.selectedBranchProvince,
+            branchSelectionMode: item.branchSelectionMode,
           });
           results.push(result);
         }
@@ -505,6 +531,11 @@ function BuyVouchersContent() {
               ? selectedProductId
               : undefined,
           faceValue: voucherAmount,
+          selectedBranchId: selectedBranchIdFromQuery ?? undefined,
+          selectedBranchName: selectedBranchNameFromQuery ?? undefined,
+          selectedBranchCity: selectedBranchCityFromQuery ?? undefined,
+          selectedBranchProvince: selectedBranchProvinceFromQuery ?? undefined,
+          branchSelectionMode: branchSelectionModeFromQuery === 'manual' ? 'manual' : 'nearest',
         });
 
         setPurchaseStatus(data.status);
@@ -776,12 +807,17 @@ function BuyVouchersContent() {
                   className="text-primary"
                 />
                 <h2 className="font-headline font-bold text-2xl text-foreground">
-                  {walletTopupMode ? 'Top-Up Amount' : cartCheckout ? 'Checkout Cart' : 'Select Merchant'}
+                  {walletTopupMode
+                    ? 'Top-Up Amount'
+                    : cartCheckout
+                      ? 'Checkout Cart'
+                      : 'Select Merchant'}
                 </h2>
               </div>
               {walletTopupMode ? (
                 <p className="text-sm text-muted-foreground">
-                  Choose the top-up amount, then select a payment method to fund your wallet balance.
+                  Choose the top-up amount, then select a payment method to fund your wallet
+                  balance.
                 </p>
               ) : cartCheckout ? (
                 <div className="space-y-3">

@@ -13,18 +13,65 @@ import {
   markSubmitted,
 } from '@/settlements/mock-settlement-store';
 import { FileDown, RefreshCw } from 'lucide-react';
+import {
+  approveBillingSettlementBatch,
+  confirmBillingSettlementBatch,
+  exportBillingSettlementBatchBankServ,
+  getBankServStatus,
+  listBillingSettlementBatches,
+  submitBillingSettlementBatch,
+} from '@/api/portal-api';
 
 export default function BankServ() {
   const { session, isFinanceApprover, role } = useAdminAuth();
   const [batches, setBatches] = useState([]);
+  const [bankServStatus, setBankServStatus] = useState(null);
+  const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
+  const usePortalApi = dataMode === 'portal';
 
-  function refresh() {
-    setBatches(listBatches());
+  function downloadBlob(filename, blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function refresh() {
+    if (!usePortalApi) {
+      setBatches(listBatches());
+      return;
+    }
+
+    if (!session?.email) {
+      setBatches([]);
+      return;
+    }
+
+    const response = await listBillingSettlementBatches(session, role, { limit: 200, offset: 0 });
+    const raw = response?.data ?? [];
+    const normalised = raw.map((b) => ({
+      ...b,
+      batchNumber: b.batchNumber ?? b.batch_number,
+      createdAt: b.createdAt ?? b.created_at,
+      createdByEmail: b.createdByEmail ?? b.created_by_email ?? session?.email,
+      merchantCount: b.merchantCount ?? b.merchant_count,
+      totalAmount: b.totalAmount ?? b.total_amount,
+    }));
+    setBatches(normalised);
   }
 
   useEffect(() => {
-    refresh();
+    refresh().catch(() => setBatches([]));
   }, []);
+
+  useEffect(() => {
+    if (!usePortalApi || !session?.email) return;
+    getBankServStatus(session, role)
+      .then((res) => setBankServStatus(res?.data ?? null))
+      .catch(() => setBankServStatus(null));
+  }, [usePortalApi, session?.email, role]);
 
   const counts = useMemo(() => {
     const c = {
@@ -72,27 +119,61 @@ export default function BankServ() {
 
   function exportBatch(batch) {
     const exportedByEmail = session?.email || 'unknown';
-    const updated = markExported({ batchId: batch.id, exportedByEmail });
-    const csv = buildSettlementCsv(updated);
-    downloadTextFile(`${updated.batchNumber}.csv`, csv);
-    logAuditEvent('bankserv.export_csv', { batchNumber: updated.batchNumber, exportedByEmail });
-    refresh();
+
+    if (!usePortalApi) {
+      const updated = markExported({ batchId: batch.id, exportedByEmail });
+      const csv = buildSettlementCsv(updated);
+      downloadTextFile(`${updated.batchNumber}.csv`, csv);
+      logAuditEvent('bankserv.export_csv', { batchNumber: updated.batchNumber, exportedByEmail });
+      refresh();
+      return;
+    }
+
+    exportBillingSettlementBatchBankServ(batch.id, session, role)
+      .then(({ blob, filename }) => {
+        downloadBlob(filename, blob);
+        logAuditEvent('bankserv.export_bankserv', { batchNumber: batch.batchNumber, exportedByEmail });
+        refresh();
+      })
+      .catch((err) => {
+        console.error(err);
+      });
   }
 
   function submitBatch(batch) {
     const submittedByEmail = session?.email || 'unknown';
-    const updated = markSubmitted({ batchId: batch.id, submittedByEmail });
-    logAuditEvent('bankserv.submit_to_bank', { batchNumber: updated.batchNumber, submittedByEmail });
-    refresh();
-    return updated;
+    if (!usePortalApi) {
+      const updated = markSubmitted({ batchId: batch.id, submittedByEmail });
+      logAuditEvent('bankserv.submit_to_bank', { batchNumber: updated.batchNumber, submittedByEmail });
+      refresh();
+      return updated;
+    }
+
+    submitBillingSettlementBatch(batch.id, session, role)
+      .then(() => {
+        logAuditEvent('bankserv.submit_to_bank', { batchNumber: batch.batchNumber, submittedByEmail });
+        refresh();
+      })
+      .catch((err) => console.error(err));
+    return batch;
   }
 
   function confirmBatch(batch) {
     const confirmedByEmail = session?.email || 'unknown';
-    const updated = markConfirmed({ batchId: batch.id, confirmedByEmail });
-    logAuditEvent('bankserv.confirm_paid', { batchNumber: updated.batchNumber, confirmedByEmail });
-    refresh();
-    return updated;
+    if (!usePortalApi) {
+      const updated = markConfirmed({ batchId: batch.id, confirmedByEmail });
+      logAuditEvent('bankserv.confirm_paid', { batchNumber: updated.batchNumber, confirmedByEmail });
+      refresh();
+      return updated;
+    }
+
+    confirmBillingSettlementBatch(batch.id, session, role)
+      .then(() => {
+        logAuditEvent('bankserv.confirm_paid', { batchNumber: batch.batchNumber, confirmedByEmail });
+        refresh();
+      })
+      .catch((err) => console.error(err));
+    return batch;
   }
 
   const latestExportable = useMemo(
@@ -110,15 +191,143 @@ export default function BankServ() {
     }
   }, [latestExportable]);
 
+  function approveBatch(batch) {
+    const approvedByEmail = session?.email || 'unknown';
+    if (!usePortalApi) {
+      // This screen’s mock store already enforces 2-person control for demo.
+      return;
+    }
+    approveBillingSettlementBatch(batch.id, session, role)
+      .then(() => {
+        logAuditEvent('bankserv.approve_batch', { batchNumber: batch.batchNumber, approvedByEmail });
+        refresh();
+      })
+      .catch((err) => console.error(err));
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
-          <FileDown className="w-5 h-5 text-[#00A89D]" />
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
+            <FileDown className="w-5 h-5 text-[#00A89D]" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">BankServ Africa Adaptor</h1>
+            <p className="text-sm text-white/70">
+              Bridge layer: eVoucher Platform → FNB Sponsor → PCH/SAMOS → BankServ → Merchant
+            </p>
+            {bankServStatus?.partner ? (
+              <p className="text-xs text-white/50 mt-1">Settlement partner: {bankServStatus.partner}</p>
+            ) : null}
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold">BankServ</h1>
-          <p className="text-sm text-white/70">Settlement file export + submission workflow (Phase 2 demo).</p>
+
+        <div className="flex items-center gap-2">
+          <Badge className="bg-white/10 border-white/10 text-white">Demo</Badge>
+          {bankServStatus?.connected ? (
+            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">LIVE</Badge>
+          ) : (
+            <Badge className="bg-yellow-500/20 text-yellow-200 border-yellow-500/30">Mock</Badge>
+          )}
+          <Badge
+            className={
+              bankServStatus?.connected
+                ? 'bg-emerald-500/10 text-emerald-200 border-emerald-500/20'
+                : 'bg-white/10 border-white/10 text-white/70'
+            }
+          >
+            {bankServStatus?.connected ? 'BankServ Connected' : 'BankServ Not Connected'}
+          </Badge>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="bg-white/5 border-white/10 text-white p-4 lg:col-span-2">
+          <div className="font-semibold mb-3">Payment Flow Architecture</div>
+          <div className="space-y-3">
+            {[
+              { step: 'Step 1', title: 'Consumer Payment', sub: 'Card / EFT / Wallet' },
+              { step: 'Step 2', title: 'eVoucher Platform', sub: 'Business logic layer' },
+              { step: 'Step 3', title: 'Sponsor Bank (FNB)', sub: 'Originating bank • RMB/FNB CIB' },
+              { step: 'Step 4', title: 'PCH / SAMOS', sub: 'Clearing house' },
+              { step: 'Step 5', title: 'BankServ Africa', sub: 'ACH operator (ISO 20022)' },
+              { step: 'Step 6', title: "Merchant's Bank", sub: 'Destination account' },
+            ].map((row) => (
+              <div
+                key={row.step}
+                className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10"
+              >
+                <div>
+                  <div className="text-sm font-semibold">{row.title}</div>
+                  <div className="text-xs text-white/60">{row.sub}</div>
+                </div>
+                <Badge className="bg-white/10 border-white/10 text-white">{row.step}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <div className="space-y-4">
+          <Card className="bg-white/5 border-white/10 text-white p-4">
+            <div className="font-semibold mb-3">Money Split (Per Transaction)</div>
+            <div className="h-2 rounded-full bg-white/10 overflow-hidden mb-3">
+              <div className="h-full bg-emerald-400" style={{ width: '96%' }} />
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>96% Merchant Payout</span>
+                </div>
+                <span className="text-white/70">Settled via BankServ</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-purple-400" />
+                  <span>2.8% Consumer Benefit</span>
+                </div>
+                <span className="text-white/70">Credited to wallet</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#00A89D]" />
+                  <span>1.2% Platform Revenue</span>
+                </div>
+                <span className="text-white/70">Retained</span>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="bg-white/5 border-white/10 text-white p-4">
+            <div className="font-semibold mb-3">Technical Specifications</div>
+            <div className="text-sm text-white/70 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-white/60">File format</span>
+                <span>ISO 20022 / BankServ</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-white/60">EFT credit code</span>
+                <span>Transaction Code 40</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-white/60">Originating bank</span>
+                <span>FNB (Branch: 250655)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-white/60">Clearing network</span>
+                <span>PCH / SAMOS (SARB)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-white/60">Settlement timing</span>
+                <span>T+0 (FNB→FNB) / T+1</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-white/60">Encryption</span>
+                <span>AES‑256 + TLS 1.3</span>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
 
@@ -126,7 +335,6 @@ export default function BankServ() {
         <div className="flex items-center justify-between">
           <div className="font-semibold">EFT Export Requirements</div>
           <div className="flex items-center gap-2">
-            <Badge className="bg-white/10 border-white/10 text-white">Demo</Badge>
             <GoldButton
               variant="outline"
               size="sm"
@@ -206,6 +414,16 @@ export default function BankServ() {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {b.status === 'pending_approval' && (isFinanceApprover || role === 'admin') ? (
+                    <GoldButton
+                      size="sm"
+                      onClick={() => approveBatch(b)}
+                      className="bg-blue-600 hover:bg-blue-600/90 text-white"
+                    >
+                      Approve Batch
+                    </GoldButton>
+                  ) : null}
+
                   {canExport(b.status) ? (
                     <GoldButton
                       size="sm"
@@ -243,7 +461,8 @@ export default function BankServ() {
         )}
 
         <div className="mt-4 text-xs text-white/60">
-          Role permissions: <span className="font-mono">finance_approver</span> can export/submit/confirm. Current: {role}.
+          Data mode: <span className="font-mono">{usePortalApi ? 'portal' : 'mock'}</span>. Role permissions:{' '}
+          <span className="font-mono">finance_approver</span> can approve/export/submit/confirm. Current: {role}.
         </div>
       </Card>
 

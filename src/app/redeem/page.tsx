@@ -30,6 +30,12 @@ interface RedeemResult {
   status: VoucherStatus;
 }
 
+interface ParticipatingMerchant {
+  id: string;
+  businessName: string;
+  status: string;
+}
+
 function toCurrency(value: number) {
   return `R${Number(value ?? 0).toFixed(2)}`;
 }
@@ -42,10 +48,8 @@ function getStatusClass(status: VoucherStatus) {
 
 function getScopeLabel(voucher: RedeemVoucher) {
   const scope = String(voucher.redemption_scope ?? 'all_branches').toLowerCase();
-  if (scope === 'national') return 'Valid nationwide';
-  if (scope === 'province_wide') return 'Valid in selected provinces';
-  if (scope === 'specific_branch') return 'Valid at selected branches';
-  return 'Valid at all locations';
+  if (scope === 'national') return 'Redeemable at any participating eVoucher store nationwide';
+  return 'Redeemable at any participating eVoucher store';
 }
 
 function normalizeCode(value: string) {
@@ -75,6 +79,8 @@ function RedeemPageContent() {
   const [redeemAmount, setRedeemAmount] = useState('');
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<RedeemResult | null>(null);
+  const [participatingMerchants, setParticipatingMerchants] = useState<ParticipatingMerchant[]>([]);
+  const [selectedMerchantId, setSelectedMerchantId] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -106,17 +112,49 @@ function RedeemPageContent() {
   }, [user]);
 
   useEffect(() => {
+    if (!user || isMerchant) return;
+    void (async () => {
+      try {
+        const response = await fetch('/api/v1/merchants/active', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        const data = await response.json().catch(() => ({}) as any);
+        if (!response.ok) return;
+        const merchants = Array.isArray(data?.merchants) ? data.merchants : [];
+        const normalized: ParticipatingMerchant[] = merchants.map((merchant: any) => ({
+          id: String(merchant.id ?? ''),
+          businessName: String(merchant.businessName ?? merchant.business_name ?? 'Merchant'),
+          status: String(merchant.status ?? 'active'),
+        }));
+        setParticipatingMerchants(normalized.filter((merchant) => merchant.id));
+      } catch {
+        setParticipatingMerchants([]);
+      }
+    })();
+  }, [user, isMerchant]);
+
+  useEffect(() => {
+    if (isMerchant) return;
+    if (selectedMerchantId) return;
+    if (participatingMerchants.length === 0) return;
+    setSelectedMerchantId(participatingMerchants[0].id);
+  }, [isMerchant, participatingMerchants, selectedMerchantId]);
+
+  useEffect(() => {
     const prefillCode = normalizeCode(searchParams.get('code') ?? '');
     if (!prefillCode) return;
     setCode(prefillCode);
   }, [searchParams]);
 
   const canRedeemVoucher = useMemo(
-    () =>
-      Boolean(voucher) &&
-      isMerchant &&
-      (voucher?.status === 'active' || voucher?.status === 'partial'),
-    [voucher, isMerchant]
+    () => Boolean(voucher) && (voucher?.status === 'active' || voucher?.status === 'partial'),
+    [voucher]
+  );
+  const canProcessRedemption = useMemo(
+    () => canRedeemVoucher && (isMerchant || Boolean(selectedMerchantId)),
+    [canRedeemVoucher, isMerchant, selectedMerchantId]
   );
   const showVoucherCard = Boolean(voucher) && !Boolean(result?.success);
 
@@ -187,7 +225,7 @@ function RedeemPageContent() {
 
   const handleRedeem = async () => {
     if (!voucher) return;
-    if (!isMerchant) return;
+    if (!canProcessRedemption) return;
 
     const amount = Number(redeemAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -222,7 +260,7 @@ function RedeemPageContent() {
         body: JSON.stringify({
           voucherCode: voucher.code,
           amount,
-          merchantId: merchantId ?? undefined,
+          merchantId: isMerchant ? merchantId ?? undefined : selectedMerchantId || undefined,
           idempotencyKey: createIdempotencyKey(),
         }),
       });
@@ -297,7 +335,7 @@ function RedeemPageContent() {
               <div>
                 <h1 className="font-headline font-bold text-5xl text-foreground">Redeem Voucher</h1>
                 <p className="text-muted-foreground">
-                  Enter your voucher code to redeem at a merchant
+                  Enter your voucher code and redeem at any participating registered eVoucher store.
                 </p>
               </div>
             </div>
@@ -384,16 +422,36 @@ function RedeemPageContent() {
                 {voucher.expiry_date ? new Date(voucher.expiry_date).toLocaleDateString() : 'N/A'}
               </p>
 
-              {!isMerchant ? (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                  <p className="font-headline font-semibold text-foreground mb-1">Customer view</p>
-                  <p className="text-sm text-muted-foreground">
-                    Show this voucher code/QR to the cashier. Only merchant accounts can process the
-                    redemption.
+              {!canRedeemVoucher ? (
+                <div className="rounded-lg border border-error/20 bg-error/10 p-3">
+                  <p className="text-sm text-error">
+                    This voucher cannot be redeemed because it is {voucher.status}.
                   </p>
                 </div>
-              ) : canRedeemVoucher ? (
+              ) : (
                 <>
+                  {!isMerchant && (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 mb-3">
+                      <p className="font-headline font-semibold text-foreground mb-2">
+                        Select Participating Store
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Choose any active eVoucher merchant store where redemption is being processed.
+                      </p>
+                      <select
+                        value={selectedMerchantId}
+                        onChange={(event) => setSelectedMerchantId(event.target.value)}
+                        className="w-full px-3 py-3 border border-border rounded-lg bg-background font-body"
+                      >
+                        <option value="">Select store</option>
+                        {participatingMerchants.map((merchant) => (
+                          <option key={merchant.id} value={merchant.id}>
+                            {merchant.businessName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <label
                     htmlFor="redeem-amount"
                     className="block text-sm font-headline font-semibold text-foreground mb-2"
@@ -415,20 +473,19 @@ function RedeemPageContent() {
                   </p>
                   <button
                     onClick={() => void handleRedeem()}
-                    disabled={processing}
+                    disabled={processing || !canProcessRedemption}
                     className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-headline font-semibold disabled:opacity-60"
                   >
                     {processing
                       ? 'Processing at POS...'
-                      : `Redeem ${toCurrency(Number(redeemAmount || 0))}`}
+                      : `Redeem ${toCurrency(Number(redeemAmount || 0))} In Store`}
                   </button>
+                  {!isMerchant && !selectedMerchantId && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Select a participating store to enable redemption.
+                    </p>
+                  )}
                 </>
-              ) : (
-                <div className="rounded-lg border border-error/20 bg-error/10 p-3">
-                  <p className="text-sm text-error">
-                    This voucher cannot be redeemed because it is {voucher.status}.
-                  </p>
-                </div>
               )}
             </section>
           )}

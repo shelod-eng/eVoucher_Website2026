@@ -30,6 +30,11 @@ export interface PurchaseVoucherRequest {
   productId?: string;
   faceValue?: number;
   paymentMethod: 'visa_secure' | 'debit_credit' | 'payfast' | 'eft' | 'wallet';
+  selectedBranchId?: string;
+  selectedBranchName?: string;
+  selectedBranchCity?: string;
+  selectedBranchProvince?: string;
+  branchSelectionMode?: 'nearest' | 'manual';
   cardLastFour?: string;
   cardBrand?: string;
   payfastEmail?: string;

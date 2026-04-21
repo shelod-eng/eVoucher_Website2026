@@ -6,6 +6,7 @@ import { RedeemVoucherRequest } from '@/types/domain';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { resolveUserRole } from '@/server/utils/role';
 import { writeAuditEvent, writeFraudAlert } from '@/server/utils/audit';
+import { recordVoucherRedemptionBillingEvent } from '@/server/services/billing/billing-events';
 import { sha256 } from '@/server/utils/security';
 import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
 
@@ -230,61 +231,11 @@ async function fetchActiveMerchantByBrand(admin: any, brandName: string | null) 
   return null;
 }
 
-function normalizeText(value: unknown) {
-  return String(value ?? '')
-    .trim()
-    .toLowerCase();
-}
-
-function normalizeTextArray(value: unknown) {
-  if (!Array.isArray(value)) return [];
-  return value.map((entry) => normalizeText(entry)).filter((entry) => entry.length > 0);
-}
-
-function normalizeUuidArray(value: unknown) {
-  if (!Array.isArray(value)) return [];
-  return value.map((entry) => String(entry)).filter((entry) => entry.length > 0);
-}
-
-function validateScope(voucher: VoucherRow, merchant: MerchantRow | null) {
-  const scope = normalizeScope(voucher.redemption_scope);
-  if (!merchant) {
-    if (scope === 'specific_branch') {
-      return { valid: false, message: 'Voucher requires a specific branch for redemption.' };
-    }
-    return { valid: true };
+function validateScope(_voucher: VoucherRow, merchant: MerchantRow | null) {
+  // Nationwide interoperability mode: any active participating merchant can accept vouchers.
+  if (!merchant?.id) {
+    return { valid: false, message: 'Select a participating merchant to redeem this voucher.' };
   }
-
-  const voucherBrand = normalizeText(voucher.parent_brand || voucher.merchant_name);
-  const merchantBrand = normalizeText(merchant.parent_brand || merchant.business_name);
-  if (voucherBrand && merchantBrand && voucherBrand !== merchantBrand) {
-    return { valid: false, message: 'Voucher is not valid for this brand.' };
-  }
-
-  if (scope === 'all_branches' || scope === 'national') {
-    return { valid: true };
-  }
-
-  if (scope === 'specific_branch') {
-    const validBranchIds = normalizeUuidArray(voucher.valid_branch_ids);
-    if (validBranchIds.length > 0 && !validBranchIds.includes(merchant.id)) {
-      return { valid: false, message: 'Voucher is not valid for this branch.' };
-    }
-    return { valid: true };
-  }
-
-  if (scope === 'province_wide') {
-    const validProvinces = normalizeTextArray(voucher.valid_provinces);
-    const merchantProvince = normalizeText(merchant.province);
-    if (
-      validProvinces.length > 0 &&
-      (!merchantProvince || !validProvinces.includes(merchantProvince))
-    ) {
-      return { valid: false, message: 'Voucher is not valid in this province.' };
-    }
-    return { valid: true };
-  }
-
   return { valid: true };
 }
 
@@ -424,9 +375,12 @@ export async function POST(request: Request) {
     }
 
     const { role } = await resolveUserRole(supabase, user);
-    if (role !== 'merchant') {
+    if (role !== 'merchant' && role !== 'consumer') {
       return NextResponse.json(
-        { error: 'Only merchant accounts can redeem vouchers.', code: 'merchant_only_redemption' },
+        {
+          error: 'Only consumer or merchant accounts can redeem vouchers.',
+          code: 'redemption_role_not_allowed',
+        },
         { status: 403 }
       );
     }
@@ -445,12 +399,15 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
 
-    const merchantContext = await resolveMerchantForUser<MerchantRow>(
-      admin,
-      user,
-      'id,business_name,parent_brand,branch_name,province,status,default_total_discount_pct'
-    );
-    if (!merchantContext?.id) {
+    const merchantContext =
+      role === 'merchant'
+        ? await resolveMerchantForUser<MerchantRow>(
+            admin,
+            user,
+            'id,business_name,parent_brand,branch_name,province,status,default_total_discount_pct'
+          )
+        : null;
+    if (role === 'merchant' && !merchantContext?.id) {
       return NextResponse.json(
         {
           error: 'Merchant account is not linked to a merchant profile.',
@@ -463,6 +420,12 @@ export async function POST(request: Request) {
     const voucher = await fetchVoucherByCodeGlobal(admin, voucherCode);
     if (!voucher) {
       return NextResponse.json({ error: 'No voucher found with this code.' }, { status: 404 });
+    }
+    if (role !== 'merchant' && String(voucher.customer_id) !== String(user.id)) {
+      return NextResponse.json(
+        { error: 'You can only redeem vouchers issued to your own account.' },
+        { status: 403 }
+      );
     }
 
     const currentBalance = getVoucherBalance(voucher);
@@ -484,12 +447,25 @@ export async function POST(request: Request) {
       );
     }
 
+    const requestedMerchantId = String(body.merchantId ?? '').trim();
     const merchant =
-      (await fetchActiveMerchantById(admin, String(merchantContext.id).trim())) ??
-      (await fetchActiveMerchantByBrand(
-        admin,
-        merchantContext.parent_brand ?? merchantContext.business_name
-      ));
+      role === 'merchant'
+        ? (await fetchActiveMerchantById(admin, String(merchantContext?.id ?? '').trim())) ??
+          (await fetchActiveMerchantByBrand(
+            admin,
+            merchantContext?.parent_brand ?? merchantContext?.business_name ?? null
+          ))
+        : await fetchActiveMerchantById(admin, requestedMerchantId);
+
+    if (!merchant?.id) {
+      return NextResponse.json(
+        {
+          error: 'Please select a participating active merchant for redemption.',
+          code: 'merchant_required',
+        },
+        { status: 400 }
+      );
+    }
 
     const scopeValidation = validateScope(voucher, merchant);
     if (!scopeValidation.valid) {
@@ -589,6 +565,34 @@ export async function POST(request: Request) {
       });
       if (!payoutRes.error) {
         merchantPayoutQueued = true;
+      }
+
+      // Finance-grade billing: idempotent event + ledger posting (safe to retry).
+      try {
+        await recordVoucherRedemptionBillingEvent(admin, {
+          eventKey: idempotencyKey,
+          merchantId: merchant.id,
+          customerId: voucher.customer_id,
+          voucherId: voucher.id,
+          grossAmount: amount,
+          totalDiscountPct,
+          occurredAt: redeemedAt,
+          metadata: {
+            voucherCode,
+            redemptionStatus: newStatus,
+            merchantPayoutQueued,
+          },
+        });
+      } catch (error: any) {
+        // Do not break voucher redemption if billing schema is not deployed yet.
+        if (
+          isMissingRelation(error, 'public.billing_events') ||
+          isMissingRelation(error, 'public.billing_ledger_entries')
+        ) {
+          // ignore
+        } else {
+          throw error;
+        }
       }
     }
 

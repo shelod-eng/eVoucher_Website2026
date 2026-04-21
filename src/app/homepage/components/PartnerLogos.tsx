@@ -1,4 +1,5 @@
 import AppImage from '@/components/ui/AppImage';
+import Link from 'next/link';
 
 interface Partner {
   name: string;
@@ -104,6 +105,45 @@ const PartnerLogos = () => {
   return (
     <section className="py-16 bg-background">
       <div className="max-w-7xl mx-auto px-4 lg:px-6">
+        <div className="mb-12 rounded-2xl border border-primary/30 bg-primary/5 p-6">
+          <p className="font-headline text-xs uppercase tracking-wide text-primary font-semibold">
+            Featured Partner Networks
+          </p>
+          <div className="mt-2 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h3 className="font-headline font-bold text-3xl text-foreground">
+                Kalapeng Pharmacy Group
+              </h3>
+              <p className="font-body text-sm text-muted-foreground mt-1">
+                35 Branches + Loyalty Enabled. Earn points on every purchase with branch-aware
+                fulfilment.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className="px-2 py-1 rounded-full text-xs bg-success/15 text-success font-headline font-semibold">
+                  35 Branches
+                </span>
+                <span className="px-2 py-1 rounded-full text-xs bg-warning/15 text-warning font-headline font-semibold">
+                  Loyalty Enabled
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/shop?brandKey=kalapeng"
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
+              >
+                Shop Kalapeng
+              </Link>
+              <Link
+                href="/rewards?network=kalapeng"
+                className="px-4 py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
+              >
+                Join Kalapeng Loyalty
+              </Link>
+            </div>
+          </div>
+        </div>
+
         <div className="text-center mb-12">
           <h3 className="font-headline font-bold text-2xl text-foreground mb-2">
             Trusted by Leading Retailers

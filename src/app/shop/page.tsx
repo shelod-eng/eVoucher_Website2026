@@ -15,6 +15,8 @@ interface BrandLocation {
   city: string | null;
   province: string | null;
   physical_address: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
 }
 
 interface BrandSummary {
@@ -84,6 +86,31 @@ function getRedemptionScopeLabel(product: CatalogProduct, selectedBrand: BrandSu
   return `Valid at all ${product.parent_brand} locations`;
 }
 
+const KALAPENG_PARTNER_LABEL = 'Kalapeng Pharmacy Group';
+const KALAPENG_BRANCH_TARGET = 35;
+
+function isKalapengLabel(value: string) {
+  return String(value ?? '')
+    .toLowerCase()
+    .includes('kalapeng');
+}
+
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function haversineDistanceKm(from: { lat: number; lng: number }, to: { lat: number; lng: number }) {
+  const earthRadiusKm = 6371;
+  const deltaLat = toRadians(to.lat - from.lat);
+  const deltaLng = toRadians(to.lng - from.lng);
+  const fromLat = toRadians(from.lat);
+  const toLat = toRadians(to.lat);
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(fromLat) * Math.cos(toLat) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function ShopPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -100,6 +127,8 @@ export default function ShopPage() {
   const [ussdAccessCode, setUssdAccessCode] = useState('*120*384#');
   const [failedLogos, setFailedLogos] = useState<Set<string>>(new Set());
   const [locationsModalOpen, setLocationsModalOpen] = useState(false);
+  const [selectedKalapengBranchId, setSelectedKalapengBranchId] = useState('');
+  const [branchSelectionMode, setBranchSelectionMode] = useState<'nearest' | 'manual'>('nearest');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -189,14 +218,83 @@ export default function ShopPage() {
     () => brands.find((brand) => brand.brandKey === selectedBrandKey) ?? null,
     [brands, selectedBrandKey]
   );
+  const selectedBrandIsKalapeng = useMemo(() => {
+    if (!selectedBrand) return false;
+    return (
+      selectedBrand.brandKey === 'kalapeng' ||
+      isKalapengLabel(selectedBrand.displayName) ||
+      isKalapengLabel(selectedBrand.merchantName ?? '')
+    );
+  }, [selectedBrand]);
+  const selectedKalapengBranch = useMemo(() => {
+    if (!selectedBrandIsKalapeng || !selectedBrand) return null;
+    return (
+      selectedBrand.locations.find((location) => location.id === selectedKalapengBranchId) ??
+      selectedBrand.locations[0] ??
+      null
+    );
+  }, [selectedBrandIsKalapeng, selectedBrand, selectedKalapengBranchId]);
+
+  useEffect(() => {
+    if (!selectedBrandIsKalapeng || !selectedBrand) {
+      setSelectedKalapengBranchId('');
+      setBranchSelectionMode('nearest');
+      return;
+    }
+
+    if (selectedKalapengBranchId) return;
+    const locationsWithCoords = selectedBrand.locations.filter(
+      (location) =>
+        Number.isFinite(Number(location.location_lat)) &&
+        Number.isFinite(Number(location.location_lng))
+    );
+
+    if (locationsWithCoords.length === 0) {
+      setSelectedKalapengBranchId(selectedBrand.locations[0]?.id ?? '');
+      return;
+    }
+
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      setSelectedKalapengBranchId(selectedBrand.locations[0]?.id ?? '');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nearest = locationsWithCoords
+          .map((location) => ({
+            location,
+            km: haversineDistanceKm(
+              { lat: position.coords.latitude, lng: position.coords.longitude },
+              {
+                lat: Number(location.location_lat),
+                lng: Number(location.location_lng),
+              }
+            ),
+          }))
+          .sort((a, b) => a.km - b.km)[0]?.location;
+        setSelectedKalapengBranchId(nearest?.id ?? selectedBrand.locations[0]?.id ?? '');
+      },
+      () => {
+        setSelectedKalapengBranchId(selectedBrand.locations[0]?.id ?? '');
+      },
+      { maximumAge: 300000, timeout: 3500 }
+    );
+  }, [selectedBrandIsKalapeng, selectedBrand, selectedKalapengBranchId]);
 
   const handleSelectBrand = (brandKey: string) => {
     if (brandKey === selectedBrandKey) return;
     setSelectedBrandKey(brandKey);
+    setSelectedKalapengBranchId('');
+    setBranchSelectionMode('nearest');
   };
 
   const handleAddToCart = (product: CatalogProduct) => {
-    if (!product.merchant_id) {
+    const resolvedMerchantId =
+      selectedBrandIsKalapeng && selectedKalapengBranch?.id
+        ? selectedKalapengBranch.id
+        : product.merchant_id;
+    if (!resolvedMerchantId) {
       setStatusMessage('No merchant account is currently linked to this brand for checkout.');
       window.setTimeout(() => setStatusMessage(''), 2200);
       return;
@@ -204,20 +302,36 @@ export default function ShopPage() {
 
     const scopedUserId = user?.id;
 
-    addCartItem({
-      id: product.id,
-      merchantId: product.merchant_id,
-      merchantName: product.merchant_name,
-      productId: product.id,
-      productName: product.product_name,
-      faceValue: Number(product.face_value),
-      consumerPrice: Number(product.consumer_price),
-      consumerBenefitAmount: Number(product.consumer_benefit_amount),
-      totalDiscountPct: Number(product.total_discount_pct),
-      quantity: 1,
-      parentBrand: product.parent_brand,
-      redemptionScope: product.redemption_scope,
-    }, scopedUserId);
+    addCartItem(
+      {
+        id: product.id,
+        merchantId: resolvedMerchantId,
+        merchantName: product.merchant_name,
+        selectedBranchId: selectedBrandIsKalapeng
+          ? (selectedKalapengBranch?.id ?? undefined)
+          : undefined,
+        selectedBranchName: selectedBrandIsKalapeng
+          ? selectedKalapengBranch?.branch_name || selectedKalapengBranch?.business_name
+          : undefined,
+        selectedBranchCity: selectedBrandIsKalapeng
+          ? (selectedKalapengBranch?.city ?? undefined)
+          : undefined,
+        selectedBranchProvince: selectedBrandIsKalapeng
+          ? (selectedKalapengBranch?.province ?? undefined)
+          : undefined,
+        branchSelectionMode: selectedBrandIsKalapeng ? branchSelectionMode : undefined,
+        productId: product.id,
+        productName: product.product_name,
+        faceValue: Number(product.face_value),
+        consumerPrice: Number(product.consumer_price),
+        consumerBenefitAmount: Number(product.consumer_benefit_amount),
+        totalDiscountPct: Number(product.total_discount_pct),
+        quantity: 1,
+        parentBrand: product.parent_brand,
+        redemptionScope: product.redemption_scope,
+      },
+      scopedUserId
+    );
     setStatusMessage(`${product.product_name} added to cart.`);
     window.setTimeout(() => setStatusMessage(''), 1600);
   };
@@ -230,10 +344,25 @@ export default function ShopPage() {
     }
 
     const params = new URLSearchParams({
-      merchantId: product.merchant_id,
+      merchantId:
+        selectedBrandIsKalapeng && selectedKalapengBranch?.id
+          ? selectedKalapengBranch.id
+          : String(product.merchant_id ?? ''),
       brandKey: product.brandKey,
       faceValue: String(product.face_value),
     });
+    if (selectedBrandIsKalapeng && selectedKalapengBranch) {
+      params.set('selectedBranchId', selectedKalapengBranch.id);
+      params.set(
+        'selectedBranchName',
+        String(selectedKalapengBranch.branch_name || selectedKalapengBranch.business_name)
+      );
+      if (selectedKalapengBranch.city)
+        params.set('selectedBranchCity', selectedKalapengBranch.city);
+      if (selectedKalapengBranch.province)
+        params.set('selectedBranchProvince', selectedKalapengBranch.province);
+      params.set('branchSelectionMode', branchSelectionMode);
+    }
 
     if (product.source === 'db' && !product.id.startsWith('starter-')) {
       params.set('productId', product.id);
@@ -331,6 +460,43 @@ export default function ShopPage() {
           )}
 
           <section className="bg-card rounded-2xl border border-border p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-primary font-headline font-semibold">
+                  Featured Partner Networks
+                </p>
+                <h2 className="font-headline font-bold text-3xl text-foreground mt-1">
+                  Enterprise Merchant Groups
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Strategic partner networks with branch-level loyalty and cross-branch redemption.
+                </p>
+              </div>
+              <button
+                onClick={() => handleSelectBrand('kalapeng')}
+                className="px-5 py-3 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
+              >
+                Shop Kalapeng
+              </button>
+            </div>
+            <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="font-headline font-bold text-foreground">{KALAPENG_PARTNER_LABEL}</p>
+                <span className="px-2 py-1 rounded-full text-xs bg-success/15 text-success font-headline font-semibold">
+                  {KALAPENG_BRANCH_TARGET} Branches
+                </span>
+                <span className="px-2 py-1 rounded-full text-xs bg-warning/15 text-warning font-headline font-semibold">
+                  Loyalty Enabled
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Earn Kalapeng loyalty points on every eVoucher purchase. Refill reminders, branch
+                offers, and cross-branch support included.
+              </p>
+            </div>
+          </section>
+
+          <section className="bg-card rounded-2xl border border-border p-6">
             <h2 className="font-headline font-bold text-3xl text-foreground mb-1">Shopping at</h2>
             <p className="text-sm text-muted-foreground mb-4">
               Select one brand, then browse products valid across multiple branches.
@@ -391,13 +557,76 @@ export default function ShopPage() {
                       Showing key coverage nodes. Additional locations are available nationwide.
                     </p>
                   )}
+                  {selectedBrandIsKalapeng && selectedKalapengBranch && (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-2 py-1 rounded-full text-xs bg-primary/10 text-primary font-headline font-semibold">
+                          Active Branch
+                        </span>
+                        <span className="text-sm font-headline font-semibold text-foreground">
+                          {selectedKalapengBranch.branch_name ||
+                            selectedKalapengBranch.business_name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {selectedKalapengBranch.city || 'City N/A'}
+                          {selectedKalapengBranch.province
+                            ? `, ${selectedKalapengBranch.province}`
+                            : ''}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedKalapengBranchId('');
+                            setBranchSelectionMode('nearest');
+                          }}
+                          className="px-3 py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
+                        >
+                          Auto-select nearest branch
+                        </button>
+                        <select
+                          value={selectedKalapengBranchId}
+                          onChange={(event) => {
+                            setSelectedKalapengBranchId(event.target.value);
+                            setBranchSelectionMode('manual');
+                          }}
+                          className="px-3 py-2 rounded-lg border border-border bg-card text-sm"
+                        >
+                          {selectedBrand.locations.map((location) => (
+                            <option key={location.id} value={location.id}>
+                              {location.branch_name || location.business_name}
+                              {location.city ? ` - ${location.city}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={() => setLocationsModalOpen(true)}
-                  className="px-4 py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
-                >
-                  View Locations
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  {selectedBrandIsKalapeng && (
+                    <button
+                      onClick={() =>
+                        router.push(
+                          `/rewards?network=kalapeng${
+                            selectedKalapengBranch?.id
+                              ? `&branchId=${encodeURIComponent(selectedKalapengBranch.id)}`
+                              : ''
+                          }`
+                        )
+                      }
+                      className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
+                    >
+                      Join Kalapeng Loyalty
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setLocationsModalOpen(true)}
+                    className="px-4 py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
+                  >
+                    View Locations
+                  </button>
+                </div>
               </div>
             )}
           </section>
@@ -496,14 +725,20 @@ export default function ShopPage() {
                       <div className="mt-4 grid grid-cols-2 gap-2">
                         <button
                           onClick={() => handleAddToCart(product)}
-                          disabled={!product.merchant_id}
+                          disabled={
+                            !product.merchant_id &&
+                            !(selectedBrandIsKalapeng && selectedKalapengBranch?.id)
+                          }
                           className="px-3 py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10 disabled:opacity-50"
                         >
                           Add
                         </button>
                         <button
                           onClick={() => handleBuyNow(product)}
-                          disabled={!product.merchant_id}
+                          disabled={
+                            !product.merchant_id &&
+                            !(selectedBrandIsKalapeng && selectedKalapengBranch?.id)
+                          }
                           className="px-3 py-2 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90 disabled:opacity-50"
                         >
                           Buy Now

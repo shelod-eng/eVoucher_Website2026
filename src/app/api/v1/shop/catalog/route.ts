@@ -33,6 +33,8 @@ type MerchantRow = {
   city: string | null;
   province: string | null;
   physical_address: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
 };
 
 type ProductRow = {
@@ -62,6 +64,8 @@ type BrandLocation = {
   city: string | null;
   province: string | null;
   physical_address: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
 };
 
 type BrandAggregation = {
@@ -219,6 +223,10 @@ function toMerchantRow(
     city: row.city ?? null,
     province: row.province ?? null,
     physical_address: row.physical_address ?? null,
+    location_lat:
+      row.location_lat === null || row.location_lat === undefined ? null : Number(row.location_lat),
+    location_lng:
+      row.location_lng === null || row.location_lng === undefined ? null : Number(row.location_lng),
   } as MerchantRow;
 }
 
@@ -253,6 +261,8 @@ function toProductRow(
 
 async function fetchMerchants(dataClient: any, activeOnly: boolean): Promise<MerchantRow[]> {
   const fieldSets = [
+    'id,business_name,email,status,business_type,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province,physical_address,location_lat,location_lng',
+    'id,business_name,email,status,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province,physical_address,location_lat,location_lng',
     'id,business_name,email,status,business_type,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province,physical_address',
     'id,business_name,email,status,default_total_discount_pct,parent_brand,branch_name,branch_code,city,province,physical_address',
     'id,business_name,email,status,default_total_discount_pct',
@@ -533,6 +543,8 @@ export async function GET(request: Request) {
         city: merchant.city,
         province: merchant.province,
         physical_address: merchant.physical_address,
+        location_lat: merchant.location_lat,
+        location_lng: merchant.location_lng,
       });
       if (merchant.province) {
         current.provinces.add(merchant.province);
@@ -568,6 +580,8 @@ export async function GET(request: Request) {
               city: 'South Africa',
               province: 'National',
               physical_address: 'Redeem at participating locations nationwide',
+              location_lat: null,
+              location_lng: null,
             },
           ],
           provinces: new Set<string>(['National']),

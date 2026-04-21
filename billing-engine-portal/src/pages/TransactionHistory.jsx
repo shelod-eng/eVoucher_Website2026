@@ -10,44 +10,69 @@ import { ArrowLeft, ShoppingBag, CreditCard, ArrowDownLeft, ArrowUpRight, Gift, 
 
 export default function TransactionHistoryPage() {
   const [filter, setFilter] = useState('all');
+  const [merchantId, setMerchantId] = useState(null);
 
-  const { data: transactions = [], isLoading } = useQuery({
-    queryKey: ['transactions'],
-    queryFn: () => base44.entities.Transaction.list('-created_date', 50),
+  const { data: billingEvents = [], isLoading } = useQuery({
+    queryKey: ['billing-events', merchantId],
+    queryFn: async () => {
+      try {
+        const mainAppUrl = import.meta.env.VITE_MAIN_APP_URL || import.meta.env.VITE_PORTAL_API_BASE_URL || 'http://localhost:3000';
+        const url = new URL(`${mainAppUrl}/api/billing/events`);
+        if (merchantId) {
+          url.searchParams.append('merchantId', merchantId);
+        }
+        
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+          throw new Error(`Failed to fetch billing events: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        return result.data || [];
+      } catch (error) {
+        console.error('[TransactionHistory] Error fetching billing events:', error);
+        return [];
+      }
+    },
+    staleTime: 30000, // 30 seconds
+    retry: 2,
   });
 
   const filteredTransactions = filter === 'all' 
-    ? transactions 
-    : transactions.filter(t => t.type === filter);
+    ? billingEvents 
+    : billingEvents.filter(e => e.event_type === filter);
 
-  const getIcon = (type) => {
-    switch(type) {
-      case 'purchase': return <ShoppingBag className="w-5 h-5 text-purple-500" />;
-      case 'redemption': return <CreditCard className="w-5 h-5 text-orange-500" />;
-      case 'deposit': return <ArrowDownLeft className="w-5 h-5 text-green-500" />;
-      case 'payout': return <ArrowUpRight className="w-5 h-5 text-red-500" />;
-      case 'gift_voucher': return <Gift className="w-5 h-5 text-pink-500" />;
-      case 'referral_bonus': return <Users className="w-5 h-5 text-blue-500" />;
+  const getIcon = (eventType) => {
+    switch(eventType) {
+      case 'payment_transaction': return <ShoppingBag className="w-5 h-5 text-purple-500" />;
+      case 'voucher_redemption': return <CreditCard className="w-5 h-5 text-orange-500" />;
+      case 'manual_adjustment': return <ArrowDownLeft className="w-5 h-5 text-blue-500" />;
       default: return <CreditCard className="w-5 h-5 text-gray-500" />;
     }
   };
 
-  const getBgColor = (type) => {
-    switch(type) {
-      case 'purchase': return 'bg-purple-100';
-      case 'redemption': return 'bg-orange-100';
-      case 'deposit': return 'bg-green-100';
-      case 'payout': return 'bg-red-100';
-      case 'gift_voucher': return 'bg-pink-100';
-      case 'referral_bonus': return 'bg-blue-100';
+  const getBgColor = (eventType) => {
+    switch(eventType) {
+      case 'payment_transaction': return 'bg-purple-100';
+      case 'voucher_redemption': return 'bg-orange-100';
+      case 'manual_adjustment': return 'bg-blue-100';
       default: return 'bg-gray-100';
+    }
+  };
+
+  const getEventLabel = (eventType) => {
+    switch(eventType) {
+      case 'payment_transaction': return 'Purchase';
+      case 'voucher_redemption': return 'Redemption';
+      case 'manual_adjustment': return 'Adjustment';
+      default: return eventType;
     }
   };
 
   const filters = [
     { id: 'all', label: 'All' },
-    { id: 'purchase', label: 'Purchases' },
-    { id: 'redemption', label: 'Redemptions' },
+    { id: 'payment_transaction', label: 'Purchases' },
+    { id: 'voucher_redemption', label: 'Redemptions' },
   ];
 
   return (
@@ -93,21 +118,24 @@ export default function TransactionHistoryPage() {
           ) : filteredTransactions.length === 0 ? (
             <Card className="bg-gray-50 rounded-xl p-8 text-center border-0">
               <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">No transactions found</p>
+              <p className="text-gray-500">No billing events found</p>
             </Card>
           ) : (
             <div className="space-y-3">
-              {filteredTransactions.map((tx) => (
-                <Card key={tx.id} className="bg-white rounded-xl p-4 border border-gray-100">
+              {filteredTransactions.map((event) => (
+                <Card key={event.id} className="bg-white rounded-xl p-4 border border-gray-100">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-full ${getBgColor(tx.type)} flex items-center justify-center`}>
-                        {getIcon(tx.type)}
+                      <div className={`w-12 h-12 rounded-full ${getBgColor(event.event_type)} flex items-center justify-center`}>
+                        {getIcon(event.event_type)}
                       </div>
                       <div>
-                        <p className="text-gray-900 font-medium">{tx.description || tx.merchantName || tx.type}</p>
+                        <p className="text-gray-900 font-medium">
+                          {getEventLabel(event.event_type)} 
+                          {event.metadata?.voucherCode ? ` - ${event.metadata.voucherCode}` : ''}
+                        </p>
                         <p className="text-gray-500 text-xs">
-                          {new Date(tx.created_date).toLocaleDateString('en-ZA', { 
+                          {new Date(event.occurred_at).toLocaleDateString('en-ZA', { 
                             day: 'numeric', 
                             month: 'short',
                             year: 'numeric',
@@ -118,17 +146,11 @@ export default function TransactionHistoryPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-bold ${
-                        tx.type === 'purchase' || tx.type === 'payout' || tx.type === 'gift_voucher'
-                          ? 'text-gray-900' 
-                          : 'text-green-600'
-                      }`}>
-                        {tx.type === 'purchase' || tx.type === 'payout' || tx.type === 'gift_voucher' ? '-' : '+'}R{tx.amount}
+                      <p className="font-bold text-gray-900">
+                        R{Number(event.gross_amount ?? 0).toFixed(2)}
                       </p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        tx.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {tx.status}
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                        Recorded
                       </span>
                     </div>
                   </div>

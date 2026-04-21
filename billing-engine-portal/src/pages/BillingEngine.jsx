@@ -24,10 +24,19 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import moment from 'moment';
 import { logAuditEvent } from '@/audit/audit-log';
+import { useAdminAuth } from '@/auth/admin-auth';
+import {
+  createBillingInvoice,
+  getBillingDashboard,
+  listBillingInvoices,
+  listBillingSettlements,
+  runBillingEngine,
+} from '@/api/portal-api';
 
 export default function BillingEngine() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
+  const { session, role } = useAdminAuth();
   const [stockRows, setStockRows] = useState([
     { sku: 'SPC-WASH-DOUBLE', merchant: 'SuperPrecast', onHand: 42, reserved: 6, reorderLevel: 20 },
     { sku: 'SPC-WASH-SINGLE', merchant: 'SuperPrecast', onHand: 27, reserved: 4, reorderLevel: 18 },
@@ -74,12 +83,51 @@ export default function BillingEngine() {
   });
 
   const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
-  const useMock = dataMode !== 'base44';
+  const useMock = dataMode === 'mock';
+  const usePortalApi = dataMode === 'portal';
+  const useBase44 = dataMode === 'base44';
 
-  const { data: invoices = [] } = useQuery({
-    queryKey: ['invoices'],
-    queryFn: () => (useMock ? Promise.resolve(mockInvoices) : base44.entities.Invoice.list('-created_date')),
+  function formatCurrency(value) {
+    const num = Number(value ?? 0);
+    return `R${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  const { data: dashboardResponse } = useQuery({
+    queryKey: ['billing-dashboard'],
+    queryFn: () => (usePortalApi && session?.email ? getBillingDashboard(session, role) : null),
+    enabled: usePortalApi && Boolean(session?.email),
+    staleTime: 15000,
   });
+
+  const dashboardTotals = dashboardResponse?.data?.totals || null;
+  const dashboardSplit = dashboardResponse?.data?.splitModel || null;
+
+  const { data: invoicesResponse } = useQuery({
+    queryKey: ['invoices'],
+    queryFn: () =>
+      usePortalApi && session?.email
+        ? listBillingInvoices(session, role, { page: 1, limit: 200 })
+        : useMock
+          ? Promise.resolve({ success: true, data: mockInvoices })
+          : base44.entities.Invoice.list('-created_date'),
+    enabled: useMock || useBase44 || (usePortalApi && Boolean(session?.email)),
+  });
+  const rawInvoices = invoicesResponse?.data ?? invoicesResponse ?? [];
+  const invoices = useMemo(() => {
+    return (rawInvoices ?? []).map((inv) => ({
+      ...inv,
+      invoiceNumber: inv.invoiceNumber ?? inv.invoice_number,
+      merchantId: inv.merchantId ?? inv.merchant_id,
+      billingPeriodStart: inv.billingPeriodStart ?? inv.billing_period_start ?? inv.period_start,
+      billingPeriodEnd: inv.billingPeriodEnd ?? inv.billing_period_end ?? inv.period_end,
+      totalFaceValue: inv.totalFaceValue ?? inv.total_face_value,
+      merchantPayoutAmount: inv.merchantPayoutAmount ?? inv.merchant_payout_amount,
+      platformRevenue: inv.platformRevenue ?? inv.platform_revenue_amount,
+      consumerDiscount: inv.consumerDiscount ?? inv.consumer_benefit_amount,
+      bankFees: inv.bankFees ?? inv.bank_fee_amount,
+      netPayable: inv.netPayable ?? inv.net_payable_to_merchant,
+    }));
+  }, [rawInvoices]);
 
   const { data: banks = [] } = useQuery({
     queryKey: ['bankSponsors'],
@@ -91,10 +139,26 @@ export default function BillingEngine() {
     queryFn: () => (useMock ? Promise.resolve(mockMerchants) : base44.entities.Merchant.list()),
   });
 
-  const { data: settlements = [] } = useQuery({
+  const { data: settlementsResponse } = useQuery({
     queryKey: ['settlements'],
-    queryFn: () => (useMock ? Promise.resolve(mockSettlements) : base44.entities.Settlement.list('-created_date')),
+    queryFn: () =>
+      usePortalApi && session?.email
+        ? listBillingSettlements(session, role)
+        : useMock
+          ? Promise.resolve({ success: true, data: mockSettlements })
+          : base44.entities.Settlement.list('-created_date'),
+    enabled: useMock || useBase44 || (usePortalApi && Boolean(session?.email)),
   });
+  const rawSettlements = settlementsResponse?.data ?? settlementsResponse ?? [];
+  const settlements = useMemo(() => {
+    return (rawSettlements ?? []).map((row) => ({
+      ...row,
+      settlementReference: row.settlementReference ?? row.settlement_reference ?? row.reference,
+      reconciliationStatus: row.reconciliationStatus ?? row.reconciliation_status,
+      initiatedDate: row.initiatedDate ?? row.initiated_at ?? row.created_at,
+      confirmedDate: row.confirmedDate ?? row.confirmed_at,
+    }));
+  }, [rawSettlements]);
 
   const { data: transactions = [] } = useQuery({
     queryKey: ['transactions'],
@@ -103,6 +167,9 @@ export default function BillingEngine() {
 
   const generateInvoiceMutation = useMutation({
     mutationFn: async ({ merchantId, periodStart, periodEnd }) => {
+      if (usePortalApi) {
+        return createBillingInvoice({ merchantId, periodStart, periodEnd }, session, role);
+      }
       if (useMock) {
         return {
           id: `inv_mock_${Date.now()}`,
@@ -158,6 +225,17 @@ export default function BillingEngine() {
     }
   });
 
+  const runEngineMutation = useMutation({
+    mutationFn: async () => {
+      if (!usePortalApi) return { success: true, data: { status: 'mock' } };
+      return runBillingEngine(session, role);
+    },
+    onSuccess: () => {
+      logAuditEvent('billing_engine.run', { mode: usePortalApi ? 'portal' : useMock ? 'mock' : 'base44' });
+      queryClient.invalidateQueries(['settlements']);
+    },
+  });
+
   const processPaymentMutation = useMutation({
     mutationFn: async (invoiceId) => {
       if (useMock) {
@@ -174,10 +252,35 @@ export default function BillingEngine() {
     }
   });
 
-  const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.platformRevenue || 0), 0);
-  const totalBankFees = invoices.reduce((sum, inv) => sum + (inv.bankFees || 0), 0);
-  const pendingPayouts = invoices.filter(inv => inv.status === 'pending').reduce((sum, inv) => sum + (inv.netPayable || 0), 0);
-  const paidOut = invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (inv.netPayable || 0), 0);
+  const totalRevenue = invoices.reduce((sum, inv) => sum + Number(inv.platformRevenue || 0), 0);
+  const totalBankFees = invoices.reduce((sum, inv) => sum + Number(inv.bankFees || 0), 0);
+  const pendingPayouts = invoices
+    .filter((inv) => String(inv.status || '').includes('pending'))
+    .reduce((sum, inv) => sum + Number(inv.netPayable || 0), 0);
+  const paidOut = invoices
+    .filter((inv) => String(inv.status || '').includes('paid'))
+    .reduce((sum, inv) => sum + Number(inv.netPayable || 0), 0);
+
+  const kpiTotalVolume =
+    dashboardTotals?.totalVoucherVolume ??
+    invoices.reduce((sum, inv) => sum + Number(inv.totalFaceValue || 0), 0);
+  const kpiPlatformRevenue = dashboardTotals?.platformRevenue ?? totalRevenue;
+  const kpiMemberBenefits = dashboardTotals?.memberBenefitsPaid ?? 0;
+  const kpiPendingPayouts = dashboardTotals?.pendingMerchantPayouts ?? pendingPayouts;
+  const kpiSettled = dashboardTotals?.settledToMerchants ?? paidOut;
+  const kpiBankFees = dashboardTotals?.bankProcessingFees ?? totalBankFees;
+
+  const demoVoucherValue = 1000;
+  const merchantPayoutPct = Number(dashboardSplit?.merchantPayoutPct ?? 96);
+  const memberBenefitPct = Number(dashboardSplit?.memberBenefitPct ?? 2.8);
+  const platformRevenuePct = Number(dashboardSplit?.platformRevenuePct ?? 1.2);
+  const bankFeePctOfMerchant = Number(dashboardSplit?.bankFeePctOfMerchantPayout ?? 0.5);
+
+  const merchantGross = (demoVoucherValue * merchantPayoutPct) / 100;
+  const bankFee = (merchantGross * bankFeePctOfMerchant) / 100;
+  const merchantNet = merchantGross - bankFee;
+  const memberBenefit = (demoVoucherValue * memberBenefitPct) / 100;
+  const platformRevenueDemo = (demoVoucherValue * platformRevenuePct) / 100;
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -280,19 +383,28 @@ export default function BillingEngine() {
               <p className="text-white/60">Merchant invoicing & bank integration</p>
             </div>
           </div>
+          <div className="hidden md:flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-xs text-white/50">Settlement Partner</div>
+              <div className="text-sm font-semibold text-white">RMB / FNB CIB / VISA</div>
+            </div>
+            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+              System Operational
+            </Badge>
+          </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-white/60">Platform Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">Total Voucher Volume</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-white">R{totalRevenue.toLocaleString()}</p>
-                  <p className="text-xs text-white/60 mt-1">4% margin collected</p>
+                  <p className="text-2xl font-bold text-[#00A89D]">{formatCurrency(kpiTotalVolume)}</p>
+                  <p className="text-xs text-white/60 mt-1">Face value transacted</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-[#00A89D]" />
               </div>
@@ -301,43 +413,73 @@ export default function BillingEngine() {
 
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-white/60">Pending Payouts</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">Platform Revenue (1.2%)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-yellow-300">R{pendingPayouts.toLocaleString()}</p>
-                  <p className="text-xs text-white/60 mt-1">Awaiting payment</p>
+                  <p className="text-2xl font-bold text-white">{formatCurrency(kpiPlatformRevenue)}</p>
+                  <p className="text-xs text-white/60 mt-1">eVoucher margin earned</p>
                 </div>
-                <Clock className="w-8 h-8 text-yellow-300" />
+                <DollarSign className="w-8 h-8 text-white/60" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-white/60">Paid Out</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">Member Benefits (2.8%)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-emerald-300">R{paidOut.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-purple-300">{formatCurrency(kpiMemberBenefits)}</p>
+                  <p className="text-xs text-white/60 mt-1">Credited to wallets</p>
+                </div>
+                <CheckCircle className="w-8 h-8 text-purple-300" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/5 border-white/10 text-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-white/60">Pending Merchant Payouts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-orange-300">{formatCurrency(kpiPendingPayouts)}</p>
+                  <p className="text-xs text-white/60 mt-1">Awaiting settlement</p>
+                </div>
+                <Clock className="w-8 h-8 text-orange-300" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/5 border-white/10 text-white">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-white/60">Settled To Merchants</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-blue-200">{formatCurrency(kpiSettled)}</p>
                   <p className="text-xs text-white/60 mt-1">Successfully paid</p>
                 </div>
-                <CheckCircle className="w-8 h-8 text-emerald-300" />
+                <Banknote className="w-8 h-8 text-blue-200" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-white/60">Bank Fees</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">Bank Processing Fees</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-white">R{totalBankFees.toLocaleString()}</p>
-                  <p className="text-xs text-white/60 mt-1">Processing costs</p>
+                  <p className="text-2xl font-bold text-white">{formatCurrency(kpiBankFees)}</p>
+                  <p className="text-xs text-white/60 mt-1">FNB/ABSA transaction fees</p>
                 </div>
                 <CreditCard className="w-8 h-8 text-white/60" />
               </div>
@@ -354,73 +496,132 @@ export default function BillingEngine() {
           </TabsList>
 
           <TabsContent value="overview">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Payment Flow */}
-              <Card>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <Card className="xl:col-span-2 bg-white/5 border-white/10 text-white">
                 <CardHeader>
-                  <CardTitle>Payment Flow Architecture</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-[#00A89D]" />
+                    Benefit Distribution Model — Per R{demoVoucherValue.toLocaleString()} Voucher
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
-                    <h4 className="font-semibold text-blue-900 mb-2">1. Consumer Purchase</h4>
-                    <p className="text-sm text-blue-700">Consumer pays <strong>R960</strong> for R1,000 voucher (4% discount)</p>
+                <CardContent className="space-y-5">
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="text-white/80 font-medium">Consumer Purchases Voucher</div>
+                      <div className="text-white/70">100%</div>
+                      <div className="text-[#00A89D] font-semibold">{formatCurrency(demoVoucherValue)}</div>
+                    </div>
+                    <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full w-full bg-[#00A89D]" />
+                    </div>
                   </div>
-                  
-                  <div className="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
-                    <h4 className="font-semibold text-green-900 mb-2">2. Platform Revenue</h4>
-                    <p className="text-sm text-green-700">Platform keeps <strong>R40</strong> (4% margin)</p>
+
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="text-white/80 font-medium">Merchant Receives Settlement</div>
+                      <div className="text-white/70">{merchantPayoutPct}%</div>
+                      <div className="text-emerald-300 font-semibold">{formatCurrency(merchantGross)}</div>
+                    </div>
+                    <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full bg-emerald-400" style={{ width: `${merchantPayoutPct}%` }} />
+                    </div>
+                    <div className="mt-2 text-xs text-white/60">
+                      Net after bank fee ({bankFeePctOfMerchant}% of merchant payout):{' '}
+                      <span className="text-white font-semibold">{formatCurrency(merchantNet)}</span>
+                    </div>
                   </div>
-                  
-                  <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
-                    <h4 className="font-semibold text-purple-900 mb-2">3. Merchant Payout</h4>
-                    <p className="text-sm text-purple-700">Merchant receives <strong>R920</strong> (92% of face value)</p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="text-white/80 font-medium">Member Benefit Credited</div>
+                        <div className="text-white/70">{memberBenefitPct}%</div>
+                        <div className="text-purple-300 font-semibold">{formatCurrency(memberBenefit)}</div>
+                      </div>
+                      <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full bg-purple-400" style={{ width: `${memberBenefitPct}%` }} />
+                      </div>
+                      <div className="mt-2 text-xs text-white/60">Credited to member wallets</div>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="text-white/80 font-medium">Platform Revenue</div>
+                        <div className="text-white/70">{platformRevenuePct}%</div>
+                        <div className="text-[#00A89D] font-semibold">{formatCurrency(platformRevenueDemo)}</div>
+                      </div>
+                      <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full bg-[#00A89D]" style={{ width: `${platformRevenuePct}%` }} />
+                      </div>
+                      <div className="mt-2 text-xs text-white/60">Retained in eVoucher revenue account</div>
+                    </div>
                   </div>
-                  
-                  <div className="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500">
-                    <h4 className="font-semibold text-orange-900 mb-2">4. Bank Processing</h4>
-                    <p className="text-sm text-orange-700">Bank sponsor processes payment, charges <strong>~0.5%</strong> fee</p>
+
+                  <div className="flex flex-col md:flex-row gap-3 pt-2">
+                    <GoldButton
+                      className="md:w-auto"
+                      onClick={() => {
+                        if (merchants.length > 0) {
+                          const merchant = merchants[0];
+                          const startDate = moment().subtract(30, 'days').format('YYYY-MM-DD');
+                          const endDate = moment().format('YYYY-MM-DD');
+                          generateInvoiceMutation.mutate({
+                            merchantId: merchant.id,
+                            periodStart: startDate,
+                            periodEnd: endDate,
+                          });
+                        }
+                      }}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Generate Monthly Invoice
+                    </GoldButton>
+                    <GoldButton
+                      variant="outline"
+                      className="md:w-auto"
+                      onClick={() => runEngineMutation.mutate()}
+                    >
+                      <Banknote className="w-4 h-4 mr-2" />
+                      Run Settlement Engine
+                    </GoldButton>
+                    <Link to={createPageUrl('SettlementPayouts')} className="md:w-auto">
+                      <GoldButton variant="outline" className="w-full md:w-auto">
+                        <Download className="w-4 h-4 mr-2" />
+                        Open Settlements
+                      </GoldButton>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Quick Actions */}
-              <Card>
+              <Card className="bg-white/5 border-white/10 text-white">
                 <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-[#00A89D]" />
+                    5‑Year Financial Projections
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <GoldButton 
-                    className="w-full"
-                    onClick={() => {
-                      if (merchants.length > 0) {
-                        const merchant = merchants[0];
-                        const startDate = moment().subtract(30, 'days').format('YYYY-MM-DD');
-                        const endDate = moment().format('YYYY-MM-DD');
-                        generateInvoiceMutation.mutate({
-                          merchantId: merchant.id,
-                          periodStart: startDate,
-                          periodEnd: endDate
-                        });
-                      }
-                    }}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Generate Monthly Invoice
-                  </GoldButton>
-                  
-                  <Link to={createPageUrl('SettlementPayouts')}>
-                    <GoldButton variant="outline" className="w-full">
-                      <Banknote className="w-4 h-4 mr-2" />
-                      Process Settlements
-                    </GoldButton>
-                  </Link>
-                  
-                  <Link to={createPageUrl('StakeholderTipping')}>
-                    <GoldButton variant="outline" className="w-full">
-                      <DollarSign className="w-4 h-4 mr-2" />
-                      Stakeholder Tips
-                    </GoldButton>
-                  </Link>
+                  {[
+                    { year: 1, volume: 'R8.34B', profit: 'R101.2M', note: '9M SASSA' },
+                    { year: 2, volume: 'R9.45B', profit: 'R117.1M', note: '+10% growth' },
+                    { year: 3, volume: 'R10.71B', profit: 'R135.2M', note: '+10% growth' },
+                    { year: 4, volume: 'R12.13B', profit: 'R156.7M', note: '+10% growth' },
+                    { year: 5, volume: 'R13.75B', profit: 'R181.9M', note: '+10% growth' },
+                  ].map((row) => (
+                    <div key={row.year} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-semibold">Year {row.year}</div>
+                          <div className="text-xs text-white/60">{row.note}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[#00A89D] font-bold">{row.volume}</div>
+                          <div className="text-xs text-white/60">Profit {row.profit}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </div>

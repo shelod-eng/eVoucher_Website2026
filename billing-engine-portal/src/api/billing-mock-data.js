@@ -33,6 +33,16 @@ export const mockMerchants = [
     accountHolder: 'Super Precast Concrete',
     kycStatus: 'verified',
   },
+  {
+    id: 'm_kalapeng',
+    name: 'Kalapeng Pharmacy Group',
+    status: 'active',
+    bankName: 'FNB',
+    branchCode: '250655',
+    accountNumber: '0001122334',
+    accountHolder: 'Kalapeng Holdings',
+    kycStatus: 'verified',
+  },
 ];
 
 export const mockTransactions = [
@@ -41,6 +51,8 @@ export const mockTransactions = [
   { id: 't2', merchantId: 'm_shoprite', type: 'purchase', amount: 486, created_date: '2026-03-02T10:10:00.000Z' },
   { id: 't3', merchantId: 'm_pnp', type: 'purchase', amount: 1944, created_date: '2026-03-03T11:10:00.000Z' },
   { id: 't4', merchantId: 'm_superprecast', type: 'purchase', amount: 975, created_date: '2026-03-04T08:10:00.000Z' },
+  { id: 't5', merchantId: 'm_kalapeng', type: 'purchase', amount: 1840, created_date: '2026-03-05T08:40:00.000Z' },
+  { id: 't6', merchantId: 'm_kalapeng', type: 'purchase', amount: 2760, created_date: '2026-03-06T09:20:00.000Z' },
 ];
 
 export const mockInvoices = [
@@ -81,6 +93,24 @@ export const mockInvoices = [
     dueDate: '2026-03-14',
     paidDate: '2026-03-08T10:00:00.000Z',
     paymentReference: 'PAY-20260308-0001',
+  },
+  {
+    id: 'inv_3',
+    invoiceNumber: 'INV-202603-0003',
+    merchantId: 'm_kalapeng',
+    merchantName: 'Kalapeng Pharmacy Group',
+    billingPeriodStart: '2026-03-01',
+    billingPeriodEnd: '2026-03-07',
+    totalVouchersSold: 2,
+    totalFaceValue: 4800,
+    merchantPayoutAmount: 4608,
+    platformRevenue: 57.6,
+    consumerDiscount: 134.4,
+    bankFees: 23.04,
+    netPayable: 4584.96,
+    bankName: 'FNB',
+    status: 'pending',
+    dueDate: '2026-03-14',
   },
 ];
 
