@@ -34,8 +34,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       Object.keys(window.sessionStorage)
         .filter(shouldClearKey)
         .forEach((key) => window.sessionStorage.removeItem(key));
+
+      // Best-effort cleanup of non-HttpOnly auth cookies in case stale tokens linger.
+      const cookieNames = document.cookie
+        .split(';')
+        .map((entry) => entry.split('=')[0]?.trim())
+        .filter((name) => Boolean(name))
+        .filter(
+          (name) => name.includes('auth-token') || (name.startsWith('sb-') && name.includes('-auth-token'))
+        );
+      cookieNames.forEach((name) => {
+        document.cookie = `${name}=; Max-Age=0; path=/; SameSite=Lax`;
+      });
     } catch (storageError) {
       console.warn('AuthContext: failed to clear local auth artifacts:', storageError);
+    }
+  };
+
+  const clearServerSession = async () => {
+    try {
+      await fetch('/api/v1/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+      });
+    } catch (logoutError) {
+      console.warn('AuthContext: server logout warning:', logoutError);
     }
   };
 
@@ -127,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Do not revoke global sessions so other devices/users remain signed in.
     try {
       await supabase.auth.signOut({ scope: 'local' });
+      await clearServerSession();
       clearLocalAuthArtifacts();
     } catch (preSignInClearError) {
       console.warn('AuthContext: pre-signin session clear warning:', preSignInClearError);
@@ -177,6 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (result.error) {
       console.warn('AuthContext: local signOut warning:', result.error.message);
     }
+    await clearServerSession();
     clearLocalAuthArtifacts();
   };
 
