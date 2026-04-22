@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 import { mockBanks, mockInvoices, mockMerchants, mockSettlements, mockTransactions } from '@/api/billing-mock-data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,9 +27,12 @@ import { useAdminAuth } from '@/auth/admin-auth';
 import {
   createBillingInvoice,
   getBillingDashboard,
+  listBillingEvents,
   listBillingInvoices,
+  listPortalMerchants,
   listBillingSettlements,
   runBillingEngine,
+  runBillingSimulation,
 } from '@/api/portal-api';
 
 export default function BillingEngine() {
@@ -81,11 +83,11 @@ export default function BillingEngine() {
     qty: 1,
     eta: moment().add(1, 'day').format('YYYY-MM-DD'),
   });
+  const [lastSimulationRef, setLastSimulationRef] = useState('');
 
   const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
   const useMock = dataMode === 'mock';
   const usePortalApi = dataMode === 'portal';
-  const useBase44 = dataMode === 'base44';
 
   function formatCurrency(value) {
     const num = Number(value ?? 0);
@@ -107,10 +109,8 @@ export default function BillingEngine() {
     queryFn: () =>
       usePortalApi && session?.email
         ? listBillingInvoices(session, role, { page: 1, limit: 200 })
-        : useMock
-          ? Promise.resolve({ success: true, data: mockInvoices })
-          : base44.entities.Invoice.list('-created_date'),
-    enabled: useMock || useBase44 || (usePortalApi && Boolean(session?.email)),
+        : Promise.resolve({ success: true, data: mockInvoices }),
+    enabled: useMock || (usePortalApi && Boolean(session?.email)),
   });
   const rawInvoices = invoicesResponse?.data ?? invoicesResponse ?? [];
   const invoices = useMemo(() => {
@@ -118,6 +118,7 @@ export default function BillingEngine() {
       ...inv,
       invoiceNumber: inv.invoiceNumber ?? inv.invoice_number,
       merchantId: inv.merchantId ?? inv.merchant_id,
+      merchantName: inv.merchantName ?? inv.merchant_name,
       billingPeriodStart: inv.billingPeriodStart ?? inv.billing_period_start ?? inv.period_start,
       billingPeriodEnd: inv.billingPeriodEnd ?? inv.billing_period_end ?? inv.period_end,
       totalFaceValue: inv.totalFaceValue ?? inv.total_face_value,
@@ -131,12 +132,13 @@ export default function BillingEngine() {
 
   const { data: banks = [] } = useQuery({
     queryKey: ['bankSponsors'],
-    queryFn: () => (useMock ? Promise.resolve(mockBanks) : base44.entities.BankSponsor.filter({ status: 'active' })),
+    queryFn: () => Promise.resolve(mockBanks),
   });
 
   const { data: merchants = [] } = useQuery({
     queryKey: ['merchants'],
-    queryFn: () => (useMock ? Promise.resolve(mockMerchants) : base44.entities.Merchant.list()),
+    queryFn: () =>
+      usePortalApi ? listPortalMerchants().then((response) => response?.data ?? response?.merchants ?? []) : Promise.resolve(mockMerchants),
   });
 
   const { data: settlementsResponse } = useQuery({
@@ -144,10 +146,8 @@ export default function BillingEngine() {
     queryFn: () =>
       usePortalApi && session?.email
         ? listBillingSettlements(session, role)
-        : useMock
-          ? Promise.resolve({ success: true, data: mockSettlements })
-          : base44.entities.Settlement.list('-created_date'),
-    enabled: useMock || useBase44 || (usePortalApi && Boolean(session?.email)),
+        : Promise.resolve({ success: true, data: mockSettlements }),
+    enabled: useMock || (usePortalApi && Boolean(session?.email)),
   });
   const rawSettlements = settlementsResponse?.data ?? settlementsResponse ?? [];
   const settlements = useMemo(() => {
@@ -162,7 +162,30 @@ export default function BillingEngine() {
 
   const { data: transactions = [] } = useQuery({
     queryKey: ['transactions'],
-    queryFn: () => (useMock ? Promise.resolve(mockTransactions) : base44.entities.Transaction.list('-created_date', 100)),
+    queryFn: () =>
+      usePortalApi && session?.email
+        ? listBillingEvents(session, role, { limit: 100 }).then((response) => response?.data ?? [])
+        : Promise.resolve(mockTransactions),
+  });
+
+  const simulateMutation = useMutation({
+    mutationFn: async (payload) => {
+      if (!usePortalApi) return { success: true, data: { mode: 'mock' } };
+      return runBillingSimulation(payload, session, role);
+    },
+    onSuccess: (result) => {
+      const transactionReference =
+        result?.data?.transactionReference ||
+        result?.data?.webhook?.transactionReference ||
+        '';
+      if (transactionReference) {
+        setLastSimulationRef(transactionReference);
+      }
+      queryClient.invalidateQueries(['billing-dashboard']);
+      queryClient.invalidateQueries(['invoices']);
+      queryClient.invalidateQueries(['settlements']);
+      queryClient.invalidateQueries(['transactions']);
+    },
   });
 
   const generateInvoiceMutation = useMutation({
@@ -180,47 +203,10 @@ export default function BillingEngine() {
           status: 'pending',
         };
       }
-      const merchant = merchants.find(m => m.id === merchantId);
-      const periodTransactions = transactions.filter(t => 
-        t.merchantId === merchantId &&
-        t.type === 'purchase' &&
-        new Date(t.created_date) >= new Date(periodStart) &&
-        new Date(t.created_date) <= new Date(periodEnd)
-      );
-
-      const totalVouchersSold = periodTransactions.length;
-      const totalFaceValue = periodTransactions.reduce((sum, t) => sum + (t.amount / 0.96), 0);
-      const merchantPayoutAmount = totalFaceValue * 0.92;
-      const platformRevenue = totalFaceValue * 0.04;
-      const consumerDiscount = totalFaceValue * 0.04;
-      
-      const bank = banks[Math.floor(Math.random() * banks.length)];
-      const bankFees = merchantPayoutAmount * (bank?.transactionFeePercentage || 0.005);
-      const netPayable = merchantPayoutAmount - bankFees;
-
-      const invoiceNumber = `INV-${Date.now()}-${merchantId.substr(0, 6)}`;
-
-      return await base44.entities.Invoice.create({
-        invoiceNumber,
-        merchantId,
-        merchantName: merchant.name,
-        billingPeriodStart: periodStart,
-        billingPeriodEnd: periodEnd,
-        totalVouchersSold,
-        totalFaceValue,
-        merchantPayoutAmount,
-        platformRevenue,
-        consumerDiscount,
-        bankFees,
-        netPayable,
-        bankSponsorId: bank?.id,
-        bankName: bank?.bankName,
-        status: 'pending',
-        dueDate: moment().add(7, 'days').format('YYYY-MM-DD')
-      });
+      return null;
     },
     onSuccess: () => {
-      logAuditEvent('invoice.generate', { mode: useMock ? 'mock' : 'base44' });
+      logAuditEvent('invoice.generate', { mode: useMock ? 'mock' : 'portal' });
       queryClient.invalidateQueries(['invoices']);
     }
   });
@@ -231,7 +217,7 @@ export default function BillingEngine() {
       return runBillingEngine(session, role);
     },
     onSuccess: () => {
-      logAuditEvent('billing_engine.run', { mode: usePortalApi ? 'portal' : useMock ? 'mock' : 'base44' });
+      logAuditEvent('billing_engine.run', { mode: usePortalApi ? 'portal' : 'mock' });
       queryClient.invalidateQueries(['settlements']);
     },
   });
@@ -241,11 +227,7 @@ export default function BillingEngine() {
       if (useMock) {
         return { id: invoiceId, status: 'paid' };
       }
-      return await base44.entities.Invoice.update(invoiceId, {
-        status: 'paid',
-        paidDate: new Date().toISOString(),
-        paymentReference: `PAY-${Date.now()}`
-      });
+      return null;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['invoices']);
@@ -367,7 +349,7 @@ export default function BillingEngine() {
       <div className="max-w-7xl mx-auto space-y-6">
         {useMock ? (
           <div className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-md px-3 py-2">
-            Demo mode: showing mock billing data. Set <code className="font-mono">VITE_BILLING_DATA_MODE=base44</code> to use Base44 data wiring.
+            Demo mode: showing mock billing data. Set <code className="font-mono">VITE_BILLING_DATA_MODE=portal</code> to use website billing APIs.
           </div>
         ) : null}
         {/* Header */}
@@ -591,6 +573,51 @@ export default function BillingEngine() {
                       </GoldButton>
                     </Link>
                   </div>
+                  {usePortalApi ? (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-3">
+                      <GoldButton
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => simulateMutation.mutate({ action: 'purchase', paymentMethod: 'eft', paymentStatus: 'pending' })}
+                      >
+                        Simulate Purchase
+                      </GoldButton>
+                      <GoldButton
+                        variant="outline"
+                        className="w-full"
+                        disabled={!lastSimulationRef}
+                        onClick={() =>
+                          simulateMutation.mutate({
+                            action: 'webhook',
+                            transactionReference: lastSimulationRef,
+                            status: 'completed',
+                          })
+                        }
+                      >
+                        Simulate Webhook
+                      </GoldButton>
+                      <GoldButton
+                        variant="outline"
+                        className="w-full"
+                        disabled={!lastSimulationRef}
+                        onClick={() =>
+                          simulateMutation.mutate({
+                            action: 'failure',
+                            transactionReference: lastSimulationRef,
+                          })
+                        }
+                      >
+                        Simulate Failure
+                      </GoldButton>
+                      <GoldButton
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => simulateMutation.mutate({ action: 'settlement' })}
+                      >
+                        Simulate Settlement
+                      </GoldButton>
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
 

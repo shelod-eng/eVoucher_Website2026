@@ -1,81 +1,53 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 import { createPageUrl } from '@/utils';
 import { Link } from 'react-router-dom';
 import MobileContainer from '@/components/ui/MobileContainer';
 import GoldButton from '@/components/ui/GoldButton';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
-  ArrowLeft, LayoutDashboard, Store, FileText, Wallet,
-  Plus, TrendingUp, Users, ShoppingBag, DollarSign,
-  CheckCircle2, Loader2, Building2, BarChart3
+  ArrowLeft, Store, FileText, Wallet,
+  Plus, TrendingUp, DollarSign,
+  Building2, BarChart3
 } from 'lucide-react';
 import moment from 'moment';
+import { getBillingDashboard, listBillingEvents, listPortalMerchants } from '@/api/portal-api';
+import { useAdminAuth } from '@/auth/admin-auth';
 
 export default function AdminDashboard() {
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
-  const [showCreateMerchant, setShowCreateMerchant] = useState(false);
-  const [newMerchant, setNewMerchant] = useState({
-    name: '',
-    email: '',
-    bankName: '',
-    accountNumber: '',
-    branchCode: ''
-  });
+  const { session, role } = useAdminAuth();
+  const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
+  const usePortalApi = dataMode === 'portal';
   
   const { data: merchants = [] } = useQuery({
     queryKey: ['merchants'],
-    queryFn: () => base44.entities.Merchant.list()
+    queryFn: () =>
+      usePortalApi
+        ? listPortalMerchants().then((response) => response?.data ?? response?.merchants ?? [])
+        : Promise.resolve([]),
   });
   
   const { data: transactions = [] } = useQuery({
     queryKey: ['allTransactions'],
-    queryFn: () => base44.entities.Transaction.list('-created_date')
+    queryFn: () =>
+      usePortalApi
+        ? listBillingEvents(session, role, { limit: 50 }).then((response) => response?.data ?? [])
+        : Promise.resolve([]),
+    enabled: !usePortalApi || Boolean(session?.email),
   });
   
-  const { data: ledgerEntries = [] } = useQuery({
-    queryKey: ['allLedger'],
-    queryFn: () => base44.entities.LedgerEntry.list('-created_date')
+  const { data: dashboardResponse } = useQuery({
+    queryKey: ['admin-dashboard-summary'],
+    queryFn: () => (usePortalApi ? getBillingDashboard(session, role) : Promise.resolve(null)),
+    enabled: !usePortalApi || Boolean(session?.email),
   });
-  
-  const { data: voucherInstances = [] } = useQuery({
-    queryKey: ['allVouchers'],
-    queryFn: () => base44.entities.VoucherInstance.list()
-  });
-  
-  const createMerchantMutation = useMutation({
-    mutationFn: async (merchantData) => {
-      await base44.entities.Merchant.create({
-        ...merchantData,
-        status: 'active',
-        totalRevenue: 0,
-        totalRedemptions: 0
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['merchants']);
-      setShowCreateMerchant(false);
-      setNewMerchant({ name: '', email: '', bankName: '', accountNumber: '', branchCode: '' });
-    }
-  });
-  
-  // Calculate stats
-  const platformRevenue = ledgerEntries
-    .filter(e => e.entryType === 'platform_revenue')
-    .reduce((sum, e) => sum + e.amount, 0);
-  
-  const totalVolume = transactions
-    .filter(t => t.type === 'purchase')
-    .reduce((sum, t) => sum + t.amount, 0);
-  
-  const pendingPayouts = ledgerEntries
-    .filter(e => e.entryType === 'merchant_payout_liability')
-    .reduce((sum, e) => sum + e.amount, 0);
+
+  const dashboardTotals = dashboardResponse?.data?.totals ?? {};
+  const platformRevenue = Number(dashboardTotals.platformRevenue ?? 0);
+  const totalVolume = Number(dashboardTotals.totalVoucherVolume ?? 0);
+  const pendingPayouts = Number(dashboardTotals.pendingMerchantPayouts ?? 0);
 
   return (
     <MobileContainer>
@@ -173,15 +145,15 @@ export default function AdminDashboard() {
                 {transactions.slice(0, 5).map((txn) => (
                   <div key={txn.id} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
                     <div>
-                      <p className="text-gray-900 text-sm capitalize font-medium">{txn.type}</p>
-                      <p className="text-xs text-gray-500">{txn.merchantName}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[#00A89D] font-semibold">R{txn.amount}</p>
-                      <p className="text-xs text-gray-400">{moment(txn.created_date).fromNow()}</p>
-                    </div>
+                    <p className="text-gray-900 text-sm capitalize font-medium">{String(txn.event_type || 'event').replace(/_/g, ' ')}</p>
+                    <p className="text-xs text-gray-500">{txn.merchant_id || 'Merchant event'}</p>
                   </div>
-                ))}
+                  <div className="text-right">
+                      <p className="text-[#00A89D] font-semibold">R{Number(txn.gross_amount || 0).toFixed(2)}</p>
+                      <p className="text-xs text-gray-400">{moment(txn.occurred_at).fromNow()}</p>
+                  </div>
+                </div>
+              ))}
                 
                 {transactions.length === 0 && (
                   <p className="text-center text-gray-400 py-4">No transactions yet</p>
@@ -194,7 +166,7 @@ export default function AdminDashboard() {
           <TabsContent value="merchants" className="mt-4 space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-900">Registered Merchants</h2>
-              <GoldButton size="sm" onClick={() => setShowCreateMerchant(true)}>
+              <GoldButton size="sm" disabled>
                 <Plus className="w-4 h-4 mr-1" /> Add
               </GoldButton>
             </div>
@@ -207,14 +179,14 @@ export default function AdminDashboard() {
                       <span className="text-xl font-bold text-white">{merchant.name?.charAt(0)}</span>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">{merchant.name}</h3>
-                      <p className="text-sm text-gray-500">{merchant.email}</p>
+                      <h3 className="font-semibold text-gray-900">{merchant.businessName || merchant.business_name}</h3>
+                      <p className="text-sm text-gray-500">{merchant.city || merchant.province || 'eVoucher merchant'}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="bg-gray-50 rounded p-2">
-                      <p className="text-gray-500 text-xs">Bank</p>
-                      <p className="text-gray-900 font-medium">{merchant.bankName || 'Not set'}</p>
+                      <p className="text-gray-500 text-xs">Brand</p>
+                      <p className="text-gray-900 font-medium">{merchant.parentBrand || merchant.parent_brand || 'Not set'}</p>
                     </div>
                     <div className="bg-gray-50 rounded p-2">
                       <p className="text-gray-500 text-xs">Status</p>
@@ -238,109 +210,38 @@ export default function AdminDashboard() {
             <h2 className="text-lg font-semibold text-gray-900">Platform Ledger</h2>
             
             <div className="space-y-2">
-              {ledgerEntries.slice(0, 20).map((entry) => (
+              {transactions.slice(0, 20).map((entry) => (
                 <Card key={entry.id} className="bg-white border-0 shadow-md p-3">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-gray-900 text-sm capitalize font-medium">
-                        {entry.entryType?.replace(/_/g, ' ')}
+                        {String(entry.event_type || 'event').replace(/_/g, ' ')}
                       </p>
-                      <p className="text-xs text-gray-500">{entry.merchantName || 'Platform'}</p>
-                      <p className="text-xs text-gray-400">{entry.reference}</p>
+                      <p className="text-xs text-gray-500">{entry.merchant_id || 'Platform'}</p>
+                      <p className="text-xs text-gray-400">{entry.event_key}</p>
                     </div>
                     <div className="text-right">
                       <p className={`font-semibold ${
-                        entry.entryType === 'platform_revenue' ? 'text-green-600' : 'text-gray-900'
+                        entry.event_type === 'payment_transaction' ? 'text-green-600' : 'text-gray-900'
                       }`}>
-                        R{entry.amount?.toLocaleString()}
+                        R{Number(entry.gross_amount || 0).toFixed(2)}
                       </p>
-                      <p className="text-xs text-gray-400">{moment(entry.created_date).format('DD MMM HH:mm')}</p>
+                      <p className="text-xs text-gray-400">{moment(entry.occurred_at).format('DD MMM HH:mm')}</p>
                     </div>
                   </div>
                 </Card>
               ))}
               
-              {ledgerEntries.length === 0 && (
+              {transactions.length === 0 && (
                 <div className="text-center py-8 text-gray-400">
                   <FileText className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                  <p>No ledger entries yet</p>
+                  <p>No billing events yet</p>
                 </div>
               )}
             </div>
           </TabsContent>
         </Tabs>
       </div>
-      
-      {/* Create Merchant Dialog */}
-      <Dialog open={showCreateMerchant} onOpenChange={setShowCreateMerchant}>
-        <DialogContent className="bg-white max-w-sm mx-auto">
-          <DialogHeader>
-            <DialogTitle className="text-gray-900">Add New Merchant</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm text-gray-700 mb-2 block font-medium">Merchant Name</label>
-              <Input
-                placeholder="e.g., Game Stores"
-                value={newMerchant.name}
-                onChange={(e) => setNewMerchant({...newMerchant, name: e.target.value})}
-                className="h-12"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-700 mb-2 block font-medium">Email</label>
-              <Input
-                type="email"
-                placeholder="merchant@email.com"
-                value={newMerchant.email}
-                onChange={(e) => setNewMerchant({...newMerchant, email: e.target.value})}
-                className="h-12"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-700 mb-2 block font-medium">Bank Name</label>
-              <Input
-                placeholder="e.g., Standard Bank"
-                value={newMerchant.bankName}
-                onChange={(e) => setNewMerchant({...newMerchant, bankName: e.target.value})}
-                className="h-12"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm text-gray-700 mb-2 block font-medium">Account No.</label>
-                <Input
-                  placeholder="0123456789"
-                  value={newMerchant.accountNumber}
-                  onChange={(e) => setNewMerchant({...newMerchant, accountNumber: e.target.value})}
-                  className="h-12"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-gray-700 mb-2 block font-medium">Branch Code</label>
-                <Input
-                  placeholder="051001"
-                  value={newMerchant.branchCode}
-                  onChange={(e) => setNewMerchant({...newMerchant, branchCode: e.target.value})}
-                  className="h-12"
-                />
-              </div>
-            </div>
-            
-            <GoldButton 
-              className="w-full h-12" 
-              onClick={() => createMerchantMutation.mutate(newMerchant)}
-              disabled={createMerchantMutation.isPending || !newMerchant.name || !newMerchant.email}
-            >
-              {createMerchantMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                'Create Merchant'
-              )}
-            </GoldButton>
-          </div>
-        </DialogContent>
-      </Dialog>
     </MobileContainer>
   );
 }

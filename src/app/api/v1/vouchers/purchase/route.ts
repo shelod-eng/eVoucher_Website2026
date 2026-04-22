@@ -3,13 +3,13 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { PurchaseVoucherRequest } from '@/types/domain';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { MockPaymentProvider } from '@/server/services/payment/mock-payment-provider';
-import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { writeAuditEvent } from '@/server/utils/audit';
 import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { resolveBrandFromMerchantName, getBrandByKey } from '@/lib/merchant-brand-catalog';
 import { getWalletBalance, recordWalletDebit } from '@/server/services/wallet/ledger';
+import { ensureCompletedPurchaseArtifacts } from '@/server/services/billing/purchase-completion';
 
 const SUPPORTED_PAYMENT_METHODS = new Set([
   'visa_secure',
@@ -274,7 +274,6 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
     const paymentProvider = new MockPaymentProvider();
-    const voucherService = new DefaultVoucherService();
     const transactionReference = generateTransactionReference();
 
     const { data: merchant, error: merchantError } = await admin
@@ -471,27 +470,38 @@ export async function POST(request: Request) {
 
     let issuedVouchers: Array<{ code: string; faceValue: number; expiresAt?: string | null }> = [];
     if (paymentStatus === 'completed' && voucherCode) {
-      const issued = await voucherService.issueVoucher({
-        customerId: user.id,
-        merchantId: merchant.id,
-        productId: productId ?? undefined,
-        merchantName: merchant.business_name,
-        parentBrand: resolvedParentBrand,
-        redemptionScope: productRedemptionScope,
-        validProvinces: productValidProvinces,
-        validBranchIds: productValidBranchIds,
-        qrCodeUrl: buildQrCodeUrl(voucherCode),
-        faceValue: pricing.faceValue,
-        discountPercent: pricing.consumerBenefitPct,
-        pricing,
-        voucherCode,
-        expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      const completed = await ensureCompletedPurchaseArtifacts(admin, {
+        merchant: {
+          id: String(merchant.id),
+          business_name: String(merchant.business_name),
+          parent_brand: resolvedParentBrand,
+        },
+        transaction: {
+          customer_id: user.id,
+          merchant_id: merchant.id,
+          product_id: productId,
+          transaction_reference: transactionReference,
+          voucher_code: voucherCode,
+          face_value: pricing.faceValue,
+          total_discount_pct: pricing.totalDiscountPct,
+          consumer_price: pricing.consumerPrice,
+          amount: pricing.consumerPrice,
+        },
+        occurredAt: new Date().toISOString(),
+        metadata: {
+          paymentMethod: body.paymentMethod,
+          source: 'purchase_route',
+          redemptionScope: productRedemptionScope,
+          validProvinces: productValidProvinces,
+          validBranchIds: productValidBranchIds,
+          qrCodeUrl: buildQrCodeUrl(voucherCode),
+        },
       });
 
       const { data: voucherRow } = await admin
         .from('customer_vouchers')
         .select('voucher_code,face_value,expires_at')
-        .eq('id', issued.voucherId)
+        .eq('id', completed.voucherId)
         .maybeSingle();
 
       if (voucherRow) {
@@ -503,7 +513,13 @@ export async function POST(request: Request) {
           },
         ];
       } else {
-        issuedVouchers = [{ code: voucherCode, faceValue: pricing.faceValue, expiresAt: null }];
+        issuedVouchers = [
+          {
+            code: String(completed.voucherCode ?? voucherCode),
+            faceValue: pricing.faceValue,
+            expiresAt: null,
+          },
+        ];
       }
 
       const receiptEmail = String(body.payfastEmail ?? user.email ?? '').trim();
@@ -511,7 +527,7 @@ export async function POST(request: Request) {
         await sendPurchaseReceiptEmail({
           to: receiptEmail,
           merchantName: String(merchant.business_name),
-          voucherCode,
+          voucherCode: String(completed.voucherCode ?? voucherCode),
           faceValue: pricing.faceValue,
           amountPaid: pricing.consumerPrice,
           savings: pricing.consumerBenefitAmount,

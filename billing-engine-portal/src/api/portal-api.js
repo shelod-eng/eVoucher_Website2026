@@ -303,3 +303,34 @@ export async function getBillingDashboard(session, role, params = {}) {
 export async function getBankServStatus(session, role) {
   return portalFetchJson('/api/billing/bankserv/status', {}, session, role);
 }
+
+export async function listBillingEvents(session, role, params = {}) {
+  const search = new URLSearchParams();
+  if (params.merchantId) search.set('merchantId', params.merchantId);
+  if (params.limit) search.set('limit', String(params.limit));
+  const suffix = search.toString() ? `?${search}` : '';
+  return portalFetchJson(`/api/billing/events${suffix}`, {}, session, role);
+}
+
+export async function listPortalMerchants(params = {}) {
+  const search = new URLSearchParams();
+  if (params.merchantId) search.set('merchant_id', params.merchantId);
+  const suffix = search.toString() ? `?${search}` : '';
+  const response = await fetch(buildUrl(`/api/merchants${suffix}`), {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorMessage = await readError(response);
+    throw new Error(errorMessage || `Request failed (${response.status})`);
+  }
+
+  return response.json();
+}
+
+export async function runBillingSimulation(payload, session, role) {
+  return portalFetchJson('/api/billing/simulator', { method: 'POST', body: payload }, session, role);
+}

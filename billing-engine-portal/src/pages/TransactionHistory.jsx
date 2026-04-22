@@ -2,33 +2,27 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 import MobileContainer from '@/components/ui/MobileContainer';
 import BottomNav from '@/components/navigation/BottomNav';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, ShoppingBag, CreditCard, ArrowDownLeft, ArrowUpRight, Gift, Users, Loader2 } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, CreditCard, ArrowDownLeft, Loader2 } from 'lucide-react';
+import { listBillingEvents } from '@/api/portal-api';
+import { useAdminAuth } from '@/auth/admin-auth';
 
 export default function TransactionHistoryPage() {
   const [filter, setFilter] = useState('all');
-  const [merchantId, setMerchantId] = useState(null);
+  const merchantId = null;
+  const { session, role } = useAdminAuth();
 
   const { data: billingEvents = [], isLoading } = useQuery({
     queryKey: ['billing-events', merchantId],
     queryFn: async () => {
       try {
-        const mainAppUrl = import.meta.env.VITE_MAIN_APP_URL || import.meta.env.VITE_PORTAL_API_BASE_URL || 'http://localhost:3000';
-        const url = new URL(`${mainAppUrl}/api/billing/events`);
-        if (merchantId) {
-          url.searchParams.append('merchantId', merchantId);
-        }
-        
-        const response = await fetch(url.toString());
-        if (!response.ok) {
-          throw new Error(`Failed to fetch billing events: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        return result.data || [];
+        const result = await listBillingEvents(session, role, {
+          merchantId: merchantId || undefined,
+          limit: 200,
+        });
+        return result?.data || [];
       } catch (error) {
         console.error('[TransactionHistory] Error fetching billing events:', error);
         return [];
@@ -36,6 +30,7 @@ export default function TransactionHistoryPage() {
     },
     staleTime: 30000, // 30 seconds
     retry: 2,
+    enabled: Boolean(session?.email),
   });
 
   const filteredTransactions = filter === 'all' 

@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import { Link } from 'react-router-dom';
 import MobileContainer from '@/components/ui/MobileContainer';
@@ -44,32 +43,31 @@ export default function SettlementPayouts() {
   const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
   const useMock = dataMode === 'mock';
   const usePortalApi = dataMode === 'portal';
-  const useBase44 = dataMode === 'base44';
   const useDemoFlow = useMock || usePortalApi;
   const { session, isFinanceApprover, role } = useAdminAuth();
   
   const { data: merchants = [] } = useQuery({
     queryKey: ['merchants'],
-    queryFn: () => base44.entities.Merchant.list(),
-    enabled: useBase44
+    queryFn: () => Promise.resolve([]),
+    enabled: false
   });
   
   const { data: ledgerEntries = [] } = useQuery({
     queryKey: ['allLedger'],
-    queryFn: () => base44.entities.LedgerEntry.list('-created_date'),
-    enabled: useBase44
+    queryFn: () => Promise.resolve([]),
+    enabled: false
   });
   
   const { data: payoutBatches = [] } = useQuery({
     queryKey: ['payoutBatches'],
-    queryFn: () => base44.entities.PayoutBatch.list('-created_date'),
-    enabled: useBase44
+    queryFn: () => Promise.resolve([]),
+    enabled: false
   });
   
   const { data: settlements = [] } = useQuery({
     queryKey: ['settlements'],
-    queryFn: () => base44.entities.Settlement.list('-created_date'),
-    enabled: useBase44
+    queryFn: () => Promise.resolve([]),
+    enabled: false
   });
 
   const { data: portalBatchResponse, isFetching: portalBatchLoading, error: portalBatchError } = useQuery({
@@ -78,7 +76,7 @@ export default function SettlementPayouts() {
     enabled: usePortalApi && Boolean(session?.email)
   });
 
-  const portalBatches = portalBatchResponse?.batches ?? [];
+  const portalBatches = portalBatchResponse?.data ?? [];
 
   // ---- MOCK MODE: local settlement batch flow (2-person control) ----
   const [mockBatches, setMockBatches] = useState([]);
