@@ -36,6 +36,17 @@ function isMissingRelation(error: any, relationName: string) {
   );
 }
 
+function isMissingSchemaField(error: any, fieldName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const field = fieldName.toLowerCase();
+  return (
+    message.includes(`column "${field}" does not exist`) ||
+    message.includes(`could not find the '${field}' column`) ||
+    message.includes(`schema cache`) ||
+    message.includes(`record "${field}" has no field`)
+  );
+}
+
 export async function GET() {
   try {
     const { supabase, user } = await getAuthenticatedUser();
@@ -91,10 +102,68 @@ export async function GET() {
     ]);
 
     if (profileRes.error) throw profileRes.error;
-    const vouchersError =
+    let vouchersPayload = vouchersRes.data ?? [];
+    let vouchersError =
       vouchersRes.error && !isMissingRelation(vouchersRes.error, 'public.customer_vouchers')
         ? vouchersRes.error
         : null;
+    if (
+      vouchersRes.error &&
+      [
+        'merchant_id',
+        'product_id',
+        'parent_brand',
+        'total_discount_pct',
+        'consumer_benefit_pct',
+        'evoucher_benefit_pct',
+        'total_discount_amount',
+        'consumer_benefit_amount',
+        'evoucher_benefit_amount',
+        'consumer_price',
+        'merchant_receivable_after_total_discount',
+        'merchant_receivable_after_evoucher_benefit',
+        'redemption_scope',
+        'valid_provinces',
+        'valid_branch_ids',
+        'qr_code_url',
+        'redeemed_at_merchant_id',
+        'redeemed_at_branch',
+        'redeemed_at',
+      ].some((field) => isMissingSchemaField(vouchersRes.error, field))
+    ) {
+      const fallbackVouchersRes = await supabase
+        .from('customer_vouchers')
+        .select('id,merchant_name,voucher_code,face_value,discount_percent,current_balance,is_active,expires_at,issued_at')
+        .eq('customer_id', user.id)
+        .order('issued_at', { ascending: false });
+      if (fallbackVouchersRes.error && !isMissingRelation(fallbackVouchersRes.error, 'public.customer_vouchers')) {
+        vouchersError = fallbackVouchersRes.error;
+      } else {
+        vouchersError = null;
+        vouchersPayload = (fallbackVouchersRes.data ?? []).map((voucher: any) => ({
+          ...voucher,
+          merchant_id: null,
+          product_id: null,
+          parent_brand: null,
+          total_discount_pct: Number(voucher.discount_percent ?? 0),
+          consumer_benefit_pct: Number(voucher.discount_percent ?? 0),
+          evoucher_benefit_pct: 0,
+          total_discount_amount: 0,
+          consumer_benefit_amount: 0,
+          evoucher_benefit_amount: 0,
+          consumer_price: null,
+          merchant_receivable_after_total_discount: null,
+          merchant_receivable_after_evoucher_benefit: null,
+          redemption_scope: null,
+          valid_provinces: [],
+          valid_branch_ids: [],
+          qr_code_url: null,
+          redeemed_at_merchant_id: null,
+          redeemed_at_branch: null,
+          redeemed_at: null,
+        }));
+      }
+    }
     const transactionsError =
       transactionsRes.error &&
       !isMissingRelation(transactionsRes.error, 'public.redemption_history')
@@ -151,7 +220,6 @@ export async function GET() {
       role,
     };
 
-    const vouchersPayload = vouchersRes.data ?? [];
     const paymentTransactionsPayload = paymentsRes.data ?? [];
     const walletBalanceFromLedger = (await getWalletBalance(admin, user.id)) ?? 0;
     const walletTopupCredits = paymentTransactionsPayload.reduce((sum: number, tx: any) => {

@@ -8,6 +8,17 @@ import { getWalletBalance, recordWalletCredit } from '@/server/services/wallet/l
 
 const SUPPORTED_PAYMENT_METHODS = new Set(['visa_secure', 'debit_credit', 'payfast', 'eft']);
 
+function isMissingSchemaField(error: any, fieldName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const field = fieldName.toLowerCase();
+  return (
+    message.includes(`column "${field}" does not exist`) ||
+    message.includes(`could not find the '${field}' column`) ||
+    message.includes(`schema cache`) ||
+    message.includes(`record "${field}" has no field`)
+  );
+}
+
 function validate(body: any): string | null {
   const amount = Number(body?.amount ?? 0);
   if (!Number.isFinite(amount) || amount <= 0) return 'Top-up amount must be greater than zero.';
@@ -74,17 +85,35 @@ export async function POST(request: Request) {
             .padStart(4, '0')
         : '0000';
 
-    const txRes = await admin.from('payment_transactions').insert({
-      customer_id: user.id,
-      merchant_id: null,
-      amount,
-      card_last_four: cardLastFour,
-      card_brand: cardBrand,
-      payment_status: paymentStatus,
-      voucher_code: null,
-      transaction_reference: transactionReference,
-    });
-    if (txRes.error) throw txRes.error;
+    let txError = (
+      await admin.from('payment_transactions').insert({
+        customer_id: user.id,
+        merchant_id: null,
+        amount,
+        card_last_four: cardLastFour,
+        card_brand: cardBrand,
+        payment_status: paymentStatus,
+        voucher_code: null,
+        transaction_reference: transactionReference,
+      })
+    ).error;
+    if (
+      txError &&
+      ['merchant_id'].some((field) => isMissingSchemaField(txError, field))
+    ) {
+      txError = (
+        await admin.from('payment_transactions').insert({
+          customer_id: user.id,
+          amount,
+          card_last_four: cardLastFour,
+          card_brand: cardBrand,
+          payment_status: paymentStatus,
+          voucher_code: null,
+          transaction_reference: transactionReference,
+        })
+      ).error;
+    }
+    if (txError) throw txError;
 
     if (paymentStatus === 'completed') {
       await recordWalletCredit(admin, {

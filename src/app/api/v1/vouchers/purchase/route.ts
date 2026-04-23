@@ -28,6 +28,17 @@ function isMissingRelation(error: any, relationName: string) {
   );
 }
 
+function isMissingSchemaField(error: any, fieldName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const field = fieldName.toLowerCase();
+  return (
+    message.includes(`column "${field}" does not exist`) ||
+    message.includes(`could not find the '${field}' column`) ||
+    message.includes(`schema cache`) ||
+    message.includes(`record "${field}" has no field`)
+  );
+}
+
 function validate(body: PurchaseVoucherRequest): string | null {
   if (!body.merchantId?.trim()) return 'Merchant is required.';
   if (body.faceValue !== undefined && (!Number.isFinite(body.faceValue) || body.faceValue <= 0)) {
@@ -435,27 +446,59 @@ export async function POST(request: Request) {
             .padStart(4, '0')
         : '0000';
 
-    const { error: transactionError } = await admin.from('payment_transactions').insert({
-      customer_id: user.id,
-      merchant_id: merchant.id,
-      product_id: productId,
-      amount: pricing.consumerPrice,
-      face_value: pricing.faceValue,
-      total_discount_pct: pricing.totalDiscountPct,
-      consumer_benefit_pct: pricing.consumerBenefitPct,
-      evoucher_benefit_pct: pricing.evoucherBenefitPct,
-      total_discount_amount: pricing.totalDiscountAmount,
-      consumer_benefit_amount: pricing.consumerBenefitAmount,
-      evoucher_benefit_amount: pricing.evoucherBenefitAmount,
-      consumer_price: pricing.consumerPrice,
-      merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
-      merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
-      card_last_four: cardLastFour,
-      card_brand: cardBrand,
-      payment_status: paymentStatus,
-      voucher_code: voucherCode,
-      transaction_reference: transactionReference,
-    });
+    let transactionError = (
+      await admin.from('payment_transactions').insert({
+        customer_id: user.id,
+        merchant_id: merchant.id,
+        product_id: productId,
+        amount: pricing.consumerPrice,
+        face_value: pricing.faceValue,
+        total_discount_pct: pricing.totalDiscountPct,
+        consumer_benefit_pct: pricing.consumerBenefitPct,
+        evoucher_benefit_pct: pricing.evoucherBenefitPct,
+        total_discount_amount: pricing.totalDiscountAmount,
+        consumer_benefit_amount: pricing.consumerBenefitAmount,
+        evoucher_benefit_amount: pricing.evoucherBenefitAmount,
+        consumer_price: pricing.consumerPrice,
+        merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
+        merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
+        card_last_four: cardLastFour,
+        card_brand: cardBrand,
+        payment_status: paymentStatus,
+        voucher_code: voucherCode,
+        transaction_reference: transactionReference,
+      })
+    ).error;
+
+    if (
+      transactionError &&
+      [
+        'product_id',
+        'face_value',
+        'total_discount_pct',
+        'consumer_benefit_pct',
+        'evoucher_benefit_pct',
+        'total_discount_amount',
+        'consumer_benefit_amount',
+        'evoucher_benefit_amount',
+        'consumer_price',
+        'merchant_receivable_after_total_discount',
+        'merchant_receivable_after_evoucher_benefit',
+      ].some((field) => isMissingSchemaField(transactionError, field))
+    ) {
+      transactionError = (
+        await admin.from('payment_transactions').insert({
+          customer_id: user.id,
+          merchant_id: merchant.id,
+          amount: pricing.consumerPrice,
+          card_last_four: cardLastFour,
+          card_brand: cardBrand,
+          payment_status: paymentStatus,
+          voucher_code: voucherCode,
+          transaction_reference: transactionReference,
+        })
+      ).error;
+    }
 
     if (transactionError) throw transactionError;
 

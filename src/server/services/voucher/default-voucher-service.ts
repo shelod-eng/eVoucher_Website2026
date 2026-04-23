@@ -23,6 +23,17 @@ function normalizeUuidArray(value: unknown) {
   return value.map((entry) => String(entry)).filter((entry) => entry.length > 0);
 }
 
+function isMissingSchemaField(error: any, fieldName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const field = fieldName.toLowerCase();
+  return (
+    message.includes(`column "${field}" does not exist`) ||
+    message.includes(`could not find the '${field}' column`) ||
+    message.includes(`schema cache`) ||
+    message.includes(`record "${field}" has no field`)
+  );
+}
+
 function resolveVoucherScope(voucher: any): RedemptionScope {
   const scope = String(voucher?.redemption_scope ?? '')
     .trim()
@@ -89,41 +100,76 @@ export class DefaultVoucherService implements VoucherService {
   async issueVoucher(input: IssueVoucherInput): Promise<{ voucherId: string }> {
     const admin = createAdminClient();
 
-    const { data, error } = await admin
-      .from('customer_vouchers')
-      .insert({
-        customer_id: input.customerId,
-        merchant_id: input.merchantId ?? null,
-        product_id: input.productId ?? null,
-        merchant_name: input.merchantName,
-        parent_brand: input.parentBrand ?? input.merchantName,
-        redemption_scope: input.redemptionScope ?? 'all_branches',
-        valid_provinces: input.validProvinces ?? [],
-        valid_branch_ids: input.validBranchIds ?? [],
-        qr_code_url: input.qrCodeUrl ?? null,
-        voucher_code: input.voucherCode,
-        face_value: input.faceValue,
-        discount_percent: input.discountPercent,
-        total_discount_pct: input.pricing.totalDiscountPct,
-        consumer_benefit_pct: input.pricing.consumerBenefitPct,
-        evoucher_benefit_pct: input.pricing.evoucherBenefitPct,
-        total_discount_amount: input.pricing.totalDiscountAmount,
-        consumer_benefit_amount: input.pricing.consumerBenefitAmount,
-        evoucher_benefit_amount: input.pricing.evoucherBenefitAmount,
-        consumer_price: input.pricing.consumerPrice,
-        merchant_receivable_after_total_discount:
-          input.pricing.merchantReceivableAfterTotalDiscount,
-        merchant_receivable_after_evoucher_benefit:
-          input.pricing.merchantReceivableAfterEvoucherBenefit,
-        current_balance: input.faceValue,
-        is_active: true,
-        expires_at: input.expiresAt,
-      })
-      .select('id')
-      .single();
+    const richPayload = {
+      customer_id: input.customerId,
+      merchant_id: input.merchantId ?? null,
+      product_id: input.productId ?? null,
+      merchant_name: input.merchantName,
+      parent_brand: input.parentBrand ?? input.merchantName,
+      redemption_scope: input.redemptionScope ?? 'all_branches',
+      valid_provinces: input.validProvinces ?? [],
+      valid_branch_ids: input.validBranchIds ?? [],
+      qr_code_url: input.qrCodeUrl ?? null,
+      voucher_code: input.voucherCode,
+      face_value: input.faceValue,
+      discount_percent: input.discountPercent,
+      total_discount_pct: input.pricing.totalDiscountPct,
+      consumer_benefit_pct: input.pricing.consumerBenefitPct,
+      evoucher_benefit_pct: input.pricing.evoucherBenefitPct,
+      total_discount_amount: input.pricing.totalDiscountAmount,
+      consumer_benefit_amount: input.pricing.consumerBenefitAmount,
+      evoucher_benefit_amount: input.pricing.evoucherBenefitAmount,
+      consumer_price: input.pricing.consumerPrice,
+      merchant_receivable_after_total_discount:
+        input.pricing.merchantReceivableAfterTotalDiscount,
+      merchant_receivable_after_evoucher_benefit:
+        input.pricing.merchantReceivableAfterEvoucherBenefit,
+      current_balance: input.faceValue,
+      is_active: true,
+      expires_at: input.expiresAt,
+    };
 
-    if (error) throw error;
-    return { voucherId: data.id as string };
+    let insertResult = await admin.from('customer_vouchers').insert(richPayload).select('id').single();
+
+    if (
+      insertResult.error &&
+      [
+        'merchant_id',
+        'product_id',
+        'parent_brand',
+        'redemption_scope',
+        'valid_provinces',
+        'valid_branch_ids',
+        'qr_code_url',
+        'total_discount_pct',
+        'consumer_benefit_pct',
+        'evoucher_benefit_pct',
+        'total_discount_amount',
+        'consumer_benefit_amount',
+        'evoucher_benefit_amount',
+        'consumer_price',
+        'merchant_receivable_after_total_discount',
+        'merchant_receivable_after_evoucher_benefit',
+      ].some((field) => isMissingSchemaField(insertResult.error, field))
+    ) {
+      insertResult = await admin
+        .from('customer_vouchers')
+        .insert({
+          customer_id: input.customerId,
+          merchant_name: input.merchantName,
+          voucher_code: input.voucherCode,
+          face_value: input.faceValue,
+          discount_percent: input.discountPercent,
+          current_balance: input.faceValue,
+          is_active: true,
+          expires_at: input.expiresAt,
+        })
+        .select('id')
+        .single();
+    }
+
+    if (insertResult.error) throw insertResult.error;
+    return { voucherId: insertResult.data.id as string };
   }
 
   async redeemVoucher(

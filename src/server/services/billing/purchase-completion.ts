@@ -41,6 +41,15 @@ function deriveTotalDiscountPct(faceValue: number, consumerPrice: number, fallba
   return fallback;
 }
 
+function isMissingRelation(error: any, relationName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const relation = relationName.toLowerCase();
+  return (
+    message.includes(`relation "${relation}" does not exist`) ||
+    message.includes(`could not find the table '${relation}' in the schema cache`)
+  );
+}
+
 export async function ensureCompletedPurchaseArtifacts(
   admin: SupabaseClient,
   input: {
@@ -103,22 +112,31 @@ export async function ensureCompletedPurchaseArtifacts(
     })
     .eq('transaction_reference', input.transaction.transaction_reference);
 
-  await recordVoucherPurchaseBillingEvent(admin, {
-    eventKey: input.transaction.transaction_reference,
-    merchantId: input.merchant.id,
-    customerId: input.transaction.customer_id,
-    voucherId: voucherId ?? undefined,
-    consumerPrice: consumerPrice || pricing.consumerPrice,
-    faceValue: faceValue || pricing.faceValue,
-    totalDiscountPct: totalDiscountPct || pricing.totalDiscountPct,
-    occurredAt: input.occurredAt,
-    metadata: {
-      paymentStatus: 'completed',
-      voucherCode,
-      source: 'payment_completion',
-      ...(input.metadata ?? {}),
-    },
-  });
+  try {
+    await recordVoucherPurchaseBillingEvent(admin, {
+      eventKey: input.transaction.transaction_reference,
+      merchantId: input.merchant.id,
+      customerId: input.transaction.customer_id,
+      voucherId: voucherId ?? undefined,
+      consumerPrice: consumerPrice || pricing.consumerPrice,
+      faceValue: faceValue || pricing.faceValue,
+      totalDiscountPct: totalDiscountPct || pricing.totalDiscountPct,
+      occurredAt: input.occurredAt,
+      metadata: {
+        paymentStatus: 'completed',
+        voucherCode,
+        source: 'payment_completion',
+        ...(input.metadata ?? {}),
+      },
+    });
+  } catch (error: any) {
+    if (
+      !isMissingRelation(error, 'public.billing_events') &&
+      !isMissingRelation(error, 'public.billing_ledger_entries')
+    ) {
+      throw error;
+    }
+  }
 
   return {
     voucherCode,

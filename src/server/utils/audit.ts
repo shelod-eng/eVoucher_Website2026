@@ -1,6 +1,14 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { AuditEvent, FraudAlert } from '@/types/domain';
 
+function isMissingAuditSchema(error: any) {
+  const message = String(error?.message ?? '').toLowerCase();
+  return (
+    message.includes('relation "audit_events" does not exist') ||
+    message.includes("could not find the table 'audit_events' in the schema cache")
+  );
+}
+
 export async function writeAuditEvent(client: SupabaseClient, event: AuditEvent): Promise<void> {
   const { error } = await client.from('audit_events').insert({
     actor_id: event.actorId ?? null,
@@ -13,6 +21,9 @@ export async function writeAuditEvent(client: SupabaseClient, event: AuditEvent)
   });
 
   if (error) {
+    if (isMissingAuditSchema(error)) {
+      return;
+    }
     throw error;
   }
 }
