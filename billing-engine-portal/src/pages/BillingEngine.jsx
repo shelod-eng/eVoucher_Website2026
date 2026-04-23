@@ -1,23 +1,28 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockBanks, mockInvoices, mockMerchants, mockSettlements, mockTransactions } from '@/api/billing-mock-data';
+import {
+  mockBanks,
+  mockInvoices,
+  mockMerchants,
+  mockTransactions,
+} from '@/api/billing-mock-data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import GoldButton from '@/components/ui/GoldButton';
-import { 
-  Building2, 
-  FileText, 
-  TrendingUp, 
-  CreditCard, 
+import {
+  Building2,
+  FileText,
+  TrendingUp,
+  CreditCard,
   Download,
   CheckCircle,
   Clock,
   AlertCircle,
   ArrowLeft,
   DollarSign,
-  Banknote
+  Banknote,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -30,9 +35,7 @@ import {
   listBillingEvents,
   listBillingInvoices,
   listPortalMerchants,
-  listBillingSettlements,
   runBillingEngine,
-  runBillingSimulation,
 } from '@/api/portal-api';
 
 export default function BillingEngine() {
@@ -83,7 +86,6 @@ export default function BillingEngine() {
     qty: 1,
     eta: moment().add(1, 'day').format('YYYY-MM-DD'),
   });
-  const [lastSimulationRef, setLastSimulationRef] = useState('');
 
   const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
   const useMock = dataMode === 'mock';
@@ -112,9 +114,10 @@ export default function BillingEngine() {
         : Promise.resolve({ success: true, data: mockInvoices }),
     enabled: useMock || (usePortalApi && Boolean(session?.email)),
   });
-  const rawInvoices = invoicesResponse?.data ?? invoicesResponse ?? [];
   const invoices = useMemo(() => {
-    return (rawInvoices ?? []).map((inv) => ({
+    const rawInvoices = invoicesResponse?.data ?? invoicesResponse ?? [];
+
+    return rawInvoices.map((inv) => ({
       ...inv,
       invoiceNumber: inv.invoiceNumber ?? inv.invoice_number,
       merchantId: inv.merchantId ?? inv.merchant_id,
@@ -128,7 +131,7 @@ export default function BillingEngine() {
       bankFees: inv.bankFees ?? inv.bank_fee_amount,
       netPayable: inv.netPayable ?? inv.net_payable_to_merchant,
     }));
-  }, [rawInvoices]);
+  }, [invoicesResponse]);
 
   const { data: banks = [] } = useQuery({
     queryKey: ['bankSponsors'],
@@ -138,27 +141,10 @@ export default function BillingEngine() {
   const { data: merchants = [] } = useQuery({
     queryKey: ['merchants'],
     queryFn: () =>
-      usePortalApi ? listPortalMerchants().then((response) => response?.data ?? response?.merchants ?? []) : Promise.resolve(mockMerchants),
+      usePortalApi
+        ? listPortalMerchants().then((response) => response?.data ?? response?.merchants ?? [])
+        : Promise.resolve(mockMerchants),
   });
-
-  const { data: settlementsResponse } = useQuery({
-    queryKey: ['settlements'],
-    queryFn: () =>
-      usePortalApi && session?.email
-        ? listBillingSettlements(session, role)
-        : Promise.resolve({ success: true, data: mockSettlements }),
-    enabled: useMock || (usePortalApi && Boolean(session?.email)),
-  });
-  const rawSettlements = settlementsResponse?.data ?? settlementsResponse ?? [];
-  const settlements = useMemo(() => {
-    return (rawSettlements ?? []).map((row) => ({
-      ...row,
-      settlementReference: row.settlementReference ?? row.settlement_reference ?? row.reference,
-      reconciliationStatus: row.reconciliationStatus ?? row.reconciliation_status,
-      initiatedDate: row.initiatedDate ?? row.initiated_at ?? row.created_at,
-      confirmedDate: row.confirmedDate ?? row.confirmed_at,
-    }));
-  }, [rawSettlements]);
 
   const { data: transactions = [] } = useQuery({
     queryKey: ['transactions'],
@@ -167,26 +153,37 @@ export default function BillingEngine() {
         ? listBillingEvents(session, role, { limit: 100 }).then((response) => response?.data ?? [])
         : Promise.resolve(mockTransactions),
   });
+  const recentWebsiteTransactions = useMemo(() => {
+    return (transactions ?? [])
+      .map((event) => {
+        const metadata = event.metadata ?? {};
+        const transactionType =
+          metadata.transactionType ??
+          metadata.transaction_type ??
+          (event.event_type === 'payment_transaction'
+            ? 'purchase'
+            : event.event_type === 'manual_adjustment'
+              ? 'adjustment'
+              : event.event_type);
 
-  const simulateMutation = useMutation({
-    mutationFn: async (payload) => {
-      if (!usePortalApi) return { success: true, data: { mode: 'mock' } };
-      return runBillingSimulation(payload, session, role);
-    },
-    onSuccess: (result) => {
-      const transactionReference =
-        result?.data?.transactionReference ||
-        result?.data?.webhook?.transactionReference ||
-        '';
-      if (transactionReference) {
-        setLastSimulationRef(transactionReference);
-      }
-      queryClient.invalidateQueries(['billing-dashboard']);
-      queryClient.invalidateQueries(['invoices']);
-      queryClient.invalidateQueries(['settlements']);
-      queryClient.invalidateQueries(['transactions']);
-    },
-  });
+        return {
+          id: event.id,
+          eventType: event.event_type ?? 'payment_transaction',
+          transactionType: String(transactionType ?? 'transaction'),
+          merchantId: event.merchant_id ?? null,
+          customerId: event.customer_id ?? null,
+          voucherCode: metadata.voucherCode ?? metadata.voucher_code ?? null,
+          grossAmount: Number(event.gross_amount ?? 0),
+          occurredAt: event.occurred_at ?? event.created_at ?? null,
+          source:
+            metadata.source ??
+            metadata.flow ??
+            (usePortalApi ? 'www.evoucher.co.za -> sandbox' : 'mock'),
+        };
+      })
+      .sort((a, b) => new Date(b.occurredAt ?? 0).getTime() - new Date(a.occurredAt ?? 0).getTime())
+      .slice(0, 8);
+  }, [transactions, usePortalApi]);
 
   const generateInvoiceMutation = useMutation({
     mutationFn: async ({ merchantId, periodStart, periodEnd }) => {
@@ -208,7 +205,7 @@ export default function BillingEngine() {
     onSuccess: () => {
       logAuditEvent('invoice.generate', { mode: useMock ? 'mock' : 'portal' });
       queryClient.invalidateQueries(['invoices']);
-    }
+    },
   });
 
   const runEngineMutation = useMutation({
@@ -231,7 +228,7 @@ export default function BillingEngine() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['invoices']);
-    }
+    },
   });
 
   const totalRevenue = invoices.reduce((sum, inv) => sum + Number(inv.platformRevenue || 0), 0);
@@ -266,19 +263,27 @@ export default function BillingEngine() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'overdue':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'paid': return <CheckCircle className="w-4 h-4" />;
-      case 'pending': return <Clock className="w-4 h-4" />;
-      case 'overdue': return <AlertCircle className="w-4 h-4" />;
-      default: return <FileText className="w-4 h-4" />;
+      case 'paid':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'pending':
+        return <Clock className="w-4 h-4" />;
+      case 'overdue':
+        return <AlertCircle className="w-4 h-4" />;
+      default:
+        return <FileText className="w-4 h-4" />;
     }
   };
 
@@ -293,8 +298,12 @@ export default function BillingEngine() {
   const logisticsKpis = useMemo(() => {
     const totalStock = stockRows.reduce((sum, row) => sum + row.onHand, 0);
     const lowStockCount = stockRows.filter((row) => row.onHand <= row.reorderLevel).length;
-    const openOrders = orders.filter((order) => !['delivered', 'cancelled'].includes(order.status)).length;
-    const settlementReady = orders.filter((order) => order.settlementGate === 'ready_for_settlement').length;
+    const openOrders = orders.filter(
+      (order) => !['delivered', 'cancelled'].includes(order.status)
+    ).length;
+    const settlementReady = orders.filter(
+      (order) => order.settlementGate === 'ready_for_settlement'
+    ).length;
     return { totalStock, lowStockCount, openOrders, settlementReady };
   }, [stockRows, orders]);
 
@@ -302,7 +311,12 @@ export default function BillingEngine() {
     setOrders((prev) =>
       prev.map((order) => {
         if (order.id !== orderId) return order;
-        const settlementGate = nextStatus === 'delivered' ? 'ready_for_settlement' : nextStatus === 'cancelled' ? 'blocked' : 'awaiting_delivery';
+        const settlementGate =
+          nextStatus === 'delivered'
+            ? 'ready_for_settlement'
+            : nextStatus === 'cancelled'
+              ? 'blocked'
+              : 'awaiting_delivery';
         return { ...order, status: nextStatus, settlementGate };
       })
     );
@@ -349,7 +363,9 @@ export default function BillingEngine() {
       <div className="max-w-7xl mx-auto space-y-6">
         {useMock ? (
           <div className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-md px-3 py-2">
-            Demo mode: showing mock billing data. Set <code className="font-mono">VITE_BILLING_DATA_MODE=portal</code> to use website billing APIs.
+            Demo mode: showing mock billing data. Set{' '}
+            <code className="font-mono">VITE_BILLING_DATA_MODE=portal</code> to use website billing
+            APIs.
           </div>
         ) : null}
         {/* Header */}
@@ -380,12 +396,16 @@ export default function BillingEngine() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-white/60">Total Voucher Volume</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">
+                Total Voucher Volume
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-[#00A89D]">{formatCurrency(kpiTotalVolume)}</p>
+                  <p className="text-2xl font-bold text-[#00A89D]">
+                    {formatCurrency(kpiTotalVolume)}
+                  </p>
                   <p className="text-xs text-white/60 mt-1">Face value transacted</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-[#00A89D]" />
@@ -395,12 +415,16 @@ export default function BillingEngine() {
 
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-white/60">Platform Revenue (1.2%)</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">
+                Platform Revenue (1.2%)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-white">{formatCurrency(kpiPlatformRevenue)}</p>
+                  <p className="text-2xl font-bold text-white">
+                    {formatCurrency(kpiPlatformRevenue)}
+                  </p>
                   <p className="text-xs text-white/60 mt-1">eVoucher margin earned</p>
                 </div>
                 <DollarSign className="w-8 h-8 text-white/60" />
@@ -410,12 +434,16 @@ export default function BillingEngine() {
 
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-white/60">Member Benefits (2.8%)</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">
+                Member Benefits (2.8%)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-purple-300">{formatCurrency(kpiMemberBenefits)}</p>
+                  <p className="text-2xl font-bold text-purple-300">
+                    {formatCurrency(kpiMemberBenefits)}
+                  </p>
                   <p className="text-xs text-white/60 mt-1">Credited to wallets</p>
                 </div>
                 <CheckCircle className="w-8 h-8 text-purple-300" />
@@ -425,12 +453,16 @@ export default function BillingEngine() {
 
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-white/60">Pending Merchant Payouts</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">
+                Pending Merchant Payouts
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-orange-300">{formatCurrency(kpiPendingPayouts)}</p>
+                  <p className="text-2xl font-bold text-orange-300">
+                    {formatCurrency(kpiPendingPayouts)}
+                  </p>
                   <p className="text-xs text-white/60 mt-1">Awaiting settlement</p>
                 </div>
                 <Clock className="w-8 h-8 text-orange-300" />
@@ -440,7 +472,9 @@ export default function BillingEngine() {
 
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-white/60">Settled To Merchants</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">
+                Settled To Merchants
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -455,7 +489,9 @@ export default function BillingEngine() {
 
           <Card className="bg-white/5 border-white/10 text-white">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-white/60">Bank Processing Fees</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/60">
+                Bank Processing Fees
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -491,7 +527,9 @@ export default function BillingEngine() {
                     <div className="flex items-center justify-between text-sm">
                       <div className="text-white/80 font-medium">Consumer Purchases Voucher</div>
                       <div className="text-white/70">100%</div>
-                      <div className="text-[#00A89D] font-semibold">{formatCurrency(demoVoucherValue)}</div>
+                      <div className="text-[#00A89D] font-semibold">
+                        {formatCurrency(demoVoucherValue)}
+                      </div>
                     </div>
                     <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
                       <div className="h-full w-full bg-[#00A89D]" />
@@ -502,14 +540,21 @@ export default function BillingEngine() {
                     <div className="flex items-center justify-between text-sm">
                       <div className="text-white/80 font-medium">Merchant Receives Settlement</div>
                       <div className="text-white/70">{merchantPayoutPct}%</div>
-                      <div className="text-emerald-300 font-semibold">{formatCurrency(merchantGross)}</div>
+                      <div className="text-emerald-300 font-semibold">
+                        {formatCurrency(merchantGross)}
+                      </div>
                     </div>
                     <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
-                      <div className="h-full bg-emerald-400" style={{ width: `${merchantPayoutPct}%` }} />
+                      <div
+                        className="h-full bg-emerald-400"
+                        style={{ width: `${merchantPayoutPct}%` }}
+                      />
                     </div>
                     <div className="mt-2 text-xs text-white/60">
                       Net after bank fee ({bankFeePctOfMerchant}% of merchant payout):{' '}
-                      <span className="text-white font-semibold">{formatCurrency(merchantNet)}</span>
+                      <span className="text-white font-semibold">
+                        {formatCurrency(merchantNet)}
+                      </span>
                     </div>
                   </div>
 
@@ -518,10 +563,15 @@ export default function BillingEngine() {
                       <div className="flex items-center justify-between text-sm">
                         <div className="text-white/80 font-medium">Member Benefit Credited</div>
                         <div className="text-white/70">{memberBenefitPct}%</div>
-                        <div className="text-purple-300 font-semibold">{formatCurrency(memberBenefit)}</div>
+                        <div className="text-purple-300 font-semibold">
+                          {formatCurrency(memberBenefit)}
+                        </div>
                       </div>
                       <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
-                        <div className="h-full bg-purple-400" style={{ width: `${memberBenefitPct}%` }} />
+                        <div
+                          className="h-full bg-purple-400"
+                          style={{ width: `${memberBenefitPct}%` }}
+                        />
                       </div>
                       <div className="mt-2 text-xs text-white/60">Credited to member wallets</div>
                     </div>
@@ -530,12 +580,19 @@ export default function BillingEngine() {
                       <div className="flex items-center justify-between text-sm">
                         <div className="text-white/80 font-medium">Platform Revenue</div>
                         <div className="text-white/70">{platformRevenuePct}%</div>
-                        <div className="text-[#00A89D] font-semibold">{formatCurrency(platformRevenueDemo)}</div>
+                        <div className="text-[#00A89D] font-semibold">
+                          {formatCurrency(platformRevenueDemo)}
+                        </div>
                       </div>
                       <div className="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
-                        <div className="h-full bg-[#00A89D]" style={{ width: `${platformRevenuePct}%` }} />
+                        <div
+                          className="h-full bg-[#00A89D]"
+                          style={{ width: `${platformRevenuePct}%` }}
+                        />
                       </div>
-                      <div className="mt-2 text-xs text-white/60">Retained in eVoucher revenue account</div>
+                      <div className="mt-2 text-xs text-white/60">
+                        Retained in eVoucher revenue account
+                      </div>
                     </div>
                   </div>
 
@@ -573,51 +630,6 @@ export default function BillingEngine() {
                       </GoldButton>
                     </Link>
                   </div>
-                  {usePortalApi ? (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-3">
-                      <GoldButton
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => simulateMutation.mutate({ action: 'purchase', paymentMethod: 'eft', paymentStatus: 'pending' })}
-                      >
-                        Simulate Purchase
-                      </GoldButton>
-                      <GoldButton
-                        variant="outline"
-                        className="w-full"
-                        disabled={!lastSimulationRef}
-                        onClick={() =>
-                          simulateMutation.mutate({
-                            action: 'webhook',
-                            transactionReference: lastSimulationRef,
-                            status: 'completed',
-                          })
-                        }
-                      >
-                        Simulate Webhook
-                      </GoldButton>
-                      <GoldButton
-                        variant="outline"
-                        className="w-full"
-                        disabled={!lastSimulationRef}
-                        onClick={() =>
-                          simulateMutation.mutate({
-                            action: 'failure',
-                            transactionReference: lastSimulationRef,
-                          })
-                        }
-                      >
-                        Simulate Failure
-                      </GoldButton>
-                      <GoldButton
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => simulateMutation.mutate({ action: 'settlement' })}
-                      >
-                        Simulate Settlement
-                      </GoldButton>
-                    </div>
-                  ) : null}
                 </CardContent>
               </Card>
 
@@ -636,7 +648,10 @@ export default function BillingEngine() {
                     { year: 4, volume: 'R12.13B', profit: 'R156.7M', note: '+10% growth' },
                     { year: 5, volume: 'R13.75B', profit: 'R181.9M', note: '+10% growth' },
                   ].map((row) => (
-                    <div key={row.year} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div
+                      key={row.year}
+                      className="p-4 rounded-xl bg-white/5 border border-white/10"
+                    >
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-sm font-semibold">Year {row.year}</div>
@@ -652,26 +667,148 @@ export default function BillingEngine() {
                 </CardContent>
               </Card>
             </div>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
+              <Card className="xl:col-span-2 bg-white/5 border-white/10 text-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-[#00A89D]" />
+                    Recent Website Transactions
+                  </CardTitle>
+                  <div className="text-sm text-white/60">
+                    Consumer transactions from `www.evoucher.co.za` recorded into the shared sandbox
+                    billing tables.
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {recentWebsiteTransactions.length === 0 ? (
+                    <div className="text-sm text-white/60">
+                      No website transactions recorded yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {recentWebsiteTransactions.map((event) => (
+                        <div
+                          key={event.id}
+                          className="rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+                        >
+                          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <Badge className="bg-white/10 border-white/10 text-white">
+                                  {event.transactionType}
+                                </Badge>
+                                <span className="text-xs text-white/60">{event.eventType}</span>
+                              </div>
+                              <div className="mt-2 text-sm text-white/80">
+                                Merchant:{' '}
+                                <span className="font-semibold text-white">
+                                  {event.merchantId ?? 'N/A'}
+                                </span>
+                              </div>
+                              <div className="text-sm text-white/80">
+                                Customer:{' '}
+                                <span className="font-semibold text-white">
+                                  {event.customerId ?? 'N/A'}
+                                </span>
+                              </div>
+                              <div className="text-sm text-white/80">
+                                Voucher:{' '}
+                                <span className="font-semibold text-white">
+                                  {event.voucherCode ?? 'N/A'}
+                                </span>
+                              </div>
+                              <div className="text-xs text-white/50 mt-1">
+                                Source: {event.source}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-[#00A89D]">
+                                {formatCurrency(event.grossAmount)}
+                              </div>
+                              <div className="text-xs text-white/60">
+                                {event.occurredAt
+                                  ? moment(event.occurredAt).format('YYYY-MM-DD HH:mm')
+                                  : 'No timestamp'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/5 border-white/10 text-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Banknote className="w-5 h-5 text-[#00A89D]" />
+                    Accounting Path
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-white/70">
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    1. Consumer transacts on `www.evoucher.co.za`.
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    2. Website writes sandbox-backed payment, voucher, wallet, and billing event
+                    records.
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    3. Finance generates invoices from uninvoiced website events for each merchant
+                    period.
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    4. Approved invoices feed settlement batches, BankServ export, and final
+                    merchant payout confirmation.
+                  </div>
+                  <div className="rounded-xl border border-[#00A89D]/30 bg-[#00A89D]/10 p-3 text-white">
+                    FNB sponsor account accounting happens through the settlement and BankServ
+                    workflow after invoice approval.
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="logistics">
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card className="bg-white/5 border-white/10 text-white">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm text-white/70">Total Stock Units</CardTitle></CardHeader>
-                  <CardContent><p className="text-2xl font-bold">{logisticsKpis.totalStock}</p></CardContent>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-white/70">Total Stock Units</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">{logisticsKpis.totalStock}</p>
+                  </CardContent>
                 </Card>
                 <Card className="bg-white/5 border-white/10 text-white">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm text-white/70">Low Stock SKUs</CardTitle></CardHeader>
-                  <CardContent><p className="text-2xl font-bold text-yellow-300">{logisticsKpis.lowStockCount}</p></CardContent>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-white/70">Low Stock SKUs</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold text-yellow-300">
+                      {logisticsKpis.lowStockCount}
+                    </p>
+                  </CardContent>
                 </Card>
                 <Card className="bg-white/5 border-white/10 text-white">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm text-white/70">Open Orders</CardTitle></CardHeader>
-                  <CardContent><p className="text-2xl font-bold text-blue-300">{logisticsKpis.openOrders}</p></CardContent>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-white/70">Open Orders</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold text-blue-300">{logisticsKpis.openOrders}</p>
+                  </CardContent>
                 </Card>
                 <Card className="bg-white/5 border-white/10 text-white">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm text-white/70">Settlement Ready</CardTitle></CardHeader>
-                  <CardContent><p className="text-2xl font-bold text-emerald-300">{logisticsKpis.settlementReady}</p></CardContent>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-white/70">Settlement Ready</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold text-emerald-300">
+                      {logisticsKpis.settlementReady}
+                    </p>
+                  </CardContent>
                 </Card>
               </div>
 
@@ -684,13 +821,17 @@ export default function BillingEngine() {
                     className="h-10 rounded-md border border-gray-300 px-3 text-sm"
                     placeholder="Merchant"
                     value={newOrder.merchant}
-                    onChange={(event) => setNewOrder((prev) => ({ ...prev, merchant: event.target.value }))}
+                    onChange={(event) =>
+                      setNewOrder((prev) => ({ ...prev, merchant: event.target.value }))
+                    }
                   />
                   <input
                     className="h-10 rounded-md border border-gray-300 px-3 text-sm"
                     placeholder="SKU"
                     value={newOrder.sku}
-                    onChange={(event) => setNewOrder((prev) => ({ ...prev, sku: event.target.value }))}
+                    onChange={(event) =>
+                      setNewOrder((prev) => ({ ...prev, sku: event.target.value }))
+                    }
                   />
                   <input
                     type="number"
@@ -698,15 +839,22 @@ export default function BillingEngine() {
                     className="h-10 rounded-md border border-gray-300 px-3 text-sm"
                     placeholder="Qty"
                     value={newOrder.qty}
-                    onChange={(event) => setNewOrder((prev) => ({ ...prev, qty: event.target.value }))}
+                    onChange={(event) =>
+                      setNewOrder((prev) => ({ ...prev, qty: event.target.value }))
+                    }
                   />
                   <input
                     type="date"
                     className="h-10 rounded-md border border-gray-300 px-3 text-sm"
                     value={newOrder.eta}
-                    onChange={(event) => setNewOrder((prev) => ({ ...prev, eta: event.target.value }))}
+                    onChange={(event) =>
+                      setNewOrder((prev) => ({ ...prev, eta: event.target.value }))
+                    }
                   />
-                  <Button className="bg-[#00A89D] hover:bg-[#009488] text-white" onClick={createOrder}>
+                  <Button
+                    className="bg-[#00A89D] hover:bg-[#009488] text-white"
+                    onClick={createOrder}
+                  >
                     Create Order
                   </Button>
                 </CardContent>
@@ -740,12 +888,22 @@ export default function BillingEngine() {
                             <td className="py-2">{row.reserved}</td>
                             <td className="py-2">{row.reorderLevel}</td>
                             <td className="py-2">
-                              <Badge className={lowStock ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}>
+                              <Badge
+                                className={
+                                  lowStock
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-green-100 text-green-800'
+                                }
+                              >
                                 {lowStock ? 'Low stock' : 'Healthy'}
                               </Badge>
                             </td>
                             <td className="py-2">
-                              <Button size="sm" variant="outline" onClick={() => receiveStock(row.sku, 10)}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => receiveStock(row.sku, 10)}
+                              >
                                 +10 Receive
                               </Button>
                             </td>
@@ -784,7 +942,11 @@ export default function BillingEngine() {
                           <td className="py-2">{order.qty}</td>
                           <td className="py-2">{order.eta}</td>
                           <td className="py-2">
-                            <Badge className={statusClassMap[order.status] || 'bg-gray-100 text-gray-800'}>
+                            <Badge
+                              className={
+                                statusClassMap[order.status] || 'bg-gray-100 text-gray-800'
+                              }
+                            >
                               {order.status.replace('_', ' ')}
                             </Badge>
                           </td>
@@ -792,16 +954,40 @@ export default function BillingEngine() {
                           <td className="py-2">
                             <div className="flex gap-2 flex-wrap">
                               {order.status === 'pending' && (
-                                <Button size="sm" variant="outline" onClick={() => markOrderStatus(order.id, 'picked')}>Mark Picked</Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => markOrderStatus(order.id, 'picked')}
+                                >
+                                  Mark Picked
+                                </Button>
                               )}
                               {order.status === 'picked' && (
-                                <Button size="sm" variant="outline" onClick={() => markOrderStatus(order.id, 'in_transit')}>Ship</Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => markOrderStatus(order.id, 'in_transit')}
+                                >
+                                  Ship
+                                </Button>
                               )}
                               {order.status === 'in_transit' && (
-                                <Button size="sm" className="bg-[#00A89D] hover:bg-[#009488] text-white" onClick={() => markOrderStatus(order.id, 'delivered')}>Deliver</Button>
+                                <Button
+                                  size="sm"
+                                  className="bg-[#00A89D] hover:bg-[#009488] text-white"
+                                  onClick={() => markOrderStatus(order.id, 'delivered')}
+                                >
+                                  Deliver
+                                </Button>
                               )}
                               {!['delivered', 'cancelled'].includes(order.status) && (
-                                <Button size="sm" variant="ghost" onClick={() => markOrderStatus(order.id, 'cancelled')}>Cancel</Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => markOrderStatus(order.id, 'cancelled')}
+                                >
+                                  Cancel
+                                </Button>
                               )}
                             </div>
                           </td>
@@ -825,13 +1011,18 @@ export default function BillingEngine() {
                     <p className="text-gray-500 text-center py-8">No invoices generated yet.</p>
                   ) : (
                     invoices.map((invoice) => (
-                      <div key={invoice.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div
+                        key={invoice.id}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
+                      >
                         <div className="flex items-start gap-3">
                           <Building2 className="w-5 h-5 text-gray-400 mt-1" />
                           <div>
                             <h4 className="font-semibold text-gray-900">{invoice.merchantName}</h4>
                             <p className="text-sm text-gray-500">
-                              {invoice.invoiceNumber} • {moment(invoice.billingPeriodStart).format('MMM D')} - {moment(invoice.billingPeriodEnd).format('MMM D, YYYY')}
+                              {invoice.invoiceNumber} •{' '}
+                              {moment(invoice.billingPeriodStart).format('MMM D')} -{' '}
+                              {moment(invoice.billingPeriodEnd).format('MMM D, YYYY')}
                             </p>
                             <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
                               <span>Vouchers: {invoice.totalVouchersSold}</span>
@@ -882,7 +1073,9 @@ export default function BillingEngine() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Monthly Sponsorship</p>
-                      <p className="text-2xl font-bold text-[#00A89D]">R{bank.sponsorshipAmount?.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-[#00A89D]">
+                        R{bank.sponsorshipAmount?.toLocaleString()}
+                      </p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -896,7 +1089,9 @@ export default function BillingEngine() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Total Fees Collected</p>
-                      <p className="text-lg font-semibold">R{bank.totalFeesCollected?.toLocaleString()}</p>
+                      <p className="text-lg font-semibold">
+                        R{bank.totalFeesCollected?.toLocaleString()}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

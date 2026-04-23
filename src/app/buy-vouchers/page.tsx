@@ -326,7 +326,7 @@ function BuyVouchersContent() {
       icon: 'WalletIcon',
       description: 'Use your wallet cash balance',
     },
-  ];
+  ].filter((method) => !(walletTopupMode && method.id === 'wallet'));
 
   const resetErrors = () => setFormErrors({});
 

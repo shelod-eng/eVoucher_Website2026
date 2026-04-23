@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ export default function AuditLog() {
   });
 
   const localEvents = useMemo(() => listLocalAuditEvents(), []);
-  const events = usePortalApi ? portalEventsResponse?.events ?? [] : localEvents;
+  const events = usePortalApi ? (portalEventsResponse?.data ?? []) : localEvents;
 
   return (
     <div className="max-w-6xl mx-auto space-y-4">
@@ -45,7 +45,10 @@ export default function AuditLog() {
         ) : (
           <div className="space-y-2">
             {events.map((evt) => (
-              <div key={evt.id} className="flex items-start justify-between gap-4 border-b border-white/10 pb-2">
+              <div
+                key={evt.id}
+                className="flex items-start justify-between gap-4 border-b border-white/10 pb-2"
+              >
                 <div>
                   <div className="flex items-center gap-2">
                     <Badge className="bg-white/10 border-white/10 text-white">{evt.action}</Badge>

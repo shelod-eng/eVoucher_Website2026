@@ -331,6 +331,71 @@ export async function listPortalMerchants(params = {}) {
   return response.json();
 }
 
+function sandboxHeaders() {
+  const apiKey = import.meta.env.VITE_SANDBOX_API_KEY || import.meta.env.VITE_ADMIN_PASSCODE;
+  if (!apiKey) {
+    throw new Error('Missing VITE_SANDBOX_API_KEY (or fallback VITE_ADMIN_PASSCODE) for sandbox gateway access.');
+  }
+
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`,
+  };
+}
+
+async function sandboxFetchJson(path, options) {
+  const response = await fetch(buildUrl(path), {
+    method: options?.method || 'GET',
+    headers: {
+      ...sandboxHeaders(),
+      ...(options?.headers || {}),
+    },
+    body: options?.body ? JSON.stringify(options.body) : undefined,
+  });
+
+  if (!response.ok) {
+    const errorMessage = await readError(response);
+    throw new Error(errorMessage || `Sandbox request failed (${response.status})`);
+  }
+
+  return response.json();
+}
+
 export async function runBillingSimulation(payload, session, role) {
   return portalFetchJson('/api/billing/simulator', { method: 'POST', body: payload }, session, role);
+}
+
+export async function initiateSandboxPurchase(payload) {
+  return sandboxFetchJson('/api/v1/sandbox/payments/initiate', { method: 'POST', body: payload });
+}
+
+export async function authorizeSandboxPayment(payload) {
+  return sandboxFetchJson('/api/v1/sandbox/payments/authorize', { method: 'POST', body: payload });
+}
+
+export async function getSandboxPaymentStatus(ref) {
+  return sandboxFetchJson(`/api/v1/sandbox/payments/${encodeURIComponent(ref)}/status`, {});
+}
+
+export async function initiateSandboxTopup(payload) {
+  return sandboxFetchJson('/api/v1/sandbox/topup/initiate', { method: 'POST', body: payload });
+}
+
+export async function addSandboxVoucher(payload) {
+  return sandboxFetchJson('/api/v1/sandbox/voucher/add', { method: 'POST', body: payload });
+}
+
+export async function submitSandboxSettlement(payload = {}) {
+  return sandboxFetchJson('/api/v1/sandbox/settlements/submit', { method: 'POST', body: payload });
+}
+
+export async function getSandboxSettlement(batchId) {
+  return sandboxFetchJson(`/api/v1/sandbox/settlements/${encodeURIComponent(batchId)}`, {});
+}
+
+export async function refundSandboxPayment(ref, payload = {}) {
+  return sandboxFetchJson(`/api/v1/sandbox/refunds/${encodeURIComponent(ref)}`, {
+    method: 'POST',
+    body: payload,
+  });
 }

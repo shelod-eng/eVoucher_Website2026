@@ -44,6 +44,11 @@ interface PaymentTransaction {
   created_at: string;
 }
 
+interface MerchantOption {
+  id: string;
+  businessName: string;
+}
+
 type WalletTab = 'active' | 'partial' | 'used' | 'expired';
 const WALLET_TOPUP_HINT_KEY = 'evoucher.wallet.topup.hint.v1';
 const TOPUP_HINT_MAX_AGE_MS = 1000 * 60 * 30; // 30 minutes
@@ -104,7 +109,8 @@ function getPaymentDerivedWalletBalance(paymentTransactions: PaymentTransaction[
     const status = String(tx.payment_status ?? '')
       .toLowerCase()
       .trim();
-    const isCompleted = !status || status === 'completed' || status === 'paid' || status === 'success';
+    const isCompleted =
+      !status || status === 'completed' || status === 'paid' || status === 'success';
     if (!isCompleted) return sum;
     if (tx.voucher_code || tx.merchant_id) return sum;
     const amount = Number(tx.amount ?? 0);
@@ -115,7 +121,8 @@ function getPaymentDerivedWalletBalance(paymentTransactions: PaymentTransaction[
     const status = String(tx.payment_status ?? '')
       .toLowerCase()
       .trim();
-    const isCompleted = !status || status === 'completed' || status === 'paid' || status === 'success';
+    const isCompleted =
+      !status || status === 'completed' || status === 'paid' || status === 'success';
     if (!isCompleted) return sum;
     const cardBrand = String(tx.card_brand ?? '')
       .toUpperCase()
@@ -172,6 +179,14 @@ export default function WalletPage() {
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [copyMessage, setCopyMessage] = useState('');
   const [topupHintBalance, setTopupHintBalance] = useState<number>(0);
+  const [walletRefreshKey, setWalletRefreshKey] = useState(0);
+  const [addVoucherOpen, setAddVoucherOpen] = useState(false);
+  const [addVoucherCode, setAddVoucherCode] = useState('');
+  const [addVoucherAmount, setAddVoucherAmount] = useState('100');
+  const [addVoucherMerchantId, setAddVoucherMerchantId] = useState('');
+  const [addVoucherMerchants, setAddVoucherMerchants] = useState<MerchantOption[]>([]);
+  const [addVoucherProcessing, setAddVoucherProcessing] = useState(false);
+  const [addVoucherError, setAddVoucherError] = useState('');
   const topUpHref = '/buy-vouchers?walletTopup=1';
 
   useEffect(() => {
@@ -195,7 +210,9 @@ export default function WalletPage() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to load wallet.');
         const walletBalanceFromServer = Number(data.walletBalance ?? 0);
-        const paymentDerivedBalance = getPaymentDerivedWalletBalance(data.paymentTransactions ?? []);
+        const paymentDerivedBalance = getPaymentDerivedWalletBalance(
+          data.paymentTransactions ?? []
+        );
         const resolvedWalletBalance = Number(
           Math.max(walletBalanceFromServer, paymentDerivedBalance, topupHintBalance).toFixed(2)
         );
@@ -215,7 +232,43 @@ export default function WalletPage() {
     };
 
     void loadWallet();
-  }, [user, topupHintBalance]);
+  }, [user, topupHintBalance, walletRefreshKey]);
+
+  useEffect(() => {
+    if (!user || !addVoucherOpen) return;
+
+    const loadMerchants = async () => {
+      try {
+        const response = await fetch('/api/v1/merchants/active', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Failed to load merchants.');
+        const merchants = Array.isArray(data?.merchants)
+          ? data.merchants.map((merchant: any) => ({
+              id: String(merchant.id ?? ''),
+              businessName: String(
+                merchant.businessName ?? merchant.business_name ?? 'Participating Merchant'
+              ),
+            }))
+          : [];
+        setAddVoucherMerchants(merchants.filter((merchant: MerchantOption) => merchant.id));
+      } catch {
+        setAddVoucherMerchants([]);
+      }
+    };
+
+    void loadMerchants();
+  }, [user, addVoucherOpen]);
+
+  useEffect(() => {
+    if (!addVoucherOpen) return;
+    if (addVoucherMerchantId) return;
+    if (addVoucherMerchants.length === 0) return;
+    setAddVoucherMerchantId(addVoucherMerchants[0].id);
+  }, [addVoucherMerchantId, addVoucherMerchants, addVoucherOpen]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -349,6 +402,58 @@ export default function WalletPage() {
     }
   };
 
+  const handleAddVoucher = async () => {
+    const normalizedCode = addVoucherCode.trim().toUpperCase();
+    const amount = Number(addVoucherAmount);
+
+    if (!normalizedCode) {
+      setAddVoucherError('Voucher code is required.');
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setAddVoucherError('Enter a valid voucher amount.');
+      return;
+    }
+
+    setAddVoucherProcessing(true);
+    setAddVoucherError('');
+
+    try {
+      const response = await fetch('/api/v1/wallet/add-voucher', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          voucherCode: normalizedCode,
+          amount,
+          merchantId: addVoucherMerchantId || undefined,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add voucher to wallet.');
+      }
+
+      setCopyMessage(
+        data.duplicate
+          ? `Voucher ${normalizedCode} is already in your wallet.`
+          : `Voucher ${data.voucherCode ?? normalizedCode} added to your wallet.`
+      );
+      window.setTimeout(() => setCopyMessage(''), 1800);
+      setAddVoucherOpen(false);
+      setAddVoucherCode('');
+      setAddVoucherAmount('100');
+      setAddVoucherError('');
+      setWalletRefreshKey((previous) => previous + 1);
+      setTab('active');
+    } catch (addVoucherRequestError: any) {
+      setAddVoucherError(addVoucherRequestError?.message || 'Failed to add voucher to wallet.');
+    } finally {
+      setAddVoucherProcessing(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -392,13 +497,15 @@ export default function WalletPage() {
               </div>
               <div className="rounded-2xl bg-white/22 p-5 border border-white/25">
                 <p className="text-sm text-white/95">Voucher Balance</p>
-                <p className="font-headline font-bold text-5xl mt-1">{toCurrency(totalVoucherBalance)}</p>
+                <p className="font-headline font-bold text-5xl mt-1">
+                  {toCurrency(totalVoucherBalance)}
+                </p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <button
-                onClick={() => router.push('/shop')}
+                onClick={() => setAddVoucherOpen(true)}
                 className="rounded-xl bg-white text-primary font-headline font-semibold py-2.5 hover:bg-white/95"
               >
                 Add Voucher
@@ -477,7 +584,10 @@ export default function WalletPage() {
                 const status = classifyVoucher(voucher);
 
                 return (
-                  <article key={voucher.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <article
+                    key={voucher.id}
+                    className="rounded-2xl border border-border bg-card p-5 shadow-sm"
+                  >
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="font-headline font-bold text-3xl text-foreground">
@@ -688,6 +798,95 @@ export default function WalletPage() {
             >
               Copy Voucher Code
             </button>
+          </div>
+        </div>
+      )}
+
+      {addVoucherOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-headline font-bold text-2xl text-foreground">
+                  Add Voucher To Wallet
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  This submits the wallet add-voucher journey into the eVoucher sandbox flow.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setAddVoucherOpen(false);
+                  setAddVoucherError('');
+                }}
+                className="px-3 py-2 rounded-lg border border-border hover:bg-muted"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-headline font-semibold text-foreground mb-2">
+                  Voucher Code
+                </label>
+                <input
+                  value={addVoucherCode}
+                  onChange={(event) => setAddVoucherCode(event.target.value.toUpperCase())}
+                  placeholder="EVS-12345"
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-headline font-semibold text-foreground mb-2">
+                  Face Value
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={addVoucherAmount}
+                  onChange={(event) => setAddVoucherAmount(event.target.value)}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-headline font-semibold text-foreground mb-2">
+                  Participating Merchant
+                </label>
+                <select
+                  value={addVoucherMerchantId}
+                  onChange={(event) => setAddVoucherMerchantId(event.target.value)}
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 text-foreground outline-none focus:border-primary"
+                >
+                  {addVoucherMerchants.length === 0 ? (
+                    <option value="">Default participating merchant</option>
+                  ) : (
+                    addVoucherMerchants.map((merchant) => (
+                      <option key={merchant.id} value={merchant.id}>
+                        {merchant.businessName}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              {addVoucherError && (
+                <div className="rounded-lg border border-error/20 bg-error/10 p-3">
+                  <p className="text-sm text-error">{addVoucherError}</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => void handleAddVoucher()}
+                disabled={addVoucherProcessing}
+                className="w-full rounded-xl bg-primary py-3 text-primary-foreground font-headline font-semibold hover:bg-primary/90 disabled:opacity-60"
+              >
+                {addVoucherProcessing ? 'Submitting To Sandbox...' : 'Submit Voucher To Wallet'}
+              </button>
+            </div>
           </div>
         </div>
       )}
