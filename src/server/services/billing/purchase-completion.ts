@@ -44,9 +44,48 @@ function deriveTotalDiscountPct(faceValue: number, consumerPrice: number, fallba
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '').toLowerCase();
   const relation = relationName.toLowerCase();
+  const bareRelation = relation.includes('.') ? (relation.split('.').at(-1) ?? relation) : relation;
   return (
     message.includes(`relation "${relation}" does not exist`) ||
-    message.includes(`could not find the table '${relation}' in the schema cache`)
+    message.includes(`relation "${bareRelation}" does not exist`) ||
+    message.includes(`could not find the table '${relation}' in the schema cache`) ||
+    message.includes(`could not find the table '${bareRelation}' in the schema cache`)
+  );
+}
+
+function isMissingSchemaField(error: any, fieldName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const field = fieldName.toLowerCase();
+  return (
+    message.includes(`column "${field}" does not exist`) ||
+    message.includes(`could not find the '${field}' column`) ||
+    message.includes(`record "${field}" has no field`) ||
+    message.includes('schema cache')
+  );
+}
+
+function isBillingCompatibilityError(error: any) {
+  return (
+    isMissingRelation(error, 'public.billing_events') ||
+    isMissingRelation(error, 'public.billing_ledger_entries') ||
+    [
+      'event_type',
+      'merchant_id',
+      'customer_id',
+      'voucher_id',
+      'gross_amount',
+      'merchant_payout_amount',
+      'total_discount_pct',
+      'total_discount_amount',
+      'occurred_at',
+      'metadata',
+      'entry_group_id',
+      'source_type',
+      'source_id',
+      'debit_account',
+      'credit_account',
+      'currency',
+    ].some((field) => isMissingSchemaField(error, field))
   );
 }
 
@@ -130,10 +169,7 @@ export async function ensureCompletedPurchaseArtifacts(
       },
     });
   } catch (error: any) {
-    if (
-      !isMissingRelation(error, 'public.billing_events') &&
-      !isMissingRelation(error, 'public.billing_ledger_entries')
-    ) {
+    if (!isBillingCompatibilityError(error)) {
       throw error;
     }
   }

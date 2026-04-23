@@ -32,6 +32,72 @@ function truthyString(value: unknown) {
   return text.length > 0 ? text : null;
 }
 
+function isMissingRelation(error: any, relationName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const relation = relationName.toLowerCase();
+  const bareRelation = relation.includes('.') ? (relation.split('.').at(-1) ?? relation) : relation;
+  return (
+    message.includes(`relation "${relation}" does not exist`) ||
+    message.includes(`relation "${bareRelation}" does not exist`) ||
+    message.includes(`could not find the table '${relation}' in the schema cache`) ||
+    message.includes(`could not find the table '${bareRelation}' in the schema cache`)
+  );
+}
+
+function isMissingSchemaField(error: any, fieldName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const field = fieldName.toLowerCase();
+  return (
+    message.includes(`column "${field}" does not exist`) ||
+    message.includes(`could not find the '${field}' column`) ||
+    message.includes(`record "${field}" has no field`) ||
+    message.includes('schema cache')
+  );
+}
+
+async function insertPaymentTransactionWithFallback(
+  admin: ReturnType<typeof createAdminClient>,
+  row: Record<string, unknown>
+) {
+  let error = (await admin.from('payment_transactions').insert(row)).error;
+  if (!error) return;
+
+  const compatibilityFields = [
+    'product_id',
+    'face_value',
+    'total_discount_pct',
+    'consumer_benefit_pct',
+    'evoucher_benefit_pct',
+    'total_discount_amount',
+    'consumer_benefit_amount',
+    'evoucher_benefit_amount',
+    'consumer_price',
+    'merchant_receivable_after_total_discount',
+    'merchant_receivable_after_evoucher_benefit',
+    'merchant_id',
+  ];
+
+  if (!compatibilityFields.some((field) => isMissingSchemaField(error, field))) {
+    throw error;
+  }
+
+  const fallbackRow = {
+    customer_id: row.customer_id,
+    amount: row.amount,
+    card_last_four: row.card_last_four,
+    card_brand: row.card_brand,
+    payment_status: row.payment_status,
+    voucher_code: row.voucher_code,
+    transaction_reference: row.transaction_reference,
+    ...(row.merchant_id === null || row.merchant_id === undefined
+      ? {}
+      : { merchant_id: row.merchant_id }),
+  };
+
+  error = (await admin.from('payment_transactions').insert(fallbackRow)).error;
+  if (error) throw error;
+}
+
 export function jsonSandbox(data: Record<string, unknown>, init?: ResponseInit) {
   const response = NextResponse.json(data, init);
   response.headers.set('Cache-Control', 'no-store, max-age=0');
@@ -163,6 +229,10 @@ async function fetchTransaction(admin: ReturnType<typeof createAdminClient>, ref
 
 async function recordSandboxEvent(admin: ReturnType<typeof createAdminClient>, input: { eventKey: string; eventType?: string; merchantId?: string | null; customerId?: string | null; voucherId?: string | null; grossAmount: number; occurredAt: string; metadata: Record<string, unknown>; }) {
   const existing = await admin.from('billing_events').select('id').eq('event_key', input.eventKey).maybeSingle();
+  if (existing.error) {
+    if (isMissingRelation(existing.error, 'public.billing_events')) return null;
+    throw existing.error;
+  }
   if (existing.data?.id) return existing.data;
   const { error } = await admin.from('billing_events').insert({
     event_key: input.eventKey,
@@ -177,7 +247,11 @@ async function recordSandboxEvent(admin: ReturnType<typeof createAdminClient>, i
     occurred_at: input.occurredAt,
     metadata: input.metadata,
   });
-  if (error && !String(error.message ?? '').toLowerCase().includes('duplicate')) throw error;
+  if (error) {
+    if (isMissingRelation(error, 'public.billing_events')) return null;
+    if (!String(error.message ?? '').toLowerCase().includes('duplicate')) throw error;
+  }
+  return null;
 }
 async function dispatchWebhook(reference: string, status: 'completed' | 'failed') {
   const secret = String(process.env.PAYMENTS_WEBHOOK_SECRET ?? '').trim();
@@ -287,8 +361,7 @@ export async function createSandboxPurchase(body: AnyRecord) {
     voucher_code: voucherCode,
     transaction_reference: transactionReference,
   };
-  const { error } = await admin.from('payment_transactions').insert(row);
-  if (error) throw error;
+  await insertPaymentTransactionWithFallback(admin, row);
 
   let completedVoucherCode: string | null = voucherCode;
   if (paymentStatus === 'completed') {
@@ -356,8 +429,7 @@ export async function createSandboxTopup(body: AnyRecord) {
     voucher_code: null,
     transaction_reference: transactionReference,
   };
-  const { error } = await admin.from('payment_transactions').insert(row);
-  if (error) throw error;
+  await insertPaymentTransactionWithFallback(admin, row);
   if (paymentStatus === 'completed') await completeTransaction(admin, row);
 
   return {
