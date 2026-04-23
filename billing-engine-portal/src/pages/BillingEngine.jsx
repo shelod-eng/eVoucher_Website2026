@@ -178,7 +178,7 @@ export default function BillingEngine() {
           source:
             metadata.source ??
             metadata.flow ??
-            (usePortalApi ? 'www.evoucher.co.za -> sandbox' : 'mock'),
+            (usePortalApi ? 'www.evoucher.co.za -> website billing' : 'mock'),
         };
       })
       .sort((a, b) => new Date(b.occurredAt ?? 0).getTime() - new Date(a.occurredAt ?? 0).getTime())
@@ -675,7 +675,7 @@ export default function BillingEngine() {
                     Recent Website Transactions
                   </CardTitle>
                   <div className="text-sm text-white/60">
-                    Consumer transactions from `www.evoucher.co.za` recorded into the shared sandbox
+                    Consumer transactions from `www.evoucher.co.za` recorded into the website
                     billing tables.
                   </div>
                 </CardHeader>
@@ -751,8 +751,7 @@ export default function BillingEngine() {
                     1. Consumer transacts on `www.evoucher.co.za`.
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    2. Website writes sandbox-backed payment, voucher, wallet, and billing event
-                    records.
+                    2. Website writes payment, voucher, wallet, and billing event records.
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/5 p-3">
                     3. Finance generates invoices from uninvoiced website events for each merchant

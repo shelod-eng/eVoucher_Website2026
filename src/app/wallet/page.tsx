@@ -811,7 +811,7 @@ export default function WalletPage() {
                   Add Voucher To Wallet
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  This submits the wallet add-voucher journey into the eVoucher sandbox flow.
+                  Add an eVoucher code directly into your wallet.
                 </p>
               </div>
               <button
@@ -884,7 +884,7 @@ export default function WalletPage() {
                 disabled={addVoucherProcessing}
                 className="w-full rounded-xl bg-primary py-3 text-primary-foreground font-headline font-semibold hover:bg-primary/90 disabled:opacity-60"
               >
-                {addVoucherProcessing ? 'Submitting To Sandbox...' : 'Submit Voucher To Wallet'}
+                {addVoucherProcessing ? 'Adding Voucher...' : 'Add Voucher To Wallet'}
               </button>
             </div>
           </div>

@@ -107,9 +107,9 @@ export default function MerchantOnboardingFlow() {
         merchantName: formData.businessName,
         description: `${formData.businessName} Voucher - Save ${formData.discountPercentage}%`,
         faceValue: 1000,
-        consumerPrice: 1000 * (1 - parseFloat(formData.discountPercentage) / 100),
-        merchantPayout: 1000 * 0.92,
-        platformMargin: 1000 * (parseFloat(formData.discountPercentage) / 100 - 0.04),
+        consumerPrice: 1000 * (1 - (parseFloat(formData.discountPercentage) * 0.7) / 100),
+        merchantPayout: 1000 * (1 - parseFloat(formData.discountPercentage) / 100),
+        platformMargin: 1000 * ((parseFloat(formData.discountPercentage) * 0.3) / 100),
         status: 'pending'
       });
 
@@ -172,9 +172,10 @@ While we review your application, here's everything you need to know about being
 5. You receive weekly payouts to your bank account
 
 💰 YOUR EARNINGS:
-• Customer buys R1000 voucher for R${1000 * (1 - parseFloat(formData.discountPercentage) / 100)}
-• You receive R920 payout (92% of face value)
-• Customer saves R${1000 * parseFloat(formData.discountPercentage) / 100}
+• Customer buys R1000 voucher for R${1000 * (1 - (parseFloat(formData.discountPercentage) * 0.7) / 100)}
+• You receive R${1000 * (1 - parseFloat(formData.discountPercentage) / 100)} payout
+• Customer saves R${1000 * ((parseFloat(formData.discountPercentage) * 0.7) / 100)}
+• eVoucher retains R${1000 * ((parseFloat(formData.discountPercentage) * 0.3) / 100)}
 • eVoucher facilitates the transaction
 
 📱 REDEMPTION PROCESS:
@@ -1012,15 +1013,15 @@ eVoucher Merchant Success Team`
                         </div>
                         <div className="flex justify-between">
                           <span>Customer Pays:</span>
-                          <span className="font-medium text-green-600">R{(1000 * (1 - parseFloat(formData.discountPercentage || 8) / 100)).toFixed(2)}</span>
+                          <span className="font-medium text-green-600">R{(1000 * (1 - (parseFloat(formData.discountPercentage || 8) * 0.7) / 100)).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Merchant Receives:</span>
-                          <span className="font-medium text-blue-600">R920.00 (92%)</span>
+                          <span className="font-medium text-blue-600">R{(1000 * (1 - parseFloat(formData.discountPercentage || 8) / 100)).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Customer Saves:</span>
-                          <span className="font-medium text-orange-600">R{(1000 * parseFloat(formData.discountPercentage || 8) / 100).toFixed(2)}</span>
+                          <span className="font-medium text-orange-600">R{(1000 * ((parseFloat(formData.discountPercentage || 8) * 0.7) / 100)).toFixed(2)}</span>
                         </div>
                       </div>
                     </Card>

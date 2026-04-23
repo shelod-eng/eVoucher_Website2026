@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
-import { createSandboxTopup } from '@/server/services/payment/sandbox-gateway';
-import { getWalletBalance } from '@/server/services/wallet/ledger';
+import { MockPaymentProvider } from '@/server/services/payment/mock-payment-provider';
+import { generateTransactionReference } from '@/server/utils/security';
+import { getWalletBalance, recordWalletCredit } from '@/server/services/wallet/ledger';
 
 const SUPPORTED_PAYMENT_METHODS = new Set(['visa_secure', 'debit_credit', 'payfast', 'eft']);
 
@@ -48,23 +49,58 @@ export async function POST(request: Request) {
     }
 
     const amount = Number(body.amount);
-    const paymentMethod = String(body.paymentMethod).trim();
-    const admin = createAdminClient();
-    const sandboxTopup = await createSandboxTopup({
-      customer_id: user.id,
+    const paymentMethod = String(body.paymentMethod);
+    const transactionReference = generateTransactionReference();
+    const paymentProvider = new MockPaymentProvider();
+    const payment = await paymentProvider.createPayment({
       amount,
       paymentMethod,
-      payment_method: paymentMethod,
-      customer_email: user.email ?? null,
-      origin: 'https://www.evoucher.co.za',
-      webhook: 'https://www.evoucher.co.za/api/payment-callback',
+      reference: transactionReference,
     });
+
+    const paymentStatus = payment.status;
+
+    const admin = createAdminClient();
+    const cardBrand =
+      paymentMethod === 'visa_secure'
+        ? 'VISA'
+        : paymentMethod === 'debit_credit'
+          ? String(body.cardBrand ?? 'CARD').slice(0, 20)
+          : paymentMethod.toUpperCase();
+    const cardLastFour =
+      paymentMethod === 'visa_secure' || paymentMethod === 'debit_credit'
+        ? String(body.cardLastFour ?? '0000')
+            .slice(-4)
+            .padStart(4, '0')
+        : '0000';
+
+    const txRes = await admin.from('payment_transactions').insert({
+      customer_id: user.id,
+      merchant_id: null,
+      amount,
+      card_last_four: cardLastFour,
+      card_brand: cardBrand,
+      payment_status: paymentStatus,
+      voucher_code: null,
+      transaction_reference: transactionReference,
+    });
+    if (txRes.error) throw txRes.error;
+
+    if (paymentStatus === 'completed') {
+      await recordWalletCredit(admin, {
+        customerId: user.id,
+        userEmail: user.email ?? null,
+        amount,
+        description: `Wallet top-up ${transactionReference}`,
+      });
+    }
+
     const walletBalance = (await getWalletBalance(admin, user.id)) ?? 0;
 
     return NextResponse.json({
-      transactionReference: String(sandboxTopup.ref ?? ''),
-      status: String(sandboxTopup.status ?? 'pending'),
-      checkoutUrl: sandboxTopup.checkout_url ?? null,
+      transactionReference,
+      status: paymentStatus,
+      checkoutUrl: payment.checkoutUrl ?? null,
       amount,
       walletBalance,
     });

@@ -47,6 +47,21 @@ function persistWalletTopupHint(payload: {
   }
 }
 
+async function parseApiResponse(response: Response) {
+  const contentType = String(response.headers.get('content-type') ?? '').toLowerCase();
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  const compactText = text.replace(/\s+/g, ' ').trim();
+  return {
+    error: compactText.slice(0, 220) || `Request failed with status ${response.status}.`,
+    code: 'non_json_response',
+    raw: compactText,
+  };
+}
+
 function BuyVouchersContent() {
   const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
@@ -411,7 +426,7 @@ function BuyVouchersContent() {
             branchSelectionMode: payload.branchSelectionMode,
           }),
         });
-        const data = await response.json();
+        const data = await parseApiResponse(response);
         if (!response.ok) {
           setBlockingCode(data.code ?? null);
           if (data.code === 'consumer_only_purchase') {
@@ -444,7 +459,7 @@ function BuyVouchersContent() {
             eftProofName,
           }),
         });
-        const topupData = await topupResponse.json();
+        const topupData = await parseApiResponse(topupResponse);
         if (!topupResponse.ok) {
           throw new Error(topupData.error || 'Failed to top up wallet');
         }
@@ -569,7 +584,7 @@ function BuyVouchersContent() {
           credentials: 'include',
         }
       );
-      const data = await response.json();
+      const data = await parseApiResponse(response);
       if (!response.ok) {
         throw new Error(data.error || 'Failed to refresh payment status.');
       }

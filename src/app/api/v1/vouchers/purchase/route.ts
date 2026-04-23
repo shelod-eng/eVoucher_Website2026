@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PurchaseVoucherRequest } from '@/types/domain';
 import { getAuthenticatedUser } from '@/server/utils/auth';
+import { MockPaymentProvider } from '@/server/services/payment/mock-payment-provider';
 import { writeAuditEvent } from '@/server/utils/audit';
-import { createSandboxPurchase } from '@/server/services/payment/sandbox-gateway';
+import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { resolveBrandFromMerchantName, getBrandByKey } from '@/lib/merchant-brand-catalog';
 import { getWalletBalance, recordWalletDebit } from '@/server/services/wallet/ledger';
+import { ensureCompletedPurchaseArtifacts } from '@/server/services/billing/purchase-completion';
 
 const SUPPORTED_PAYMENT_METHODS = new Set([
   'visa_secure',
@@ -271,6 +273,8 @@ export async function POST(request: Request) {
     }
 
     const admin = createAdminClient();
+    const paymentProvider = new MockPaymentProvider();
+    const transactionReference = generateTransactionReference();
 
     const { data: merchant, error: merchantError } = await admin
       .from('merchants')
@@ -370,6 +374,20 @@ export async function POST(request: Request) {
       );
     }
 
+    const payment = await paymentProvider.createPayment({
+      amount: pricing.consumerPrice,
+      paymentMethod: body.paymentMethod,
+      reference: transactionReference,
+    });
+    const devForceSuccess = process.env.NODE_ENV === 'development';
+    const paymentStatus = devForceSuccess ? 'completed' : payment.status;
+    const checkoutUrl = devForceSuccess ? null : (payment.checkoutUrl ?? null);
+
+    let voucherCode: string | null = null;
+    if (paymentStatus === 'completed') {
+      voucherCode = generateSecureVoucherCode();
+    }
+
     const mappedBrand = resolveBrandFromMerchantName(merchant.business_name);
     const mappedBrandDisplayName = mappedBrand ? getBrandByKey(mappedBrand)?.displayName : null;
     const resolvedParentBrand =
@@ -404,40 +422,42 @@ export async function POST(request: Request) {
       }
     }
 
-    const sandboxPurchase = await createSandboxPurchase({
+    const cardBrand =
+      body.paymentMethod === 'visa_secure'
+        ? 'VISA'
+        : body.paymentMethod === 'debit_credit'
+          ? String(body.cardBrand ?? 'CARD').slice(0, 20)
+          : body.paymentMethod.toUpperCase();
+    const cardLastFour =
+      body.paymentMethod === 'visa_secure' || body.paymentMethod === 'debit_credit'
+        ? String(body.cardLastFour ?? '0000')
+            .slice(-4)
+            .padStart(4, '0')
+        : '0000';
+
+    const { error: transactionError } = await admin.from('payment_transactions').insert({
       customer_id: user.id,
-      customer_email: user.email ?? null,
       merchant_id: merchant.id,
-      merchant_name: merchant.business_name,
       product_id: productId,
+      amount: pricing.consumerPrice,
       face_value: pricing.faceValue,
       total_discount_pct: pricing.totalDiscountPct,
-      amount: pricing.consumerPrice,
-      paymentMethod: body.paymentMethod,
-      payment_method: body.paymentMethod,
-      card_last_four:
-        body.paymentMethod === 'visa_secure' || body.paymentMethod === 'debit_credit'
-          ? String(body.cardLastFour ?? '0000')
-              .slice(-4)
-              .padStart(4, '0')
-          : '0000',
-      card_brand:
-        body.paymentMethod === 'visa_secure'
-          ? 'VISA'
-          : body.paymentMethod === 'debit_credit'
-            ? String(body.cardBrand ?? 'CARD').slice(0, 20)
-            : body.paymentMethod.toUpperCase(),
-      order_ref: undefined,
-      origin: 'https://www.evoucher.co.za',
-      webhook: 'https://www.evoucher.co.za/api/payment-callback',
+      consumer_benefit_pct: pricing.consumerBenefitPct,
+      evoucher_benefit_pct: pricing.evoucherBenefitPct,
+      total_discount_amount: pricing.totalDiscountAmount,
+      consumer_benefit_amount: pricing.consumerBenefitAmount,
+      evoucher_benefit_amount: pricing.evoucherBenefitAmount,
+      consumer_price: pricing.consumerPrice,
+      merchant_receivable_after_total_discount: pricing.merchantReceivableAfterTotalDiscount,
+      merchant_receivable_after_evoucher_benefit: pricing.merchantReceivableAfterEvoucherBenefit,
+      card_last_four: cardLastFour,
+      card_brand: cardBrand,
+      payment_status: paymentStatus,
+      voucher_code: voucherCode,
+      transaction_reference: transactionReference,
     });
-    const transactionReference = String(sandboxPurchase.ref ?? '').trim();
-    const paymentStatus = String(sandboxPurchase.payment_status ?? 'pending').toLowerCase();
-    const checkoutUrl = sandboxPurchase.checkout_url ?? null;
-    const voucherCode =
-      typeof sandboxPurchase.voucher_code === 'string' && sandboxPurchase.voucher_code.trim()
-        ? sandboxPurchase.voucher_code.trim()
-        : null;
+
+    if (transactionError) throw transactionError;
 
     if (paymentStatus === 'completed' && body.paymentMethod === 'wallet') {
       await recordWalletDebit(admin, {
@@ -450,11 +470,38 @@ export async function POST(request: Request) {
 
     let issuedVouchers: Array<{ code: string; faceValue: number; expiresAt?: string | null }> = [];
     if (paymentStatus === 'completed' && voucherCode) {
+      const completed = await ensureCompletedPurchaseArtifacts(admin, {
+        merchant: {
+          id: String(merchant.id),
+          business_name: String(merchant.business_name),
+          parent_brand: resolvedParentBrand,
+        },
+        transaction: {
+          customer_id: user.id,
+          merchant_id: merchant.id,
+          product_id: productId,
+          transaction_reference: transactionReference,
+          voucher_code: voucherCode,
+          face_value: pricing.faceValue,
+          total_discount_pct: pricing.totalDiscountPct,
+          consumer_price: pricing.consumerPrice,
+          amount: pricing.consumerPrice,
+        },
+        occurredAt: new Date().toISOString(),
+        metadata: {
+          paymentMethod: body.paymentMethod,
+          source: 'purchase_route',
+          redemptionScope: productRedemptionScope,
+          validProvinces: productValidProvinces,
+          validBranchIds: productValidBranchIds,
+          qrCodeUrl: buildQrCodeUrl(voucherCode),
+        },
+      });
+
       const { data: voucherRow } = await admin
         .from('customer_vouchers')
         .select('voucher_code,face_value,expires_at')
-        .eq('voucher_code', voucherCode)
-        .eq('customer_id', user.id)
+        .eq('id', completed.voucherId)
         .maybeSingle();
 
       if (voucherRow) {
@@ -468,7 +515,7 @@ export async function POST(request: Request) {
       } else {
         issuedVouchers = [
           {
-            code: voucherCode,
+            code: String(completed.voucherCode ?? voucherCode),
             faceValue: pricing.faceValue,
             expiresAt: null,
           },
@@ -480,7 +527,7 @@ export async function POST(request: Request) {
         await sendPurchaseReceiptEmail({
           to: receiptEmail,
           merchantName: String(merchant.business_name),
-          voucherCode,
+          voucherCode: String(completed.voucherCode ?? voucherCode),
           faceValue: pricing.faceValue,
           amountPaid: pricing.consumerPrice,
           savings: pricing.consumerBenefitAmount,

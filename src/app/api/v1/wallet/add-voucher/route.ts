@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
-import { addVoucherToWallet } from '@/server/services/payment/sandbox-gateway';
+import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 
 function validate(body: any): string | null {
   const voucherCode = String(body?.voucherCode ?? '').trim();
@@ -44,22 +46,92 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await addVoucherToWallet({
-      customer_id: user.id,
-      customer_email: user.email ?? null,
-      merchant_id: body?.merchantId ?? null,
-      voucher_code: String(body.voucherCode).trim().toUpperCase(),
-      face_value: Number(body.amount ?? 100),
-      amount: Number(body.amount ?? 100),
-      origin: 'https://www.evoucher.co.za',
+    const admin = createAdminClient();
+    const voucherCode = String(body.voucherCode).trim().toUpperCase();
+    const faceValue = Number(body.amount ?? 100);
+
+    const existing = await admin
+      .from('customer_vouchers')
+      .select('id,voucher_code,face_value')
+      .eq('customer_id', user.id)
+      .eq('voucher_code', voucherCode)
+      .maybeSingle();
+    if (existing.error) throw existing.error;
+
+    if (existing.data?.id) {
+      return NextResponse.json({
+        status: 'active',
+        voucherCode: existing.data.voucher_code ?? voucherCode,
+        faceValue: Number(existing.data.face_value ?? faceValue),
+        duplicate: true,
+      });
+    }
+
+    let merchantId = String(body?.merchantId ?? '').trim();
+    let merchantName = 'Participating Merchant';
+    let parentBrand = 'Participating Merchant';
+    let totalDiscountPct = DEFAULT_TOTAL_DISCOUNT_PCT;
+
+    if (merchantId) {
+      const merchantLookup = await admin
+        .from('merchants')
+        .select('id,business_name,parent_brand,default_total_discount_pct')
+        .eq('id', merchantId)
+        .maybeSingle();
+      if (merchantLookup.error) throw merchantLookup.error;
+      if (merchantLookup.data) {
+        merchantId = String(merchantLookup.data.id);
+        merchantName = String(merchantLookup.data.business_name ?? merchantName);
+        parentBrand = String(
+          merchantLookup.data.parent_brand ?? merchantLookup.data.business_name ?? parentBrand
+        );
+        totalDiscountPct = Number(
+          merchantLookup.data.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+        );
+      }
+    }
+
+    if (!merchantId) {
+      const merchantLookup = await admin
+        .from('merchants')
+        .select('id,business_name,parent_brand,default_total_discount_pct,status')
+        .in('status', ['approved', 'active'])
+        .order('business_name', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (merchantLookup.error) throw merchantLookup.error;
+      if (!merchantLookup.data?.id) {
+        throw new Error('No active merchant is available for voucher issuance.');
+      }
+      merchantId = String(merchantLookup.data.id);
+      merchantName = String(merchantLookup.data.business_name ?? merchantName);
+      parentBrand = String(
+        merchantLookup.data.parent_brand ?? merchantLookup.data.business_name ?? parentBrand
+      );
+      totalDiscountPct = Number(
+        merchantLookup.data.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+      );
+    }
+
+    const pricing = calculateDiscountPricing(faceValue, totalDiscountPct);
+    const service = new DefaultVoucherService();
+    await service.issueVoucher({
+      customerId: user.id,
+      merchantId,
+      merchantName,
+      parentBrand,
+      faceValue,
+      discountPercent: pricing.consumerBenefitPct,
+      pricing,
+      voucherCode,
+      expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
     });
 
     return NextResponse.json({
-      status: result.status,
-      voucherCode: result.voucher_code ?? null,
-      faceValue: Number(result.face_value ?? body.amount ?? 100),
-      sandbox: true,
-      duplicate: Boolean(result.duplicate),
+      status: 'active',
+      voucherCode,
+      faceValue,
+      duplicate: false,
     });
   } catch (error: any) {
     return NextResponse.json(
