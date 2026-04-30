@@ -5,7 +5,11 @@ import { getAuthenticatedUser } from '@/server/utils/auth';
 import { MockPaymentProvider } from '@/server/services/payment/mock-payment-provider';
 import { writeAuditEvent } from '@/server/utils/audit';
 import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
-import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
+import {
+  calculateDiscountPricing,
+  DEFAULT_TOTAL_DISCOUNT_PCT,
+  normalizeTotalDiscountPct,
+} from '@/lib/pricing';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { resolveBrandFromMerchantName, getBrandByKey } from '@/lib/merchant-brand-catalog';
 import { getWalletBalance, recordWalletDebit } from '@/server/services/wallet/ledger';
@@ -125,6 +129,13 @@ function isMissingAdminEnvError(error: any) {
 
 function buildQrCodeUrl(voucherCode: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(voucherCode)}`;
+}
+
+function sanitizeCheckoutUrl(url: string | null | undefined) {
+  const value = String(url ?? '').trim();
+  if (!value) return null;
+  if (value.includes('payments.local')) return null;
+  return value;
 }
 
 async function sendPurchaseReceiptEmail(payload: {
@@ -269,10 +280,7 @@ export async function GET(request: Request) {
       status,
       voucherCode: transaction.voucher_code ?? null,
       issuedVouchers,
-      checkoutUrl:
-        status === 'pending'
-          ? `https://payments.local/checkout/${encodeURIComponent(transaction.transaction_reference)}`
-          : null,
+      checkoutUrl: null,
     });
   } catch (error: any) {
     if (isMissingAdminEnvError(error)) {
@@ -406,10 +414,9 @@ export async function POST(request: Request) {
 
       pricing = calculateDiscountPricing(
         Number(product.face_value),
-        Number(
-          product.total_discount_pct ??
-            merchant.default_total_discount_pct ??
-            DEFAULT_TOTAL_DISCOUNT_PCT
+        normalizeTotalDiscountPct(
+          product.total_discount_pct,
+          merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
         )
       );
     } else {
@@ -424,7 +431,7 @@ export async function POST(request: Request) {
       }
       pricing = calculateDiscountPricing(
         body.faceValue,
-        Number(merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT)
+        normalizeTotalDiscountPct(merchant.default_total_discount_pct, DEFAULT_TOTAL_DISCOUNT_PCT)
       );
     }
 
@@ -435,7 +442,7 @@ export async function POST(request: Request) {
     });
     const devForceSuccess = process.env.NODE_ENV === 'development';
     const paymentStatus = devForceSuccess ? 'completed' : payment.status;
-    const checkoutUrl = devForceSuccess ? null : (payment.checkoutUrl ?? null);
+    const checkoutUrl = devForceSuccess ? null : sanitizeCheckoutUrl(payment.checkoutUrl ?? null);
 
     let voucherCode: string | null = null;
     if (paymentStatus === 'completed') {

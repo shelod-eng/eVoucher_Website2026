@@ -31,6 +31,41 @@ function roundCurrency(value: number): number {
   return Number(value.toFixed(2));
 }
 
+function isValidTotalDiscountPct(value: number): boolean {
+  return (
+    Number.isFinite(value) && value >= MIN_TOTAL_DISCOUNT_PCT && value <= MAX_TOTAL_DISCOUNT_PCT
+  );
+}
+
+export function normalizeTotalDiscountPct(
+  rawValue: unknown,
+  fallbackValue: unknown = DEFAULT_TOTAL_DISCOUNT_PCT
+): number {
+  const directValue = Number(rawValue);
+  if (isValidTotalDiscountPct(directValue)) {
+    return roundCurrency(directValue);
+  }
+
+  // Legacy compatibility: some older records stored the customer-facing share
+  // instead of the total discount percentage. Example: 2.5 should mean 5.
+  const doubledValue = roundCurrency(directValue * 2);
+  if (directValue > 0 && isValidTotalDiscountPct(doubledValue)) {
+    return doubledValue;
+  }
+
+  const fallbackNumber = Number(fallbackValue);
+  if (isValidTotalDiscountPct(fallbackNumber)) {
+    return roundCurrency(fallbackNumber);
+  }
+
+  const doubledFallback = roundCurrency(fallbackNumber * 2);
+  if (fallbackNumber > 0 && isValidTotalDiscountPct(doubledFallback)) {
+    return doubledFallback;
+  }
+
+  return DEFAULT_TOTAL_DISCOUNT_PCT;
+}
+
 export function calculateDiscountPricing(
   faceValue: number,
   totalDiscountPct: number = DEFAULT_TOTAL_DISCOUNT_PCT
@@ -39,11 +74,7 @@ export function calculateDiscountPricing(
     throw new Error('Face value must be greater than 0.');
   }
 
-  if (
-    !Number.isFinite(totalDiscountPct) ||
-    totalDiscountPct < MIN_TOTAL_DISCOUNT_PCT ||
-    totalDiscountPct > MAX_TOTAL_DISCOUNT_PCT
-  ) {
+  if (!isValidTotalDiscountPct(totalDiscountPct)) {
     throw new Error(
       `Total discount percentage must be between ${MIN_TOTAL_DISCOUNT_PCT} and ${MAX_TOTAL_DISCOUNT_PCT}.`
     );

@@ -1,8 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import {
-  calculateDiscountPricing,
-  DEFAULT_TOTAL_DISCOUNT_PCT,
-} from '@/lib/pricing';
+import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { recordVoucherPurchaseBillingEvent } from '@/server/services/billing/billing-events';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { generateSecureVoucherCode } from '@/server/utils/security';
@@ -109,7 +106,10 @@ export async function ensureCompletedPurchaseArtifacts(
     consumerPrice,
     safeNumber(input.transaction.total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT)
   );
-  const pricing = calculateDiscountPricing(faceValue, totalDiscountPct || DEFAULT_TOTAL_DISCOUNT_PCT);
+  const pricing = calculateDiscountPricing(
+    faceValue,
+    totalDiscountPct || DEFAULT_TOTAL_DISCOUNT_PCT
+  );
 
   let voucherCode = String(input.transaction.voucher_code ?? '').trim() || null;
   let voucherId: string | null = null;

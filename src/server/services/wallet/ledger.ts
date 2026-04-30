@@ -47,7 +47,9 @@ export async function getWalletBalance(admin: any, customerId: string): Promise<
       const debits = rows.reduce((sum: number, row: any) => {
         const status = String(row?.payment_status ?? '').toLowerCase();
         if (status && status !== 'completed') return sum;
-        const brand = String(row?.card_brand ?? '').toUpperCase().trim();
+        const brand = String(row?.card_brand ?? '')
+          .toUpperCase()
+          .trim();
         if (brand !== 'WALLET') return sum;
         const amount = Number(row?.amount ?? 0);
         return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
@@ -61,7 +63,9 @@ export async function getWalletBalance(admin: any, customerId: string): Promise<
   const rows = Array.isArray(res.data) ? res.data : [];
   let balance = 0;
   for (const row of rows) {
-    const type = String(row?.type ?? '').toLowerCase().trim();
+    const type = String(row?.type ?? '')
+      .toLowerCase()
+      .trim();
     const amount = Number(row?.amount ?? 0);
     if (!Number.isFinite(amount) || amount <= 0) continue;
     if (CREDIT_TYPES.has(type)) {

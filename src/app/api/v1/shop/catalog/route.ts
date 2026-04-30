@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
-import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
+import {
+  calculateDiscountPricing,
+  DEFAULT_TOTAL_DISCOUNT_PCT,
+  normalizeTotalDiscountPct,
+} from '@/lib/pricing';
 import {
   BrandKey,
   getBrandByKey,
@@ -648,8 +652,9 @@ export async function GET(request: Request) {
 
       const brand = brandMap.get(brandMeta.brandKey);
       const faceValue = Number(row.face_value);
-      const totalDiscountPct = Number(
-        row.total_discount_pct ?? merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+      const totalDiscountPct = normalizeTotalDiscountPct(
+        row.total_discount_pct,
+        merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
       );
 
       if (!Number.isFinite(faceValue) || faceValue <= 0) {

@@ -120,8 +120,7 @@ export class DefaultVoucherService implements VoucherService {
       consumer_benefit_amount: input.pricing.consumerBenefitAmount,
       evoucher_benefit_amount: input.pricing.evoucherBenefitAmount,
       consumer_price: input.pricing.consumerPrice,
-      merchant_receivable_after_total_discount:
-        input.pricing.merchantReceivableAfterTotalDiscount,
+      merchant_receivable_after_total_discount: input.pricing.merchantReceivableAfterTotalDiscount,
       merchant_receivable_after_evoucher_benefit:
         input.pricing.merchantReceivableAfterEvoucherBenefit,
       current_balance: input.faceValue,
@@ -129,7 +128,11 @@ export class DefaultVoucherService implements VoucherService {
       expires_at: input.expiresAt,
     };
 
-    let insertResult = await admin.from('customer_vouchers').insert(richPayload).select('id').single();
+    let insertResult = await admin
+      .from('customer_vouchers')
+      .insert(richPayload)
+      .select('id')
+      .single();
 
     if (
       insertResult.error &&

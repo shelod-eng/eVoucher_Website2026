@@ -3,6 +3,11 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { ensureDemoMerchantsSeeded } from '@/server/utils/demo-merchant-seed';
+import {
+  calculateDiscountPricing,
+  DEFAULT_TOTAL_DISCOUNT_PCT,
+  normalizeTotalDiscountPct,
+} from '@/lib/pricing';
 
 function resolveDataClient(supabase: any) {
   try {
@@ -10,6 +15,18 @@ function resolveDataClient(supabase: any) {
   } catch {
     return { client: supabase, hasAdminEnv: false };
   }
+}
+
+function isMissingRelation(error: any, relationName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const relation = relationName.toLowerCase();
+  const bareRelation = relation.includes('.') ? (relation.split('.').at(-1) ?? relation) : relation;
+  return (
+    message.includes(`relation "${relation}" does not exist`) ||
+    message.includes(`relation "${bareRelation}" does not exist`) ||
+    message.includes(`could not find the table '${relation}' in the schema cache`) ||
+    message.includes(`could not find the table '${bareRelation}' in the schema cache`)
+  );
 }
 
 export async function GET(request: Request) {
@@ -81,6 +98,41 @@ export async function GET(request: Request) {
       usedFallbackStatuses = rows.length > 0;
     }
 
+    const merchantIds = rows.map((merchant: any) => String(merchant.id));
+    let productRows: any[] = [];
+    if (merchantIds.length > 0) {
+      const { data: productsData, error: productsError } = await client
+        .from('merchant_products')
+        .select(
+          'id,merchant_id,product_name,face_value,total_discount_pct,consumer_price,consumer_benefit_amount,parent_brand,is_active,status,created_at'
+        )
+        .in('merchant_id', merchantIds)
+        .order('created_at', { ascending: false })
+        .limit(5000);
+
+      if (productsError && !isMissingRelation(productsError, 'public.merchant_products')) {
+        throw productsError;
+      }
+
+      productRows = (productsData ?? []).filter((product: any) => {
+        if (typeof product?.is_active === 'boolean') return product.is_active;
+        const status = String(product?.status ?? '')
+          .trim()
+          .toLowerCase();
+        if (!status) return true;
+        return !['inactive', 'disabled', 'archived'].includes(status);
+      });
+    }
+
+    const productsByMerchant = new Map<string, any[]>();
+    productRows.forEach((product: any) => {
+      const key = String(product.merchant_id ?? '');
+      if (!key) return;
+      const current = productsByMerchant.get(key) ?? [];
+      current.push(product);
+      productsByMerchant.set(key, current);
+    });
+
     return NextResponse.json({
       merchants: rows.map((merchant: any) => ({
         id: merchant.id,
@@ -92,6 +144,37 @@ export async function GET(request: Request) {
         branchName: merchant.branch_name ?? merchant.business_name,
         city: merchant.city ?? null,
         province: merchant.province ?? null,
+        productCount: (productsByMerchant.get(String(merchant.id)) ?? []).length,
+        products: (productsByMerchant.get(String(merchant.id)) ?? []).slice(0, 6).map((product) => {
+          const fallbackDiscountPct = normalizeTotalDiscountPct(
+            product.total_discount_pct,
+            merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+          );
+          const faceValue = Number(product.face_value ?? 0);
+          const pricing =
+            Number.isFinite(Number(product.consumer_price)) &&
+            Number(product.consumer_price) > 0 &&
+            Number.isFinite(Number(product.consumer_benefit_amount))
+              ? {
+                  faceValue,
+                  totalDiscountPct: fallbackDiscountPct,
+                  consumerPrice: Number(product.consumer_price),
+                  consumerBenefitAmount: Number(product.consumer_benefit_amount),
+                }
+              : calculateDiscountPricing(faceValue, fallbackDiscountPct);
+
+          return {
+            id: String(product.id),
+            productName: String(product.product_name ?? 'Voucher Product'),
+            faceValue: Number(faceValue.toFixed(2)),
+            totalDiscountPct: Number(Number(pricing.totalDiscountPct).toFixed(2)),
+            consumerPrice: Number(Number(pricing.consumerPrice).toFixed(2)),
+            consumerBenefitAmount: Number(Number(pricing.consumerBenefitAmount).toFixed(2)),
+            parentBrand:
+              String(product.parent_brand ?? merchant.parent_brand ?? merchant.business_name) ||
+              merchant.business_name,
+          };
+        }),
       })),
       diagnostics: {
         isAuthenticated: true,
@@ -100,6 +183,7 @@ export async function GET(request: Request) {
         activeMerchantCount: activeRows?.length ?? 0,
         totalMerchantCount: rows.length,
         usedFallbackStatuses,
+        productRowCount: productRows.length,
       },
       blockReason: rows.length === 0 ? 'no_active_merchants' : null,
     });

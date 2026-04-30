@@ -8,12 +8,16 @@ import { isFreshTimestamp, verifyHmacSha256 } from '@/server/utils/security';
 
 export class MockPaymentProvider implements PaymentProvider {
   async createPayment(input: PaymentCreateInput): Promise<PaymentCreateResult> {
-    const requiresAsync = input.paymentMethod === 'eft';
+    const asyncMethods = String(process.env.PAYMENTS_ASYNC_METHODS ?? '')
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+    const requiresAsync = asyncMethods.includes(String(input.paymentMethod ?? '').toLowerCase());
 
     if (requiresAsync) {
       return {
         status: 'pending',
-        checkoutUrl: `https://payments.local/checkout/${encodeURIComponent(input.reference)}`,
+        checkoutUrl: null,
       };
     }
 

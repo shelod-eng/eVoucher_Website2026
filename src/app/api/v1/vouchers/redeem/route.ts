@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { RedeemVoucherRequest } from '@/types/domain';
 import { getAuthenticatedUser } from '@/server/utils/auth';
-import { resolveUserRole } from '@/server/utils/role';
+import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { writeAuditEvent, writeFraudAlert } from '@/server/utils/audit';
 import { recordVoucherRedemptionBillingEvent } from '@/server/services/billing/billing-events';
 import { sha256 } from '@/server/utils/security';
@@ -375,7 +375,7 @@ export async function POST(request: Request) {
     }
 
     const { role } = await resolveUserRole(supabase, user);
-    if (role !== 'merchant' && role !== 'consumer') {
+    if (role !== 'merchant' && !isConsumerRole(role)) {
       return NextResponse.json(
         {
           error: 'Only consumer or merchant accounts can redeem vouchers.',
@@ -450,11 +450,11 @@ export async function POST(request: Request) {
     const requestedMerchantId = String(body.merchantId ?? '').trim();
     const merchant =
       role === 'merchant'
-        ? (await fetchActiveMerchantById(admin, String(merchantContext?.id ?? '').trim())) ??
+        ? ((await fetchActiveMerchantById(admin, String(merchantContext?.id ?? '').trim())) ??
           (await fetchActiveMerchantByBrand(
             admin,
             merchantContext?.parent_brand ?? merchantContext?.business_name ?? null
-          ))
+          )))
         : await fetchActiveMerchantById(admin, requestedMerchantId);
 
     if (!merchant?.id) {
@@ -630,7 +630,7 @@ export async function POST(request: Request) {
 
     await writeAuditEvent(admin, {
       actorId: user.id,
-      actorRole: 'merchant',
+      actorRole: role === 'merchant' ? 'merchant' : 'customer',
       entityType: 'voucher_redemption',
       entityId: idempotencyKey,
       action: 'voucher_redeemed',

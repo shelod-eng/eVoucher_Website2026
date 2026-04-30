@@ -97,10 +97,7 @@ export async function POST(request: Request) {
         transaction_reference: transactionReference,
       })
     ).error;
-    if (
-      txError &&
-      ['merchant_id'].some((field) => isMissingSchemaField(txError, field))
-    ) {
+    if (txError && ['merchant_id'].some((field) => isMissingSchemaField(txError, field))) {
       txError = (
         await admin.from('payment_transactions').insert({
           customer_id: user.id,
@@ -126,10 +123,14 @@ export async function POST(request: Request) {
 
     const walletBalance = (await getWalletBalance(admin, user.id)) ?? 0;
 
+    const checkoutUrl = String(payment.checkoutUrl ?? '').includes('payments.local')
+      ? null
+      : (payment.checkoutUrl ?? null);
+
     return NextResponse.json({
       transactionReference,
       status: paymentStatus,
-      checkoutUrl: payment.checkoutUrl ?? null,
+      checkoutUrl,
       amount,
       walletBalance,
     });
