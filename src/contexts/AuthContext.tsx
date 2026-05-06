@@ -52,14 +52,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const clearServerSession = async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
     try {
       await fetch('/api/v1/auth/logout', {
         method: 'POST',
         credentials: 'include',
         cache: 'no-store',
+        signal: controller.signal,
       });
     } catch (logoutError) {
       console.warn('AuthContext: server logout warning:', logoutError);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  const bestEffortLocalSignOut = async () => {
+    try {
+      await Promise.race([
+        supabase.auth.signOut({ scope: 'local' }),
+        new Promise((resolve) => setTimeout(resolve, 4000)),
+      ]);
+    } catch (signOutError) {
+      console.warn('AuthContext: local signOut warning:', signOutError);
     }
   };
 
@@ -150,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear only the current browser session before a role/account switch.
     // Do not revoke global sessions so other devices/users remain signed in.
     try {
-      await supabase.auth.signOut({ scope: 'local' });
+      await bestEffortLocalSignOut();
       await clearServerSession();
       clearLocalAuthArtifacts();
     } catch (preSignInClearError) {
@@ -198,10 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRole(null);
     setLoading(false);
 
-    const result = await supabase.auth.signOut({ scope: 'local' });
-    if (result.error) {
-      console.warn('AuthContext: local signOut warning:', result.error.message);
-    }
+    await bestEffortLocalSignOut();
     await clearServerSession();
     clearLocalAuthArtifacts();
   };
