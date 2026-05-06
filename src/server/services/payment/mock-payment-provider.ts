@@ -8,13 +8,28 @@ import { isFreshTimestamp, verifyHmacSha256 } from '@/server/utils/security';
 
 export class MockPaymentProvider implements PaymentProvider {
   async createPayment(input: PaymentCreateInput): Promise<PaymentCreateResult> {
+    const forceCompletedByDefault = String(process.env.PAYMENTS_FORCE_COMPLETED ?? 'true')
+      .trim()
+      .toLowerCase();
+    const shouldForceCompleted =
+      forceCompletedByDefault === '' ||
+      forceCompletedByDefault === 'true' ||
+      forceCompletedByDefault === '1' ||
+      forceCompletedByDefault === 'yes' ||
+      forceCompletedByDefault === 'on';
+
     const asyncMethods = String(process.env.PAYMENTS_ASYNC_METHODS ?? '')
       .split(',')
       .map((value) => value.trim().toLowerCase())
       .filter(Boolean);
+    const asyncRedirectsEnabled = ['true', '1', 'yes', 'on'].includes(
+      String(process.env.PAYMENTS_ENABLE_ASYNC_METHODS ?? 'false')
+        .trim()
+        .toLowerCase()
+    );
     const requiresAsync = asyncMethods.includes(String(input.paymentMethod ?? '').toLowerCase());
 
-    if (requiresAsync) {
+    if (!shouldForceCompleted && asyncRedirectsEnabled && requiresAsync) {
       return {
         status: 'pending',
         checkoutUrl: null,
