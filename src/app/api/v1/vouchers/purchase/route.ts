@@ -112,36 +112,55 @@ async function ensureConsumerProfile(
     'Customer';
   const phone = String(user.user_metadata?.phone ?? '').trim() || null;
   const email = String(user.email ?? '').trim().toLowerCase();
-
-  const { error } = await admin.from('user_profiles').upsert(
+  const placeholderEmail = `${user.id}@placeholder.local`;
+  const attempts = [
     {
       id: user.id,
-      email: email || `${user.id}@placeholder.local`,
+      email: email || placeholderEmail,
       full_name: fullName,
       phone,
       role: 'customer',
     },
-    { onConflict: 'id' }
-  );
+    {
+      id: user.id,
+      email: email || placeholderEmail,
+      full_name: fullName,
+      role: 'customer',
+    },
+    {
+      id: user.id,
+      email: placeholderEmail,
+      full_name: fullName,
+      phone,
+      role: 'customer',
+    },
+    {
+      id: user.id,
+      email: placeholderEmail,
+      full_name: fullName,
+    },
+  ];
 
-  if (!error || isMissingRelation(error, 'public.user_profiles')) {
-    return;
+  let lastError: any = null;
+  for (const payload of attempts) {
+    const { error } = await admin.from('user_profiles').upsert(payload, { onConflict: 'id' });
+    if (!error || isMissingRelation(error, 'public.user_profiles')) {
+      return;
+    }
+
+    lastError = error;
+    const hasSchemaDrift =
+      ['email', 'full_name', 'phone', 'role'].some((field) => isMissingSchemaField(error, field)) ||
+      String(error?.message ?? '').toLowerCase().includes('not-null constraint');
+    const hasEmailConflict = isUniqueConstraintError(error);
+    if (hasSchemaDrift || hasEmailConflict) {
+      continue;
+    }
+
+    throw error;
   }
 
-  if (
-    ['email', 'full_name', 'phone', 'role'].some((field) => isMissingSchemaField(error, field)) ||
-    String(error?.message ?? '').toLowerCase().includes('duplicate key value') ||
-    String(error?.message ?? '').toLowerCase().includes('violates unique constraint')
-  ) {
-    console.warn('[voucher-purchase][consumer-profile-backfill-skipped]', {
-      message: error.message,
-      code: error.code ?? null,
-      hint: error.hint ?? null,
-    });
-    return;
-  }
-
-  throw error;
+  throw lastError;
 }
 
 function validate(body: PurchaseVoucherRequest): string | null {
@@ -183,6 +202,11 @@ function isMissingAdminEnvError(error: any) {
   return String(error?.message ?? '').includes(
     'Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL'
   );
+}
+
+function isUniqueConstraintError(error: any) {
+  const message = String(error?.message ?? '').toLowerCase();
+  return message.includes('duplicate key value') || message.includes('unique constraint');
 }
 
 function buildQrCodeUrl(voucherCode: string) {
@@ -396,19 +420,11 @@ export async function POST(request: Request) {
     const paymentProvider = new MockPaymentProvider();
     const transactionReference = generateTransactionReference();
 
-    try {
-      await ensureConsumerProfile(admin, {
-        id: user.id,
-        email: user.email ?? null,
-        user_metadata: (user.user_metadata as Record<string, unknown> | null | undefined) ?? null,
-      });
-    } catch (profileError: any) {
-      console.warn('[voucher-purchase][consumer-profile-backfill-error]', {
-        message: profileError?.message ?? String(profileError),
-        code: profileError?.code ?? null,
-        hint: profileError?.hint ?? null,
-      });
-    }
+    await ensureConsumerProfile(admin, {
+      id: user.id,
+      email: user.email ?? null,
+      user_metadata: (user.user_metadata as Record<string, unknown> | null | undefined) ?? null,
+    });
 
     const { data: merchant, error: merchantError } = await admin
       .from('merchants')
