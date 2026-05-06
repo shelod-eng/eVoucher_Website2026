@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
-import { MockPaymentProvider } from '@/server/services/payment/mock-payment-provider';
+import { createPaymentProvider } from '@/server/services/payment/payment-provider-factory';
 import { generateTransactionReference } from '@/server/utils/security';
 import { getWalletBalance, recordWalletCredit } from '@/server/services/wallet/ledger';
 
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const amount = Number(body.amount);
     const paymentMethod = String(body.paymentMethod);
     const transactionReference = generateTransactionReference();
-    const paymentProvider = new MockPaymentProvider();
+    const paymentProvider = createPaymentProvider('production');
     const payment = await paymentProvider.createPayment({
       amount,
       paymentMethod,

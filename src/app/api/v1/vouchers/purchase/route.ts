@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PurchaseVoucherRequest } from '@/types/domain';
 import { getAuthenticatedUser } from '@/server/utils/auth';
-import { MockPaymentProvider } from '@/server/services/payment/mock-payment-provider';
+import { createPaymentProvider } from '@/server/services/payment/payment-provider-factory';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { writeAuditEvent } from '@/server/utils/audit';
 import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
@@ -266,7 +266,7 @@ export async function POST(request: Request) {
     }
 
     const admin = createAdminClient();
-    const paymentProvider = new MockPaymentProvider();
+    const paymentProvider = createPaymentProvider('production');
     const voucherService = new DefaultVoucherService();
     const transactionReference = generateTransactionReference();
 

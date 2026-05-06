@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { MockPaymentProvider } from '@/server/services/payment/mock-payment-provider';
+import { createPaymentProvider } from '@/server/services/payment/payment-provider-factory';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { recordWalletCredit } from '@/server/services/wallet/ledger';
 import { writeAuditEvent } from '@/server/utils/audit';
@@ -24,8 +24,8 @@ export async function POST(request: Request) {
     const payloadText = await request.text();
     const signature = request.headers.get('x-webhook-signature');
     const timestamp = request.headers.get('x-webhook-timestamp');
-    const provider = request.headers.get('x-payment-provider') || 'mock';
-    const paymentProvider = new MockPaymentProvider();
+    const provider = request.headers.get('x-payment-provider') || 'production';
+    const paymentProvider = createPaymentProvider(provider === 'sandbox' ? 'sandbox' : 'production');
     const admin = createAdminClient();
 
     const verified = await paymentProvider.verifyWebhook({

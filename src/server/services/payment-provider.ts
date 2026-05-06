@@ -2,11 +2,14 @@ export interface PaymentCreateInput {
   amount: number;
   paymentMethod: string;
   reference: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PaymentCreateResult {
   status: 'pending' | 'completed' | 'failed';
   checkoutUrl?: string | null;
+  provider?: 'production' | 'sandbox';
+  metadata?: Record<string, unknown>;
 }
 
 export interface PaymentWebhookVerificationInput {
