@@ -86,6 +86,36 @@ async function insertPaymentTransactionWithFallback(
   if (error) throw error;
 }
 
+async function ensureConsumerProfile(
+  admin: ReturnType<typeof createAdminClient>,
+  user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null }
+) {
+  const fullName =
+    String(user.user_metadata?.full_name ?? '').trim() ||
+    String(user.user_metadata?.name ?? '').trim() ||
+    String(user.email ?? '')
+      .split('@')[0]
+      .trim() ||
+    'Customer';
+  const phone = String(user.user_metadata?.phone ?? '').trim() || null;
+  const email = String(user.email ?? '').trim().toLowerCase();
+
+  const { error } = await admin.from('user_profiles').upsert(
+    {
+      id: user.id,
+      email: email || `${user.id}@placeholder.local`,
+      full_name: fullName,
+      phone,
+      role: 'customer',
+    },
+    { onConflict: 'id' }
+  );
+
+  if (error && !isMissingRelation(error, 'public.user_profiles')) {
+    throw error;
+  }
+}
+
 function validate(body: PurchaseVoucherRequest): string | null {
   if (!body.merchantId?.trim()) return 'Merchant is required.';
   if (body.faceValue !== undefined && (!Number.isFinite(body.faceValue) || body.faceValue <= 0)) {
@@ -337,6 +367,12 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     const paymentProvider = new MockPaymentProvider();
     const transactionReference = generateTransactionReference();
+
+    await ensureConsumerProfile(admin, {
+      id: user.id,
+      email: user.email ?? null,
+      user_metadata: (user.user_metadata as Record<string, unknown> | null | undefined) ?? null,
+    });
 
     const { data: merchant, error: merchantError } = await admin
       .from('merchants')
