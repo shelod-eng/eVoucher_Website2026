@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { MockPaymentProvider } from '@/server/services/payment/mock-payment-provider';
+import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { recordWalletCredit } from '@/server/services/wallet/ledger';
 import { writeAuditEvent } from '@/server/utils/audit';
-import { sha256 } from '@/server/utils/security';
+import { generateSecureVoucherCode, sha256 } from '@/server/utils/security';
 import {
   calculateDiscountPricing,
   CONSUMER_DISCOUNT_SHARE,
   DEFAULT_TOTAL_DISCOUNT_PCT,
 } from '@/lib/pricing';
-import { ensureCompletedPurchaseArtifacts } from '@/server/services/billing/purchase-completion';
 
 interface WebhookPayload {
   eventId?: string;
@@ -115,41 +115,30 @@ export async function POST(request: Request) {
           description: `Wallet top-up ${payload.transactionReference}`,
         });
       }
-    } else if (normalizedStatus === 'completed') {
+    } else if (normalizedStatus === 'completed' && !voucherCode) {
       const { data: merchant, error: merchantError } = await admin
         .from('merchants')
-        .select('id,business_name,parent_brand')
+        .select('id,business_name')
         .eq('id', transaction.merchant_id)
         .single();
 
       if (merchantError || !merchant) {
         throw merchantError ?? new Error('Merchant not found for transaction.');
       }
-      const completed = await ensureCompletedPurchaseArtifacts(admin, {
-        merchant: {
-          id: String(merchant.id),
-          business_name: String(merchant.business_name),
-          parent_brand: merchant.parent_brand ?? merchant.business_name,
-        },
-        transaction: {
-          customer_id: String(transaction.customer_id),
-          merchant_id: String(transaction.merchant_id),
-          product_id: transaction.product_id ?? null,
-          transaction_reference: String(payload.transactionReference),
-          voucher_code: transaction.voucher_code ?? null,
-          face_value: faceValue,
-          total_discount_pct: totalDiscountPct,
-          consumer_price: Number(transaction.consumer_price ?? transaction.amount ?? settledAmount),
-          amount: settledAmount,
-        },
-        occurredAt: new Date().toISOString(),
-        metadata: {
-          provider,
-          source: 'payment_webhook',
-          webhookEventId: payload.eventId,
-        },
+
+      const voucherService = new DefaultVoucherService();
+      voucherCode = generateSecureVoucherCode();
+      await voucherService.issueVoucher({
+        customerId: transaction.customer_id,
+        merchantId: merchant.id,
+        productId: transaction.product_id ?? undefined,
+        merchantName: merchant.business_name,
+        faceValue: pricing.faceValue,
+        discountPercent: pricing.consumerBenefitPct,
+        pricing,
+        voucherCode,
+        expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
       });
-      voucherCode = String(completed.voucherCode ?? '').trim() || null;
     }
 
     await admin

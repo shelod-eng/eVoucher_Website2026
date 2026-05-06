@@ -3,17 +3,13 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { PurchaseVoucherRequest } from '@/types/domain';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { MockPaymentProvider } from '@/server/services/payment/mock-payment-provider';
+import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { writeAuditEvent } from '@/server/utils/audit';
 import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
-import {
-  calculateDiscountPricing,
-  DEFAULT_TOTAL_DISCOUNT_PCT,
-  normalizeTotalDiscountPct,
-} from '@/lib/pricing';
+import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { resolveBrandFromMerchantName, getBrandByKey } from '@/lib/merchant-brand-catalog';
 import { getWalletBalance, recordWalletDebit } from '@/server/services/wallet/ledger';
-import { ensureCompletedPurchaseArtifacts } from '@/server/services/billing/purchase-completion';
 
 const SUPPORTED_PAYMENT_METHODS = new Set([
   'visa_secure',
@@ -30,137 +26,6 @@ function isMissingRelation(error: any, relationName: string) {
     message.includes(`relation "${relation}" does not exist`) ||
     message.includes(`could not find the table '${relation}' in the schema cache`)
   );
-}
-
-function isMissingSchemaField(error: any, fieldName: string) {
-  const message = String(error?.message ?? '').toLowerCase();
-  const field = fieldName.toLowerCase();
-  return (
-    message.includes(`column "${field}" does not exist`) ||
-    message.includes(`could not find the '${field}' column`) ||
-    message.includes(`schema cache`) ||
-    message.includes(`record "${field}" has no field`)
-  );
-}
-
-async function insertPaymentTransactionWithFallback(
-  admin: ReturnType<typeof createAdminClient>,
-  row: Record<string, unknown>
-) {
-  let error = (await admin.from('payment_transactions').insert(row)).error;
-  if (!error) return;
-
-  const compatibilityFields = [
-    'merchant_id',
-    'product_id',
-    'face_value',
-    'total_discount_pct',
-    'consumer_benefit_pct',
-    'evoucher_benefit_pct',
-    'total_discount_amount',
-    'consumer_benefit_amount',
-    'evoucher_benefit_amount',
-    'consumer_price',
-    'merchant_receivable_after_total_discount',
-    'merchant_receivable_after_evoucher_benefit',
-  ];
-
-  if (!compatibilityFields.some((field) => isMissingSchemaField(error, field))) {
-    throw error;
-  }
-
-  const fallbackRow = {
-    customer_id: row.customer_id,
-    amount: row.amount,
-    card_last_four: row.card_last_four,
-    card_brand: row.card_brand,
-    payment_status: row.payment_status,
-    voucher_code: row.voucher_code,
-    transaction_reference: row.transaction_reference,
-    ...(row.merchant_id === null || row.merchant_id === undefined
-      ? {}
-      : { merchant_id: row.merchant_id }),
-  };
-
-  error = (await admin.from('payment_transactions').insert(fallbackRow)).error;
-  if (error && isMissingSchemaField(error, 'merchant_id')) {
-    error = (
-      await admin.from('payment_transactions').insert({
-        customer_id: row.customer_id,
-        amount: row.amount,
-        card_last_four: row.card_last_four,
-        card_brand: row.card_brand,
-        payment_status: row.payment_status,
-        voucher_code: row.voucher_code,
-        transaction_reference: row.transaction_reference,
-      })
-    ).error;
-  }
-  if (error) throw error;
-}
-
-async function ensureConsumerProfile(
-  admin: ReturnType<typeof createAdminClient>,
-  user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null }
-) {
-  const fullName =
-    String(user.user_metadata?.full_name ?? '').trim() ||
-    String(user.user_metadata?.name ?? '').trim() ||
-    String(user.email ?? '')
-      .split('@')[0]
-      .trim() ||
-    'Customer';
-  const phone = String(user.user_metadata?.phone ?? '').trim() || null;
-  const email = String(user.email ?? '').trim().toLowerCase();
-  const placeholderEmail = `${user.id}@placeholder.local`;
-  const attempts = [
-    {
-      id: user.id,
-      email: email || placeholderEmail,
-      full_name: fullName,
-      phone,
-      role: 'customer',
-    },
-    {
-      id: user.id,
-      email: email || placeholderEmail,
-      full_name: fullName,
-      role: 'customer',
-    },
-    {
-      id: user.id,
-      email: placeholderEmail,
-      full_name: fullName,
-      phone,
-      role: 'customer',
-    },
-    {
-      id: user.id,
-      email: placeholderEmail,
-      full_name: fullName,
-    },
-  ];
-
-  let lastError: any = null;
-  for (const payload of attempts) {
-    const { error } = await admin.from('user_profiles').upsert(payload, { onConflict: 'id' });
-    if (!error || isMissingRelation(error, 'public.user_profiles')) {
-      return;
-    }
-
-    lastError = error;
-    const hasSchemaDrift =
-      ['email', 'full_name', 'phone', 'role'].some((field) => isMissingSchemaField(error, field)) ||
-      String(error?.message ?? '').toLowerCase().includes('not-null constraint');
-    const hasEmailConflict = isUniqueConstraintError(error);
-    if (hasSchemaDrift || hasEmailConflict) {
-      continue;
-    }
-
-    throw error;
-  }
-
-  throw lastError;
 }
 
 function validate(body: PurchaseVoucherRequest): string | null {
@@ -188,13 +53,6 @@ function validate(body: PurchaseVoucherRequest): string | null {
     const lastFour = String(body.cardLastFour ?? '').trim();
     if (lastFour && !/^\d{4}$/.test(lastFour)) return 'Card last four must be 4 digits.';
   }
-  if (
-    body.branchSelectionMode &&
-    body.branchSelectionMode !== 'nearest' &&
-    body.branchSelectionMode !== 'manual'
-  ) {
-    return 'Invalid branchSelectionMode.';
-  }
   return null;
 }
 
@@ -204,20 +62,8 @@ function isMissingAdminEnvError(error: any) {
   );
 }
 
-function isUniqueConstraintError(error: any) {
-  const message = String(error?.message ?? '').toLowerCase();
-  return message.includes('duplicate key value') || message.includes('unique constraint');
-}
-
 function buildQrCodeUrl(voucherCode: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(voucherCode)}`;
-}
-
-function sanitizeCheckoutUrl(url: string | null | undefined) {
-  const value = String(url ?? '').trim();
-  if (!value) return null;
-  if (value.includes('payments.local')) return null;
-  return value;
 }
 
 async function sendPurchaseReceiptEmail(payload: {
@@ -362,7 +208,10 @@ export async function GET(request: Request) {
       status,
       voucherCode: transaction.voucher_code ?? null,
       issuedVouchers,
-      checkoutUrl: null,
+      checkoutUrl:
+        status === 'pending'
+          ? `https://payments.local/checkout/${encodeURIComponent(transaction.transaction_reference)}`
+          : null,
     });
   } catch (error: any) {
     if (isMissingAdminEnvError(error)) {
@@ -418,13 +267,8 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
     const paymentProvider = new MockPaymentProvider();
+    const voucherService = new DefaultVoucherService();
     const transactionReference = generateTransactionReference();
-
-    await ensureConsumerProfile(admin, {
-      id: user.id,
-      email: user.email ?? null,
-      user_metadata: (user.user_metadata as Record<string, unknown> | null | undefined) ?? null,
-    });
 
     const { data: merchant, error: merchantError } = await admin
       .from('merchants')
@@ -440,16 +284,6 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
-
-    const resolvedBranchName = String(
-      body.selectedBranchName ?? merchant.branch_name ?? merchant.business_name
-    ).trim();
-    const resolvedBranchCity =
-      String(body.selectedBranchCity ?? merchant.city ?? '').trim() || null;
-    const resolvedBranchProvince =
-      String(body.selectedBranchProvince ?? merchant.province ?? '').trim() || null;
-    const resolvedBranchSelectionMode =
-      body.branchSelectionMode === 'manual' ? 'manual' : 'nearest';
 
     let productId: string | null = null;
     let productParentBrand: string | null = null;
@@ -502,9 +336,10 @@ export async function POST(request: Request) {
 
       pricing = calculateDiscountPricing(
         Number(product.face_value),
-        normalizeTotalDiscountPct(
-          product.total_discount_pct,
-          merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT
+        Number(
+          product.total_discount_pct ??
+            merchant.default_total_discount_pct ??
+            DEFAULT_TOTAL_DISCOUNT_PCT
         )
       );
     } else {
@@ -519,7 +354,7 @@ export async function POST(request: Request) {
       }
       pricing = calculateDiscountPricing(
         body.faceValue,
-        normalizeTotalDiscountPct(merchant.default_total_discount_pct, DEFAULT_TOTAL_DISCOUNT_PCT)
+        Number(merchant.default_total_discount_pct ?? DEFAULT_TOTAL_DISCOUNT_PCT)
       );
     }
 
@@ -530,7 +365,7 @@ export async function POST(request: Request) {
     });
     const devForceSuccess = process.env.NODE_ENV === 'development';
     const paymentStatus = devForceSuccess ? 'completed' : payment.status;
-    const checkoutUrl = devForceSuccess ? null : sanitizeCheckoutUrl(payment.checkoutUrl ?? null);
+    const checkoutUrl = devForceSuccess ? null : (payment.checkoutUrl ?? null);
 
     let voucherCode: string | null = null;
     if (paymentStatus === 'completed') {
@@ -584,7 +419,7 @@ export async function POST(request: Request) {
             .padStart(4, '0')
         : '0000';
 
-    await insertPaymentTransactionWithFallback(admin, {
+    const { error: transactionError } = await admin.from('payment_transactions').insert({
       customer_id: user.id,
       merchant_id: merchant.id,
       product_id: productId,
@@ -606,6 +441,8 @@ export async function POST(request: Request) {
       transaction_reference: transactionReference,
     });
 
+    if (transactionError) throw transactionError;
+
     if (paymentStatus === 'completed' && body.paymentMethod === 'wallet') {
       await recordWalletDebit(admin, {
         customerId: user.id,
@@ -617,38 +454,27 @@ export async function POST(request: Request) {
 
     let issuedVouchers: Array<{ code: string; faceValue: number; expiresAt?: string | null }> = [];
     if (paymentStatus === 'completed' && voucherCode) {
-      const completed = await ensureCompletedPurchaseArtifacts(admin, {
-        merchant: {
-          id: String(merchant.id),
-          business_name: String(merchant.business_name),
-          parent_brand: resolvedParentBrand,
-        },
-        transaction: {
-          customer_id: user.id,
-          merchant_id: merchant.id,
-          product_id: productId,
-          transaction_reference: transactionReference,
-          voucher_code: voucherCode,
-          face_value: pricing.faceValue,
-          total_discount_pct: pricing.totalDiscountPct,
-          consumer_price: pricing.consumerPrice,
-          amount: pricing.consumerPrice,
-        },
-        occurredAt: new Date().toISOString(),
-        metadata: {
-          paymentMethod: body.paymentMethod,
-          source: 'purchase_route',
-          redemptionScope: productRedemptionScope,
-          validProvinces: productValidProvinces,
-          validBranchIds: productValidBranchIds,
-          qrCodeUrl: buildQrCodeUrl(voucherCode),
-        },
+      const issued = await voucherService.issueVoucher({
+        customerId: user.id,
+        merchantId: merchant.id,
+        productId: productId ?? undefined,
+        merchantName: merchant.business_name,
+        parentBrand: resolvedParentBrand,
+        redemptionScope: productRedemptionScope,
+        validProvinces: productValidProvinces,
+        validBranchIds: productValidBranchIds,
+        qrCodeUrl: buildQrCodeUrl(voucherCode),
+        faceValue: pricing.faceValue,
+        discountPercent: pricing.consumerBenefitPct,
+        pricing,
+        voucherCode,
+        expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
       });
 
       const { data: voucherRow } = await admin
         .from('customer_vouchers')
         .select('voucher_code,face_value,expires_at')
-        .eq('id', completed.voucherId)
+        .eq('id', issued.voucherId)
         .maybeSingle();
 
       if (voucherRow) {
@@ -660,13 +486,7 @@ export async function POST(request: Request) {
           },
         ];
       } else {
-        issuedVouchers = [
-          {
-            code: String(completed.voucherCode ?? voucherCode),
-            faceValue: pricing.faceValue,
-            expiresAt: null,
-          },
-        ];
+        issuedVouchers = [{ code: voucherCode, faceValue: pricing.faceValue, expiresAt: null }];
       }
 
       const receiptEmail = String(body.payfastEmail ?? user.email ?? '').trim();
@@ -674,7 +494,7 @@ export async function POST(request: Request) {
         await sendPurchaseReceiptEmail({
           to: receiptEmail,
           merchantName: String(merchant.business_name),
-          voucherCode: String(completed.voucherCode ?? voucherCode),
+          voucherCode,
           faceValue: pricing.faceValue,
           amountPaid: pricing.consumerPrice,
           savings: pricing.consumerBenefitAmount,
@@ -682,6 +502,7 @@ export async function POST(request: Request) {
           paymentMethod: body.paymentMethod,
         });
       }
+
     }
 
     await writeAuditEvent(admin, {
@@ -693,11 +514,6 @@ export async function POST(request: Request) {
         paymentStatus === 'completed' ? 'voucher_purchase_completed' : 'voucher_purchase_pending',
       metadata: {
         merchantId: merchant.id,
-        selectedBranchId: body.selectedBranchId ?? merchant.id,
-        selectedBranchName: resolvedBranchName,
-        selectedBranchCity: resolvedBranchCity,
-        selectedBranchProvince: resolvedBranchProvince,
-        branchSelectionMode: resolvedBranchSelectionMode,
         faceValue: pricing.faceValue,
         consumerPrice: pricing.consumerPrice,
         totalDiscountPct: pricing.totalDiscountPct,
@@ -717,21 +533,8 @@ export async function POST(request: Request) {
       voucherCode,
       issuedVouchers,
       pricing,
-      selectedBranch: {
-        id: body.selectedBranchId ?? merchant.id,
-        name: resolvedBranchName,
-        city: resolvedBranchCity,
-        province: resolvedBranchProvince,
-        selectionMode: resolvedBranchSelectionMode,
-      },
     });
   } catch (error: any) {
-    console.error('[voucher-purchase][failed]', {
-      message: error?.message ?? String(error),
-      code: error?.code ?? null,
-      details: error?.details ?? null,
-      hint: error?.hint ?? null,
-    });
     return NextResponse.json(
       isMissingAdminEnvError(error)
         ? {

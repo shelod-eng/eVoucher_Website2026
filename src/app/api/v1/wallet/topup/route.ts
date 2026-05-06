@@ -6,18 +6,13 @@ import { MockPaymentProvider } from '@/server/services/payment/mock-payment-prov
 import { generateTransactionReference } from '@/server/utils/security';
 import { getWalletBalance, recordWalletCredit } from '@/server/services/wallet/ledger';
 
-const SUPPORTED_PAYMENT_METHODS = new Set(['visa_secure', 'debit_credit', 'payfast', 'eft']);
-
-function isMissingSchemaField(error: any, fieldName: string) {
-  const message = String(error?.message ?? '').toLowerCase();
-  const field = fieldName.toLowerCase();
-  return (
-    message.includes(`column "${field}" does not exist`) ||
-    message.includes(`could not find the '${field}' column`) ||
-    message.includes(`schema cache`) ||
-    message.includes(`record "${field}" has no field`)
-  );
-}
+const SUPPORTED_PAYMENT_METHODS = new Set([
+  'visa_secure',
+  'debit_credit',
+  'payfast',
+  'eft',
+  'wallet',
+]);
 
 function validate(body: any): string | null {
   const amount = Number(body?.amount ?? 0);
@@ -42,10 +37,7 @@ export async function POST(request: Request) {
     const { role } = await resolveUserRole(supabase, user);
     if (!isConsumerRole(role)) {
       return NextResponse.json(
-        {
-          error: 'Only signed-in consumers can top up wallet.',
-          code: 'consumer_only_wallet_topup',
-        },
+        { error: 'Only signed-in consumers can top up wallet.', code: 'consumer_only_wallet_topup' },
         { status: 403 }
       );
     }
@@ -53,10 +45,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validationError = validate(body);
     if (validationError) {
-      return NextResponse.json(
-        { error: validationError, code: 'invalid_wallet_topup' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: validationError, code: 'invalid_wallet_topup' }, { status: 400 });
     }
 
     const amount = Number(body.amount);
@@ -85,32 +74,17 @@ export async function POST(request: Request) {
             .padStart(4, '0')
         : '0000';
 
-    let txError = (
-      await admin.from('payment_transactions').insert({
-        customer_id: user.id,
-        merchant_id: null,
-        amount,
-        card_last_four: cardLastFour,
-        card_brand: cardBrand,
-        payment_status: paymentStatus,
-        voucher_code: null,
-        transaction_reference: transactionReference,
-      })
-    ).error;
-    if (txError && ['merchant_id'].some((field) => isMissingSchemaField(txError, field))) {
-      txError = (
-        await admin.from('payment_transactions').insert({
-          customer_id: user.id,
-          amount,
-          card_last_four: cardLastFour,
-          card_brand: cardBrand,
-          payment_status: paymentStatus,
-          voucher_code: null,
-          transaction_reference: transactionReference,
-        })
-      ).error;
-    }
-    if (txError) throw txError;
+    const txRes = await admin.from('payment_transactions').insert({
+      customer_id: user.id,
+      merchant_id: null,
+      amount,
+      card_last_four: cardLastFour,
+      card_brand: cardBrand,
+      payment_status: paymentStatus,
+      voucher_code: null,
+      transaction_reference: transactionReference,
+    });
+    if (txRes.error) throw txRes.error;
 
     if (paymentStatus === 'completed') {
       await recordWalletCredit(admin, {
@@ -123,14 +97,10 @@ export async function POST(request: Request) {
 
     const walletBalance = (await getWalletBalance(admin, user.id)) ?? 0;
 
-    const checkoutUrl = String(payment.checkoutUrl ?? '').includes('payments.local')
-      ? null
-      : (payment.checkoutUrl ?? null);
-
     return NextResponse.json({
       transactionReference,
       status: paymentStatus,
-      checkoutUrl,
+      checkoutUrl: payment.checkoutUrl ?? null,
       amount,
       walletBalance,
     });

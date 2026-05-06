@@ -9,7 +9,6 @@ import {
   calculateDiscountPricing,
   DEFAULT_TOTAL_DISCOUNT_PCT,
   DiscountPricingBreakdown,
-  normalizeTotalDiscountPct,
 } from '@/lib/pricing';
 import { CartItem, clearCart, getCartItems, getCartSummary } from '@/lib/cart';
 
@@ -19,20 +18,6 @@ interface MerchantOption {
   email: string;
   status: string;
   defaultTotalDiscountPct: number;
-  parentBrand?: string | null;
-  branchName?: string | null;
-  city?: string | null;
-  province?: string | null;
-  productCount?: number;
-  products?: {
-    id: string;
-    productName: string;
-    faceValue: number;
-    totalDiscountPct: number;
-    consumerPrice: number;
-    consumerBenefitAmount: number;
-    parentBrand?: string | null;
-  }[];
 }
 
 type PaymentMethod = 'visa_secure' | 'debit_credit' | 'payfast' | 'eft' | 'wallet';
@@ -60,21 +45,6 @@ function persistWalletTopupHint(payload: {
   } catch {
     // Ignore localStorage failures (private mode/quota) and continue.
   }
-}
-
-async function parseApiResponse(response: Response) {
-  const contentType = String(response.headers.get('content-type') ?? '').toLowerCase();
-  if (contentType.includes('application/json')) {
-    return response.json();
-  }
-
-  const text = await response.text();
-  const compactText = text.replace(/\s+/g, ' ').trim();
-  return {
-    error: compactText.slice(0, 220) || `Request failed with status ${response.status}.`,
-    code: 'non_json_response',
-    raw: compactText,
-  };
 }
 
 function BuyVouchersContent() {
@@ -116,38 +86,21 @@ function BuyVouchersContent() {
   const merchantIdFromQuery = searchParams.get('merchantId');
   const brandKeyFromQuery = searchParams.get('brandKey');
   const productIdFromQuery = searchParams.get('productId');
-  const selectedBranchIdFromQuery = searchParams.get('selectedBranchId');
-  const selectedBranchNameFromQuery = searchParams.get('selectedBranchName');
-  const selectedBranchCityFromQuery = searchParams.get('selectedBranchCity');
-  const selectedBranchProvinceFromQuery = searchParams.get('selectedBranchProvince');
-  const branchSelectionModeFromQuery = searchParams.get('branchSelectionMode');
   const walletTopupMode = searchParams.get('walletTopup') === '1';
   const cartCheckout = searchParams.get('cartCheckout') === '1';
   const merchantLocked = Boolean(merchantIdFromQuery);
   const selectedMerchantDetails =
     merchants.find((merchant) => merchant.id === selectedMerchant) ?? null;
-  const selectedMerchantProducts = useMemo(
-    () => selectedMerchantDetails?.products ?? [],
-    [selectedMerchantDetails]
-  );
   const amountOptions = useMemo(() => {
     const defaults = [100, 200, 300, 500, 1000];
-    selectedMerchantProducts.forEach((product) => {
-      if (Number.isFinite(Number(product.faceValue)) && Number(product.faceValue) > 0) {
-        defaults.push(Number(product.faceValue));
-      }
-    });
     if (Number.isFinite(faceValueFromQuery) && faceValueFromQuery > 0) {
       defaults.push(faceValueFromQuery);
     }
     return Array.from(new Set(defaults)).sort((a, b) => a - b);
-  }, [faceValueFromQuery, selectedMerchantProducts]);
+  }, [faceValueFromQuery]);
   const previewPricing = calculateDiscountPricing(
     voucherAmount,
-    normalizeTotalDiscountPct(
-      selectedMerchantDetails?.defaultTotalDiscountPct,
-      DEFAULT_TOTAL_DISCOUNT_PCT
-    )
+    selectedMerchantDetails?.defaultTotalDiscountPct ?? DEFAULT_TOTAL_DISCOUNT_PCT
   );
   const cartSummary = useMemo(() => getCartSummary(checkoutCartItems), [checkoutCartItems]);
   const checkoutPricing = useMemo<DiscountPricingBreakdown>(() => {
@@ -199,13 +152,7 @@ function BuyVouchersContent() {
       merchantReceivableAfterTotalDiscount,
       merchantReceivableAfterEvoucherBenefit,
     };
-  }, [
-    cartCheckout,
-    previewPricing,
-    checkoutCartItems,
-    cartSummary.totalConsumerPrice,
-    cartSummary.totalSavings,
-  ]);
+  }, [cartCheckout, previewPricing, checkoutCartItems, cartSummary.totalConsumerPrice, cartSummary.totalSavings]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -232,53 +179,6 @@ function BuyVouchersContent() {
       void fetchWalletBalance();
     }
   }, [user, walletTopupMode]);
-
-  useEffect(() => {
-    if (cartCheckout || walletTopupMode) return;
-    if (!selectedMerchantDetails) return;
-
-    const merchantProducts = selectedMerchantDetails.products ?? [];
-    if (merchantProducts.length === 0) {
-      if (selectedProductId && !productIdFromQuery) {
-        setSelectedProductId(null);
-      }
-      return;
-    }
-
-    const querySelectedProduct = productIdFromQuery
-      ? merchantProducts.find((product) => product.id === productIdFromQuery)
-      : null;
-    if (querySelectedProduct) {
-      if (selectedProductId !== querySelectedProduct.id) {
-        setSelectedProductId(querySelectedProduct.id);
-      }
-      if (voucherAmount !== Number(querySelectedProduct.faceValue)) {
-        setVoucherAmount(Number(querySelectedProduct.faceValue));
-      }
-      return;
-    }
-
-    const currentSelection = selectedProductId
-      ? merchantProducts.find((product) => product.id === selectedProductId)
-      : null;
-    if (currentSelection) {
-      if (voucherAmount !== Number(currentSelection.faceValue)) {
-        setVoucherAmount(Number(currentSelection.faceValue));
-      }
-      return;
-    }
-
-    const firstProduct = merchantProducts[0];
-    setSelectedProductId(firstProduct.id);
-    setVoucherAmount(Number(firstProduct.faceValue));
-  }, [
-    cartCheckout,
-    walletTopupMode,
-    selectedMerchantDetails,
-    selectedProductId,
-    productIdFromQuery,
-    voucherAmount,
-  ]);
 
   useEffect(() => {
     if (!user) return;
@@ -384,19 +284,6 @@ function BuyVouchersContent() {
     }
   };
 
-  const handleSelectMerchant = (merchantId: string) => {
-    setSelectedMerchant(merchantId);
-    if (productIdFromQuery) return;
-    setSelectedProductId(null);
-  };
-
-  const handleSelectMerchantProduct = (productId: string) => {
-    const product = selectedMerchantProducts.find((item) => item.id === productId);
-    if (!product) return;
-    setSelectedProductId(product.id);
-    setVoucherAmount(Number(product.faceValue));
-  };
-
   const paymentMethods = [
     {
       id: 'visa_secure' as PaymentMethod,
@@ -428,7 +315,7 @@ function BuyVouchersContent() {
       icon: 'WalletIcon',
       description: 'Use your wallet cash balance',
     },
-  ].filter((method) => !(walletTopupMode && method.id === 'wallet'));
+  ];
 
   const resetErrors = () => setFormErrors({});
 
@@ -487,11 +374,6 @@ function BuyVouchersContent() {
         merchantId: string;
         productId?: string;
         faceValue?: number;
-        selectedBranchId?: string;
-        selectedBranchName?: string;
-        selectedBranchCity?: string;
-        selectedBranchProvince?: string;
-        branchSelectionMode?: 'nearest' | 'manual';
       }) => {
         const response = await fetch('/api/v1/vouchers/purchase', {
           method: 'POST',
@@ -506,14 +388,9 @@ function BuyVouchersContent() {
             payfastEmail,
             billingAddress,
             eftProofName,
-            selectedBranchId: payload.selectedBranchId,
-            selectedBranchName: payload.selectedBranchName,
-            selectedBranchCity: payload.selectedBranchCity,
-            selectedBranchProvince: payload.selectedBranchProvince,
-            branchSelectionMode: payload.branchSelectionMode,
           }),
         });
-        const data = await parseApiResponse(response);
+        const data = await response.json();
         if (!response.ok) {
           setBlockingCode(data.code ?? null);
           if (data.code === 'consumer_only_purchase') {
@@ -546,7 +423,7 @@ function BuyVouchersContent() {
             eftProofName,
           }),
         });
-        const topupData = await parseApiResponse(topupResponse);
+        const topupData = await topupResponse.json();
         if (!topupResponse.ok) {
           throw new Error(topupData.error || 'Failed to top up wallet');
         }
@@ -594,11 +471,6 @@ function BuyVouchersContent() {
                 ? item.productId
                 : undefined,
             faceValue: Number(item.faceValue),
-            selectedBranchId: item.selectedBranchId,
-            selectedBranchName: item.selectedBranchName,
-            selectedBranchCity: item.selectedBranchCity,
-            selectedBranchProvince: item.selectedBranchProvince,
-            branchSelectionMode: item.branchSelectionMode,
           });
           results.push(result);
         }
@@ -633,11 +505,6 @@ function BuyVouchersContent() {
               ? selectedProductId
               : undefined,
           faceValue: voucherAmount,
-          selectedBranchId: selectedBranchIdFromQuery ?? undefined,
-          selectedBranchName: selectedBranchNameFromQuery ?? undefined,
-          selectedBranchCity: selectedBranchCityFromQuery ?? undefined,
-          selectedBranchProvince: selectedBranchProvinceFromQuery ?? undefined,
-          branchSelectionMode: branchSelectionModeFromQuery === 'manual' ? 'manual' : 'nearest',
         });
 
         setPurchaseStatus(data.status);
@@ -671,7 +538,7 @@ function BuyVouchersContent() {
           credentials: 'include',
         }
       );
-      const data = await parseApiResponse(response);
+      const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Failed to refresh payment status.');
       }
@@ -909,17 +776,12 @@ function BuyVouchersContent() {
                   className="text-primary"
                 />
                 <h2 className="font-headline font-bold text-2xl text-foreground">
-                  {walletTopupMode
-                    ? 'Top-Up Amount'
-                    : cartCheckout
-                      ? 'Checkout Cart'
-                      : 'Select Merchant'}
+                  {walletTopupMode ? 'Top-Up Amount' : cartCheckout ? 'Checkout Cart' : 'Select Merchant'}
                 </h2>
               </div>
               {walletTopupMode ? (
                 <p className="text-sm text-muted-foreground">
-                  Choose the top-up amount, then select a payment method to fund your wallet
-                  balance.
+                  Choose the top-up amount, then select a payment method to fund your wallet balance.
                 </p>
               ) : cartCheckout ? (
                 <div className="space-y-3">
@@ -1007,7 +869,7 @@ function BuyVouchersContent() {
                     merchants.map((merchant) => (
                       <button
                         key={merchant.id}
-                        onClick={() => handleSelectMerchant(merchant.id)}
+                        onClick={() => setSelectedMerchant(merchant.id)}
                         className={`w-full p-4 rounded-xl border-2 transition-all duration-300 text-left ${
                           selectedMerchant === merchant.id
                             ? 'border-primary bg-primary/5'
@@ -1033,13 +895,6 @@ function BuyVouchersContent() {
                             <p className="text-xs text-primary font-body mt-1">
                               Discount budget: {merchant.defaultTotalDiscountPct.toFixed(2)}%
                             </p>
-                            <p className="text-xs text-muted-foreground font-body mt-1">
-                              {merchant.productCount ?? merchant.products?.length ?? 0} product
-                              {(merchant.productCount ?? merchant.products?.length ?? 0) === 1
-                                ? ''
-                                : 's'}{' '}
-                              available
-                            </p>
                           </div>
                           {selectedMerchant === merchant.id && (
                             <Icon
@@ -1056,80 +911,18 @@ function BuyVouchersContent() {
                 </div>
               )}
 
-              {!walletTopupMode &&
-                !cartCheckout &&
-                selectedMerchantDetails &&
-                selectedMerchantProducts.length > 0 && (
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <label className="block text-sm font-headline font-semibold text-foreground">
-                        Actual Products Sold
-                      </label>
-                      <span className="text-xs text-muted-foreground font-body">
-                        {selectedMerchantProducts.length} shown
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {selectedMerchantProducts.map((product) => {
-                        const isSelected = selectedProductId === product.id;
-                        return (
-                          <button
-                            key={product.id}
-                            type="button"
-                            onClick={() => handleSelectMerchantProduct(product.id)}
-                            className={`w-full rounded-xl border p-3 text-left transition-all ${
-                              isSelected
-                                ? 'border-primary bg-primary/5'
-                                : 'border-border hover:border-primary/40'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="font-headline font-semibold text-foreground">
-                                  {product.productName}
-                                </p>
-                                <p className="text-xs text-muted-foreground font-body mt-1">
-                                  Face value R{Number(product.faceValue).toFixed(2)} · Save R
-                                  {Number(product.consumerBenefitAmount).toFixed(2)} · Pay R
-                                  {Number(product.consumerPrice).toFixed(2)}
-                                </p>
-                              </div>
-                              <span className="px-2 py-1 rounded-full text-xs bg-success/10 text-success font-headline font-semibold">
-                                {Number(product.totalDiscountPct).toFixed(1)}% off
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
               {!cartCheckout && (
                 <div className="mt-6">
                   <label
                     htmlFor="voucher-amount-select"
                     className="block text-sm font-headline font-semibold text-foreground mb-2"
                   >
-                    {selectedMerchantProducts.length > 0
-                      ? 'Selected Product Face Value (R)'
-                      : 'Voucher Amount (R)'}
+                    Voucher Amount (R)
                   </label>
                   <select
                     id="voucher-amount-select"
                     value={voucherAmount}
-                    onChange={(e) => {
-                      const nextAmount = Number(e.target.value);
-                      setVoucherAmount(nextAmount);
-                      if (
-                        selectedMerchantProducts.length > 0 &&
-                        !selectedMerchantProducts.some(
-                          (product) => Number(product.faceValue) === Number(nextAmount)
-                        )
-                      ) {
-                        setSelectedProductId(null);
-                      }
-                    }}
+                    onChange={(e) => setVoucherAmount(Number(e.target.value))}
                     className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-body"
                   >
                     {amountOptions.map((amount) => (
