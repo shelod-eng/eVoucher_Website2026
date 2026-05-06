@@ -7,14 +7,14 @@ import {
 } from '@/server/services/payment/sandbox-transaction-store';
 
 export async function GET(
-  context: { params: Promise<{ ref: string }> | { ref: string } }
+  _request: Request,
+  { params }: { params: { ref: string } }
 ) {
   const access = await requireSandboxAccess();
   if (!access.allowed) {
     return NextResponse.json(access.body, { status: access.status });
   }
 
-  const params = await Promise.resolve(context.params);
   const transaction = await getSandboxTransaction(params.ref);
   if (!transaction) {
     return NextResponse.json({ error: 'Sandbox transaction not found.' }, { status: 404 });
