@@ -47,11 +47,6 @@ const nextConfig = {
         permanent: false,
       },
       {
-        source: '/customer/purchase',
-        destination: '/buy-vouchers',
-        permanent: false,
-      },
-      {
         source: '/merchant/payouts',
         destination: '/merchant/dashboard',
         permanent: false,
