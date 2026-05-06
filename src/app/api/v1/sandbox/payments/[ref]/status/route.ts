@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireSandboxAccess } from '@/server/services/payment/sandbox-access';
-import { getSandboxScenario } from '@/server/services/payment/sandbox-scenario-engine';
+import {
+  getSandboxTransaction,
+  listSandboxEftProofs,
+  listSandboxWebhookEvents,
+} from '@/server/services/payment/sandbox-transaction-store';
 
 export async function GET(
-  request: Request,
   context: { params: Promise<{ ref: string }> | { ref: string } }
 ) {
   const access = await requireSandboxAccess();
@@ -12,22 +15,32 @@ export async function GET(
   }
 
   const params = await Promise.resolve(context.params);
-  const { searchParams } = new URL(request.url);
-  const scenarioKey = String(searchParams.get('scenario') ?? '').trim();
-  const scenario = getSandboxScenario(scenarioKey);
-
-  if (!scenario) {
-    return NextResponse.json({ error: 'Unknown sandbox scenario.' }, { status: 400 });
+  const transaction = await getSandboxTransaction(params.ref);
+  if (!transaction) {
+    return NextResponse.json({ error: 'Sandbox transaction not found.' }, { status: 404 });
   }
+
+  const [webhookEvents, eftProofs] = await Promise.all([
+    listSandboxWebhookEvents(params.ref),
+    listSandboxEftProofs(params.ref),
+  ]);
 
   return NextResponse.json({
     sandbox: true,
-    transactionReference: params.ref,
-    scenarioKey: scenario.key,
-    status: scenario.initialStatus,
-    finalStatus: scenario.finalStatus,
-    requiresAuthorization: Boolean(scenario.requiresAuthorization),
-    callbackDelayMs: scenario.callbackDelayMs ?? 0,
-    webhookRetries: scenario.webhookRetries ?? 0,
+    transactionReference: transaction.transactionReference,
+    scenarioKey: transaction.scenarioKey,
+    paymentMethod: transaction.paymentMethod,
+    amount: transaction.amount,
+    status: transaction.currentStatus,
+    detailedState: transaction.detailedState,
+    finalStatus: transaction.finalStatus,
+    requiresAuthorization: transaction.requiresAuthorization,
+    callbackDelayMs: transaction.callbackDelayMs,
+    webhookRetries: transaction.webhookRetries,
+    checkoutUrl: transaction.checkoutUrl,
+    metadata: transaction.metadata,
+    stateHistory: transaction.stateHistory,
+    webhookEvents,
+    eftProofs,
   });
 }

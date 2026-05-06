@@ -29,6 +29,8 @@ export class SandboxPaymentProvider implements PaymentProvider {
       metadata: {
         scenarioKey: scenario.key,
         label: scenario.label,
+        flowType: scenario.flowType,
+        stateTimeline: scenario.stateTimeline,
         finalStatus: scenario.finalStatus,
         requiresAuthorization: Boolean(scenario.requiresAuthorization),
         redirectFlow: Boolean(scenario.redirectFlow),

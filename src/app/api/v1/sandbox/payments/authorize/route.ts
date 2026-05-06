@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireSandboxAccess } from '@/server/services/payment/sandbox-access';
-import { getSandboxScenario } from '@/server/services/payment/sandbox-scenario-engine';
+import { applyAuthorizationOutcome } from '@/server/services/payment/sandbox-state-machine';
+import { getSandboxTransaction, updateSandboxTransaction } from '@/server/services/payment/sandbox-transaction-store';
 
 export async function POST(request: Request) {
   const access = await requireSandboxAccess();
@@ -10,27 +11,40 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const reference = String(body.transactionReference ?? '').trim();
-  const scenarioKey = String(body.scenarioKey ?? '').trim();
   const otp = String(body.otp ?? '').trim();
-  const scenario = getSandboxScenario(scenarioKey);
 
   if (!reference) {
     return NextResponse.json({ error: 'transactionReference is required.' }, { status: 400 });
   }
-  if (!scenario) {
-    return NextResponse.json({ error: 'Unknown sandbox scenario.' }, { status: 400 });
+
+  const transaction = await getSandboxTransaction(reference);
+  if (!transaction) {
+    return NextResponse.json({ error: 'Sandbox transaction not found.' }, { status: 404 });
   }
 
-  const isFailure = scenario.finalStatus === 'failed' || otp === '000000';
+  const outcome =
+    transaction.finalStatus === 'failed'
+      ? transaction.scenarioKey === 'visa_3ds_timeout'
+        ? 'expired'
+        : 'failed'
+      : otp === '000000'
+        ? 'failed'
+        : 'completed';
+  const updated = await updateSandboxTransaction(reference, (current) =>
+    applyAuthorizationOutcome(current, outcome, {
+      otp,
+      operatorRole: access.role,
+    })
+  );
+
   return NextResponse.json({
     sandbox: true,
     transactionReference: reference,
-    scenarioKey: scenario.key,
-    status: isFailure ? 'failed' : 'completed',
+    scenarioKey: transaction.scenarioKey,
+    status: updated?.currentStatus ?? transaction.currentStatus,
+    detailedState: updated?.detailedState ?? transaction.detailedState,
     authorizedAt: new Date().toISOString(),
-    metadata: {
-      requiresAuthorization: Boolean(scenario.requiresAuthorization),
-      operatorRole: access.role,
-    },
+    metadata: updated?.metadata ?? transaction.metadata,
+    stateHistory: updated?.stateHistory ?? transaction.stateHistory,
   });
 }

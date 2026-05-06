@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createPaymentProvider } from '@/server/services/payment/payment-provider-factory';
 import { requireSandboxAccess } from '@/server/services/payment/sandbox-access';
 import { getSandboxScenario } from '@/server/services/payment/sandbox-scenario-engine';
+import { getInitialDetailedState, getInitialStateHistory } from '@/server/services/payment/sandbox-state-machine';
+import { createSandboxTransaction } from '@/server/services/payment/sandbox-transaction-store';
 
 function buildReference() {
   const random = Math.random().toString(36).slice(2, 10).toUpperCase();
@@ -18,6 +20,7 @@ export async function POST(request: Request) {
   const amount = Number(body.amount ?? 0);
   const paymentMethod = String(body.paymentMethod ?? '').trim();
   const scenarioKey = String(body.scenarioKey ?? '').trim();
+  const phoneNumber = String(body.phoneNumber ?? '').trim() || null;
 
   if (!Number.isFinite(amount) || amount <= 0) {
     return NextResponse.json({ error: 'amount must be greater than zero.' }, { status: 400 });
@@ -43,15 +46,48 @@ export async function POST(request: Request) {
     },
   });
 
+  const now = new Date().toISOString();
+  const record = await createSandboxTransaction({
+    transactionReference: reference,
+    scenarioKey: scenario.key,
+    paymentMethod: scenario.paymentMethod,
+    amount,
+    provider: 'sandbox',
+    initialStatus: payment.status,
+    currentStatus: payment.status,
+    finalStatus: scenario.finalStatus,
+    detailedState: getInitialDetailedState(scenario),
+    requiresAuthorization: Boolean(scenario.requiresAuthorization),
+    redirectFlow: Boolean(scenario.redirectFlow),
+    callbackDelayMs: scenario.callbackDelayMs ?? 0,
+    webhookRetries: scenario.webhookRetries ?? 0,
+    checkoutUrl: payment.checkoutUrl ?? null,
+    operatorUserId: access.user.id,
+    phoneNumber,
+    metadata: {
+      label: scenario.label,
+      flowType: scenario.flowType,
+      stateTimeline: scenario.stateTimeline,
+      finalStatus: scenario.finalStatus,
+      redirectFlow: Boolean(scenario.redirectFlow),
+      requiresAuthorization: Boolean(scenario.requiresAuthorization),
+    },
+    stateHistory: getInitialStateHistory(scenario),
+    createdAt: now,
+    updatedAt: now,
+  });
+
   return NextResponse.json({
     sandbox: true,
-    transactionReference: reference,
-    amount,
-    paymentMethod,
+    transactionReference: record.transactionReference,
+    amount: record.amount,
+    paymentMethod: record.paymentMethod,
     scenario,
-    status: payment.status,
-    finalStatus: payment.metadata?.finalStatus ?? scenario.finalStatus,
-    checkoutUrl: payment.checkoutUrl ?? null,
-    metadata: payment.metadata ?? {},
+    status: record.currentStatus,
+    detailedState: record.detailedState,
+    finalStatus: record.finalStatus,
+    checkoutUrl: record.checkoutUrl,
+    metadata: record.metadata,
+    stateHistory: record.stateHistory,
   });
 }
