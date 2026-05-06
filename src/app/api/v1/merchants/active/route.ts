@@ -29,6 +29,17 @@ function isMissingRelation(error: any, relationName: string) {
   );
 }
 
+function isMissingSchemaField(error: any, fieldName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const field = fieldName.toLowerCase();
+  return (
+    message.includes(`column "${field}" does not exist`) ||
+    message.includes(`could not find the '${field}' column`) ||
+    message.includes(`record "${field}" has no field`) ||
+    message.includes('schema cache')
+  );
+}
+
 export async function GET(request: Request) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
@@ -101,26 +112,51 @@ export async function GET(request: Request) {
     const merchantIds = rows.map((merchant: any) => String(merchant.id));
     let productRows: any[] = [];
     if (merchantIds.length > 0) {
-      const { data: productsData, error: productsError } = await client
-        .from('merchant_products')
-        .select(
-          'id,merchant_id,product_name,face_value,total_discount_pct,consumer_price,consumer_benefit_amount,parent_brand,is_active,status,created_at'
-        )
-        .in('merchant_id', merchantIds)
-        .order('created_at', { ascending: false })
-        .limit(5000);
+      const productFieldSets = [
+        'id,merchant_id,product_name,face_value,total_discount_pct,consumer_price,consumer_benefit_amount,parent_brand,is_active,created_at',
+        'id,merchant_id,product_name,face_value,total_discount_pct,consumer_price,consumer_benefit_amount,parent_brand,created_at',
+      ];
+      let productsData: any[] = [];
+      let productsError: any = null;
 
-      if (productsError && !isMissingRelation(productsError, 'public.merchant_products')) {
+      for (const fields of productFieldSets) {
+        const result = await client
+          .from('merchant_products')
+          .select(fields)
+          .in('merchant_id', merchantIds)
+          .order('created_at', { ascending: false })
+          .limit(5000);
+
+        if (!result.error) {
+          productsData = result.data ?? [];
+          productsError = null;
+          break;
+        }
+
+        if (isMissingRelation(result.error, 'public.merchant_products')) {
+          productsData = [];
+          productsError = null;
+          break;
+        }
+
+        if (
+          isMissingSchemaField(result.error, 'merchant_products.status') ||
+          isMissingSchemaField(result.error, 'status')
+        ) {
+          continue;
+        }
+
+        productsError = result.error;
+        break;
+      }
+
+      if (productsError) {
         throw productsError;
       }
 
       productRows = (productsData ?? []).filter((product: any) => {
         if (typeof product?.is_active === 'boolean') return product.is_active;
-        const status = String(product?.status ?? '')
-          .trim()
-          .toLowerCase();
-        if (!status) return true;
-        return !['inactive', 'disabled', 'archived'].includes(status);
+        return true;
       });
     }
 

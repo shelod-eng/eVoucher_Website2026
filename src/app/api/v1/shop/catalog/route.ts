@@ -154,6 +154,17 @@ function isMissingRelation(error: any, relationName: string) {
   );
 }
 
+function isMissingSchemaField(error: any, fieldName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const field = fieldName.toLowerCase();
+  return (
+    message.includes(`column "${field}" does not exist`) ||
+    message.includes(`could not find the '${field}' column`) ||
+    message.includes(`record "${field}" has no field`) ||
+    message.includes('schema cache')
+  );
+}
+
 function withSearchMatch(text: string, term: string) {
   if (!term) return true;
   return text.toLowerCase().includes(term);
@@ -370,6 +381,13 @@ async function fetchProductsForMerchantIds(
 
     if (isMissingRelation(result.error, 'public.merchant_products')) {
       return [];
+    }
+
+    if (
+      isMissingSchemaField(result.error, 'merchant_products.status') ||
+      isMissingSchemaField(result.error, 'status')
+    ) {
+      continue;
     }
 
     lastError = result.error;
