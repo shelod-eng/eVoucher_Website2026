@@ -105,6 +105,19 @@ async function insertPaymentTransactionWithFallback(
   };
 
   error = (await admin.from('payment_transactions').insert(fallbackRow)).error;
+  if (error && isMissingSchemaField(error, 'merchant_id')) {
+    error = (
+      await admin.from('payment_transactions').insert({
+        customer_id: row.customer_id,
+        amount: row.amount,
+        card_last_four: row.card_last_four,
+        card_brand: row.card_brand,
+        payment_status: row.payment_status,
+        voucher_code: row.voucher_code,
+        transaction_reference: row.transaction_reference,
+      })
+    ).error;
+  }
   if (error) throw error;
 }
 

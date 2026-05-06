@@ -83,6 +83,19 @@ async function insertPaymentTransactionWithFallback(
   };
 
   error = (await admin.from('payment_transactions').insert(fallbackRow)).error;
+  if (error && isMissingSchemaField(error, 'merchant_id')) {
+    error = (
+      await admin.from('payment_transactions').insert({
+        customer_id: row.customer_id,
+        amount: row.amount,
+        card_last_four: row.card_last_four,
+        card_brand: row.card_brand,
+        payment_status: row.payment_status,
+        voucher_code: row.voucher_code,
+        transaction_reference: row.transaction_reference,
+      })
+    ).error;
+  }
   if (error) throw error;
 }
 
@@ -111,9 +124,24 @@ async function ensureConsumerProfile(
     { onConflict: 'id' }
   );
 
-  if (error && !isMissingRelation(error, 'public.user_profiles')) {
-    throw error;
+  if (!error || isMissingRelation(error, 'public.user_profiles')) {
+    return;
   }
+
+  if (
+    ['email', 'full_name', 'phone', 'role'].some((field) => isMissingSchemaField(error, field)) ||
+    String(error?.message ?? '').toLowerCase().includes('duplicate key value') ||
+    String(error?.message ?? '').toLowerCase().includes('violates unique constraint')
+  ) {
+    console.warn('[voucher-purchase][consumer-profile-backfill-skipped]', {
+      message: error.message,
+      code: error.code ?? null,
+      hint: error.hint ?? null,
+    });
+    return;
+  }
+
+  throw error;
 }
 
 function validate(body: PurchaseVoucherRequest): string | null {
@@ -368,11 +396,19 @@ export async function POST(request: Request) {
     const paymentProvider = new MockPaymentProvider();
     const transactionReference = generateTransactionReference();
 
-    await ensureConsumerProfile(admin, {
-      id: user.id,
-      email: user.email ?? null,
-      user_metadata: (user.user_metadata as Record<string, unknown> | null | undefined) ?? null,
-    });
+    try {
+      await ensureConsumerProfile(admin, {
+        id: user.id,
+        email: user.email ?? null,
+        user_metadata: (user.user_metadata as Record<string, unknown> | null | undefined) ?? null,
+      });
+    } catch (profileError: any) {
+      console.warn('[voucher-purchase][consumer-profile-backfill-error]', {
+        message: profileError?.message ?? String(profileError),
+        code: profileError?.code ?? null,
+        hint: profileError?.hint ?? null,
+      });
+    }
 
     const { data: merchant, error: merchantError } = await admin
       .from('merchants')
