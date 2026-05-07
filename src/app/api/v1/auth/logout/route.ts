@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -21,18 +22,40 @@ function jsonNoStore(body: unknown, init?: ResponseInit) {
   });
 }
 
+async function expireSupabaseAuthCookies(response: NextResponse) {
+  const cookieStore = await cookies();
+  const authCookies = cookieStore
+    .getAll()
+    .map(({ name }) => name)
+    .filter((name) => name.startsWith('sb-') || name.includes('auth-token'));
+
+  authCookies.forEach((name) => {
+    response.cookies.set(name, '', {
+      path: '/',
+      maxAge: 0,
+      expires: new Date(0),
+      sameSite: 'lax',
+    });
+  });
+
+  return response;
+}
+
 export async function POST() {
   try {
     const supabase = await createClient();
     const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) {
-      return jsonNoStore({ error: error.message, code: 'logout_failed' }, { status: 500 });
+      const response = jsonNoStore({ error: error.message, code: 'logout_failed' }, { status: 500 });
+      return await expireSupabaseAuthCookies(response);
     }
-    return jsonNoStore({ success: true });
+    const response = jsonNoStore({ success: true });
+    return await expireSupabaseAuthCookies(response);
   } catch (error: any) {
-    return jsonNoStore(
+    const response = jsonNoStore(
       { error: error?.message || 'Failed to log out.', code: 'logout_failed' },
       { status: 500 }
     );
+    return await expireSupabaseAuthCookies(response);
   }
 }

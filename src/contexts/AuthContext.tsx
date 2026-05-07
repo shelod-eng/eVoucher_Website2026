@@ -40,9 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .split(';')
         .map((entry) => entry.split('=')[0]?.trim())
         .filter((name) => Boolean(name))
-        .filter(
-          (name) => name.includes('auth-token') || (name.startsWith('sb-') && name.includes('-auth-token'))
-        );
+        .filter((name) => name.startsWith('sb-') || name.includes('auth-token'));
       cookieNames.forEach((name) => {
         document.cookie = `${name}=; Max-Age=0; path=/; SameSite=Lax`;
       });
