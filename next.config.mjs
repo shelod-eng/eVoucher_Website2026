@@ -32,11 +32,6 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        source: '/',
-        destination: '/portal',
-        permanent: false,
-      },
-      {
         source: '/consumer',
         destination: '/customer/signup',
         permanent: false,
