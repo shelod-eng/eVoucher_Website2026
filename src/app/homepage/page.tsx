@@ -1,7 +1,7 @@
-import { redirect } from 'next/navigation';
+'use client';
 
-export const dynamic = 'force-dynamic';
+import HomepageLanding from './HomepageLanding';
 
-export default function HomepageReportRedirect() {
-  redirect('/');
+export default function HomepagePage() {
+  return <HomepageLanding />;
 }

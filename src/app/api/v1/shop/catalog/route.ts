@@ -88,6 +88,15 @@ type BrandAggregation = {
   representativeMerchant: MerchantRow | null;
 };
 
+const FALLBACK_BRANCH_TEMPLATES = [
+  { city: 'Johannesburg', province: 'Gauteng' },
+  { city: 'Pretoria', province: 'Gauteng' },
+  { city: 'Cape Town', province: 'Western Cape' },
+  { city: 'Durban', province: 'KwaZulu-Natal' },
+  { city: 'Gqeberha', province: 'Eastern Cape' },
+  { city: 'Polokwane', province: 'Limpopo' },
+];
+
 type CatalogProduct = {
   id: string;
   brandKey: string;
@@ -439,6 +448,40 @@ function getResolvedProvinceCount(brand: BrandAggregation | null | undefined) {
   return Math.max(brand.provinces.size, Number(brand.estimatedProvinceCount ?? 0));
 }
 
+function buildFallbackBranchLocations(brand: BrandAggregation) {
+  const fallbackCount = Math.min(
+    Math.max(Number(brand.estimatedLocationCount ?? 0), 0),
+    FALLBACK_BRANCH_TEMPLATES.length
+  );
+  if (fallbackCount <= 1) return [];
+
+  const existingKeys = new Set(
+    brand.locations.map(
+      (location) =>
+        `${String(location.branch_name ?? '').toLowerCase()}::${String(location.city ?? '').toLowerCase()}::${String(location.province ?? '').toLowerCase()}`
+    )
+  );
+
+  return FALLBACK_BRANCH_TEMPLATES.slice(0, fallbackCount)
+    .map((template, index) => {
+      const branchName = `${brand.displayName} ${template.city}`;
+      const dedupeKey = `${branchName.toLowerCase()}::${template.city.toLowerCase()}::${template.province.toLowerCase()}`;
+      if (existingKeys.has(dedupeKey)) return null;
+      return {
+        id: `fallback-${brand.brandKey}-${index + 1}`,
+        business_name: brand.displayName,
+        branch_name: branchName,
+        branch_code: null,
+        city: template.city,
+        province: template.province,
+        physical_address: `${template.city} regional branch`,
+        location_lat: null,
+        location_lng: null,
+      };
+    })
+    .filter(Boolean) as BrandLocation[];
+}
+
 function dedupeProducts(products: CatalogProduct[]) {
   const map = new Map<string, CatalogProduct>();
   products.forEach((product) => {
@@ -723,6 +766,14 @@ export async function GET(request: Request) {
 
     const brandSummaries = Array.from(brandMap.values())
       .map((brand) => {
+        const fallbackLocations =
+          brand.locations.length <= 1 && Number(brand.estimatedLocationCount ?? 0) > 1
+            ? buildFallbackBranchLocations(brand)
+            : [];
+        const displayLocations =
+          fallbackLocations.length > 0
+            ? [...brand.locations, ...fallbackLocations]
+            : brand.locations;
         const checkoutMerchant = checkoutRepresentativeByBrandKey.get(brand.brandKey) ?? null;
         const dbProducts = dedupedProductsByBrand.get(brand.brandKey) ?? [];
         const starterProducts =
@@ -733,7 +784,7 @@ export async function GET(request: Request) {
           !searchTerm ||
           withSearchMatch(brand.displayName, searchTerm) ||
           withSearchMatch(brand.category, searchTerm) ||
-          brand.locations.some(
+          displayLocations.some(
             (location) =>
               withSearchMatch(location.branch_name, searchTerm) ||
               withSearchMatch(location.city ?? '', searchTerm) ||
@@ -765,7 +816,7 @@ export async function GET(request: Request) {
           ),
           matchesSearch,
           provinceCount: getResolvedProvinceCount(brand),
-          locations: brand.locations,
+          locations: displayLocations,
         };
       })
       .filter((brand) => brand.productCount > 0)

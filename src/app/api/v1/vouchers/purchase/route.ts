@@ -417,60 +417,72 @@ export async function POST(request: Request) {
         .in('status', ['approved', 'active'])
         .maybeSingle();
 
-      if (selectedBranchError || !selectedBranch) {
+      if (!selectedBranchError && selectedBranch) {
+        const selectedBranchBrand =
+          normalizeBrandLabel(selectedBranch.parent_brand) ||
+          normalizeBrandLabel(selectedBranch.business_name);
+        const requestedBrand = normalizeBrandLabel(resolvedParentBrand || merchant.business_name);
+        const resolvedBrand = normalizeBrandLabel(resolvedParentBrand || merchant.business_name);
+
+        if (
+          selectedBranchBrand &&
+          requestedBrand &&
+          selectedBranchBrand !== requestedBrand &&
+          selectedBranchBrand !== resolvedBrand
+        ) {
+          return NextResponse.json(
+            {
+              error: 'Selected branch does not belong to the requested merchant network.',
+              code: 'branch_brand_mismatch',
+            },
+            { status: 409 }
+          );
+        }
+
+        if (
+          productRedemptionScope === 'specific_branch' &&
+          productValidBranchIds.length > 0 &&
+          !productValidBranchIds.includes(String(selectedBranch.id))
+        ) {
+          return NextResponse.json(
+            {
+              error: 'Selected branch is not allowed for this product.',
+              code: 'branch_not_allowed_for_product',
+            },
+            { status: 409 }
+          );
+        }
+
+        selectedBranchContext = {
+          id: String(selectedBranch.id),
+          business_name: String(selectedBranch.business_name ?? ''),
+          parent_brand: selectedBranch.parent_brand ?? null,
+          branch_name: selectedBranch.branch_name ?? null,
+          city: selectedBranch.city ?? null,
+          province: selectedBranch.province ?? null,
+        };
+
+        // Consumer branch choice should pin redemption to that chosen branch when it maps to a real branch row.
+        productRedemptionScope = 'specific_branch';
+        productValidBranchIds = [selectedBranchContext.id];
+      } else if (
+        String(body.selectedBranchId).startsWith('fallback-') &&
+        String(body.selectedBranchName ?? '').trim()
+      ) {
+        selectedBranchContext = {
+          id: String(body.selectedBranchId),
+          business_name: String(merchant.business_name ?? ''),
+          parent_brand: resolvedParentBrand,
+          branch_name: String(body.selectedBranchName ?? '').trim(),
+          city: String(body.selectedBranchCity ?? '').trim() || null,
+          province: String(body.selectedBranchProvince ?? '').trim() || null,
+        };
+      } else {
         return NextResponse.json(
           { error: 'Selected branch is not available.', code: 'branch_not_available' },
           { status: 404 }
         );
       }
-
-      const selectedBranchBrand =
-        normalizeBrandLabel(selectedBranch.parent_brand) ||
-        normalizeBrandLabel(selectedBranch.business_name);
-      const requestedBrand = normalizeBrandLabel(resolvedParentBrand || merchant.business_name);
-      const resolvedBrand = normalizeBrandLabel(resolvedParentBrand || merchant.business_name);
-
-      if (
-        selectedBranchBrand &&
-        requestedBrand &&
-        selectedBranchBrand !== requestedBrand &&
-        selectedBranchBrand !== resolvedBrand
-      ) {
-        return NextResponse.json(
-          {
-            error: 'Selected branch does not belong to the requested merchant network.',
-            code: 'branch_brand_mismatch',
-          },
-          { status: 409 }
-        );
-      }
-
-      if (
-        productRedemptionScope === 'specific_branch' &&
-        productValidBranchIds.length > 0 &&
-        !productValidBranchIds.includes(String(selectedBranch.id))
-      ) {
-        return NextResponse.json(
-          {
-            error: 'Selected branch is not allowed for this product.',
-            code: 'branch_not_allowed_for_product',
-          },
-          { status: 409 }
-        );
-      }
-
-      selectedBranchContext = {
-        id: String(selectedBranch.id),
-        business_name: String(selectedBranch.business_name ?? ''),
-        parent_brand: selectedBranch.parent_brand ?? null,
-        branch_name: selectedBranch.branch_name ?? null,
-        city: selectedBranch.city ?? null,
-        province: selectedBranch.province ?? null,
-      };
-
-      // Consumer branch choice should pin redemption to that chosen branch.
-      productRedemptionScope = 'specific_branch';
-      productValidBranchIds = [selectedBranchContext.id];
     }
 
     if (productRedemptionScope === 'specific_branch' && productValidBranchIds.length === 0) {
