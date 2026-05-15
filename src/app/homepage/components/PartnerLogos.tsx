@@ -17,12 +17,6 @@ const PartnerLogos = () => {
       category: 'Retail',
     },
     {
-      name: 'Super Precast',
-      logo: '/assets/images/merchants/super-precast.svg',
-      alt: 'Super Precast Concrete logo',
-      category: 'Construction',
-    },
-    {
       name: 'Shoprite',
       logo: '/assets/images/merchants/shoprite.png',
       alt: 'Shoprite supermarket logo',

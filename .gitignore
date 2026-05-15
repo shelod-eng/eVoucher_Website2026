@@ -46,3 +46,6 @@ postman/
 supabase/.temp/
 eVoucher.session.sql
 .tmp_iscream_ppt/
+
+.vercel
+.env*.local

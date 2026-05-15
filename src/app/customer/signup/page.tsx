@@ -41,6 +41,11 @@ export default function CustomerSignup() {
         full_name: formData.fullName,
         phone: formData.phone,
         role: 'customer',
+        acquisition_channel: 'web',
+        primary_access_channel: 'web',
+        consumer_segment: 'private_sector',
+        popia_consent: true,
+        popia_consent_version: 'May2026',
       });
       router.push('/customer/login');
     } catch (err: any) {

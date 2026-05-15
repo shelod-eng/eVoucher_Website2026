@@ -43,6 +43,11 @@ export default function RegistrationForm() {
         phone: formData.phone,
         pin: formData.pin,
         role: 'customer',
+        acquisition_channel: 'web',
+        primary_access_channel: 'ussd',
+        consumer_segment: 'community',
+        popia_consent: true,
+        popia_consent_version: 'May2026',
       });
       setSuccess(true);
       setTimeout(() => {

@@ -108,6 +108,11 @@ export default function CustomerRegistrationModal({
             phone: formData.phone,
             pin: formData.pin,
             role: 'customer',
+            acquisition_channel: 'web',
+            primary_access_channel: 'ussd',
+            consumer_segment: 'community',
+            popia_consent_at: new Date().toISOString(),
+            popia_consent_version: 'May2026',
           },
         },
       });
@@ -137,6 +142,20 @@ export default function CustomerRegistrationModal({
 
       console.log('Customer auth user created:', authData.user.id);
       console.log('Trigger automatically created user_profiles entry');
+
+      await supabase.from('user_profiles').upsert({
+        id: authData.user.id,
+        email: formData.email,
+        full_name: formData.fullName,
+        phone: formData.phone,
+        role: 'customer',
+        acquisition_channel: 'web',
+        primary_access_channel: 'ussd',
+        consumer_segment: 'community',
+        popia_consent_at: new Date().toISOString(),
+        popia_consent_version: 'May2026',
+        marketing_consent: false,
+      });
 
       // Generate referral code for display
       const referralCode = generateReferralCode();

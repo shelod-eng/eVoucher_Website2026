@@ -30,12 +30,21 @@ export default function CartPage() {
   const summary = getCartSummary(items);
   const itemCount = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
 
-  const handleRemove = (productId: string, merchantId: string) => {
-    setItems(removeCartItem(productId, user?.id, merchantId));
+  const handleRemove = (
+    productId: string,
+    merchantId: string,
+    selectedBranchId?: string | null
+  ) => {
+    setItems(removeCartItem(productId, user?.id, merchantId, selectedBranchId));
   };
 
-  const handleQuantityChange = (productId: string, merchantId: string, quantity: number) => {
-    setItems(updateCartQuantity(productId, quantity, user?.id, merchantId));
+  const handleQuantityChange = (
+    productId: string,
+    merchantId: string,
+    quantity: number,
+    selectedBranchId?: string | null
+  ) => {
+    setItems(updateCartQuantity(productId, quantity, user?.id, merchantId, selectedBranchId));
   };
 
   const handleCheckout = () => {
@@ -85,7 +94,7 @@ export default function CartPage() {
               <div className="space-y-4">
                 {items.map((item) => (
                   <div
-                    key={`${item.merchantId}:${item.productId}`}
+                    key={`${item.merchantId}:${item.productId}:${item.selectedBranchId ?? 'all-branches'}`}
                     className="bg-card rounded-2xl border border-border p-5"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -100,9 +109,20 @@ export default function CartPage() {
                           Face: R{item.faceValue.toFixed(2)} | You pay: R
                           {item.consumerPrice.toFixed(2)}
                         </p>
+                        {item.selectedBranchName && (
+                          <p className="text-xs text-primary mt-1">
+                            Branch: {item.selectedBranchName}
+                            {item.selectedBranchCity ? ` - ${item.selectedBranchCity}` : ''}
+                            {item.selectedBranchProvince
+                              ? `, ${item.selectedBranchProvince}`
+                              : ''}
+                          </p>
+                        )}
                       </div>
                       <button
-                        onClick={() => handleRemove(item.productId, item.merchantId)}
+                        onClick={() =>
+                          handleRemove(item.productId, item.merchantId, item.selectedBranchId)
+                        }
                         className="text-error hover:bg-error/10 rounded-lg p-2"
                       >
                         <Icon name="TrashIcon" size={16} variant="outline" />
@@ -113,7 +133,12 @@ export default function CartPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() =>
-                            handleQuantityChange(item.productId, item.merchantId, item.quantity - 1)
+                            handleQuantityChange(
+                              item.productId,
+                              item.merchantId,
+                              item.quantity - 1,
+                              item.selectedBranchId
+                            )
                           }
                           className="w-8 h-8 rounded-lg border border-border"
                         >
@@ -124,7 +149,12 @@ export default function CartPage() {
                         </span>
                         <button
                           onClick={() =>
-                            handleQuantityChange(item.productId, item.merchantId, item.quantity + 1)
+                            handleQuantityChange(
+                              item.productId,
+                              item.merchantId,
+                              item.quantity + 1,
+                              item.selectedBranchId
+                            )
                           }
                           className="w-8 h-8 rounded-lg border border-border"
                         >

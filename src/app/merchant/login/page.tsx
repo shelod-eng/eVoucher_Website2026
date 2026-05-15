@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
+import { createClient } from '@/lib/supabase/client';
 
 const DEMO_PASSWORD = 'demo123';
 const DEMO_MERCHANTS = [
@@ -80,7 +81,9 @@ export default function MerchantLogin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const { user, role, signIn, signOut } = useAuth();
+  const supabase = createClient();
   useEffect(() => {
     if (typeof user === 'undefined') {
       setError('Authentication context failed to load. Please refresh or contact support.');
@@ -194,6 +197,34 @@ export default function MerchantLogin() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const normalizedEmail = String(email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!normalizedEmail) {
+      setError('Enter the registered merchant email address first, then request a reset link.');
+      return;
+    }
+
+    setResetLoading(true);
+    setError('');
+    try {
+      const redirectTo =
+        typeof window === 'undefined'
+          ? undefined
+          : `${window.location.origin}/merchant/reset-password`;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo,
+      });
+      if (resetError) throw resetError;
+      setError('Password reset link sent. Check the registered merchant email address.');
+    } catch (forgotPasswordError: any) {
+      setError(forgotPasswordError?.message || 'Failed to send password reset link.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.18),_transparent_45%),radial-gradient(circle_at_bottom_right,_rgba(20,184,166,0.16),_transparent_50%),#f4fbfa]">
       <Header />
@@ -289,6 +320,15 @@ export default function MerchantLogin() {
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
+
+            <button
+              type="button"
+              onClick={() => void handleForgotPassword()}
+              disabled={resetLoading}
+              className="mt-4 w-full rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3 text-sm font-headline font-semibold text-secondary transition hover:bg-secondary/10 disabled:opacity-60"
+            >
+              {resetLoading ? 'Sending reset link...' : 'Forgot Password'}
+            </button>
 
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-center text-sm text-muted-foreground font-body">

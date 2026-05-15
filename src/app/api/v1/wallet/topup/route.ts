@@ -14,6 +14,16 @@ const SUPPORTED_PAYMENT_METHODS = new Set([
   'wallet',
 ]);
 
+function isMissingSchemaField(error: any, fieldName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const field = fieldName.toLowerCase();
+  return (
+    message.includes(`column "${field}" does not exist`) ||
+    message.includes(`could not find the '${field}' column`) ||
+    message.includes('schema cache')
+  );
+}
+
 function validate(body: any): string | null {
   const amount = Number(body?.amount ?? 0);
   if (!Number.isFinite(amount) || amount <= 0) return 'Top-up amount must be greater than zero.';
@@ -50,6 +60,7 @@ export async function POST(request: Request) {
 
     const amount = Number(body.amount);
     const paymentMethod = String(body.paymentMethod);
+    const accessChannel = String(body.accessChannel ?? 'web').trim().toLowerCase();
     const transactionReference = generateTransactionReference();
     const paymentProvider = createPaymentProvider('production');
     const payment = await paymentProvider.createPayment({
@@ -74,16 +85,28 @@ export async function POST(request: Request) {
             .padStart(4, '0')
         : '0000';
 
-    const txRes = await admin.from('payment_transactions').insert({
+    const txPayload = {
       customer_id: user.id,
       merchant_id: null,
       amount,
+      payment_method: paymentMethod,
+      access_channel: accessChannel,
       card_last_four: cardLastFour,
       card_brand: cardBrand,
       payment_status: paymentStatus,
       voucher_code: null,
       transaction_reference: transactionReference,
-    });
+    };
+    let txRes = await admin.from('payment_transactions').insert(txPayload);
+    if (
+      txRes.error &&
+      (isMissingSchemaField(txRes.error, 'payment_method') ||
+        isMissingSchemaField(txRes.error, 'access_channel'))
+    ) {
+      const { payment_method: _paymentMethod, access_channel: _accessChannel, ...legacyPayload } =
+        txPayload as any;
+      txRes = await admin.from('payment_transactions').insert(legacyPayload);
+    }
     if (txRes.error) throw txRes.error;
 
     if (paymentStatus === 'completed') {

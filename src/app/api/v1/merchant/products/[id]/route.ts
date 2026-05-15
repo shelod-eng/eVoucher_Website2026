@@ -139,24 +139,28 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         { status: 409 }
       );
     }
-    const complianceSnapshot = await getMerchantComplianceSnapshot(
-      admin,
-      merchant.id,
-      merchant.status
-    );
-    if (!complianceSnapshot.canIssueVouchers) {
-      return NextResponse.json(
-        {
-          error:
-            'Compliance verification is incomplete. Upload and verify all required compliance documents before updating products.',
-          code: 'compliance_not_verified',
-          overallStatus: complianceSnapshot.overallStatus,
-          missingDocuments: complianceSnapshot.missingDocuments,
-        },
-        { status: 409 }
-      );
-    }
     const body = (await request.json()) as UpdateMerchantProductRequest;
+    const isDeactivationRequest = body.isActive === false;
+
+    if (!isDeactivationRequest) {
+      const complianceSnapshot = await getMerchantComplianceSnapshot(
+        admin,
+        merchant.id,
+        merchant.status
+      );
+      if (!complianceSnapshot.canIssueVouchers) {
+        return NextResponse.json(
+          {
+            error:
+              'Compliance verification is incomplete. Upload and verify all required compliance documents before updating products.',
+            code: 'compliance_not_verified',
+            overallStatus: complianceSnapshot.overallStatus,
+            missingDocuments: complianceSnapshot.missingDocuments,
+          },
+          { status: 409 }
+        );
+      }
+    }
 
     const { data: existing, error: existingError } = await admin
       .from('merchant_products')
@@ -511,39 +515,34 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
         { status: 409 }
       );
     }
-    const complianceSnapshot = await getMerchantComplianceSnapshot(
-      admin,
-      merchant.id,
-      merchant.status
-    );
-    if (!complianceSnapshot.canIssueVouchers) {
-      return NextResponse.json(
-        {
-          error:
-            'Compliance verification is incomplete. Upload and verify all required compliance documents before managing products.',
-          code: 'compliance_not_verified',
-          overallStatus: complianceSnapshot.overallStatus,
-          missingDocuments: complianceSnapshot.missingDocuments,
-        },
-        { status: 409 }
-      );
+    const { data: existingProduct, error: existingError } = await admin
+      .from('merchant_products')
+      .select('id')
+      .eq('id', params.id)
+      .eq('merchant_id', merchant.id)
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+    if (!existingProduct) {
+      return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
     }
 
     const { error } = await admin
       .from('merchant_products')
-      .update({ is_active: false })
+      .delete()
       .eq('id', params.id)
       .eq('merchant_id', merchant.id);
 
     if (error) throw error;
+
     await safeAuditProductEvent(admin, {
       actorId: user.id,
       merchantId: merchant.id,
       productId: String(params.id),
-      action: 'merchant_product_deactivated',
+      action: 'merchant_product_deleted',
     });
 
-    return NextResponse.json({ message: 'Product deactivated.' });
+    return NextResponse.json({ message: 'Product deleted.' });
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Failed to deactivate merchant product.' },

@@ -144,13 +144,6 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
     aliases: ['super store', 'superstore', 'super-store'],
   },
   {
-    brandKey: 'superprecast',
-    displayName: 'Super Precast',
-    category: 'Construction',
-    assetPath: '/assets/images/merchants/super-precast.svg',
-    aliases: ['super precast', 'superprecast', 'super precast concrete', 'super-precast'],
-  },
-  {
     brandKey: 'siliconvalley',
     displayName: 'Silicon Valley eVoucher',
     category: 'Groceries',

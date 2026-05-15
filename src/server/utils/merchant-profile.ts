@@ -1,3 +1,5 @@
+import { isForcedAutoApprovalMode } from '@/server/utils/merchant-status';
+
 type AuthUser = {
   id: string;
   email?: string | null;
@@ -26,30 +28,6 @@ function isUserIdTypeMismatch(error: any) {
 function isKycApprovalGate(error: any) {
   const message = String(error?.message ?? '').toLowerCase();
   return message.includes('cannot be moved to approved without approved kyc review');
-}
-
-function isForcedAutoApprovalMode() {
-  // Keep CI/tests deterministic: default OFF in test unless explicitly enabled.
-  if (process.env.NODE_ENV === 'test') {
-    const testRaw = String(
-      process.env.FORCE_MERCHANT_AUTO_APPROVAL ??
-        process.env.NEXT_PUBLIC_FORCE_MERCHANT_AUTO_APPROVAL ??
-        ''
-    )
-      .trim()
-      .toLowerCase();
-    return ['true', '1', 'yes', 'on'].includes(testRaw);
-  }
-
-  const raw = String(
-    process.env.FORCE_MERCHANT_AUTO_APPROVAL ??
-      process.env.NEXT_PUBLIC_FORCE_MERCHANT_AUTO_APPROVAL ??
-      ''
-  )
-    .trim()
-    .toLowerCase();
-  if (!raw) return true;
-  return ['true', '1', 'yes', 'on'].includes(raw);
 }
 
 async function autoApprovePendingMerchantsForUser(admin: any, user: AuthUser) {

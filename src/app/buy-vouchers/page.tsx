@@ -86,6 +86,11 @@ function BuyVouchersContent() {
   const merchantIdFromQuery = searchParams.get('merchantId');
   const brandKeyFromQuery = searchParams.get('brandKey');
   const productIdFromQuery = searchParams.get('productId');
+  const selectedBranchIdFromQuery = searchParams.get('selectedBranchId');
+  const selectedBranchNameFromQuery = searchParams.get('selectedBranchName');
+  const selectedBranchCityFromQuery = searchParams.get('selectedBranchCity');
+  const selectedBranchProvinceFromQuery = searchParams.get('selectedBranchProvince');
+  const branchSelectionModeFromQuery = searchParams.get('branchSelectionMode');
   const walletTopupMode = searchParams.get('walletTopup') === '1';
   const cartCheckout = searchParams.get('cartCheckout') === '1';
   const merchantLocked = Boolean(merchantIdFromQuery);
@@ -374,6 +379,11 @@ function BuyVouchersContent() {
         merchantId: string;
         productId?: string;
         faceValue?: number;
+        selectedBranchId?: string;
+        selectedBranchName?: string;
+        selectedBranchCity?: string;
+        selectedBranchProvince?: string;
+        branchSelectionMode?: 'nearest' | 'manual';
       }) => {
         const response = await fetch('/api/v1/vouchers/purchase', {
           method: 'POST',
@@ -471,6 +481,11 @@ function BuyVouchersContent() {
                 ? item.productId
                 : undefined,
             faceValue: Number(item.faceValue),
+            selectedBranchId: item.selectedBranchId,
+            selectedBranchName: item.selectedBranchName,
+            selectedBranchCity: item.selectedBranchCity,
+            selectedBranchProvince: item.selectedBranchProvince,
+            branchSelectionMode: item.branchSelectionMode,
           });
           results.push(result);
         }
@@ -505,6 +520,14 @@ function BuyVouchersContent() {
               ? selectedProductId
               : undefined,
           faceValue: voucherAmount,
+          selectedBranchId: selectedBranchIdFromQuery ?? undefined,
+          selectedBranchName: selectedBranchNameFromQuery ?? undefined,
+          selectedBranchCity: selectedBranchCityFromQuery ?? undefined,
+          selectedBranchProvince: selectedBranchProvinceFromQuery ?? undefined,
+          branchSelectionMode:
+            branchSelectionModeFromQuery === 'manual' || branchSelectionModeFromQuery === 'nearest'
+              ? branchSelectionModeFromQuery
+              : undefined,
         });
 
         setPurchaseStatus(data.status);
@@ -792,7 +815,7 @@ function BuyVouchersContent() {
                   ) : (
                     checkoutCartItems.map((item) => (
                       <div
-                        key={`${item.merchantId}:${item.productId}`}
+                        key={`${item.merchantId}:${item.productId}:${item.selectedBranchId ?? 'all-branches'}`}
                         className="rounded-xl border border-border p-3 bg-background"
                       >
                         <p className="text-xs uppercase tracking-wide text-primary font-headline font-semibold">
@@ -801,6 +824,13 @@ function BuyVouchersContent() {
                         <p className="font-headline font-semibold text-foreground">
                           {item.productName}
                         </p>
+                        {item.selectedBranchName && (
+                          <p className="text-xs text-primary">
+                            Branch: {item.selectedBranchName}
+                            {item.selectedBranchCity ? ` - ${item.selectedBranchCity}` : ''}
+                            {item.selectedBranchProvince ? `, ${item.selectedBranchProvince}` : ''}
+                          </p>
+                        )}
                         <p className="text-xs text-muted-foreground">
                           Qty {item.quantity} x R{Number(item.consumerPrice).toFixed(2)} = R
                           {(Number(item.consumerPrice) * Number(item.quantity)).toFixed(2)}
@@ -835,6 +865,17 @@ function BuyVouchersContent() {
                         {brandKeyFromQuery && (
                           <p className="text-xs text-muted-foreground font-body mt-1">
                             Source: Shop brand {brandKeyFromQuery}
+                          </p>
+                        )}
+                        {selectedBranchNameFromQuery && (
+                          <p className="text-xs text-primary font-body mt-1">
+                            Branch: {selectedBranchNameFromQuery}
+                            {selectedBranchCityFromQuery
+                              ? ` - ${selectedBranchCityFromQuery}`
+                              : ''}
+                            {selectedBranchProvinceFromQuery
+                              ? `, ${selectedBranchProvinceFromQuery}`
+                              : ''}
                           </p>
                         )}
                       </div>

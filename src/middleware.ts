@@ -69,9 +69,11 @@ export async function middleware(request: NextRequest) {
 
   const portalArea = path.startsWith('/portal');
   const portalLogin = path.startsWith('/portal/login');
+  const portalResetPassword = path.startsWith('/portal/reset-password');
+  const portalPublicArea = portalLogin || portalResetPassword;
 
   // Redirect to login if accessing protected routes without auth
-  if (!user && (customerArea || merchantProtectedArea || (portalArea && !portalLogin))) {
+  if (!user && (customerArea || merchantProtectedArea || (portalArea && !portalPublicArea))) {
     const url = request.nextUrl.clone();
     if (portalArea) {
       url.pathname = '/portal/login';

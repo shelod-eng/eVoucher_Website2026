@@ -28,6 +28,16 @@ function isMissingRelation(error: any, relationName: string) {
   );
 }
 
+function isMissingSchemaField(error: any, fieldName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const field = fieldName.toLowerCase();
+  return (
+    message.includes(`column "${field}" does not exist`) ||
+    message.includes(`could not find the '${field}' column`) ||
+    message.includes('schema cache')
+  );
+}
+
 function validate(body: PurchaseVoucherRequest): string | null {
   if (!body.merchantId?.trim()) return 'Merchant is required.';
   if (body.faceValue !== undefined && (!Number.isFinite(body.faceValue) || body.faceValue <= 0)) {
@@ -64,6 +74,12 @@ function isMissingAdminEnvError(error: any) {
 
 function buildQrCodeUrl(voucherCode: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(voucherCode)}`;
+}
+
+function normalizeBrandLabel(value: unknown) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 async function sendPurchaseReceiptEmail(payload: {
@@ -269,6 +285,9 @@ export async function POST(request: Request) {
     const paymentProvider = createPaymentProvider('production');
     const voucherService = new DefaultVoucherService();
     const transactionReference = generateTransactionReference();
+    const accessChannel = String((body as any).accessChannel ?? 'web')
+      .trim()
+      .toLowerCase();
 
     const { data: merchant, error: merchantError } = await admin
       .from('merchants')
@@ -291,6 +310,16 @@ export async function POST(request: Request) {
       'all_branches';
     let productValidProvinces: string[] = [];
     let productValidBranchIds: string[] = [];
+    let selectedBranchContext:
+      | {
+          id: string;
+          business_name: string;
+          parent_brand: string | null;
+          branch_name: string | null;
+          city: string | null;
+          province: string | null;
+        }
+      | null = null;
     let pricing: ReturnType<typeof calculateDiscountPricing>;
 
     if (body.productId) {
@@ -380,6 +409,70 @@ export async function POST(request: Request) {
       mappedBrandDisplayName ||
       merchant.business_name;
 
+    if (body.selectedBranchId) {
+      const { data: selectedBranch, error: selectedBranchError } = await admin
+        .from('merchants')
+        .select('id,business_name,parent_brand,branch_name,city,province,status')
+        .eq('id', body.selectedBranchId)
+        .in('status', ['approved', 'active'])
+        .maybeSingle();
+
+      if (selectedBranchError || !selectedBranch) {
+        return NextResponse.json(
+          { error: 'Selected branch is not available.', code: 'branch_not_available' },
+          { status: 404 }
+        );
+      }
+
+      const selectedBranchBrand =
+        normalizeBrandLabel(selectedBranch.parent_brand) ||
+        normalizeBrandLabel(selectedBranch.business_name);
+      const requestedBrand = normalizeBrandLabel(resolvedParentBrand || merchant.business_name);
+      const resolvedBrand = normalizeBrandLabel(resolvedParentBrand || merchant.business_name);
+
+      if (
+        selectedBranchBrand &&
+        requestedBrand &&
+        selectedBranchBrand !== requestedBrand &&
+        selectedBranchBrand !== resolvedBrand
+      ) {
+        return NextResponse.json(
+          {
+            error: 'Selected branch does not belong to the requested merchant network.',
+            code: 'branch_brand_mismatch',
+          },
+          { status: 409 }
+        );
+      }
+
+      if (
+        productRedemptionScope === 'specific_branch' &&
+        productValidBranchIds.length > 0 &&
+        !productValidBranchIds.includes(String(selectedBranch.id))
+      ) {
+        return NextResponse.json(
+          {
+            error: 'Selected branch is not allowed for this product.',
+            code: 'branch_not_allowed_for_product',
+          },
+          { status: 409 }
+        );
+      }
+
+      selectedBranchContext = {
+        id: String(selectedBranch.id),
+        business_name: String(selectedBranch.business_name ?? ''),
+        parent_brand: selectedBranch.parent_brand ?? null,
+        branch_name: selectedBranch.branch_name ?? null,
+        city: selectedBranch.city ?? null,
+        province: selectedBranch.province ?? null,
+      };
+
+      // Consumer branch choice should pin redemption to that chosen branch.
+      productRedemptionScope = 'specific_branch';
+      productValidBranchIds = [selectedBranchContext.id];
+    }
+
     if (productRedemptionScope === 'specific_branch' && productValidBranchIds.length === 0) {
       productValidBranchIds = [String(merchant.id)];
     }
@@ -419,11 +512,13 @@ export async function POST(request: Request) {
             .padStart(4, '0')
         : '0000';
 
-    const { error: transactionError } = await admin.from('payment_transactions').insert({
+    const transactionInsertPayload = {
       customer_id: user.id,
       merchant_id: merchant.id,
       product_id: productId,
       amount: pricing.consumerPrice,
+      payment_method: body.paymentMethod,
+      access_channel: accessChannel,
       face_value: pricing.faceValue,
       total_discount_pct: pricing.totalDiscountPct,
       consumer_benefit_pct: pricing.consumerBenefitPct,
@@ -439,7 +534,22 @@ export async function POST(request: Request) {
       payment_status: paymentStatus,
       voucher_code: voucherCode,
       transaction_reference: transactionReference,
-    });
+    };
+
+    let { error: transactionError } = await admin
+      .from('payment_transactions')
+      .insert(transactionInsertPayload);
+
+    if (
+      transactionError &&
+      (isMissingSchemaField(transactionError, 'payment_method') ||
+        isMissingSchemaField(transactionError, 'access_channel'))
+    ) {
+      const { payment_method: _paymentMethod, access_channel: _accessChannel, ...legacyPayload } =
+        transactionInsertPayload as any;
+      const legacyInsert = await admin.from('payment_transactions').insert(legacyPayload);
+      transactionError = legacyInsert.error;
+    }
 
     if (transactionError) throw transactionError;
 
@@ -514,12 +624,22 @@ export async function POST(request: Request) {
         paymentStatus === 'completed' ? 'voucher_purchase_completed' : 'voucher_purchase_pending',
       metadata: {
         merchantId: merchant.id,
+        selectedBranchId: selectedBranchContext?.id ?? null,
+        selectedBranchName:
+          selectedBranchContext?.branch_name ??
+          selectedBranchContext?.business_name ??
+          body.selectedBranchName ??
+          null,
+        selectedBranchCity: selectedBranchContext?.city ?? body.selectedBranchCity ?? null,
+        selectedBranchProvince:
+          selectedBranchContext?.province ?? body.selectedBranchProvince ?? null,
         faceValue: pricing.faceValue,
         consumerPrice: pricing.consumerPrice,
         totalDiscountPct: pricing.totalDiscountPct,
         consumerBenefitPct: pricing.consumerBenefitPct,
         evoucherBenefitPct: pricing.evoucherBenefitPct,
         paymentMethod: body.paymentMethod,
+        accessChannel,
         voucherCode,
         issuedVouchers,
       },

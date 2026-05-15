@@ -33,7 +33,7 @@ const nextConfig = {
     return [
       {
         source: '/',
-        destination: '/homepage',
+        destination: '/portal',
         permanent: false,
       },
       {

@@ -189,10 +189,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, metadata?: any) => {
     console.log('AuthContext: Attempting signUp...');
+    const normalizedMetadata = {
+      ...metadata,
+      role: metadata?.role ?? 'customer',
+      acquisition_channel: metadata?.acquisition_channel ?? 'web',
+      primary_access_channel:
+        metadata?.primary_access_channel ?? metadata?.acquisition_channel ?? 'web',
+      consumer_segment: metadata?.consumer_segment ?? 'unknown',
+      popia_consent_at:
+        metadata?.popia_consent_at ??
+        (metadata?.popia_consent === false ? null : new Date().toISOString()),
+      marketing_consent: Boolean(metadata?.marketing_consent ?? false),
+    };
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: metadata },
+      options: { data: normalizedMetadata },
     });
 
     if (error) {
@@ -201,6 +213,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     console.log('AuthContext: signUp successful:', data.user?.id);
+    if (data.user?.id) {
+      try {
+        await supabase.from('user_profiles').upsert({
+          id: data.user.id,
+          email,
+          full_name: String(
+            normalizedMetadata.full_name ??
+              normalizedMetadata.name ??
+              data.user.user_metadata?.full_name ??
+              email.split('@')[0]
+          ),
+          phone: String(normalizedMetadata.phone ?? ''),
+          role: normalizedMetadata.role,
+          acquisition_channel: normalizedMetadata.acquisition_channel,
+          primary_access_channel: normalizedMetadata.primary_access_channel,
+          consumer_segment: normalizedMetadata.consumer_segment,
+          popia_consent_at: normalizedMetadata.popia_consent_at,
+          popia_consent_version: normalizedMetadata.popia_consent_version ?? 'May2026',
+          marketing_consent: normalizedMetadata.marketing_consent,
+        });
+      } catch (profileSyncError) {
+        console.warn('AuthContext: profile sync warning:', profileSyncError);
+      }
+    }
     const resolvedRole = await resolveUserRole(data.user ?? null);
     setRole(resolvedRole);
     if (error) throw error;

@@ -27,7 +27,7 @@ function AppImage({
   height,
   className = '',
   priority = false,
-  quality = 75,
+  quality = 90,
   placeholder = 'empty',
   blurDataURL,
   fill = false,

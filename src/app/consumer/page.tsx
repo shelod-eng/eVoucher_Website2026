@@ -43,6 +43,11 @@ export default function ConsumerPage() {
         phone: formData.phone,
         id_number: formData.idNumber,
         role: 'customer',
+        acquisition_channel: 'web',
+        primary_access_channel: 'web',
+        consumer_segment: 'private_sector',
+        popia_consent: true,
+        popia_consent_version: 'May2026',
       });
       setSuccess(true);
       setTimeout(() => {

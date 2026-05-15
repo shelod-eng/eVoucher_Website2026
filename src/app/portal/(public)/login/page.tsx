@@ -4,18 +4,21 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 export default function PortalLoginPage() {
   const { user, role, signIn } = useAuth();
   const router = useRouter();
+  const supabase = createClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
     if (user && role === 'admin') {
-      router.replace('/portal');
+      router.replace('/portal/dashboard');
     }
   }, [user, role, router]);
 
@@ -30,11 +33,39 @@ export default function PortalLoginPage() {
         setStatus('This account is not authorized for the business portal.');
         return;
       }
-      router.replace('/portal');
+      router.replace('/portal/dashboard');
     } catch (error: any) {
       setStatus(error?.message || 'Login failed. Check your credentials.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    const normalizedEmail = String(email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!normalizedEmail) {
+      setStatus('Enter your admin email address first, then request a reset link.');
+      return;
+    }
+
+    setResetLoading(true);
+    setStatus(null);
+    try {
+      const redirectTo =
+        typeof window === 'undefined'
+          ? undefined
+          : `${window.location.origin}/portal/reset-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo,
+      });
+      if (error) throw error;
+      setStatus('Password reset link sent. Check your email and open the recovery link.');
+    } catch (error: any) {
+      setStatus(error?.message || 'Failed to send password reset link.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -88,7 +119,23 @@ export default function PortalLoginPage() {
           </button>
         </form>
 
+        <button
+          type="button"
+          onClick={() => void handleForgotPassword()}
+          disabled={resetLoading}
+          className="mt-4 w-full rounded-lg border border-sky-400/25 bg-[#102647] px-4 py-3 text-sm font-semibold text-sky-100 transition hover:border-sky-300/40 hover:text-white disabled:opacity-60"
+        >
+          {resetLoading ? 'Sending reset link…' : 'Forgot Password'}
+        </button>
+
         <div className="mt-6 text-xs text-slate-400">
+          Need the admin landing page?{' '}
+          <Link href="/portal" className="text-sky-300 hover:text-sky-200">
+            Open portal entry
+          </Link>
+        </div>
+
+        <div className="mt-3 text-xs text-slate-400">
           Need a merchant login?{' '}
           <Link href="/merchant/login" className="text-emerald-300 hover:text-emerald-200">
             Go to merchant portal

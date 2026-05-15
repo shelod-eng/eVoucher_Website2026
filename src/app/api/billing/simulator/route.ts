@@ -20,6 +20,16 @@ function safeNumber(value: unknown, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function isMissingSchemaField(error: any, fieldName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const field = fieldName.toLowerCase();
+  return (
+    message.includes(`column "${field}" does not exist`) ||
+    message.includes(`could not find the '${field}' column`) ||
+    message.includes('schema cache')
+  );
+}
+
 function portalHeaders(request: Request, role: string | null) {
   const headers = new Headers();
   const userHeader = request.headers.get('x-portal-user');
@@ -135,6 +145,7 @@ async function simulatePurchase(
   const totalDiscountPct = safeNumber(body.totalDiscountPct, DEFAULT_TOTAL_DISCOUNT_PCT);
   const pricing = calculateDiscountPricing(faceValue, totalDiscountPct);
   const paymentMethod = String(body.paymentMethod ?? 'eft').trim().toLowerCase();
+  const accessChannel = String(body.accessChannel ?? 'web').trim().toLowerCase();
   const transactionReference =
     String(body.transactionReference ?? '').trim() || generateTransactionReference('SIM');
 
@@ -149,11 +160,13 @@ async function simulatePurchase(
   const voucherCode = paymentStatus === 'completed' ? generateSecureVoucherCode('SIM') : null;
   const now = new Date().toISOString();
 
-  const { error: insertError } = await admin.from('payment_transactions').insert({
+  const txPayload = {
     customer_id: customerId,
     merchant_id: merchant.id,
     product_id: null,
     amount: pricing.consumerPrice,
+    payment_method: paymentMethod,
+    access_channel: accessChannel,
     face_value: pricing.faceValue,
     total_discount_pct: pricing.totalDiscountPct,
     consumer_benefit_pct: pricing.consumerBenefitPct,
@@ -169,7 +182,19 @@ async function simulatePurchase(
     payment_status: paymentStatus,
     voucher_code: voucherCode,
     transaction_reference: transactionReference,
-  });
+  };
+
+  let { error: insertError } = await admin.from('payment_transactions').insert(txPayload);
+  if (
+    insertError &&
+    (isMissingSchemaField(insertError, 'payment_method') ||
+      isMissingSchemaField(insertError, 'access_channel'))
+  ) {
+    const { payment_method: _paymentMethod, access_channel: _accessChannel, ...legacyPayload } =
+      txPayload as any;
+    const legacyInsert = await admin.from('payment_transactions').insert(legacyPayload);
+    insertError = legacyInsert.error;
+  }
   if (insertError) throw insertError;
 
   let purchaseArtifacts: Awaited<ReturnType<typeof ensureCompletedPurchaseArtifacts>> | null = null;
@@ -195,6 +220,7 @@ async function simulatePurchase(
       metadata: {
         source: 'billing_simulator_purchase',
         paymentMethod,
+        accessChannel,
       },
     });
   }

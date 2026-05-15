@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_R9G26nPONSdC8WbvyZCMm18eb08c",
+  "orgId": "team_HUiTPYqCm3vwu73SQmDb6mL3",
+  "projectName": "e-voucher-website2026",
+  "settings": {
+    "createdAt": 1771921826641,
+    "framework": "nextjs",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": "next build",
+    "outputDirectory": ".next-local",
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}

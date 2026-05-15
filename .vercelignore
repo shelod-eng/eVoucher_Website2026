@@ -1,0 +1,16 @@
+/node_modules
+/.next
+/.next-local
+/.tmp_iscream_ppt
+/.vercel.backup-20260513
+/billing-engine-portal
+/docs
+/postman
+/tests
+/supabase
+/.github
+/.vscode
+*.log
+tsconfig.tsbuildinfo
+.vercel.preview.env
+.vercel.production.env

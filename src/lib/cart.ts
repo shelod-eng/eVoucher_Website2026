@@ -56,7 +56,8 @@ export function addCartItem(item: CartItem, scopeKey?: string | null) {
   const existing = items.find(
     (cartItem) =>
       String(cartItem.productId) === String(item.productId) &&
-      String(cartItem.merchantId) === String(item.merchantId)
+      String(cartItem.merchantId) === String(item.merchantId) &&
+      String(cartItem.selectedBranchId ?? '') === String(item.selectedBranchId ?? '')
   );
   if (existing) {
     existing.quantity += item.quantity;
@@ -70,12 +71,14 @@ export function addCartItem(item: CartItem, scopeKey?: string | null) {
 export function removeCartItem(
   productId: string,
   scopeKey?: string | null,
-  merchantId?: string | null
+  merchantId?: string | null,
+  selectedBranchId?: string | null
 ) {
   const items = getCartItems(scopeKey).filter((item) => {
     if (item.productId !== productId) return true;
     if (!merchantId) return false;
-    return String(item.merchantId) !== String(merchantId);
+    if (String(item.merchantId) !== String(merchantId)) return true;
+    return String(item.selectedBranchId ?? '') !== String(selectedBranchId ?? '');
   });
   saveCartItems(items, scopeKey);
   return items;
@@ -85,10 +88,13 @@ export function updateCartQuantity(
   productId: string,
   quantity: number,
   scopeKey?: string | null,
-  merchantId?: string | null
+  merchantId?: string | null,
+  selectedBranchId?: string | null
 ) {
   const items = getCartItems(scopeKey).map((item) =>
-    item.productId === productId && (!merchantId || String(item.merchantId) === String(merchantId))
+    item.productId === productId &&
+    (!merchantId || String(item.merchantId) === String(merchantId)) &&
+    String(item.selectedBranchId ?? '') === String(selectedBranchId ?? '')
       ? {
           ...item,
           quantity: Math.max(1, quantity),

@@ -8,6 +8,7 @@ import {
   DEFAULT_TOTAL_DISCOUNT_PCT,
   normalizeTotalDiscountPct,
 } from '@/lib/pricing';
+import { promotePendingPrivateMerchants } from '@/server/utils/merchant-status';
 
 function resolveDataClient(supabase: any) {
   try {
@@ -69,6 +70,7 @@ export async function GET(request: Request) {
     try {
       const admin = createAdminClient();
       await ensureDemoMerchantsSeeded(admin);
+      await promotePendingPrivateMerchants(admin);
     } catch {
       // Continue without demo seeding when admin env is not available.
     }

@@ -20,6 +20,7 @@ import {
 } from '@/lib/starter-products';
 import { ensureDemoMerchantsSeeded } from '@/server/utils/demo-merchant-seed';
 import { isLikelyServiceRoleKey } from '@/lib/supabase/admin';
+import { promotePendingPrivateMerchants } from '@/server/utils/merchant-status';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -129,10 +130,7 @@ const DEMO_BRAND_KEYS = new Set<BrandKey>([
   'game',
   'woolworths',
   'mrprice',
-  'superprecast',
 ]);
-
-const SUPERPRECAST_MERCHANT_ID = '463acd04-aa4f-46d4-a12c-bd2948de4bd0';
 
 function resolveDataClient(supabase: any) {
   try {
@@ -497,6 +495,7 @@ export async function GET(request: Request) {
     try {
       const admin = createAdminClient();
       await ensureDemoMerchantsSeeded(admin);
+      await promotePendingPrivateMerchants(admin);
     } catch {
       // Ignore seeding failures when admin env is not configured; catalog still falls back safely.
     }
@@ -849,24 +848,6 @@ export async function GET(request: Request) {
         }))
       : undefined;
 
-    let superprecastVisible = false;
-    let superprecastDbProductCount: number | null = null;
-    if (debugEnabled) {
-      superprecastVisible = merchantById.has(SUPERPRECAST_MERCHANT_ID);
-      try {
-        const { count, error } = await dataClient
-          .from('merchant_products')
-          .select('id', { count: 'exact', head: true })
-          .eq('merchant_id', SUPERPRECAST_MERCHANT_ID)
-          .eq('is_active', true);
-        if (!error) {
-          superprecastDbProductCount = typeof count === 'number' ? count : 0;
-        }
-      } catch {
-        // ignore
-      }
-    }
-
     return NextResponse.json(
       {
         brands: brandSummaries,
@@ -887,8 +868,6 @@ export async function GET(request: Request) {
               productRowCount,
               selectedBrandKey: defaultBrandKey,
               selectedDbProductCount,
-              superprecastVisible,
-              superprecastDbProductCount,
               usedStarterFallback,
               merchantSample: debugMerchantSample,
             }
