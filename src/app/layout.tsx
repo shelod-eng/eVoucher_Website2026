@@ -1,5 +1,6 @@
 import React from 'react';
 import { AuthProvider } from '@/contexts/AuthContext';
+import WebsiteChatbotWidget from '@/components/common/WebsiteChatbotWidget';
 import '../styles/index.css';
 
 export const viewport = {
@@ -24,7 +25,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <WebsiteChatbotWidget />
+        </AuthProvider>
       </body>
     </html>
   );

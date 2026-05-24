@@ -206,7 +206,7 @@ export default function SupportPage() {
                       Suggested launch line:
                     </p>
                     <p className="mt-2 font-headline text-xl font-semibold">
-                      “Hi eVoucher, I need help with voucher purchase or redemption.”
+                      "Hi eVoucher, I need help with voucher purchase or redemption."
                     </p>
                   </div>
 

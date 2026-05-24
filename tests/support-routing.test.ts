@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildChatbotReply,
+  buildEmailRoutingPreview,
   buildSupportTicketDecision,
+  buildWhatsappLaunch,
   classifySupportCategory,
   classifySupportPriority,
 } from '@/server/services/support/support-routing';
@@ -45,5 +47,27 @@ describe('support routing', () => {
     expect(reply.intent).toBe('billing_support');
     expect(reply.escalationRecommended).toBe(true);
     expect(reply.suggestedChannel).toBe('jira');
+  });
+
+  it('builds a WhatsApp launch payload for website handoff', () => {
+    const launch = buildWhatsappLaunch('How do I use WhatsApp for support?');
+
+    expect(launch.phoneNumber).toBeTruthy();
+    expect(launch.launchUrl).toContain('https://wa.me/');
+    expect(launch.parityJourneys.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('builds email routing preview with category alias and SLA', () => {
+    const routing = buildEmailRoutingPreview({
+      name: 'Lebo',
+      email: 'lebo@evoucher.co.za',
+      subject: 'Merchant onboarding support needed',
+      description: 'Need help with compliance documents and onboarding steps.',
+      requesterType: 'merchant',
+    });
+
+    expect(routing.mailbox).toBe('support@evoucher.co.za');
+    expect(routing.routingAddress).toContain('support+merchant@');
+    expect(routing.slaHours).toBeGreaterThan(0);
   });
 });

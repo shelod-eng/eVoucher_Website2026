@@ -21,6 +21,21 @@ type TicketResponse = {
   };
 };
 
+type EmailRoutingResponse = {
+  routing: {
+    mailbox: string;
+    aliases: string[];
+    category: string;
+    priority: string;
+    queue: string;
+    routingAddress: string;
+    autoReplySubject: string;
+    autoReplyMessage: string;
+    slaHours: number;
+    assignedPlatform: string;
+  };
+};
+
 const initialForm = {
   name: '',
   email: '',
@@ -40,6 +55,7 @@ export default function SupportTicketWorkspace() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<TicketResponse | null>(null);
+  const [routingPreview, setRoutingPreview] = useState<EmailRoutingResponse | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,6 +73,22 @@ export default function SupportTicketWorkspace() {
       if (!response.ok) throw new Error(payload?.error || 'Unable to log support ticket.');
 
       setResult(payload.data as TicketResponse);
+
+      const previewResponse = await fetch('/api/v1/support/email-intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromName: form.name,
+          fromEmail: form.email,
+          subject: form.subject,
+          text: form.description,
+          requesterType: form.requesterType,
+        }),
+      });
+      const previewPayload = await previewResponse.json();
+      if (previewResponse.ok) {
+        setRoutingPreview(previewPayload.data as EmailRoutingResponse);
+      }
       setForm(initialForm);
     } catch (submitError: any) {
       setError(submitError?.message || 'Unable to log support ticket.');
@@ -262,6 +294,42 @@ export default function SupportTicketWorkspace() {
           ) : (
             <p className="mt-4 font-body text-sm text-slate-600">
               Submit a ticket to preview the routing queue, response SLA, and ITSM platform handoff.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-[28px] border border-slate-200 bg-white p-5">
+          <p className="font-body text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+            Email Routing Preview
+          </p>
+          {routingPreview ? (
+            <div className="mt-4 space-y-3">
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <p className="font-headline text-lg font-semibold text-slate-900">
+                  {routingPreview.routing.routingAddress}
+                </p>
+                <p className="mt-1 font-body text-sm text-slate-600">
+                  {routingPreview.routing.category} routed to {routingPreview.routing.queue} with{' '}
+                  {routingPreview.routing.slaHours}h SLA
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {routingPreview.routing.aliases.map((alias) => (
+                  <span
+                    key={alias}
+                    className="rounded-full bg-slate-100 px-3 py-1.5 font-body text-xs font-medium text-slate-700"
+                  >
+                    {alias}
+                  </span>
+                ))}
+              </div>
+              <p className="font-body text-sm text-slate-700">
+                Auto-reply: {routingPreview.routing.autoReplySubject}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-4 font-body text-sm text-slate-600">
+              Submit a ticket to preview the helpdesk email routing outcome.
             </p>
           )}
         </div>

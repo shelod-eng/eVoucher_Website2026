@@ -13,6 +13,7 @@ type ChatReply = {
   intent: string;
   answer: string;
   suggestedActions: string[];
+  actionIds: string[];
   suggestedChannel: string;
   escalationRecommended: boolean;
 };
