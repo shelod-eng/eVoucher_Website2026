@@ -1,456 +1,244 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
+import Icon from '@/components/ui/AppIcon';
+import SupportChatConsole from './components/SupportChatConsole';
+import SupportTicketWorkspace from './components/SupportTicketWorkspace';
 
 export const metadata: Metadata = {
-  title: 'Support & Help - eVoucher Platform',
+  title: 'Support Channels - eVoucher Platform',
   description:
-    'Get help with eVoucher. Contact support, find answers to common questions, and access resources.',
+    'Customer support channels for eVoucher, including chatbot guidance, WhatsApp access, helpdesk routing, and ticket logging.',
 };
+
+const sprintTasks = [
+  {
+    id: 'Task 01',
+    label: 'UX / Channel',
+    title: 'Website Chatbot Integration',
+    description:
+      'Guide consumers through voucher purchase, redemption, and support journeys with a lightweight website assistant.',
+    accent: 'sky',
+    icon: 'CpuChipIcon',
+  },
+  {
+    id: 'Task 02',
+    label: 'Channel Expansion',
+    title: 'WhatsApp Platform Integration',
+    description:
+      'Extend support and voucher guidance to WhatsApp for users who need a familiar mobile-first channel.',
+    accent: 'emerald',
+    icon: 'ChatBubbleLeftRightIcon',
+  },
+  {
+    id: 'Task 03',
+    label: 'Support Ops',
+    title: 'Helpdesk Email Routing',
+    description:
+      'Route inbound support requests by category and start SLA timing automatically from first receipt.',
+    accent: 'amber',
+    icon: 'EnvelopeOpenIcon',
+  },
+  {
+    id: 'Task 04',
+    label: 'DevOps / ITSM',
+    title: 'Ticket Logging via Jira / ServiceNow',
+    description:
+      'Track escalations from intake to resolution with ticket workflow and sponsor-facing accountability.',
+    accent: 'violet',
+    icon: 'TicketIcon',
+  },
+];
+
+const whatsappJourneys = [
+  'Voucher lookup and purchase assistance',
+  'Redemption help and support follow-up',
+  'Merchant and consumer query handoff',
+  'Channel parity with USSD and web support flows',
+];
+
+function accentClasses(accent: string) {
+  if (accent === 'emerald') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-900';
+  }
+  if (accent === 'amber') {
+    return 'border-amber-200 bg-amber-50 text-amber-900';
+  }
+  if (accent === 'violet') {
+    return 'border-violet-200 bg-violet-50 text-violet-900';
+  }
+  return 'border-sky-200 bg-sky-50 text-sky-900';
+}
 
 export default function SupportPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(186,230,253,0.35),_transparent_32%),linear-gradient(180deg,#f8fbff_0%,#ffffff_48%,#f8fafc_100%)]">
       <Header />
 
       <main className="pt-16">
-        {/* Hero Section */}
-        <section className="bg-gradient-to-br from-primary/10 via-background to-secondary/10 py-20">
-          <div className="max-w-7xl mx-auto px-4 lg:px-6 text-center">
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Icon
-                name="QuestionMarkCircleIcon"
-                size={48}
-                variant="solid"
-                className="text-primary"
-              />
-            </div>
-            <h1 className="font-headline font-bold text-5xl text-foreground mb-4">
-              How Can We Help You?
-            </h1>
-            <p className="font-body text-xl text-muted-foreground max-w-2xl mx-auto">
-              We're here to support you every step of the way. Find answers, get in touch, or access
-              help resources.
-            </p>
-          </div>
-        </section>
-
-        {/* Contact Methods */}
-        <section className="py-20 bg-card">
-          <div className="max-w-7xl mx-auto px-4 lg:px-6">
-            <h2 className="font-headline font-bold text-3xl text-foreground text-center mb-12">
-              Get In Touch
-            </h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="bg-background rounded-2xl p-8 text-center border-2 border-border hover:border-primary transition-all duration-300 hover:shadow-lg">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Icon name="PhoneIcon" size={32} variant="solid" className="text-primary" />
+        <section className="relative overflow-hidden px-4 py-20 lg:px-6 lg:py-24">
+          <div className="mx-auto max-w-7xl">
+            <div className="rounded-[36px] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-8 shadow-[0_30px_100px_-60px_rgba(15,118,110,0.55)] lg:p-10">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                <div className="max-w-4xl">
+                  <p className="font-body text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
+                    Weekend Sprint
+                  </p>
+                  <h1 className="mt-4 font-headline text-4xl font-bold leading-tight text-slate-950 lg:text-6xl">
+                    Support channels that move eVoucher closer to always-on service.
+                  </h1>
+                  <p className="mt-5 max-w-3xl font-body text-lg leading-8 text-slate-600">
+                    This sprint focuses on four visible deliverables for `evoucher.co.za`: a website
+                    chatbot, WhatsApp support entry point, helpdesk routing logic, and ticket
+                    logging flow for Jira or ServiceNow escalation.
+                  </p>
                 </div>
-                <h3 className="font-headline font-bold text-xl text-foreground mb-3">Call Us</h3>
-                <p className="font-body text-muted-foreground mb-4">Speak to a support agent</p>
-                <p className="font-headline text-2xl font-bold text-primary mb-2">0800 123 456</p>
-                <p className="font-body text-sm text-muted-foreground">Mon-Fri: 8am-6pm</p>
-              </div>
-
-              <div className="bg-background rounded-2xl p-8 text-center border-2 border-border hover:border-secondary transition-all duration-300 hover:shadow-lg">
-                <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Icon name="EnvelopeIcon" size={32} variant="solid" className="text-secondary" />
+                <div className="rounded-3xl bg-slate-950 px-6 py-5 text-white shadow-xl">
+                  <p className="font-body text-xs uppercase tracking-[0.26em] text-sky-200">
+                    Sprint Outcome
+                  </p>
+                  <p className="mt-2 font-headline text-2xl font-bold">4 Planned Deliverables</p>
+                  <p className="mt-2 font-body text-sm text-slate-300">
+                    Customer-facing channels, support operations, and sponsor-ready visibility.
+                  </p>
                 </div>
-                <h3 className="font-headline font-bold text-xl text-foreground mb-3">Email Us</h3>
-                <p className="font-body text-muted-foreground mb-4">
-                  Get a response within 24 hours
-                </p>
-                <a
-                  href="mailto:support@evoucher.co.za"
-                  className="font-headline text-lg font-semibold text-secondary hover:underline"
-                >
-                  support@evoucher.co.za
-                </a>
               </div>
 
-              <div className="bg-background rounded-2xl p-8 text-center border-2 border-border hover:border-success transition-all duration-300 hover:shadow-lg">
-                <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Icon
-                    name="DevicePhoneMobileIcon"
-                    size={32}
-                    variant="solid"
-                    className="text-success"
-                  />
-                </div>
-                <h3 className="font-headline font-bold text-xl text-foreground mb-3">
-                  USSD Access
-                </h3>
-                <p className="font-body text-muted-foreground mb-4">No smartphone needed</p>
-                <p className="font-accent text-3xl font-bold text-success mb-2">*134*2468#</p>
-                <p className="font-body text-sm text-muted-foreground">Works on any phone</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* FAQs */}
-        <section className="py-20 bg-background">
-          <div className="max-w-4xl mx-auto px-4 lg:px-6">
-            <h2 className="font-headline font-bold text-3xl text-foreground text-center mb-12">
-              Frequently Asked Questions
-            </h2>
-            <div className="space-y-6">
-              <div className="bg-card rounded-xl p-6 border-2 border-border">
-                <h3 className="font-headline font-bold text-lg text-foreground mb-3">
-                  How do I register as a customer?
-                </h3>
-                <p className="font-body text-muted-foreground mb-4">
-                  Visit our{' '}
-                  <Link href="/consumer" className="text-primary font-semibold hover:underline">
-                    Consumer Registration page
-                  </Link>{' '}
-                  and fill in your basic details. It takes less than 2 minutes and is completely
-                  free.
-                </p>
-              </div>
-
-              <div className="bg-card rounded-xl p-6 border-2 border-border">
-                <h3 className="font-headline font-bold text-lg text-foreground mb-3">
-                  Do I need a smartphone to use eVoucher?
-                </h3>
-                <p className="font-body text-muted-foreground mb-4">
-                  No! You can access eVoucher from any phone using USSD by dialing{' '}
-                  <span className="font-accent font-bold text-primary">*134*2468#</span>. No data or
-                  smartphone required.
-                </p>
-              </div>
-
-              <div className="bg-card rounded-xl p-6 border-2 border-border">
-                <h3 className="font-headline font-bold text-lg text-foreground mb-3">
-                  How do I become a merchant partner?
-                </h3>
-                <p className="font-body text-muted-foreground mb-4">
-                  Visit our{' '}
-                  <Link href="/merchants" className="text-secondary font-semibold hover:underline">
-                    Merchant Onboarding page
-                  </Link>{' '}
-                  and complete the application. Our team will review your application within 2-3
-                  business days.
-                </p>
-              </div>
-
-              <div className="bg-card rounded-xl p-6 border-2 border-border">
-                <h3 className="font-headline font-bold text-lg text-foreground mb-3">
-                  How much can I save with eVoucher?
-                </h3>
-                <p className="font-body text-muted-foreground mb-4">
-                  Customers typically save 10-15% on purchases at participating merchants. The exact
-                  discount depends on the merchant and product category.
-                </p>
-              </div>
-
-              <div className="bg-card rounded-xl p-6 border-2 border-border">
-                <h3 className="font-headline font-bold text-lg text-foreground mb-3">
-                  Is eVoucher safe and secure?
-                </h3>
-                <p className="font-body text-muted-foreground mb-4">
-                  Yes! eVoucher is government-aligned and uses bank-grade security. All transactions
-                  are encrypted and auditable. Your personal information is protected.
-                </p>
-              </div>
-
-              <div className="bg-card rounded-xl p-6 border-2 border-border">
-                <h3 className="font-headline font-bold text-lg text-foreground mb-3">
-                  How long does merchant approval take?
-                </h3>
-                <p className="font-body text-muted-foreground mb-4">
-                  Merchant applications are typically reviewed within 2-3 business days. We'll
-                  notify you via email and SMS when your status changes.
-                </p>
-              </div>
-
-              <div className="bg-card rounded-xl p-6 border-2 border-border">
-                <h3 className="font-headline font-bold text-lg text-foreground mb-3">
-                  What is the merchant onboarding fee?
-                </h3>
-                <p className="font-body text-muted-foreground mb-4">
-                  The one-time onboarding fee is R500, which includes R250 donation to a registered
-                  charity (tax deductible) and R250 for platform setup and verification.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Help Resources */}
-        <section className="py-20 bg-card">
-          <div className="max-w-7xl mx-auto px-4 lg:px-6">
-            <h2 className="font-headline font-bold text-3xl text-foreground text-center mb-12">
-              Help Resources
-            </h2>
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="bg-background rounded-2xl p-8 border-2 border-border">
-                <div className="flex items-start space-x-4 mb-6">
-                  <div className="bg-primary/10 p-3 rounded-xl flex-shrink-0">
-                    <Icon name="UserIcon" size={28} variant="solid" className="text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-headline font-bold text-xl text-foreground mb-2">
-                      For Customers
-                    </h3>
-                    <p className="font-body text-muted-foreground mb-4">
-                      Learn how to register, find vouchers, and save money
-                    </p>
-                    <ul className="space-y-2">
-                      <li className="flex items-center space-x-2">
-                        <Icon
-                          name="CheckCircleIcon"
-                          size={16}
-                          variant="solid"
-                          className="text-success"
-                        />
-                        <span className="font-body text-sm text-muted-foreground">
-                          Registration guide
-                        </span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <Icon
-                          name="CheckCircleIcon"
-                          size={16}
-                          variant="solid"
-                          className="text-success"
-                        />
-                        <span className="font-body text-sm text-muted-foreground">
-                          How to use USSD
-                        </span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <Icon
-                          name="CheckCircleIcon"
-                          size={16}
-                          variant="solid"
-                          className="text-success"
-                        />
-                        <span className="font-body text-sm text-muted-foreground">
-                          Finding merchants near you
-                        </span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <Icon
-                          name="CheckCircleIcon"
-                          size={16}
-                          variant="solid"
-                          className="text-success"
-                        />
-                        <span className="font-body text-sm text-muted-foreground">
-                          Redeeming vouchers
-                        </span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-                <Link
-                  href="/consumer"
-                  className="inline-flex items-center space-x-2 text-primary font-headline font-semibold hover:underline"
-                >
-                  <span>Register as Customer</span>
-                  <Icon name="ArrowRightIcon" size={16} variant="outline" />
-                </Link>
-              </div>
-
-              <div className="bg-background rounded-2xl p-8 border-2 border-border">
-                <div className="flex items-start space-x-4 mb-6">
-                  <div className="bg-secondary/10 p-3 rounded-xl flex-shrink-0">
-                    <Icon
-                      name="BuildingStorefrontIcon"
-                      size={28}
-                      variant="solid"
-                      className="text-secondary"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="font-headline font-bold text-xl text-foreground mb-2">
-                      For Merchants
-                    </h3>
-                    <p className="font-body text-muted-foreground mb-4">
-                      Everything you need to become a partner merchant
-                    </p>
-                    <ul className="space-y-2">
-                      <li className="flex items-center space-x-2">
-                        <Icon
-                          name="CheckCircleIcon"
-                          size={16}
-                          variant="solid"
-                          className="text-success"
-                        />
-                        <span className="font-body text-sm text-muted-foreground">
-                          Onboarding process
-                        </span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <Icon
-                          name="CheckCircleIcon"
-                          size={16}
-                          variant="solid"
-                          className="text-success"
-                        />
-                        <span className="font-body text-sm text-muted-foreground">
-                          Required documents
-                        </span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <Icon
-                          name="CheckCircleIcon"
-                          size={16}
-                          variant="solid"
-                          className="text-success"
-                        />
-                        <span className="font-body text-sm text-muted-foreground">
-                          Bank account setup
-                        </span>
-                      </li>
-                      <li className="flex items-center space-x-2">
-                        <Icon
-                          name="CheckCircleIcon"
-                          size={16}
-                          variant="solid"
-                          className="text-success"
-                        />
-                        <span className="font-body text-sm text-muted-foreground">
-                          Payout schedule
-                        </span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-                <Link
-                  href="/merchants"
-                  className="inline-flex items-center space-x-2 text-secondary font-headline font-semibold hover:underline"
-                >
-                  <span>Join as Merchant</span>
-                  <Icon name="ArrowRightIcon" size={16} variant="outline" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="py-20 bg-gradient-to-br from-primary/10 to-secondary/10">
-          <div className="max-w-4xl mx-auto px-4 lg:px-6 text-center">
-            <h2 className="font-headline font-bold text-4xl text-foreground mb-6">
-              Still Need Help?
-            </h2>
-            <p className="font-body text-xl text-muted-foreground mb-8">
-              Our support team is ready to assist you with any questions or concerns.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="tel:0800123456"
-                className="inline-flex items-center justify-center space-x-3 px-8 py-4 bg-primary text-primary-foreground rounded-xl font-headline font-semibold text-lg hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 shadow-lg"
-              >
-                <Icon name="PhoneIcon" size={24} variant="solid" />
-                <span>Call 0800 123 456</span>
-              </a>
-              <a
-                href="mailto:support@evoucher.co.za"
-                className="inline-flex items-center justify-center space-x-3 px-8 py-4 bg-secondary text-secondary-foreground rounded-xl font-headline font-semibold text-lg hover:bg-secondary/90 transition-all duration-300 transform hover:scale-105 shadow-lg"
-              >
-                <Icon name="EnvelopeIcon" size={24} variant="solid" />
-                <span>Email Support</span>
-              </a>
-            </div>
-          </div>
-        </section>
-
-        {/* Footer */}
-        <footer className="bg-card border-t border-border py-12">
-          <div className="max-w-7xl mx-auto px-4 lg:px-6">
-            <div className="grid md:grid-cols-4 gap-8">
-              <div>
-                <div className="flex items-center space-x-2 mb-4">
-                  <svg
-                    width="32"
-                    height="32"
-                    viewBox="0 0 40 40"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+              <div className="mt-10 grid gap-4 lg:grid-cols-2">
+                {sprintTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className={`rounded-[28px] border p-6 shadow-[0_18px_50px_-40px_rgba(15,23,42,0.45)] ${accentClasses(task.accent)}`}
                   >
-                    <rect width="40" height="40" rx="8" fill="#20B2AA" />
-                    <path d="M20 10L28 16V24L20 30L12 24V16L20 10Z" fill="white" opacity="0.9" />
-                    <path d="M20 15L24 18V22L20 25L16 22V18L20 15Z" fill="#FF7A00" />
-                    <circle cx="20" cy="20" r="3" fill="white" />
-                  </svg>
-                  <span className="font-headline font-bold text-xl text-foreground">eVoucher</span>
-                </div>
-                <p className="font-body text-sm text-muted-foreground">
-                  Dignified digital commerce for all South Africans
-                </p>
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/75 shadow-sm">
+                        <Icon name={task.icon} size={28} variant="solid" className="text-current" />
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="rounded-full border border-current/15 bg-white/70 px-3 py-1 font-body text-xs font-semibold uppercase tracking-[0.2em]">
+                            {task.id}
+                          </span>
+                          <span className="rounded-full border border-current/15 bg-white px-3 py-1 font-body text-xs font-semibold uppercase tracking-[0.2em]">
+                            {task.label}
+                          </span>
+                        </div>
+                        <h2 className="mt-4 font-headline text-2xl font-bold">{task.title}</h2>
+                        <p className="mt-2 font-body text-sm leading-7 text-slate-600">
+                          {task.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              <div>
-                <h4 className="font-headline font-semibold text-foreground mb-4">Quick Links</h4>
-                <ul className="space-y-2">
-                  <li>
-                    <Link
-                      href="/"
-                      className="font-body text-sm text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      Home
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/consumer"
-                      className="font-body text-sm text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      Register as Customer
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/merchants"
-                      className="font-body text-sm text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      Join as Merchant
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-headline font-semibold text-foreground mb-4">Contact</h4>
-                <ul className="space-y-2">
-                  <li className="font-body text-sm text-muted-foreground">
-                    Email: support@evoucher.co.za
-                  </li>
-                  <li className="font-body text-sm text-muted-foreground">Phone: 0800 123 456</li>
-                  <li className="font-body text-sm text-muted-foreground">USSD: *134*2468#</li>
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-headline font-semibold text-foreground mb-4">
-                  Trust & Security
-                </h4>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Icon name="ShieldCheckIcon" size={20} variant="solid" className="text-success" />
-                  <span className="font-body text-sm text-muted-foreground">
-                    Government Aligned
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Icon name="LockClosedIcon" size={20} variant="solid" className="text-success" />
-                  <span className="font-body text-sm text-muted-foreground">
-                    Bank-Grade Security
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-border mt-8 pt-8 text-center">
-              <p className="font-body text-sm text-muted-foreground">
-                © 2026 eVoucher Platform. All rights reserved. | Proudly South African
-              </p>
             </div>
           </div>
-        </footer>
+        </section>
+
+        <section className="px-4 py-8 lg:px-6">
+          <div className="mx-auto max-w-7xl">
+            <SupportChatConsole />
+          </div>
+        </section>
+
+        <section className="px-4 py-8 lg:px-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="rounded-[32px] border border-emerald-200 bg-white p-6 shadow-[0_24px_80px_-50px_rgba(5,150,105,0.4)] lg:p-8">
+              <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+                <div>
+                  <p className="font-body text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700">
+                    Task 02
+                  </p>
+                  <h2 className="mt-3 font-headline text-3xl font-bold text-slate-950">
+                    WhatsApp Platform Integration
+                  </h2>
+                  <p className="mt-4 font-body text-base leading-8 text-slate-600">
+                    Add WhatsApp as an alternative support and guidance channel for consumers who
+                    prefer mobile messaging over web or app navigation.
+                  </p>
+                  <div className="mt-6 rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
+                    <p className="font-body text-sm font-semibold uppercase tracking-[0.22em] text-emerald-700">
+                      Ready-to-launch journeys
+                    </p>
+                    <ul className="mt-4 space-y-3">
+                      {whatsappJourneys.map((journey) => (
+                        <li key={journey} className="flex gap-3 font-body text-sm text-slate-700">
+                          <Icon
+                            name="CheckCircleIcon"
+                            size={18}
+                            variant="solid"
+                            className="mt-0.5 text-emerald-600"
+                          />
+                          <span>{journey}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="rounded-[28px] bg-gradient-to-br from-emerald-700 via-emerald-800 to-slate-950 p-6 text-white">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-body text-xs font-semibold uppercase tracking-[0.22em] text-emerald-100">
+                        Channel Expansion
+                      </p>
+                      <h3 className="mt-3 font-headline text-2xl font-bold">
+                        WhatsApp support entry point
+                      </h3>
+                      <p className="mt-3 font-body text-sm leading-7 text-emerald-50/85">
+                        Pre-fill a consumer help message and route the conversation into the same
+                        support taxonomy used by the website and helpdesk intake.
+                      </p>
+                    </div>
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
+                      <Icon
+                        name="ChatBubbleLeftRightIcon"
+                        size={28}
+                        variant="solid"
+                        className="text-emerald-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-8 rounded-[26px] bg-white/10 p-5 backdrop-blur-sm">
+                    <p className="font-body text-sm text-emerald-50">
+                      Suggested launch line:
+                    </p>
+                    <p className="mt-2 font-headline text-xl font-semibold">
+                      “Hi eVoucher, I need help with voucher purchase or redemption.”
+                    </p>
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <a
+                      href="https://wa.me/27712345678?text=Hi%20eVoucher%2C%20I%20need%20help%20with%20voucher%20purchase%20or%20redemption."
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 font-headline text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
+                    >
+                      <Icon name="PaperAirplaneIcon" size={18} variant="solid" className="text-emerald-700" />
+                      <span>Launch WhatsApp</span>
+                    </a>
+                    <Link
+                      href="/ussd-console"
+                      className="inline-flex items-center gap-2 rounded-2xl border border-white/20 px-5 py-3 font-headline text-sm font-semibold text-white transition hover:bg-white/10"
+                    >
+                      <Icon name="DevicePhoneMobileIcon" size={18} variant="solid" className="text-emerald-100" />
+                      <span>Open USSD simulator</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 py-8 lg:px-6 lg:pb-20">
+          <div className="mx-auto max-w-7xl">
+            <SupportTicketWorkspace />
+          </div>
+        </section>
       </main>
     </div>
   );
