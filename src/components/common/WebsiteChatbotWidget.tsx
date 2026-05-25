@@ -20,8 +20,8 @@ type ChatbotReply = {
 };
 
 const quickPrompts = [
-  'How do I buy a voucher?',
-  'How do I redeem my voucher?',
+  'How do I shop with merchants?',
+  'How do I top up my wallet?',
   'How do I contact support?',
 ];
 
@@ -52,7 +52,7 @@ export default function WebsiteChatbotWidget() {
   const [latestReply, setLatestReply] = useState<ChatbotReply | null>(null);
   const [messages, setMessages] = useState<ChatbotMessage[]>([
     buildAssistantMessage(
-      'Hi, I am the eVoucher assistant. I can help you buy vouchers, redeem vouchers, find support, and guide you to the right next step.'
+      'Hi, I am the eVoucher assistant. I can help you shop with merchants, top up your wallet, redeem vouchers, find support, and guide you to the right next step.'
     ),
   ]);
 
@@ -83,7 +83,12 @@ export default function WebsiteChatbotWidget() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            message: latestReply?.intent === 'merchant_onboarding' ? 'merchant onboarding' : 'whatsapp support',
+            message:
+              latestReply?.intent === 'merchant_onboarding'
+                ? 'merchant onboarding'
+                : latestReply?.intent === 'cash_withdrawal_support'
+                  ? 'cash withdrawal support'
+                  : 'whatsapp support',
           }),
         });
         const payload = await response.json();
@@ -149,7 +154,7 @@ export default function WebsiteChatbotWidget() {
                 </p>
                 <h3 className="mt-2 font-headline text-xl font-bold">Need help right now?</h3>
                 <p className="mt-1 font-body text-sm text-sky-50/80">
-                  Ask about buying, redeeming, or getting support.
+                  Ask about shopping, wallet support, redeeming, or getting support.
                 </p>
               </div>
               <button
@@ -244,7 +249,7 @@ export default function WebsiteChatbotWidget() {
               <input
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                placeholder="Type your question..."
+                placeholder="Ask about shopping, wallet support, redemption..."
                 className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 font-body text-sm text-slate-900 outline-none focus:border-sky-400"
               />
               <button

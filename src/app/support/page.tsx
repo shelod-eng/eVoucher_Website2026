@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
 import SupportChatConsole from './components/SupportChatConsole';
 import SupportTicketWorkspace from './components/SupportTicketWorkspace';
+import WhatsAppExperienceDemo from './components/WhatsAppExperienceDemo';
 
 export const metadata: Metadata = {
   title: 'Support Channels - eVoucher Platform',
@@ -48,13 +48,6 @@ const sprintTasks = [
     accent: 'violet',
     icon: 'TicketIcon',
   },
-];
-
-const whatsappJourneys = [
-  'Voucher lookup and purchase assistance',
-  'Redemption help and support follow-up',
-  'Merchant and consumer query handoff',
-  'Channel parity with USSD and web support flows',
 ];
 
 function accentClasses(accent: string) {
@@ -144,93 +137,7 @@ export default function SupportPage() {
 
         <section className="px-4 py-8 lg:px-6">
           <div className="mx-auto max-w-7xl">
-            <div className="rounded-[32px] border border-emerald-200 bg-white p-6 shadow-[0_24px_80px_-50px_rgba(5,150,105,0.4)] lg:p-8">
-              <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-                <div>
-                  <p className="font-body text-xs font-semibold uppercase tracking-[0.25em] text-emerald-700">
-                    Task 02
-                  </p>
-                  <h2 className="mt-3 font-headline text-3xl font-bold text-slate-950">
-                    WhatsApp Platform Integration
-                  </h2>
-                  <p className="mt-4 font-body text-base leading-8 text-slate-600">
-                    Add WhatsApp as an alternative support and guidance channel for consumers who
-                    prefer mobile messaging over web or app navigation.
-                  </p>
-                  <div className="mt-6 rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
-                    <p className="font-body text-sm font-semibold uppercase tracking-[0.22em] text-emerald-700">
-                      Ready-to-launch journeys
-                    </p>
-                    <ul className="mt-4 space-y-3">
-                      {whatsappJourneys.map((journey) => (
-                        <li key={journey} className="flex gap-3 font-body text-sm text-slate-700">
-                          <Icon
-                            name="CheckCircleIcon"
-                            size={18}
-                            variant="solid"
-                            className="mt-0.5 text-emerald-600"
-                          />
-                          <span>{journey}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] bg-gradient-to-br from-emerald-700 via-emerald-800 to-slate-950 p-6 text-white">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-body text-xs font-semibold uppercase tracking-[0.22em] text-emerald-100">
-                        Channel Expansion
-                      </p>
-                      <h3 className="mt-3 font-headline text-2xl font-bold">
-                        WhatsApp support entry point
-                      </h3>
-                      <p className="mt-3 font-body text-sm leading-7 text-emerald-50/85">
-                        Pre-fill a consumer help message and route the conversation into the same
-                        support taxonomy used by the website and helpdesk intake.
-                      </p>
-                    </div>
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
-                      <Icon
-                        name="ChatBubbleLeftRightIcon"
-                        size={28}
-                        variant="solid"
-                        className="text-emerald-100"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-8 rounded-[26px] bg-white/10 p-5 backdrop-blur-sm">
-                    <p className="font-body text-sm text-emerald-50">
-                      Suggested launch line:
-                    </p>
-                    <p className="mt-2 font-headline text-xl font-semibold">
-                      "Hi eVoucher, I need help with voucher purchase or redemption."
-                    </p>
-                  </div>
-
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <a
-                      href="https://wa.me/27712345678?text=Hi%20eVoucher%2C%20I%20need%20help%20with%20voucher%20purchase%20or%20redemption."
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 font-headline text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
-                    >
-                      <Icon name="PaperAirplaneIcon" size={18} variant="solid" className="text-emerald-700" />
-                      <span>Launch WhatsApp</span>
-                    </a>
-                    <Link
-                      href="/ussd-console"
-                      className="inline-flex items-center gap-2 rounded-2xl border border-white/20 px-5 py-3 font-headline text-sm font-semibold text-white transition hover:bg-white/10"
-                    >
-                      <Icon name="DevicePhoneMobileIcon" size={18} variant="solid" className="text-emerald-100" />
-                      <span>Open USSD simulator</span>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <WhatsAppExperienceDemo />
           </div>
         </section>
 

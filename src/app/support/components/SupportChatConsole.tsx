@@ -19,8 +19,8 @@ type ChatReply = {
 };
 
 const quickPrompts = [
-  'How do I buy a voucher?',
-  'How do I redeem a voucher?',
+  'How do I shop with merchants?',
+  'How do I top up my wallet?',
   'How does WhatsApp support work?',
   'I have a billing problem.',
 ];
@@ -30,7 +30,7 @@ export default function SupportChatConsole() {
     {
       id: 'assistant-welcome',
       from: 'assistant',
-      text: 'Hi, I am the eVoucher support assistant. I can help with voucher purchase, redemption, merchant onboarding, billing, USSD, and WhatsApp support.',
+      text: 'Hi, I am the eVoucher support assistant. I can help with merchant shopping, wallet top-ups, voucher redemption, merchant onboarding, billing, USSD, and WhatsApp support.',
     },
   ]);
   const [draft, setDraft] = useState('');
@@ -161,7 +161,7 @@ export default function SupportChatConsole() {
             <input
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="Ask about buying, redeeming, merchant onboarding, billing..."
+                placeholder="Ask about shopping, wallet support, redeeming, merchant onboarding, billing..."
               className="flex-1 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 font-body text-sm text-white outline-none ring-0 placeholder:text-slate-500"
             />
             <button
@@ -182,11 +182,11 @@ export default function SupportChatConsole() {
             <ul className="mt-4 space-y-3 font-body text-sm text-slate-700">
               <li className="flex gap-3">
                 <Icon name="CheckCircleIcon" size={18} variant="solid" className="mt-0.5 text-sky-600" />
-                <span>Voucher purchase guidance for first-time checkout journeys.</span>
+                <span>Merchant shopping guidance for groceries and other participating offers.</span>
               </li>
               <li className="flex gap-3">
                 <Icon name="CheckCircleIcon" size={18} variant="solid" className="mt-0.5 text-sky-600" />
-                <span>Voucher redemption support and wallet lookup prompts.</span>
+                <span>Wallet top-up, balance support, and voucher redemption prompts.</span>
               </li>
               <li className="flex gap-3">
                 <Icon name="CheckCircleIcon" size={18} variant="solid" className="mt-0.5 text-sky-600" />

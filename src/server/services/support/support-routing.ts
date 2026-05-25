@@ -107,8 +107,8 @@ const CHATBOT_KNOWLEDGE: Array<{
     intent: 'platform_overview',
     keywords: ['what is evoucher', 'what do you do', 'platform', 'about evoucher', 'offerings'],
     answer:
-      'eVoucher is a digital commerce platform that helps consumers save on everyday purchases, lets merchants launch voucher offers, and supports access through web, wallet, and USSD channels.',
-    suggestedActions: ['Explore homepage', 'Browse vouchers', 'Learn about merchants'],
+      'eVoucher is a digital commerce platform that helps consumers shop with participating merchants, manage wallet value, buy and redeem vouchers, and access support across web, wallet, USSD, and assisted channels.',
+    suggestedActions: ['Browse merchants', 'Open wallet', 'Learn about merchants'],
     actionIds: ['open_support', 'open_shop', 'open_merchants'],
     suggestedChannel: 'chatbot',
   },
@@ -123,11 +123,11 @@ const CHATBOT_KNOWLEDGE: Array<{
     escalationRecommended: true,
   },
   {
-    intent: 'voucher_purchase',
-    keywords: ['buy', 'purchase', 'checkout', 'pay', 'voucher'],
+    intent: 'merchant_shopping',
+    keywords: ['buy groceries', 'groceries', 'grocery', 'shop', 'shopping', 'checkout', 'buy', 'purchase'],
     answer:
-      'You can buy a voucher from the Shop flow, pay by card, EFT, PayFast, or wallet, and receive the voucher immediately after successful payment.',
-    suggestedActions: ['Open Shop', 'View payment options', 'Talk to support if payment failed'],
+      'Consumers can shop from participating merchants, add products or voucher-backed offers to checkout, and pay by card, EFT, PayFast, or wallet depending on the flow.',
+    suggestedActions: ['Open Shop', 'Open Wallet', 'Talk to support if payment failed'],
     actionIds: ['open_shop', 'view_benefits', 'open_support'],
     suggestedChannel: 'chatbot',
   },
@@ -150,19 +150,38 @@ const CHATBOT_KNOWLEDGE: Array<{
     suggestedChannel: 'email',
   },
   {
-    intent: 'wallet_benefits',
-    keywords: ['wallet', 'benefits', 'rewards', 'save money'],
+    intent: 'wallet_topup',
+    keywords: ['top up', 'top-up', 'topup', 'wallet top up', 'wallet balance', 'fund wallet', 'add money'],
     answer:
-      'The eVoucher wallet helps customers store vouchers, track available value, and move quickly from purchase to redemption while keeping savings visible.',
+      'The wallet can be topped up from the consumer flow, and the balance can then be used for supported purchases while keeping transaction history visible in the wallet view.',
+    suggestedActions: ['Open Wallet', 'Open Shop', 'View payment options'],
+    actionIds: ['open_wallet', 'open_shop', 'view_benefits'],
+    suggestedChannel: 'chatbot',
+  },
+  {
+    intent: 'wallet_benefits',
+    keywords: ['wallet', 'benefits', 'rewards', 'save money', 'ewallet'],
+    answer:
+      'The eVoucher wallet helps customers track stored value, voucher activity, top-ups, purchase history, and savings while moving quickly between shop and redemption journeys.',
     suggestedActions: ['Open Wallet', 'View benefits', 'Browse offers'],
     actionIds: ['open_wallet', 'view_benefits', 'open_shop'],
     suggestedChannel: 'chatbot',
   },
   {
+    intent: 'cash_withdrawal_support',
+    keywords: ['withdraw cash', 'cash withdrawal', 'withdrawal', 'cash out', 'cash-out'],
+    answer:
+      'Cash withdrawal is treated as a wallet support journey. The support team can help verify wallet balance, transaction status, and the right next step if a cash-out request is delayed or blocked.',
+    suggestedActions: ['Open Wallet', 'Log a support ticket', 'Ask for a human agent'],
+    actionIds: ['open_wallet', 'log_ticket', 'open_support'],
+    suggestedChannel: 'whatsapp',
+    escalationRecommended: true,
+  },
+  {
     intent: 'ussd_whatsapp',
     keywords: ['ussd', 'whatsapp', 'feature phone', 'phone'],
     answer:
-      'eVoucher supports USSD access today, and the weekend sprint expands support journeys through WhatsApp for voucher lookup, purchase guidance, and help requests.',
+      'eVoucher supports USSD access today, and the WhatsApp demo extends support journeys for merchant shopping, wallet help, voucher redemption, and assisted support requests.',
     suggestedActions: ['Open USSD simulator', 'Launch WhatsApp support', 'Ask for a human agent'],
     actionIds: ['open_ussd', 'launch_whatsapp', 'open_support'],
     suggestedChannel: 'whatsapp',
@@ -264,12 +283,15 @@ export function buildWhatsappLaunch(message?: string) {
   const phoneNumber = String(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP_NUMBER ?? '27712345678')
     .replace(/\D/g, '')
     .trim();
-  const fallbackMessage = 'Hi eVoucher, I need help with voucher purchase or redemption.';
+  const fallbackMessage =
+    'Hi eVoucher, I need help with shopping, wallet support, or voucher redemption.';
   const launchMessage =
     reply.intent === 'merchant_onboarding'
       ? 'Hi eVoucher, I need help with merchant onboarding on the website.'
       : reply.intent === 'billing_support'
         ? 'Hi eVoucher, I need help with a billing or payment issue.'
+        : reply.intent === 'cash_withdrawal_support'
+          ? 'Hi eVoucher, I need help with a wallet cash withdrawal request.'
         : fallbackMessage;
 
   return {
@@ -278,8 +300,10 @@ export function buildWhatsappLaunch(message?: string) {
     launchUrl: `https://wa.me/${phoneNumber}?text=${encodeURIComponent(launchMessage)}`,
     intent: reply.intent,
     parityJourneys: [
-      'voucher lookup and purchase assistance',
-      'redemption help and support follow-up',
+      'merchant shopping and checkout assistance',
+      'wallet top-up and balance support',
+      'voucher redemption and support follow-up',
+      'cash withdrawal support guidance',
       'merchant and consumer query handoff',
       'channel parity with website and USSD support flows',
     ],
@@ -326,9 +350,9 @@ export function buildChatbotReply(message: string): SupportChatReply {
   return {
     intent: 'general_support',
     answer:
-      'I can help with voucher purchase, redemption, merchant onboarding, billing, USSD, and WhatsApp support journeys. If the issue is urgent, I can route you to a human support path.',
-    suggestedActions: ['Ask about voucher purchase', 'Ask about redemption', 'Log a support ticket'],
-    actionIds: ['open_shop', 'open_redeem', 'log_ticket'],
+      'I can help with merchant shopping, wallet top-ups, voucher redemption, cash withdrawal support, merchant onboarding, billing, USSD, and WhatsApp journeys. If the issue is urgent, I can route you to a human support path.',
+    suggestedActions: ['Ask about merchant shopping', 'Ask about wallet support', 'Log a support ticket'],
+    actionIds: ['open_shop', 'open_wallet', 'log_ticket'],
     suggestedChannel: 'chatbot',
     escalationRecommended: false,
   };

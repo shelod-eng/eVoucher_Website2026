@@ -49,6 +49,22 @@ describe('support routing', () => {
     expect(reply.suggestedChannel).toBe('jira');
   });
 
+  it('responds to merchant shopping queries without narrowing the product to vouchers only', () => {
+    const reply = buildChatbotReply('How do I shop for groceries from participating merchants?');
+
+    expect(reply.intent).toBe('merchant_shopping');
+    expect(reply.suggestedChannel).toBe('chatbot');
+    expect(reply.suggestedActions).toContain('Open Shop');
+  });
+
+  it('escalates cash withdrawal support requests through the support path', () => {
+    const reply = buildChatbotReply('My cash withdrawal is delayed and I need help');
+
+    expect(reply.intent).toBe('cash_withdrawal_support');
+    expect(reply.escalationRecommended).toBe(true);
+    expect(reply.suggestedChannel).toBe('whatsapp');
+  });
+
   it('builds a WhatsApp launch payload for website handoff', () => {
     const launch = buildWhatsappLaunch('How do I use WhatsApp for support?');
 
