@@ -6,6 +6,7 @@ import CustomerRegistrationModal from '@/app/components/CustomerRegistrationModa
 import MerchantOnboardingModal from '@/app/components/MerchantOnboardingModal';
 import HeroSection from './components/HeroSection';
 import ValueProposition from './components/ValueProposition';
+import ImpactMetricsSection from './components/ImpactMetricsSection';
 import HowItWorks from './components/HowItWorks';
 import StakeholderJourneys from './components/StakeholderJourneys';
 import PartnerLogos from './components/PartnerLogos';
@@ -27,6 +28,7 @@ export default function HomepageLanding() {
           onOpenMerchantModal={() => setShowMerchantModal(true)}
         />
         <TrustBadges />
+        <ImpactMetricsSection />
         <ValueProposition />
         <HowItWorks />
         <StakeholderJourneys />

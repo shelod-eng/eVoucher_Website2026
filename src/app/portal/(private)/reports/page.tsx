@@ -211,6 +211,35 @@ export default async function PortalReportsPage() {
     },
   ];
 
+  const merchantShare =
+    overview.executiveSummary.settledToMerchants + overview.executiveSummary.pendingPayouts;
+  const consumerShare = overview.executiveSummary.totalSavings;
+  const platformShare = overview.executiveSummary.platformRevenue;
+  const splitTotal = Math.max(merchantShare + consumerShare + platformShare, 1);
+  const revenueSplitCards = [
+    {
+      label: 'Merchant settlement value',
+      value: merchantShare,
+      percentage: (merchantShare / splitTotal) * 100,
+      detail: 'Net value released or queued for merchant payouts',
+      tone: 'from-emerald-400 to-teal-400',
+    },
+    {
+      label: 'Consumer benefit retained',
+      value: consumerShare,
+      percentage: (consumerShare / splitTotal) * 100,
+      detail: 'Savings protected for households and beneficiaries',
+      tone: 'from-sky-400 to-cyan-300',
+    },
+    {
+      label: 'Platform revenue',
+      value: platformShare,
+      percentage: (platformShare / splitTotal) * 100,
+      detail: 'Transparent operating revenue for infrastructure sustainability',
+      tone: 'from-orange-400 to-amber-300',
+    },
+  ];
+
   return (
     <div className="space-y-6 pb-8">
       <section className="overflow-hidden rounded-[2rem] border border-sky-400/16 bg-[#0b1d3a]/95 p-6 shadow-[0_30px_120px_rgba(2,8,23,0.42)]">
@@ -346,6 +375,68 @@ export default async function PortalReportsPage() {
               >
                 Export Sponsor Summary
               </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-[2rem] border border-sky-400/16 bg-[#0b1d3a]/95 p-6 shadow-[0_24px_80px_rgba(2,8,23,0.38)]">
+        <div className="grid gap-6 xl:grid-cols-[1fr_0.85fr]">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-sky-200/75">
+              Revenue Split Transparency
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold text-white">
+              Merchant, consumer, and platform value distribution
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">
+              Sponsors can see exactly where value lands: merchants receive settlement value,
+              consumers retain direct benefit, and the platform revenue is visible rather than
+              hidden inside opaque fees.
+            </p>
+
+            <div className="mt-6 space-y-4">
+              {revenueSplitCards.map((card) => (
+                <div key={card.label}>
+                  <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                    <span className="font-semibold text-white">{card.label}</span>
+                    <span className="text-slate-300">
+                      {formatCurrency(card.value)} | {formatPercent(card.percentage)}
+                    </span>
+                  </div>
+                  <div className="h-3 overflow-hidden rounded-full bg-slate-950/45">
+                    <div
+                      className={`h-3 rounded-full bg-gradient-to-r ${card.tone}`}
+                      style={{ width: `${Math.max(8, Math.round(card.percentage))}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-slate-400">{card.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[1.6rem] border border-emerald-300/22 bg-[linear-gradient(180deg,rgba(16,185,129,0.14),rgba(16,38,71,0.95))] p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-100">
+              Preferred gateway positioning
+            </p>
+            <h3 className="mt-4 text-3xl font-semibold text-white">NetCash-ready payment rail</h3>
+            <p className="mt-4 text-sm leading-7 text-slate-200">
+              The portal now presents NetCash as the preferred payment gateway partner for sponsor
+              conversations, while keeping the payment provider layer abstract enough for PayFast,
+              EFT, PayShap, and future bank integrations.
+            </p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {['Gateway governance', 'Settlement traceability', 'Sponsor reconciliation', 'Bank-grade controls'].map(
+                (item) => (
+                  <div
+                    key={item}
+                    className="rounded-[1rem] border border-emerald-300/16 bg-slate-950/18 p-3 text-sm font-semibold text-emerald-50"
+                  >
+                    {item}
+                  </div>
+                )
+              )}
             </div>
           </div>
         </div>

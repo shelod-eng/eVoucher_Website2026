@@ -2,18 +2,21 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { resolveUserRole } from '@/server/utils/role';
+import { writeAuditEvent } from '@/server/utils/audit';
+import { sendMerchantDocumentReviewEmail } from '@/server/utils/merchant-notifications';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const ALLOWED_REVIEW_ROLES = new Set(['admin', 'compliance_officer', 'devops']);
-const ALLOWED_STATUSES = new Set(['VERIFIED', 'FAILED', 'EXPIRED', 'PENDING']);
+const ALLOWED_STATUSES = new Set(['VERIFIED', 'FAILED', 'EXPIRED', 'PENDING', 'NEEDS_MORE']);
 
 function mapComplianceToVerification(status: string) {
   const normalized = String(status).trim().toUpperCase();
   if (normalized === 'VERIFIED') return 'approved';
   if (normalized === 'FAILED') return 'rejected';
   if (normalized === 'EXPIRED') return 'rejected';
+  if (normalized === 'NEEDS_MORE') return 'under_review';
   return 'under_review';
 }
 
@@ -24,6 +27,12 @@ function mapVerificationToCompliance(status: string) {
   if (normalized === 'under_review') return 'PENDING';
   if (normalized === 'submitted') return 'PENDING';
   return 'PENDING';
+}
+
+function mapVerificationToEmailStatus(status: string): 'approved' | 'rejected' | 'under_review' {
+  if (status === 'approved') return 'approved';
+  if (status === 'rejected') return 'rejected';
+  return 'under_review';
 }
 
 export async function PATCH(request: Request) {
@@ -53,7 +62,14 @@ export async function PATCH(request: Request) {
     }
     if (!ALLOWED_STATUSES.has(status)) {
       return NextResponse.json(
-        { error: 'status must be one of PENDING, VERIFIED, FAILED, EXPIRED.' },
+        { error: 'status must be one of PENDING, VERIFIED, FAILED, EXPIRED, NEEDS_MORE.' },
+        { status: 400 }
+      );
+    }
+    const notes = body.notes ? String(body.notes).slice(0, 500) : null;
+    if ((status === 'FAILED' || status === 'NEEDS_MORE') && !notes) {
+      return NextResponse.json(
+        { error: 'Reviewer notes are required for rejected documents or more information requests.' },
         { status: 400 }
       );
     }
@@ -65,11 +81,14 @@ export async function PATCH(request: Request) {
       .from('merchant_kyc_documents')
       .update({
         verification_status: verificationStatus,
+        reviewed_by: user.id,
         reviewed_at: reviewedAt,
-        reviewer_notes: body.notes ? String(body.notes).slice(0, 500) : null,
+        reviewer_notes: notes,
       })
       .eq('id', documentId)
-      .select('id,merchant_id,document_type,document_url,verification_status,reviewed_at,reviewer_notes')
+      .select(
+        'id,merchant_id,document_type,document_url,storage_bucket,storage_path,original_file_name,verification_status,reviewed_by,reviewed_at,reviewer_notes'
+      )
       .single();
 
     if (error) {
@@ -79,16 +98,56 @@ export async function PATCH(request: Request) {
       );
     }
 
+    await writeAuditEvent(admin, {
+      actorId: user.id,
+      actorRole: role,
+      entityType: 'merchant_kyc_document',
+      entityId: data?.id ?? documentId,
+      action: 'merchant_document_reviewed',
+      metadata: {
+        merchantId: data?.merchant_id ?? null,
+        documentType: data?.document_type ?? null,
+        status,
+        verificationStatus,
+        notes,
+      },
+    });
+
+    if (data?.merchant_id) {
+      const { data: merchant } = await admin
+        .from('merchants')
+        .select('id,business_name,email')
+        .eq('id', data.merchant_id)
+        .maybeSingle();
+
+      if (merchant?.email) {
+        const notification = await sendMerchantDocumentReviewEmail({
+          merchantId: merchant.id,
+          businessName: merchant.business_name ?? 'your business',
+          merchantEmail: merchant.email,
+          documentType: data?.document_type ?? 'compliance document',
+          status: mapVerificationToEmailStatus(verificationStatus),
+          reviewerNotes: notes,
+        });
+        if (!notification.sent) {
+          console.warn('[merchant-document-review][notification][warn]', notification.error);
+        }
+      }
+    }
+
     return NextResponse.json({
       message: 'Document review updated.',
-      notes: body.notes ? String(body.notes).slice(0, 500) : null,
+      notes,
       document: {
         id: data?.id ?? null,
         merchant_id: data?.merchant_id ?? null,
         document_type: data?.document_type ?? null,
-        file_url: data?.document_url ?? null,
+        file_url: data?.document_url?.startsWith('http') ? data.document_url : null,
+        storage_bucket: data?.storage_bucket ?? null,
+        storage_path: data?.storage_path ?? null,
+        file_name: data?.original_file_name ?? null,
         status: mapVerificationToCompliance(data?.verification_status ?? ''),
-        reviewed_by: user.id,
+        reviewed_by: data?.reviewed_by ?? user.id,
         reviewed_at: data?.reviewed_at ?? reviewedAt,
       },
     });

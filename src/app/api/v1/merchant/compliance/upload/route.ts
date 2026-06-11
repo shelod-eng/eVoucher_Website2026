@@ -3,22 +3,18 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { resolveUserRole } from '@/server/utils/role';
 import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
-import { REQUIRED_COMPLIANCE_DOCUMENTS } from '@/server/utils/compliance';
+import { writeAuditEvent } from '@/server/utils/audit';
+import {
+  buildDocumentObjectPath,
+  getComplianceStorageBucket,
+  sanitizeDocumentFilename,
+  sha256Hex,
+  validateDocumentFile,
+  validateDocumentType,
+} from '@/server/utils/document-validator';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-const VALID_DOCUMENT_TYPES = new Set(REQUIRED_COMPLIANCE_DOCUMENTS.map((doc) => doc.type));
-
-function sanitizeFilename(name: string) {
-  return String(name || 'document')
-    .replace(/[^a-zA-Z0-9.\-_]/g, '_')
-    .slice(0, 120);
-}
-
-function inferContentType(file: File) {
-  return file.type || 'application/octet-stream';
-}
 
 function inferFileNameFromUrl(url: string | null) {
   if (!url) return null;
@@ -81,36 +77,44 @@ export async function POST(request: Request) {
     const documentType = String(formData.get('documentType') ?? '')
       .trim()
       .toUpperCase();
-    const file = formData.get('file');
+    const fileEntry = formData.get('file');
 
-    if (!VALID_DOCUMENT_TYPES.has(documentType as any)) {
-      return NextResponse.json({ error: 'Invalid document type.' }, { status: 400 });
-    }
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: 'File is required.' }, { status: 400 });
-    }
-    if (file.size <= 0) {
-      return NextResponse.json({ error: 'Uploaded file is empty.' }, { status: 400 });
-    }
-    const maxBytes = 10 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      return NextResponse.json({ error: 'File exceeds 10MB upload limit.' }, { status: 400 });
+    const documentTypeValidation = validateDocumentType(documentType);
+    if (!documentTypeValidation.ok) {
+      return NextResponse.json(
+        { error: documentTypeValidation.error, code: documentTypeValidation.code },
+        { status: 400 }
+      );
     }
 
-    const bucket = process.env.COMPLIANCE_STORAGE_BUCKET || 'merchant-compliance-documents';
-    const safeName = sanitizeFilename(file.name);
-    const objectPath = `${merchant.id}/${documentType}/${Date.now()}-${safeName}`;
+    const fileValidation = validateDocumentFile(fileEntry);
+    if (!fileValidation.ok) {
+      return NextResponse.json(
+        { error: fileValidation.error, code: fileValidation.code },
+        { status: 400 }
+      );
+    }
+    const file = fileEntry as File;
+
+    const bucket = getComplianceStorageBucket();
+    const safeName = sanitizeDocumentFilename(file.name);
+    const objectPath = buildDocumentObjectPath({
+      merchantId: merchant.id,
+      documentType,
+      fileName: safeName,
+    });
     let fileUrl: string | null = null;
+    let fileChecksum: string | null = null;
 
     try {
       const buffer = Buffer.from(await file.arrayBuffer());
+      fileChecksum = sha256Hex(buffer);
       const upload = await admin.storage.from(bucket).upload(objectPath, buffer, {
-        contentType: inferContentType(file),
+        contentType: file.type,
         upsert: false,
       });
       if (!upload.error) {
-        const publicUrl = admin.storage.from(bucket).getPublicUrl(objectPath);
-        fileUrl = publicUrl?.data?.publicUrl ?? null;
+        fileUrl = `supabase://${bucket}/${objectPath}`;
       } else {
         console.warn('[merchant-compliance][upload][warn]', upload.error.message);
       }
@@ -134,15 +138,22 @@ export async function POST(request: Request) {
         merchant_id: merchant.id,
         document_type: documentType,
         document_url: fileUrl,
+        storage_bucket: bucket,
+        storage_path: objectPath,
+        original_file_name: safeName,
+        mime_type: file.type,
+        size_bytes: file.size,
+        checksum_sha256: fileChecksum,
         verification_status: 'submitted',
         uploaded_by: user.id,
       })
       .select(
-        'id,merchant_id,document_type,document_url,verification_status,uploaded_by,uploaded_at,reviewed_at,reviewer_notes'
+        'id,merchant_id,document_type,document_url,storage_bucket,storage_path,original_file_name,mime_type,size_bytes,checksum_sha256,verification_status,uploaded_by,uploaded_at,reviewed_at,reviewer_notes'
       )
       .single();
 
     if (error) {
+      await admin.storage.from(bucket).remove([objectPath]).catch(() => null);
       return NextResponse.json(
         {
           error: error.message || 'Failed to save compliance document.',
@@ -152,6 +163,23 @@ export async function POST(request: Request) {
       );
     }
 
+    await writeAuditEvent(admin, {
+      actorId: user.id,
+      actorRole: role,
+      entityType: 'merchant_kyc_document',
+      entityId: data?.id ?? null,
+      action: 'merchant_document_uploaded',
+      metadata: {
+        merchantId: merchant.id,
+        documentType,
+        storageBucket: bucket,
+        storagePath: objectPath,
+        mimeType: file.type,
+        sizeBytes: file.size,
+        checksumSha256: fileChecksum,
+      },
+    });
+
     return NextResponse.json(
       {
         message: 'Document uploaded successfully.',
@@ -159,8 +187,16 @@ export async function POST(request: Request) {
           id: data?.id ?? null,
           merchant_id: data?.merchant_id ?? merchant.id,
           document_type: data?.document_type ?? documentType,
-          file_name: inferFileNameFromUrl(data?.document_url ?? fileUrl),
-          file_url: data?.document_url ?? fileUrl,
+          file_name:
+            data?.original_file_name ??
+            inferFileNameFromUrl(data?.document_url ?? fileUrl) ??
+            safeName,
+          file_url: null,
+          storage_bucket: data?.storage_bucket ?? bucket,
+          storage_path: data?.storage_path ?? objectPath,
+          mime_type: data?.mime_type ?? file.type,
+          size_bytes: data?.size_bytes ?? file.size,
+          checksum_sha256: data?.checksum_sha256 ?? fileChecksum,
           status: mapVerificationStatus(data?.verification_status),
           uploaded_at: data?.uploaded_at ?? null,
           reviewed_by: null,

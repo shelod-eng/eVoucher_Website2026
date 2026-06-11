@@ -52,9 +52,18 @@ type MerchantApprovalConfirmationPayload = {
   loginUrl: string;
 };
 
+type MerchantDocumentReviewPayload = {
+  merchantId: string;
+  businessName: string;
+  merchantEmail: string;
+  documentType: string;
+  status: 'approved' | 'rejected' | 'under_review';
+  reviewerNotes?: string | null;
+};
+
 type MerchantEmailDispatchResult = {
   sent: boolean;
-  provider: 'resend' | 'console';
+  provider: 'resend' | 'sendgrid' | 'console';
   error?: string;
   recipient: string;
 };
@@ -177,6 +186,39 @@ async function sendViaResend(recipients: string[], subject: string, text: string
   return true;
 }
 
+async function sendViaSendGrid(recipients: string[], subject: string, text: string, html: string) {
+  const apiKey = String(process.env.SENDGRID_API_KEY ?? '').trim();
+  if (!apiKey) return null;
+
+  const fromAddress = String(
+    process.env.SENDGRID_FROM_EMAIL ?? process.env.RESEND_FROM ?? 'onboarding@evoucher.co.za'
+  ).trim();
+
+  const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: recipients.map((email) => ({ email })) }],
+      from: { email: fromAddress.includes('<') ? 'onboarding@evoucher.co.za' : fromAddress },
+      subject,
+      content: [
+        { type: 'text/plain', value: text },
+        { type: 'text/html', value: html },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`SendGrid email failed (${response.status}): ${body}`);
+  }
+
+  return true;
+}
+
 function resolveAppBaseUrl() {
   const explicitUrl =
     String(process.env.NEXT_PUBLIC_APP_URL ?? '').trim() ||
@@ -237,13 +279,18 @@ async function sendEmailToMerchant(
       return { sent: true, provider: 'resend', recipient };
     }
 
+    const sendGridSent = await sendViaSendGrid(allRecipients, subject, text, html);
+    if (sendGridSent) {
+      return { sent: true, provider: 'sendgrid', recipient };
+    }
+
     const isProduction = process.env.NODE_ENV === 'production';
     if (isProduction) {
       return {
         sent: false,
-        provider: 'resend',
+        provider: 'sendgrid',
         recipient,
-        error: 'RESEND_API_KEY is not configured in production.',
+        error: 'No merchant email provider is configured in production.',
       };
     }
 
@@ -435,6 +482,49 @@ export async function sendMerchantApprovalConfirmationEmail(
       error: error?.message || 'Failed to send merchant approval confirmation email.',
     };
   }
+}
+
+export async function sendMerchantDocumentReviewEmail(payload: MerchantDocumentReviewPayload) {
+  const prettyDocument = payload.documentType.replaceAll('_', ' ');
+  const statusLabel =
+    payload.status === 'approved'
+      ? 'approved'
+      : payload.status === 'rejected'
+        ? 'rejected'
+        : 'marked for more information';
+  const subject = `eVoucher compliance document ${statusLabel} - ${prettyDocument}`;
+  const notes = String(payload.reviewerNotes ?? '').trim();
+  const text = [
+    `Hi,`,
+    ``,
+    `Your ${prettyDocument} for ${payload.businessName} was ${statusLabel}.`,
+    notes ? `Reviewer notes: ${notes}` : null,
+    ``,
+    payload.status === 'approved'
+      ? 'No further action is required for this document.'
+      : 'Please sign in to the eVoucher merchant portal and upload the corrected document.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;line-height:1.5;">
+      <h2 style="margin-bottom:12px;">Compliance document ${statusLabel}</h2>
+      <p>Your <strong>${prettyDocument}</strong> for <strong>${payload.businessName}</strong> was <strong>${statusLabel}</strong>.</p>
+      ${
+        notes
+          ? `<div style="border:1px solid #dbe3ec;border-radius:10px;padding:14px;margin:14px 0;background:#f8fafc;"><strong>Reviewer notes:</strong><br/>${notes}</div>`
+          : ''
+      }
+      <p>${
+        payload.status === 'approved'
+          ? 'No further action is required for this document.'
+          : 'Please sign in to the eVoucher merchant portal and upload the corrected document.'
+      }</p>
+    </div>
+  `.trim();
+
+  return sendEmailToMerchant(payload.merchantEmail, subject, text, html);
 }
 
 export function getMerchantLoginUrl() {
