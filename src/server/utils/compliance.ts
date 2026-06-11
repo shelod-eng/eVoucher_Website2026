@@ -36,9 +36,16 @@ type ComplianceDocumentRow = {
   merchant_id: string;
   document_type: string;
   document_url: string | null;
+  storage_bucket?: string | null;
+  storage_path?: string | null;
+  original_file_name?: string | null;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  checksum_sha256?: string | null;
   verification_status: string | null;
   uploaded_by: string | null;
   uploaded_at: string | null;
+  reviewed_by?: string | null;
   reviewed_at: string | null;
   reviewer_notes: string | null;
 };
@@ -56,6 +63,12 @@ export type MerchantComplianceSnapshot = {
     status: ComplianceStatusValue;
     fileName: string | null;
     fileUrl: string | null;
+    storageBucket: string | null;
+    storagePath: string | null;
+    mimeType: string | null;
+    sizeBytes: number | null;
+    checksumSha256: string | null;
+    reviewerNotes: string | null;
     uploadedAt: string | null;
     reviewedBy: string | null;
     reviewedAt: string | null;
@@ -138,6 +151,12 @@ export async function getMerchantComplianceSnapshot(
     status: (merchantApproved ? 'VERIFIED' : 'PENDING') as ComplianceStatusValue,
     fileName: null,
     fileUrl: null,
+    storageBucket: null,
+    storagePath: null,
+    mimeType: null,
+    sizeBytes: null,
+    checksumSha256: null,
+    reviewerNotes: null,
     uploadedAt: null,
     reviewedBy: null,
     reviewedAt: null,
@@ -147,7 +166,7 @@ export async function getMerchantComplianceSnapshot(
   const { data, error } = await admin
     .from('merchant_kyc_documents')
     .select(
-      'id,merchant_id,document_type,document_url,verification_status,uploaded_by,uploaded_at,reviewed_at,reviewer_notes'
+      'id,merchant_id,document_type,document_url,storage_bucket,storage_path,original_file_name,mime_type,size_bytes,checksum_sha256,verification_status,uploaded_by,uploaded_at,reviewed_by,reviewed_at,reviewer_notes'
     )
     .eq('merchant_id', merchantId)
     .order('uploaded_at', { ascending: false });
@@ -180,10 +199,16 @@ export async function getMerchantComplianceSnapshot(
       label: doc.label,
       description: doc.description,
       status: row ? mapVerificationStatus(row.verification_status) : ('PENDING' as ComplianceStatusValue),
-      fileName: row ? inferFileNameFromUrl(row.document_url) : null,
-      fileUrl: row?.document_url ?? null,
+      fileName: row ? row.original_file_name ?? inferFileNameFromUrl(row.document_url) : null,
+      fileUrl: row?.document_url?.startsWith('http') ? row.document_url : null,
+      storageBucket: row?.storage_bucket ?? null,
+      storagePath: row?.storage_path ?? null,
+      mimeType: row?.mime_type ?? null,
+      sizeBytes: row?.size_bytes ?? null,
+      checksumSha256: row?.checksum_sha256 ?? null,
+      reviewerNotes: row?.reviewer_notes ?? null,
       uploadedAt: row?.uploaded_at ?? null,
-      reviewedBy: null,
+      reviewedBy: row?.reviewed_by ?? null,
       reviewedAt: row?.reviewed_at ?? null,
       expiresAt: null,
     };

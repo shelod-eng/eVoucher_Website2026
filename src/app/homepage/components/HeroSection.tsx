@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
+import PwaInstallButton from '@/components/common/PwaInstallButton';
 
 interface HeroSectionProps {
   className?: string;
@@ -23,21 +24,37 @@ const HeroSection = ({
             {/* Trust Badge */}
             <div className="inline-flex items-center space-x-2 bg-success/10 text-success px-4 py-2 rounded-full">
               <Icon name="ShieldCheckIcon" size={20} variant="solid" />
-              <span className="text-sm font-body font-medium">Government Aligned & Secure</span>
+              <span className="text-sm font-body font-medium">
+                Sponsor-ready, PWA-enabled, POPIA-aligned
+              </span>
             </div>
 
             {/* Main Heading */}
             <h1 className="font-headline font-bold text-4xl lg:text-6xl text-foreground leading-tight">
-              Digital Commerce That Serves With <span className="text-primary">Dignity</span> &{' '}
-              <span className="text-secondary">Transparency</span>
+              South Africa's Digital Voucher Infrastructure -{' '}
+              <span className="text-primary">Dignified Impact</span>.
             </h1>
 
             {/* Subheading */}
             <p className="font-body text-lg lg:text-xl text-muted-foreground leading-relaxed">
-              Bridging government social programs with merchant networks to deliver meaningful
-              savings to South Africa's most vulnerable communities. Real savings, real impact, real
-              accountability.
+              Bridging government, CSI sponsors, merchants, and communities through installable
+              mobile-first onboarding, private compliance evidence, transparent settlement flows,
+              and measurable consumer savings.
             </p>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {['FNB', 'DTI', 'CSI Partners'].map((partner) => (
+                <div
+                  key={partner}
+                  className="rounded-lg border border-border bg-card px-4 py-3 text-center shadow-sm"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                    Sponsor signal
+                  </p>
+                  <p className="mt-1 font-headline text-lg font-bold text-foreground">{partner}</p>
+                </div>
+              ))}
+            </div>
 
             {/* USSD Code Highlight */}
             <div className="bg-card border-2 border-primary rounded-lg p-6 shadow-md">
@@ -52,9 +69,11 @@ const HeroSection = ({
                 </div>
                 <div>
                   <p className="font-body text-sm text-muted-foreground">
-                    Access Without Smartphone
+                    Access without app store friction
                   </p>
-                  <p className="font-accent text-2xl font-bold text-foreground">*134*2468#</p>
+                  <p className="font-accent text-2xl font-bold text-foreground">
+                    PWA + *134*2468#
+                  </p>
                 </div>
               </div>
             </div>
@@ -75,6 +94,7 @@ const HeroSection = ({
                 <Icon name="BuildingStorefrontIcon" size={20} variant="solid" />
                 <span>Onboard as Merchant</span>
               </button>
+              <PwaInstallButton className="px-8 py-4 text-base" />
             </div>
 
             {/* Government CTA */}

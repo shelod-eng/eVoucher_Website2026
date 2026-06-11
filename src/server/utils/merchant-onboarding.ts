@@ -75,6 +75,24 @@ type OnboardingInsert = {
   must_reset_password: boolean;
 };
 
+type MerchantEmailProvider = 'resend' | 'sendgrid' | 'console';
+
+type FinalizeMerchantApprovalResult = {
+  approved: boolean;
+  status: 'pending' | 'approved' | 'active' | 'suspended';
+  vettingStatus: string | null;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  message: string;
+  credentialsEmailSent?: boolean;
+  credentialsEmailRecipient?: string;
+  credentialsEmailProvider?: MerchantEmailProvider;
+  credentialsEmailError?: string | null;
+  approvalConfirmationSent?: boolean;
+  approvalConfirmationError?: string | null;
+  debug?: Record<string, unknown>;
+};
+
 type MerchantRecord = {
   id: string;
   user_id: string | null;
@@ -1015,7 +1033,7 @@ export async function verifyMerchantEmailToken(args: {
     let postConfirmationCredentials: {
       sent: boolean;
       recipient: string;
-      provider: 'resend' | 'console';
+      provider: MerchantEmailProvider;
       error?: string;
     } | null = null;
     let postConfirmationTemporaryPassword: string | null = null;
@@ -1635,7 +1653,9 @@ export async function resendMerchantCredentials(args: {
   };
 }
 
-async function finalizeMerchantApproval(options: FinalizeOptions & { merchantId: string }) {
+async function finalizeMerchantApproval(
+  options: FinalizeOptions & { merchantId: string }
+): Promise<FinalizeMerchantApprovalResult> {
   const admin = createAdminClient();
   const merchant = await getMerchantById(admin, options.merchantId);
   const verification = await getVerificationByMerchantId(admin, options.merchantId);

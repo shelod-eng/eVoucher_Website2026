@@ -23,6 +23,9 @@ type ComplianceDocument = {
   status: ComplianceStatus;
   fileName: string | null;
   fileUrl: string | null;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  reviewerNotes?: string | null;
   uploadedAt: string | null;
   reviewedBy: string | null;
   reviewedAt: string | null;
@@ -44,21 +47,69 @@ type ComplianceResponse = {
 function statusBadge(status: string) {
   const normalized = String(status).toUpperCase();
   if (normalized === 'VERIFIED' || normalized === 'APPROVED') {
-    return 'bg-success/10 text-success';
+    return 'border border-success/30 bg-success/10 text-success';
   }
   if (normalized === 'FAILED' || normalized === 'REJECTED' || normalized === 'SUSPENDED') {
-    return 'bg-error/10 text-error';
+    return 'border border-error/30 bg-error/10 text-error';
   }
   if (normalized === 'EXPIRED') {
-    return 'bg-warning/10 text-warning';
+    return 'border border-warning/30 bg-warning/10 text-warning';
   }
-  return 'bg-warning/10 text-warning';
+  return 'border border-warning/30 bg-warning/10 text-warning';
+}
+
+function formatBytes(value?: number | null) {
+  if (!value) return null;
+  if (value < 1024 * 1024) return `${Math.max(1, Math.round(value / 1024))} KB`;
+  return `${(value / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function isImageFile(file: File) {
+  return file.type.startsWith('image/') || /\.(heic|heif|jpe?g|png|webp)$/i.test(file.name);
+}
+
+async function normalizeMobileImage(file: File) {
+  if (!isImageFile(file)) return file;
+
+  const bitmap = await createImageBitmap(file);
+  const maxEdge = 2048;
+  const ratio = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * ratio));
+  const height = Math.max(1, Math.round(bitmap.height * ratio));
+
+  if (ratio === 1 && !/\.(heic|heif)$/i.test(file.name)) {
+    bitmap.close();
+    return file;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  if (!context) {
+    bitmap.close();
+    return file;
+  }
+  context.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob((value) => resolve(value), 'image/jpeg', 0.88)
+  );
+  if (!blob) return file;
+
+  const jpegName = file.name.replace(/\.(heic|heif|png|webp)$/i, '.jpg');
+  return new File([blob], jpegName === file.name ? `${file.name}.jpg` : jpegName, {
+    type: 'image/jpeg',
+    lastModified: Date.now(),
+  });
 }
 
 export default function MerchantCompliancePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<ComplianceDocumentType | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [snapshot, setSnapshot] = useState<ComplianceResponse | null>(null);
@@ -101,29 +152,43 @@ export default function MerchantCompliancePage() {
     const file = event.target.files?.[0];
     if (!file) return;
     setSubmitting(documentType);
+    setUploadProgress((current) => ({ ...current, [documentType]: 12 }));
     setError('');
     setMessage('');
     try {
+      const uploadFile = await normalizeMobileImage(file);
+      setUploadProgress((current) => ({ ...current, [documentType]: 36 }));
+
       const formData = new FormData();
       formData.set('documentType', documentType);
-      formData.set('file', file);
+      formData.set('file', uploadFile);
 
       const res = await fetch('/api/v1/merchant/compliance/upload', {
         method: 'POST',
         credentials: 'include',
         body: formData,
       });
+      setUploadProgress((current) => ({ ...current, [documentType]: 78 }));
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(payload?.error || 'Upload failed.');
       }
+      setUploadProgress((current) => ({ ...current, [documentType]: 100 }));
       setMessage(`${documentType.replaceAll('_', ' ')} uploaded successfully.`);
       await fetchStatus();
     } catch (uploadError: any) {
-      setError(String(uploadError?.message || 'Upload failed.'));
+      setError(
+        String(
+          uploadError?.message ||
+            'Upload failed. HEIC conversion depends on device browser support; try camera capture or JPEG/PDF upload.'
+        )
+      );
     } finally {
       setSubmitting(null);
       event.target.value = '';
+      window.setTimeout(() => {
+        setUploadProgress((current) => ({ ...current, [documentType]: 0 }));
+      }, 900);
     }
   };
 
@@ -182,6 +247,11 @@ export default function MerchantCompliancePage() {
 
           <section className="rounded-2xl border border-border bg-card p-6">
             <h2 className="font-headline text-xl text-foreground">Required Documents</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Capture documents from your phone camera or upload PDF, JPG, PNG, and WebP files.
+              Mobile images are resized to 2048px and converted to JPEG where the browser supports
+              it.
+            </p>
             {loading ? (
               <p className="mt-4 text-sm text-muted-foreground">Loading compliance checklist...</p>
             ) : (
@@ -199,11 +269,22 @@ export default function MerchantCompliancePage() {
                         {doc.status}
                       </span>
                     </div>
+                    {doc.status === 'FAILED' && doc.reviewerNotes && (
+                      <div className="mt-3 rounded-lg border border-error/25 bg-error/10 p-3 text-sm text-error">
+                        Rejection reason: {doc.reviewerNotes}
+                      </div>
+                    )}
                     <div className="mt-3 flex flex-wrap items-center gap-3">
                       <label className="cursor-pointer rounded-lg bg-primary px-3 py-2 text-xs font-headline text-primary-foreground">
-                        {submitting === doc.documentType ? 'Uploading...' : `Upload ${doc.label}`}
+                        {submitting === doc.documentType
+                          ? 'Uploading...'
+                          : doc.status === 'FAILED'
+                            ? `Resubmit ${doc.label}`
+                            : `Upload ${doc.label}`}
                         <input
                           type="file"
+                          accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif"
+                          capture={doc.documentType === 'FICA_ID' ? 'environment' : undefined}
                           className="hidden"
                           onChange={(event) => {
                             void handleUpload(doc.documentType, event);
@@ -214,12 +295,25 @@ export default function MerchantCompliancePage() {
                       <span className="text-xs text-muted-foreground">
                         {doc.fileName ? `Latest: ${doc.fileName}` : 'No file uploaded yet.'}
                       </span>
+                      {formatBytes(doc.sizeBytes) && (
+                        <span className="text-xs text-muted-foreground">
+                          Size: {formatBytes(doc.sizeBytes)}
+                        </span>
+                      )}
                       {doc.uploadedAt && (
                         <span className="text-xs text-muted-foreground">
                           Uploaded: {new Date(doc.uploadedAt).toLocaleString()}
                         </span>
                       )}
                     </div>
+                    {Boolean(uploadProgress[doc.documentType]) && (
+                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${uploadProgress[doc.documentType]}%` }}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
