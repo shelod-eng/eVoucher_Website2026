@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createPaymentProvider } from '@/server/services/payment/payment-provider-factory';
+import {
+  deriveSettlementAmount,
+  isBankservAdaptorCompatibilityError,
+  queueBankservSettlementTransaction,
+} from '@/server/services/bankserv/adaptor';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { recordWalletCredit } from '@/server/services/wallet/ledger';
 import { writeAuditEvent } from '@/server/utils/audit';
@@ -149,6 +154,40 @@ export async function POST(request: Request) {
         voucher_code: voucherCode,
       })
       .eq('transaction_reference', payload.transactionReference);
+
+    if (normalizedStatus === 'completed' && !isWalletTopupTransaction) {
+      try {
+        await queueBankservSettlementTransaction(admin, {
+          transactionReference: payload.transactionReference,
+          merchantId: String(transaction.merchant_id ?? ''),
+          customerId: transaction.customer_id ?? null,
+          voucherCode,
+          paymentMethod: String(transaction.payment_method ?? ''),
+          accessChannel: String(transaction.access_channel ?? 'web'),
+          settlementAmount: deriveSettlementAmount({
+            merchantReceivableAfterTotalDiscount: transaction.merchant_receivable_after_total_discount,
+            merchantReceivableAfterEvoucherBenefit:
+              transaction.merchant_receivable_after_evoucher_benefit,
+            faceValue,
+            totalDiscountAmount: pricing.totalDiscountAmount,
+            amount: settledAmount,
+          }),
+          grossAmount: faceValue,
+          sourceEventKey: payload.eventId,
+          completionSource: 'webhook',
+          metadata: {
+            provider,
+            normalizedStatus,
+            settledAmount,
+            source: 'payment_webhook',
+          },
+        });
+      } catch (error: any) {
+        if (!isBankservAdaptorCompatibilityError(error)) {
+          throw error;
+        }
+      }
+    }
 
     await writeAuditEvent(admin, {
       actorId: transaction.customer_id,

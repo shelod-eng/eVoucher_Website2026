@@ -39,7 +39,24 @@ async function updateMerchantStatus(formData: FormData) {
   const admin = createAdminClient();
   const updatePayload: Record<string, any> = { status };
   if (status === 'approved' || status === 'active') {
+    const existingReview = await admin
+      .from('merchant_kyc_reviews')
+      .select('id')
+      .eq('merchant_id', merchantId)
+      .eq('review_status', 'approved')
+      .limit(1);
+    if (!existingReview.error && (!existingReview.data || existingReview.data.length === 0)) {
+      await admin.from('merchant_kyc_reviews').insert({
+        merchant_id: merchantId,
+        review_status: 'approved',
+        reviewed_by: null,
+        review_notes: 'Administrative status update from sponsor merchant management.',
+      });
+    }
     updatePayload.approved_at = new Date().toISOString();
+    updatePayload.vetting_status = 'approved';
+    updatePayload.email_verified = true;
+    updatePayload.phone_verified = true;
   }
   await admin.from('merchants').update(updatePayload).eq('id', merchantId);
   revalidatePath('/portal/merchants');
@@ -100,8 +117,8 @@ export default async function PortalMerchantsPage({
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-semibold text-slate-900">Merchant management</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Review onboarding status, approve merchants with the real backend workflow, and resend
-          credentials when needed.
+          Review onboarding status, approve merchants with the real backend workflow, and reset or
+          resend credentials when needed.
         </p>
         {notice && (
           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -187,17 +204,15 @@ export default async function PortalMerchantsPage({
                           </button>
                         </form>
 
-                        {isApproved && (
-                          <form action={resendCredentialsAction}>
-                            <input type="hidden" name="merchantId" value={merchant.id} />
-                            <button
-                              type="submit"
-                              className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
-                            >
-                              Resend Credentials
-                            </button>
-                          </form>
-                        )}
+                        <form action={resendCredentialsAction}>
+                          <input type="hidden" name="merchantId" value={merchant.id} />
+                          <button
+                            type="submit"
+                            className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                          >
+                            Reset Credentials
+                          </button>
+                        </form>
                       </div>
                     </td>
                   </tr>

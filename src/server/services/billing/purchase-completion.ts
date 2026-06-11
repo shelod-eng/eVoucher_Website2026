@@ -1,5 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
+import {
+  deriveSettlementAmount,
+  isBankservAdaptorCompatibilityError,
+  queueBankservSettlementTransaction,
+} from '@/server/services/bankserv/adaptor';
 import { recordVoucherPurchaseBillingEvent } from '@/server/services/billing/billing-events';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { generateSecureVoucherCode } from '@/server/utils/security';
@@ -170,6 +175,39 @@ export async function ensureCompletedPurchaseArtifacts(
     });
   } catch (error: any) {
     if (!isBillingCompatibilityError(error)) {
+      throw error;
+    }
+  }
+
+  try {
+    await queueBankservSettlementTransaction(admin, {
+      transactionReference: input.transaction.transaction_reference,
+      merchantId: input.merchant.id,
+      customerId: input.transaction.customer_id,
+      voucherCode,
+      paymentMethod: String(input.metadata?.paymentMethod ?? ''),
+      accessChannel: String(input.metadata?.accessChannel ?? 'web'),
+      settlementAmount: deriveSettlementAmount({
+        merchantReceivableAfterTotalDiscount: pricing.merchantReceivableAfterTotalDiscount,
+        merchantReceivableAfterEvoucherBenefit: pricing.merchantReceivableAfterEvoucherBenefit,
+        faceValue: faceValue || pricing.faceValue,
+        totalDiscountAmount: pricing.totalDiscountAmount,
+        amount: consumerPrice || pricing.consumerPrice,
+      }),
+      grossAmount: faceValue || pricing.faceValue,
+      sourceEventKey: input.transaction.transaction_reference,
+      completionSource:
+        input.metadata?.source === 'billing_simulator_purchase' ? 'simulator' : 'unknown',
+      metadata: {
+        paymentStatus: 'completed',
+        source: input.metadata?.source ?? 'payment_completion',
+        consumerPrice: consumerPrice || pricing.consumerPrice,
+        faceValue: faceValue || pricing.faceValue,
+        totalDiscountPct: totalDiscountPct || pricing.totalDiscountPct,
+      },
+    });
+  } catch (error: any) {
+    if (!isBankservAdaptorCompatibilityError(error)) {
       throw error;
     }
   }

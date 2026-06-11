@@ -113,7 +113,7 @@ export default function PortalResetPasswordPage() {
         await signIn(email, password);
       }
 
-      router.replace('/portal/dashboard');
+      router.replace('/portal/bankserv');
     } catch (error: any) {
       setStatus(error?.message || 'Failed to update password.');
     } finally {
