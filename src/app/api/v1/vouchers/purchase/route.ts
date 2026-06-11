@@ -3,6 +3,11 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { PurchaseVoucherRequest } from '@/types/domain';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { createPaymentProvider } from '@/server/services/payment/payment-provider-factory';
+import {
+  deriveSettlementAmount,
+  isBankservAdaptorCompatibilityError,
+  queueBankservSettlementTransaction,
+} from '@/server/services/bankserv/adaptor';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { writeAuditEvent } from '@/server/utils/audit';
 import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
@@ -624,7 +629,38 @@ export async function POST(request: Request) {
           paymentMethod: body.paymentMethod,
         });
       }
+    }
 
+    if (paymentStatus === 'completed') {
+      try {
+        await queueBankservSettlementTransaction(admin, {
+          transactionReference,
+          merchantId: merchant.id,
+          customerId: user.id,
+          voucherCode,
+          paymentMethod: body.paymentMethod,
+          accessChannel,
+          settlementAmount: deriveSettlementAmount({
+            merchantReceivableAfterTotalDiscount: pricing.merchantReceivableAfterTotalDiscount,
+            merchantReceivableAfterEvoucherBenefit: pricing.merchantReceivableAfterEvoucherBenefit,
+            faceValue: pricing.faceValue,
+            totalDiscountAmount: pricing.totalDiscountAmount,
+            amount: pricing.consumerPrice,
+          }),
+          grossAmount: pricing.faceValue,
+          sourceEventKey: transactionReference,
+          completionSource: 'checkout',
+          metadata: {
+            paymentStatus,
+            selectedBranchId: selectedBranchContext?.id ?? null,
+            source: 'voucher_purchase_route',
+          },
+        });
+      } catch (error: any) {
+        if (!isBankservAdaptorCompatibilityError(error)) {
+          throw error;
+        }
+      }
     }
 
     await writeAuditEvent(admin, {

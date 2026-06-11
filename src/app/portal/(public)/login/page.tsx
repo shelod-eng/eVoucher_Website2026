@@ -18,7 +18,7 @@ export default function PortalLoginPage() {
 
   useEffect(() => {
     if (user && role === 'admin') {
-      router.replace('/portal/dashboard');
+      router.replace('/portal/bankserv');
     }
   }, [user, role, router]);
 
@@ -33,7 +33,7 @@ export default function PortalLoginPage() {
         setStatus('This account is not authorized for the business portal.');
         return;
       }
-      router.replace('/portal/dashboard');
+      router.replace('/portal/bankserv');
     } catch (error: any) {
       setStatus(error?.message || 'Login failed. Check your credentials.');
     } finally {

@@ -12,7 +12,7 @@ export default async function PortalEntryPage() {
   if (user) {
     const { role } = await resolveUserRole(supabase, user);
     if (isAdminRole(role)) {
-      redirect('/portal/dashboard');
+      redirect('/portal/bankserv');
     }
   }
 

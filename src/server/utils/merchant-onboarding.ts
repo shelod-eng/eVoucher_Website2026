@@ -637,6 +637,29 @@ async function updateMerchantApprovalState(
   return { userIdPersisted: false as const, finalStatus: 'active' as const };
 }
 
+async function ensureMerchantKycApproved(
+  admin: any,
+  merchantId: string,
+  reviewNotes = 'Administrative approval for merchant login enablement.'
+) {
+  const { data, error } = await admin
+    .from('merchant_kyc_reviews')
+    .select('id')
+    .eq('merchant_id', merchantId)
+    .eq('review_status', 'approved')
+    .limit(1);
+  if (error) throw error;
+  if (Array.isArray(data) && data.length > 0) return;
+
+  const { error: insertError } = await admin.from('merchant_kyc_reviews').insert({
+    merchant_id: merchantId,
+    review_status: 'approved',
+    reviewed_by: null,
+    review_notes: reviewNotes,
+  });
+  if (insertError) throw insertError;
+}
+
 async function updateMerchantCredentialIssuanceState(
   admin: any,
   args: {
@@ -1579,22 +1602,73 @@ export async function resendMerchantCredentials(args: {
   }
 
   const merchant = await getMerchantById(admin, merchantId);
+  const normalizedStatus = String(merchant.status ?? '').toLowerCase();
+  if (normalizedStatus === 'pending') {
+    const nowIso = new Date().toISOString();
+    await ensureMerchantKycApproved(
+      admin,
+      merchant.id,
+      'Administrative approval before merchant credential reset.'
+    );
+    await admin.from('merchant_onboarding_verifications').upsert(
+      {
+        merchant_id: merchant.id,
+        email_verified_at: nowIso,
+        sms_verified_at: nowIso,
+        otp_attempts: 0,
+      },
+      { onConflict: 'merchant_id' }
+    );
+    await admin
+      .from('merchants')
+      .update({
+        email_verified: true,
+        phone_verified: true,
+      })
+      .eq('id', merchant.id);
+
+    const approvalResult = await finalizeMerchantApproval({
+      merchantId: merchant.id,
+      forceApproveChain: true,
+      actorId: args.actorId ?? null,
+      actorRole: args.actorRole ?? 'admin',
+      requestId: null,
+    });
+
+    return {
+      ok: true as const,
+      status: 200,
+      sent: Boolean(approvalResult.credentialsEmailSent),
+      credentialsEmailRecipient: approvalResult.credentialsEmailRecipient,
+      credentialsEmailProvider: approvalResult.credentialsEmailProvider,
+      message: approvalResult.message,
+      error: approvalResult.credentialsEmailError,
+      statusData: await getMerchantOnboardingStatus(merchantId),
+      ...('debug' in approvalResult ? { debug: approvalResult.debug } : {}),
+    };
+  }
+
   let targetUserId = String(merchant.user_id ?? '').trim();
   if (!targetUserId || !isUuid(targetUserId)) {
     const authUser = await findAuthUserByEmail(admin, normalizeEmail(merchant.email));
     targetUserId = String(authUser?.id ?? '').trim();
   }
 
-  if (merchant.status !== 'approved' || !targetUserId) {
+  if (normalizedStatus !== 'approved' && normalizedStatus !== 'active') {
     return {
       ok: false as const,
       status: 409,
       error:
-        'Merchant must be approved with a linked auth account before credentials can be resent.',
+        'Merchant must be pending, approved, or active before credentials can be resent.',
     };
   }
 
   const temporaryPassword = generateTemporaryPassword();
+  if (!targetUserId) {
+    targetUserId = await provisionAuthUserForMerchant(admin, merchant, temporaryPassword);
+    await enforceMerchantLoginReadiness(admin, merchant, targetUserId);
+  }
+
   const issuedAt = new Date().toISOString();
   const { error: authUpdateError } = await admin.auth.admin.updateUserById(targetUserId, {
     password: temporaryPassword,
@@ -1611,6 +1685,7 @@ export async function resendMerchantCredentials(args: {
   const { error: merchantUpdateError } = await admin
     .from('merchants')
     .update({
+      user_id: targetUserId,
       must_reset_password: true,
       temporary_password_issued_at: issuedAt,
     })
@@ -1666,17 +1741,17 @@ async function finalizeMerchantApproval(
   const forceAutoApprovalMode = isForcedAutoApprovalMode();
 
   if (
-    merchant.status === 'approved' &&
+    (merchant.status === 'approved' || merchant.status === 'active') &&
     Boolean(verification?.credentials_sent_at) &&
     Boolean(merchant.user_id)
   ) {
     return {
       approved: true,
-      status: 'approved',
+      status: merchant.status,
       vettingStatus: merchant.vetting_status ?? 'approved',
       emailVerified,
       phoneVerified,
-      message: 'Merchant is already approved. Use merchant login.',
+      message: 'Merchant is already login-ready. Use merchant login.',
     };
   }
 
@@ -1752,6 +1827,13 @@ async function finalizeMerchantApproval(
 
   const approvedAt = new Date().toISOString();
   const nextVettingStatus = options.forceApproveChain ? 'approved' : 'auto_approved';
+  await ensureMerchantKycApproved(
+    admin,
+    merchant.id,
+    options.forceApproveChain
+      ? 'Administrative merchant approval workflow.'
+      : 'Automatic merchant approval workflow.'
+  );
   const updateResult = await updateMerchantApprovalState(admin, {
     merchantId: merchant.id,
     userId,

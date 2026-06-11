@@ -44,9 +44,20 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const {
+      data: { user: resolvedUser },
+    } = await supabase.auth.getUser();
+    user = resolvedUser;
+  } catch (error: any) {
+    const message = String(error?.message ?? '').toLowerCase();
+    const causeCode = String(error?.cause?.code ?? '');
+    if (!(message.includes('fetch failed') || causeCode === 'UND_ERR_CONNECT_TIMEOUT')) {
+      throw error;
+    }
+    user = null;
+  }
   const role = String(user?.user_metadata?.role ?? '').toLowerCase();
   const path = request.nextUrl.pathname;
 

@@ -15,6 +15,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function isRetryableAuthFetchError(error: any) {
+  const name = String(error?.name ?? '');
+  const message = String(error?.message ?? '').toLowerCase();
+  const causeCode = String(error?.cause?.code ?? '');
+  return (
+    name === 'AuthRetryableFetchError' ||
+    message.includes('fetch failed') ||
+    causeCode === 'UND_ERR_CONNECT_TIMEOUT'
+  );
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
@@ -142,11 +153,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       async (_event: AuthChangeEvent, session: Session | null) => {
-        await applySessionState(session);
+        try {
+          await applySessionState(session);
+        } catch (authStateError) {
+          console.warn('AuthContext: auth state change warning:', authStateError);
+          if (isMounted) {
+            setUser(session?.user ?? null);
+            setRole(String(session?.user?.user_metadata?.role ?? '').toLowerCase() || null);
+            setLoading(false);
+          }
+        }
       }
     );
 
-    void bootstrap();
+    void bootstrap().catch((bootstrapError) => {
+      console.warn('AuthContext: bootstrap warning:', bootstrapError);
+      if (isMounted) {
+        setUser(null);
+        setRole(null);
+        setLoading(false);
+      }
+    });
 
     return () => {
       isMounted = false;
@@ -171,20 +198,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('AuthContext: pre-signin session clear warning:', preSignInClearError);
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password: normalizedPassword,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: normalizedPassword,
+      });
 
-    if (error) {
-      console.error('AuthContext: signIn error:', error);
-      throw error;
+      if (error) {
+        console.error('AuthContext: signIn error:', error);
+        throw error;
+      }
+
+      console.log('AuthContext: signIn successful:', data.user?.id);
+      const resolvedRole = await resolveUserRole(data.user ?? null);
+      setRole(resolvedRole);
+      return data.user ?? null;
+    } catch (error: any) {
+      if (!isRetryableAuthFetchError(error)) {
+        throw error;
+      }
+
+      console.warn('AuthContext: retryable browser auth failure, falling back to server login.');
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password: normalizedPassword,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          payload?.error || 'Unable to contact the authentication service. Please try again.'
+        );
+      }
+
+      const accessToken = String(payload?.accessToken ?? '');
+      const refreshToken = String(payload?.refreshToken ?? '');
+      if (!accessToken || !refreshToken) {
+        throw new Error('Authentication fallback did not return a valid session.');
+      }
+
+      const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      const signedInUser = sessionData?.user ?? null;
+      const resolvedRole =
+        String(payload?.user?.role ?? '').toLowerCase().trim() ||
+        (await resolveUserRole(signedInUser));
+      setUser(signedInUser);
+      setRole(resolvedRole || null);
+      setLoading(false);
+      return signedInUser;
     }
-
-    console.log('AuthContext: signIn successful:', data.user?.id);
-    const resolvedRole = await resolveUserRole(data.user ?? null);
-    setRole(resolvedRole);
-    return data.user ?? null;
   };
 
   const signUp = async (email: string, password: string, metadata?: any) => {
