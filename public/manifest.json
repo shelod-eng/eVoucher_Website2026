@@ -2,25 +2,113 @@
   "name": "eVoucher Merchant & Sponsor Platform",
   "short_name": "eVoucher",
   "description": "South Africa's Digital Voucher Infrastructure for dignified merchant onboarding, sponsor oversight, and consumer savings.",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#07172e",
   "theme_color": "#0f766e",
   "categories": ["finance", "business", "government"],
+  "lang": "en-ZA",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/assets/images/branding/evoucher-logo.png",
+      "src": "/assets/images/branding/evoucher-logo-app.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/branding/evoucher-logo-app.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/branding/evoucher-logo-app.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/branding/evoucher-logo-app.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/branding/evoucher-logo-app.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/branding/evoucher-logo-app.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/branding/evoucher-logo-app.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/images/branding/evoucher-logo.png",
+      "src": "/assets/images/branding/evoucher-logo-app.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/branding/evoucher-logo-app.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "related_applications": [],
+  "shortcuts": [
+    {
+      "name": "Shop Vouchers",
+      "short_name": "Shop",
+      "description": "Browse and buy eVouchers",
+      "url": "/shop?source=pwa",
+      "icons": [
+        {
+          "src": "/assets/images/branding/evoucher-logo-app.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Merchant Dashboard",
+      "short_name": "Dashboard",
+      "description": "Merchant sales and payout overview",
+      "url": "/merchant/dashboard?source=pwa",
+      "icons": [
+        {
+          "src": "/assets/images/branding/evoucher-logo-app.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Redeem Voucher",
+      "short_name": "Redeem",
+      "description": "Redeem an eVoucher as a merchant",
+      "url": "/redeem?source=pwa",
+      "icons": [
+        {
+          "src": "/assets/images/branding/evoucher-logo-app.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
