@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getComplianceGaps } from '../../../docs/compliance-validator';
+import { getComplianceGaps } from '@/server/utils/compliance-validator';
 
 export type ComplianceDocumentType =
   | 'FICA_ID'
