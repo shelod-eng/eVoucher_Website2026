@@ -1,4 +1,4 @@
-import { MerchantDocumentType } from '@/docs/EXPO_MOBILE_DOCUMENT_UPLOAD'; // Assuming types are exported
+import { MerchantDocumentType } from '@/server/utils/compliance';
 
 /**
  * Core requirements for a merchant to be considered "Impact Ready"

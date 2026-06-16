@@ -1,5 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { getComplianceGaps } from '@/docs/compliance-validator';
+import { getComplianceGaps } from './compliance-validator';
 
 /**
  * Fetches merchant KYC documents and calculates the compliance state.
