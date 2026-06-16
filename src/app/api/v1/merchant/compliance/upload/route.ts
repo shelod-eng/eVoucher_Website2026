@@ -39,19 +39,14 @@ function mapVerificationStatus(value: unknown) {
   return 'PENDING';
 }
 
-function isMissingColumn(error: any, columnName: string) {
+function isSchemaError(error: any) {
   const message = String(error?.message ?? '').toLowerCase();
   const code = String(error?.code ?? '').toLowerCase();
-  const normalizedColumn = columnName.toLowerCase();
   return (
     code === '42703' ||
     code.startsWith('pgrst') ||
     message.includes('schema cache') ||
-    message.includes(`column ${normalizedColumn} does not exist`) ||
-    message.includes(`column "${normalizedColumn}" does not exist`) ||
-    message.includes(`column merchant_kyc_documents.${normalizedColumn} does not exist`) ||
-    message.includes(`could not find the '${normalizedColumn}' column`) ||
-    message.includes(`could not find the "${normalizedColumn}" column`)
+    message.includes('column') && message.includes('does not exist')
   );
 }
 
@@ -168,25 +163,31 @@ export async function POST(request: Request) {
       )
       .single();
 
-    if (error && isMissingColumn(error, 'storage_bucket')) {
+    if (error && isSchemaError(error)) {
       const legacyResult = await admin
         .from('merchant_kyc_documents')
         .insert({
           merchant_id: merchant.id,
           document_type: documentType,
           document_url: fileUrl,
-          verification_status: 'submitted',
+          // Try to use 'verification_status', fallback logic in DB should handle 'status'
+          verification_status: 'submitted', 
           uploaded_by: user.id,
         })
         .select(
           'id,merchant_id,document_type,document_url,verification_status,uploaded_by,uploaded_at,reviewed_at,reviewer_notes'
         )
         .single();
-      data = legacyResult.data as any;
-      error = legacyResult.error;
+      if (!legacyResult.error) {
+        data = legacyResult.data as any;
+        error = null;
+      } else {
+        error = legacyResult.error;
+      }
     }
 
     if (error) {
+      // Cleanup: Remove the uploaded file if database persistence failed
       await admin.storage.from(bucket).remove([objectPath]).catch(() => null);
       return NextResponse.json(
         {
