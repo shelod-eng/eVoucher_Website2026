@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getComplianceGaps } from '../../../docs/compliance-validator';
 
 export type ComplianceDocumentType =
   | 'FICA_ID'
@@ -9,6 +10,12 @@ export type ComplianceDocumentType =
   | 'AML_DECLARATION'
   | 'POPIA_CONSENT'
   | 'BANK_STATEMENT';
+
+/**
+ * Alias for MerchantDocumentType to maintain consistency with
+ * EXPO_MOBILE_DOCUMENT_UPLOAD specifications.
+ */
+export type MerchantDocumentType = ComplianceDocumentType;
 
 export type ComplianceStatusValue = 'PENDING' | 'VERIFIED' | 'FAILED' | 'EXPIRED';
 
@@ -242,21 +249,28 @@ export async function getMerchantComplianceSnapshot(
     };
   });
 
-  const missingDocuments = docs
-    .filter((doc) => doc.status !== 'VERIFIED')
-    .map((doc) => doc.documentType);
-
+  // Use the new consolidated validator logic
+  const gaps = getComplianceGaps(
+    (data || []).map((row) => ({
+      document_type: row.document_type,
+      status:
+        row.verification_status === 'approved'
+          ? 'approved'
+          : row.verification_status === 'rejected'
+            ? 'rejected'
+            : 'pending',
+      notes: row.reviewer_notes,
+      updated_at: row.uploaded_at,
+    }))
+  );
+  
   const hasFailure = docs.some((doc) => doc.status === 'FAILED');
   const hasExpired = docs.some((doc) => doc.status === 'EXPIRED');
   const allVerified = docs.every((doc) => doc.status === 'VERIFIED');
-
-  const overallStatus: MerchantComplianceSnapshot['overallStatus'] = hasFailure
-    ? 'FAILED'
-    : hasExpired
-      ? 'EXPIRED'
-      : allVerified
-        ? 'VERIFIED'
-        : 'PENDING';
+  
+  // Map the new overall status to the expected return type
+  const overallStatus: MerchantComplianceSnapshot['overallStatus'] = 
+    gaps.isComplete ? 'VERIFIED' : (hasFailure ? 'FAILED' : 'PENDING');
 
   const complianceApproved = merchantApproved && allVerified;
 
@@ -265,7 +279,7 @@ export async function getMerchantComplianceSnapshot(
     complianceApproved,
     canIssueVouchers: complianceApproved,
     canReceivePayouts: complianceApproved,
-    missingDocuments,
+    missingDocuments: gaps.missingTypes,
     documents: docs,
   };
 }

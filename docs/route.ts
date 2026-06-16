@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { resolveUserRole } from '@/server/utils/role';
-import { getMerchantComplianceSnapshot } from '@/server/utils/compliance';
+import { getMerchantComplianceSnapshot } from '../src/server/utils/compliance';
 
 export const dynamic = 'force-dynamic';
 
