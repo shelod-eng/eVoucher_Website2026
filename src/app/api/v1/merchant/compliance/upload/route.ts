@@ -39,6 +39,22 @@ function mapVerificationStatus(value: unknown) {
   return 'PENDING';
 }
 
+function isMissingColumn(error: any, columnName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const code = String(error?.code ?? '').toLowerCase();
+  const normalizedColumn = columnName.toLowerCase();
+  return (
+    code === '42703' ||
+    code.startsWith('pgrst') ||
+    message.includes('schema cache') ||
+    message.includes(`column ${normalizedColumn} does not exist`) ||
+    message.includes(`column "${normalizedColumn}" does not exist`) ||
+    message.includes(`column merchant_kyc_documents.${normalizedColumn} does not exist`) ||
+    message.includes(`could not find the '${normalizedColumn}' column`) ||
+    message.includes(`could not find the "${normalizedColumn}" column`)
+  );
+}
+
 function isMerchantContext(
   role: string,
   merchant: { user_id?: string | null } | null,
@@ -132,7 +148,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data, error } = await admin
+    let { data, error }: { data: any; error: any } = await admin
       .from('merchant_kyc_documents')
       .insert({
         merchant_id: merchant.id,
@@ -151,6 +167,24 @@ export async function POST(request: Request) {
         'id,merchant_id,document_type,document_url,storage_bucket,storage_path,original_file_name,mime_type,size_bytes,checksum_sha256,verification_status,uploaded_by,uploaded_at,reviewed_at,reviewer_notes'
       )
       .single();
+
+    if (error && isMissingColumn(error, 'storage_bucket')) {
+      const legacyResult = await admin
+        .from('merchant_kyc_documents')
+        .insert({
+          merchant_id: merchant.id,
+          document_type: documentType,
+          document_url: fileUrl,
+          verification_status: 'submitted',
+          uploaded_by: user.id,
+        })
+        .select(
+          'id,merchant_id,document_type,document_url,verification_status,uploaded_by,uploaded_at,reviewed_at,reviewer_notes'
+        )
+        .single();
+      data = legacyResult.data as any;
+      error = legacyResult.error;
+    }
 
     if (error) {
       await admin.storage.from(bucket).remove([objectPath]).catch(() => null);
