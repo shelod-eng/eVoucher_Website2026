@@ -32,6 +32,105 @@ type ComplianceDocument = {
   expiresAt: string | null;
 };
 
+const REQUIRED_CLIENT_COMPLIANCE_DOCUMENTS: ComplianceDocument[] = [
+  {
+    documentType: 'FICA_ID',
+    label: 'FICA ID',
+    description: 'Identity verification for the merchant owner or authorised representative',
+    status: 'PENDING',
+    fileName: null,
+    fileUrl: null,
+    uploadedAt: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    expiresAt: null,
+  },
+  {
+    documentType: 'FICA_POA',
+    label: 'Proof of Address',
+    description: 'FICA address verification for the merchant trading or registered address',
+    status: 'PENDING',
+    fileName: null,
+    fileUrl: null,
+    uploadedAt: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    expiresAt: null,
+  },
+  {
+    documentType: 'CIPC_CERTIFICATE',
+    label: 'CIPC Certificate',
+    description: 'Company registration evidence for KYB onboarding',
+    status: 'PENDING',
+    fileName: null,
+    fileUrl: null,
+    uploadedAt: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    expiresAt: null,
+  },
+  {
+    documentType: 'SARS_TAX_CLEARANCE',
+    label: 'SARS Tax Clearance',
+    description: 'Tax compliance evidence before activation and payouts',
+    status: 'PENDING',
+    fileName: null,
+    fileUrl: null,
+    uploadedAt: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    expiresAt: null,
+  },
+  {
+    documentType: 'EFT_MANDATE',
+    label: 'EFT Mandate',
+    description: 'Payout authorisation and settlement mandate',
+    status: 'PENDING',
+    fileName: null,
+    fileUrl: null,
+    uploadedAt: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    expiresAt: null,
+  },
+  {
+    documentType: 'AML_DECLARATION',
+    label: 'AML Declaration',
+    description: 'Anti-money laundering declaration for merchant activation',
+    status: 'PENDING',
+    fileName: null,
+    fileUrl: null,
+    uploadedAt: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    expiresAt: null,
+  },
+  {
+    documentType: 'POPIA_CONSENT',
+    label: 'POPIA Consent',
+    description: 'Consent for lawful processing of compliance and onboarding data',
+    status: 'PENDING',
+    fileName: null,
+    fileUrl: null,
+    uploadedAt: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    expiresAt: null,
+  },
+  {
+    documentType: 'BANK_STATEMENT',
+    label: 'Bank Statement',
+    description: 'Bank account verification for merchant payouts',
+    status: 'PENDING',
+    fileName: null,
+    fileUrl: null,
+    uploadedAt: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    expiresAt: null,
+  },
+];
+
 type ComplianceResponse = {
   merchantId: string;
   merchantName: string | null;
@@ -143,7 +242,10 @@ export default function MerchantCompliancePage() {
     void fetchStatus();
   }, []);
 
-  const orderedDocuments = useMemo(() => snapshot?.documents ?? [], [snapshot]);
+  const orderedDocuments = useMemo(
+    () => snapshot?.documents ?? REQUIRED_CLIENT_COMPLIANCE_DOCUMENTS,
+    [snapshot]
+  );
 
   const handleUpload = async (
     documentType: ComplianceDocumentType,

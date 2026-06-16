@@ -91,6 +91,22 @@ function isMissingRelation(error: any, relationName: string) {
   );
 }
 
+function isMissingColumn(error: any, columnName: string) {
+  const message = String(error?.message ?? '').toLowerCase();
+  const code = String(error?.code ?? '').toLowerCase();
+  const normalizedColumn = columnName.toLowerCase();
+  return (
+    code === '42703' ||
+    code.startsWith('pgrst') ||
+    message.includes('schema cache') ||
+    message.includes(`column ${normalizedColumn} does not exist`) ||
+    message.includes(`column "${normalizedColumn}" does not exist`) ||
+    message.includes(`column merchant_kyc_documents.${normalizedColumn} does not exist`) ||
+    message.includes(`could not find the '${normalizedColumn}' column`) ||
+    message.includes(`could not find the "${normalizedColumn}" column`)
+  );
+}
+
 function mapVerificationStatus(value: unknown): ComplianceStatusValue {
   const normalized = String(value ?? '')
     .trim()
@@ -163,11 +179,14 @@ export async function getMerchantComplianceSnapshot(
     expiresAt: null,
   }));
 
-  const { data, error } = await admin
+  const fullSelect =
+    'id,merchant_id,document_type,document_url,storage_bucket,storage_path,original_file_name,mime_type,size_bytes,checksum_sha256,verification_status,uploaded_by,uploaded_at,reviewed_by,reviewed_at,reviewer_notes';
+  const legacySelect =
+    'id,merchant_id,document_type,document_url,verification_status,uploaded_by,uploaded_at,reviewed_at,reviewer_notes';
+
+  let { data, error }: { data: ComplianceDocumentRow[] | null; error: any } = await admin
     .from('merchant_kyc_documents')
-    .select(
-      'id,merchant_id,document_type,document_url,storage_bucket,storage_path,original_file_name,mime_type,size_bytes,checksum_sha256,verification_status,uploaded_by,uploaded_at,reviewed_by,reviewed_at,reviewer_notes'
-    )
+    .select(fullSelect)
     .eq('merchant_id', merchantId)
     .order('uploaded_at', { ascending: false });
 
@@ -182,6 +201,15 @@ export async function getMerchantComplianceSnapshot(
         : REQUIRED_COMPLIANCE_DOCUMENTS.map((doc) => doc.type),
       documents: defaultDocs,
     };
+  }
+  if (error && isMissingColumn(error, 'storage_bucket')) {
+    const legacyResult = await admin
+      .from('merchant_kyc_documents')
+      .select(legacySelect)
+      .eq('merchant_id', merchantId)
+      .order('uploaded_at', { ascending: false });
+    data = legacyResult.data as ComplianceDocumentRow[] | null;
+    error = legacyResult.error;
   }
   if (error) throw error;
 
