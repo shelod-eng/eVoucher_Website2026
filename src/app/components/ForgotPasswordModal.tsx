@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import bcrypt from 'bcryptjs';
+import { updatePasswordHash } from '@/app/homepage/passwordActions';
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -22,8 +21,6 @@ export default function ForgotPasswordModal({ isOpen, onClose, userType }: Forgo
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const supabase = createClientComponentClient();
-
   if (!isOpen) return null;
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -38,19 +35,7 @@ export default function ForgotPasswordModal({ isOpen, onClose, userType }: Forgo
     }
 
     try {
-      const tableName = userType === 'consumer' ? 'users' : 'merchants';
-      
-      // Requirement: Hash the password for custom table updates
-      // For standard Supabase Auth, updateUser handles hashing internally
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      const { error } = await supabase
-        .from(tableName)
-        .update({ password: hashedPassword })
-        .eq('email', email);
-
-      if (error) throw error;
-
+      await updatePasswordHash(email, password, userType);
       setMessage({ type: 'success', text: 'Password updated successfully.' });
       
       // Close modal after showing success state
