@@ -29,6 +29,7 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE).then((cache) =>
       cache.addAll([
         '/',
+        '/index.html', // Ensure base HTML is always covered
         '/offline',
         '/manifest.json',
         '/icons/icon-192x192.png',
