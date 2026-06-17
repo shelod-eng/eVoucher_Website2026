@@ -12,6 +12,7 @@ Implemented layers:
 
 - PWA install support for phone-first merchant onboarding.
 - Homepage `Install eVoucher App` button for supported browsers.
+- Direct Android APK download support for non-PlayStore distribution.
 - Sponsor-ready homepage positioning: "South Africa's Digital Voucher Infrastructure - Dignified Impact."
 - Sponsor signal block for FNB, DTI, and CSI partners.
 - Live impact metrics API and homepage section.
@@ -34,6 +35,7 @@ NEXT_PUBLIC_APP_URL=https://www.evoucher.co.za
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
+NEXT_PUBLIC_APK_DOWNLOAD_URL=https://github.com/shelod-eng/eVoucher_Website2026/releases/download/v1.0.0/eVoucher_APK_Version1_16-June2026.apk
 COMPLIANCE_STORAGE_BUCKET=merchant-compliance-documents
 SENDGRID_API_KEY=...
 SENDGRID_FROM_EMAIL=onboarding@evoucher.co.za
@@ -202,6 +204,7 @@ Use this order for sponsor demos:
 3. Show FNB, DTI, CSI partner signal block.
 4. Show live impact metrics.
 5. Click `Install eVoucher App` to install the site as a PWA on mobile or desktop where supported.
+6. Show "Download Android App" button in the footer or hero for the native APK experience.
 6. Open merchant compliance and upload a sample document.
 7. Open `/portal/compliance` and review the document.
 8. Open `/portal/reports` and show revenue split transparency plus NetCash-ready positioning.
