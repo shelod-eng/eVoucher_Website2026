@@ -1,6 +1,6 @@
 {
-  "name": "eVoucher South Africa",
-  "short_name": "eVoucher",
+  "name": "eVoucher - South Africa's Digital Voucher Infrastructure",
+  "short_name": "eVoucher SA",
   "description": "South Africa's Digital Voucher Infrastructure - Dignified Impact.",
   "start_url": "/",
   "display": "standalone",
