@@ -44,6 +44,7 @@ function isSchemaError(error: any) {
   const code = String(error?.code ?? '').toLowerCase();
   return (
     code === '42703' ||
+    code === '42p01' || // Table does not exist
     code.startsWith('pgrst') ||
     message.includes('schema cache') ||
     message.includes('column') && message.includes('does not exist')
@@ -164,25 +165,27 @@ export async function POST(request: Request) {
       .single();
 
     if (error && isSchemaError(error)) {
-      const legacyResult = await admin
-        .from('merchant_kyc_documents')
-        .insert({
-          merchant_id: merchant.id,
-          document_type: documentType,
-          document_url: fileUrl,
-          // Try to use 'verification_status', fallback logic in DB should handle 'status'
-          verification_status: 'submitted', 
-          uploaded_by: user.id,
-        })
-        .select(
-          'id,merchant_id,document_type,document_url,verification_status,uploaded_by,uploaded_at,reviewed_at,reviewer_notes'
-        )
-        .single();
-      if (!legacyResult.error) {
-        data = legacyResult.data as any;
-        error = null;
-      } else {
-        error = legacyResult.error;
+      try {
+        const legacyResult = await admin
+          .from('merchant_kyc_documents')
+          .insert({
+            merchant_id: merchant.id,
+            document_type: documentType,
+            document_url: fileUrl,
+            // Try status for older schemas
+            status: 'submitted', 
+            uploaded_by: user.id,
+          })
+          .select('id,merchant_id,document_type,document_url,uploaded_by,uploaded_at');
+        
+        if (!legacyResult.error) {
+          data = Array.isArray(legacyResult.data) ? legacyResult.data[0] : legacyResult.data;
+          error = null;
+        } else {
+          error = legacyResult.error;
+        }
+      } catch (fallbackErr: any) {
+        error = fallbackErr;
       }
     }
 
@@ -198,22 +201,27 @@ export async function POST(request: Request) {
       );
     }
 
-    await writeAuditEvent(admin, {
-      actorId: user.id,
-      actorRole: role,
-      entityType: 'merchant_kyc_document',
-      entityId: data?.id ?? null,
-      action: 'merchant_document_uploaded',
-      metadata: {
-        merchantId: merchant.id,
-        documentType,
-        storageBucket: bucket,
-        storagePath: objectPath,
-        mimeType: file.type,
-        sizeBytes: file.size,
-        checksumSha256: fileChecksum,
-      },
-    });
+    try {
+      await writeAuditEvent(admin, {
+        actorId: user.id,
+        actorRole: role,
+        entityType: 'merchant_kyc_document',
+        entityId: data?.id ?? null,
+        action: 'merchant_document_uploaded',
+        metadata: {
+          merchantId: merchant.id,
+          documentType,
+          storageBucket: bucket,
+          storagePath: objectPath,
+          mimeType: file.type,
+          sizeBytes: file.size,
+          checksumSha256: fileChecksum,
+        },
+      });
+    } catch (auditError) {
+      // Non-blocking: Audit logging failure should not crash the upload flow
+      console.warn('[merchant-compliance][audit][warn]', auditError);
+    }
 
     return NextResponse.json(
       {
@@ -232,7 +240,7 @@ export async function POST(request: Request) {
           mime_type: data?.mime_type ?? file.type,
           size_bytes: data?.size_bytes ?? file.size,
           checksum_sha256: data?.checksum_sha256 ?? fileChecksum,
-          status: mapVerificationStatus(data?.verification_status),
+          status: mapVerificationStatus(data?.verification_status ?? data?.status),
           uploaded_at: data?.uploaded_at ?? null,
           reviewed_by: null,
           reviewed_at: data?.reviewed_at ?? null,
