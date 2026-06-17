@@ -66,6 +66,12 @@ Production behavior:
 - PWA registration is enabled in production automatically.
 - Local development registration can be enabled with:
 
+## Troubleshooting Custom Domains
+
+- **CRITICAL:** Do not use Vercel "Promote to Production" for PWA changes. You must trigger a **fresh deployment** on the `main` branch to ensure `NEXT_PUBLIC_APP_URL` is baked into the build with the `www.evoucher.co.za` value.
+- If PWA is disabled on `www.evoucher.co.za` but works on preview URLs, verify `NEXT_PUBLIC_APP_URL` matches the production domain exactly in Vercel settings.
+- Ensure the browser is not in "Incognito" mode, as many browsers disable Service Workers there.
+
 ```env
 NEXT_PUBLIC_ENABLE_PWA_DEV=true
 ```

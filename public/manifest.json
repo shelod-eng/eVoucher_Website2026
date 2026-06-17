@@ -1,8 +1,9 @@
 {
+  "id": "evoucher-sa-pwa",
   "name": "eVoucher - South Africa's Digital Voucher Infrastructure",
   "short_name": "eVoucher SA",
   "description": "South Africa's Digital Voucher Infrastructure - Dignified Impact.",
-  "start_url": "/",
+  "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#20B2AA",

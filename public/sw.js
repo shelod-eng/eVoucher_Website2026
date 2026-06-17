@@ -31,7 +31,8 @@ self.addEventListener('install', (event) => {
         '/',
         '/offline',
         '/manifest.json',
-        '/assets/images/branding/evoucher-logo-app.png',
+        '/icons/icon-192x192.png',
+        '/icons/icon-512x512.png',
       ])
     ).catch(() => {
       // Non-critical; app works without precache
