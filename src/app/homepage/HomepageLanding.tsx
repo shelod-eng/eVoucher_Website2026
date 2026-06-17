@@ -12,6 +12,7 @@ import StakeholderJourneys from './components/StakeholderJourneys';
 import PartnerLogos from './components/PartnerLogos';
 import SocialProofCarousel from './components/SocialProofCarousel';
 import TrustBadges from './components/TrustBadges';
+import AppDownloadSection from './components/AppDownloadSection';
 import CTASection from './components/CTASection';
 import Footer from './components/Footer';
 
@@ -28,6 +29,7 @@ export default function HomepageLanding() {
           onOpenMerchantModal={() => setShowMerchantModal(true)}
         />
         <TrustBadges />
+        <AppDownloadSection />
         <ImpactMetricsSection />
         <ValueProposition />
         <HowItWorks />
