@@ -54,57 +54,59 @@ export default function ForgotPasswordModal({ isOpen, onClose, userType }: Forgo
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative border border-slate-100 animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0A1F44]/40 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden relative border border-slate-100 animate-in zoom-in-95 duration-200">
         <button 
           onClick={onClose}
-          className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-600 transition-colors"
+          className="absolute right-6 top-6 p-2 text-slate-400 hover:text-slate-600 transition-colors z-10"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="p-8">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-[#0A1F44]">Reset Password</h2>
-            <p className="text-slate-500 mt-1">Enter your details to update your {userType} password</p>
+        <div className="p-10">
+          <div className="mb-8">
+            <h2 className="text-[24px] font-bold text-[#0A1F44] leading-tight">Secure Password Reset</h2>
+            <p className="text-[16px] text-[#4A4A4A] mt-2 font-normal leading-relaxed">
+              Enter your registered email below to securely update your {userType} password.
+            </p>
           </div>
 
           <form onSubmit={handleUpdatePassword} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700">Email Address</label>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#0A1F44]">Account Email</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#00BFA5] focus:border-transparent transition-all"
-                placeholder="name@example.com"
+                className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#00BFA5] focus:border-transparent transition-all placeholder:text-slate-300"
+                placeholder="e.g. j.doe@example.co.za"
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700">New Password</label>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#0A1F44]">New Password</label>
               <input
                 type="password"
                 required
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#00BFA5] focus:border-transparent transition-all"
-                placeholder="••••••••"
+                className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#00BFA5] focus:border-transparent transition-all placeholder:text-slate-300"
+                placeholder="Minimum 8 characters"
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700">Confirm New Password</label>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-[#0A1F44]">Confirm Password</label>
               <input
                 type="password"
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#00BFA5] focus:border-transparent transition-all"
-                placeholder="••••••••"
+                className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#00BFA5] focus:border-transparent transition-all placeholder:text-slate-300"
+                placeholder="Re-type your new password"
               />
             </div>
 
@@ -120,11 +122,17 @@ export default function ForgotPasswordModal({ isOpen, onClose, userType }: Forgo
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-4 bg-[#0A1F44] text-white rounded-xl font-bold shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2 disabled:opacity-70 mt-2 active:scale-[0.98]"
+              className="w-full py-4 bg-gradient-to-r from-[#00BFA5] to-[#0A1F44] text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-70 mt-4 active:scale-[0.98]"
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Update Password'}
             </button>
           </form>
+
+          <div className="mt-10 pt-6 border-t border-slate-100 flex flex-col items-center">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+              Secure. Verified. Bank-Grade Encryption.
+            </span>
+          </div>
         </div>
       </div>
     </div>
