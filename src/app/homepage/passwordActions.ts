@@ -26,14 +26,15 @@ export async function updatePasswordHash(
   try {
     // 1. Find the Supabase Auth user ID by email
     // This ensures we are targeting the actual login identity.
-    const { data: authUser, error: authUserError } = await admin.auth.admin.getUserByEmail(normalizedEmail);
+    const { data: users, error: listError } = await admin.auth.admin.listUsers();
+    const authUser = users?.users.find(u => u.email === normalizedEmail);
 
-    if (authUserError || !authUser?.user) {
-      console.warn(`[password-action] Auth user lookup failed for: ${normalizedEmail}`);
+    if (listError || !authUser) {
+      console.warn(`[password-action] Auth user lookup failed for: ${normalizedEmail}`, listError?.message);
       throw new Error('No account found with that email address.');
     }
 
-    const authUserId = authUser.user.id;
+    const authUserId = authUser.id;
 
     // 2. Update Supabase Auth credentials (the primary credential update)
     const { error: authError } = await admin.auth.admin.updateUserById(authUserId, {
