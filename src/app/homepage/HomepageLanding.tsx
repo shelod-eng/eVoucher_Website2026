@@ -23,6 +23,11 @@ export default function HomepageLanding() {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotUserType, setForgotUserType] = useState<'consumer' | 'merchant'>('consumer');
 
+  const openForgotModal = (type: 'consumer' | 'merchant') => {
+    setForgotUserType(type);
+    setShowForgotModal(true);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header forcePublic />
@@ -30,6 +35,8 @@ export default function HomepageLanding() {
         <HeroSection
           onOpenCustomerModal={() => setShowCustomerModal(true)}
           onOpenMerchantModal={() => setShowMerchantModal(true)}
+          // When consumers click "Forgot Password" in the login area, trigger this:
+          onOpenForgotModal={() => openForgotModal('consumer')}
         />
         <TrustBadges />
         <AppDownloadSection />
@@ -42,6 +49,7 @@ export default function HomepageLanding() {
         <CTASection
           onOpenCustomerModal={() => setShowCustomerModal(true)}
           onOpenMerchantModal={() => setShowMerchantModal(true)}
+          onOpenForgotModal={() => openForgotModal('consumer')}
         />
       </main>
       <Footer />
