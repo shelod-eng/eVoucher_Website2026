@@ -20,6 +20,7 @@ Implemented layers:
 - Private Supabase Storage metadata for KYC/KYB documents.
 - Admin compliance queue with signed private document previews.
 - Review actions: approve, reject, request more information.
+- **NEW:** BankServ Adaptor - Merchant Product Report (Real-time catalog & payout status).
 - Merchant-visible rejection reasons and resubmission flow.
 - SendGrid-compatible merchant review notifications.
 - Revenue split transparency in the sponsor portal.
@@ -214,6 +215,7 @@ Use this order for sponsor demos:
 6. Open merchant compliance and upload a sample document.
 7. Open `/portal/compliance` and review the document.
 8. Open `/portal/reports` and show revenue split transparency plus NetCash-ready positioning.
+9. **Navigate to "Merchant Product Report"** to show live onboarding vs catalog status (Auto-refreshes every 60s).
 
 ## Release Checklist
 
