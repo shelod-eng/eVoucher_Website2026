@@ -24,21 +24,29 @@ export async function updatePasswordHash(
   const normalizedEmail = email.toLowerCase().trim();
 
   try {
-    // 1. Find the user in the database table first to get the mapped user_id
+    // 1. Find the user in the database table first to get the mapped user_id (e.g., from 'merchants' or 'users')
     const { data: profile, error: findError } = await admin
       .from(tableName)
       .select('id, user_id')
       .eq('email', normalizedEmail)
       .maybeSingle();
 
-    if (findError || !profile) {
-      console.warn(`[password-action] Profile lookup failed for: ${normalizedEmail}`, findError);
+    if (findError) {
+      console.error(`[password-action] DB profile lookup error for ${normalizedEmail}:`, findError.message);
+      throw new Error('Database error during profile lookup.');
+    }
+    if (!profile) {
+      console.warn(`[password-action] No profile found for email: ${normalizedEmail}`);
       throw new Error('No account found with that email address.');
     }
 
     // 2. Resolve the Auth User ID
     // In your schema, merchants usually have a user_id, while consumers might use the id directly
     const authUserId = profile.user_id || profile.id;
+    if (!authUserId) {
+      console.error(`[password-action] Resolved authUserId is null for profile ID: ${profile.id}`);
+      throw new Error('Could not resolve authentication user ID.');
+    }
 
     // 3. Update Supabase Auth credentials (The "Source of Truth")
     const { error: authError } = await admin.auth.admin.updateUserById(authUserId, {
@@ -46,23 +54,26 @@ export async function updatePasswordHash(
     });
 
     if (authError) {
-      console.error(`[password-action] Supabase Auth update failed:`, authError.message);
-      throw new Error(`Authentication system error: ${authError.message}`);
+      console.error(`[password-action] Supabase Auth update failed for ${authUserId}:`, authError.message);
+      throw new Error(`Authentication system error: ${authError.message}. Please contact support.`);
     }
 
-    // 4. Sync hashed password to custom table for legacy compatibility
+    // 4. Sync hashed password to custom table for legacy compatibility and must_reset_password flag
     const hashedPassword = await bcrypt.hash(password, 10);
-    const { error: dbError } = await admin
+    const { error: dbError, count } = await admin
       .from(tableName)
       .update({ 
         password: hashedPassword,
         must_reset_password: false 
       })
-      .eq('id', profile.id);
+      .eq('id', profile.id)
+      .select('id', { count: 'exact' }); // Use select with count for robustness
 
-    if (dbError) {
-      // Log but don't fail the whole action if Auth already succeeded
-      console.warn(`[password-action] DB sync failed (Auth succeeded):`, dbError.message);
+    if (dbError && dbError.code !== '42703') { // 42703 is "undefined_column"
+      console.error(`[password-action] Critical DB sync error (Auth succeeded):`, dbError.message);
+      throw new Error(`Database sync failed: ${dbError.message}`); // Still throw for critical DB errors
+    } else if (dbError && dbError.code === '42703') {
+      console.warn(`[password-action] DB sync warning (missing column, Auth succeeded):`, dbError.message);
     }
 
     console.info(`[password-action] Successfully reset credentials for ${userType}: ${normalizedEmail}`);
