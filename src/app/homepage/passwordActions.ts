@@ -58,16 +58,16 @@ export async function updatePasswordHash(
       throw new Error(`Authentication system error: ${authError.message}. Please contact support.`);
     }
 
-    // 4. Sync hashed password to custom table for legacy compatibility and must_reset_password flag
+    // 4. Sync hashed password to custom table for legacy compatibility
     const hashedPassword = await bcrypt.hash(password, 10);
-    const { error: dbError, count } = await admin
+    const { error: dbError, data: updatedRows } = await admin
       .from(tableName)
       .update({ 
         password: hashedPassword,
         must_reset_password: false 
       })
       .eq('id', profile.id)
-      .select('id', { count: 'exact' }); // Use select with count for robustness
+      .select('id'); // Simplified to 1 argument to resolve TypeScript compilation error
 
     if (dbError && dbError.code !== '42703') { // 42703 is "undefined_column"
       console.error(`[password-action] Critical DB sync error (Auth succeeded):`, dbError.message);
