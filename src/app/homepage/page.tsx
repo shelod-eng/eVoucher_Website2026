@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation'; // Corrected import for useRouter
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js'; // Import AuthChangeEvent and Session types
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('');
@@ -19,7 +20,7 @@ export default function UpdatePasswordPage() {
 
   useEffect(() => {
     // Supabase Auth needs a moment to process the URL hash with the access_token
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       if (event === 'SIGNED_IN' && session) {
         setIsAuthReady(true);
       } else if (event === 'SIGNED_OUT') {
