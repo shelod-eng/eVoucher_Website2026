@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'; // Corrected import for useRouter
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
-import { AuthChangeEvent, Session } from '@supabase/supabase-js'; // Import AuthChangeEvent and Session types
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('');
