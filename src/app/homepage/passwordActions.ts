@@ -48,14 +48,14 @@ export async function updatePasswordHash(
 
     // 3. Sync the hashed password to the custom table for legacy/compatibility reasons
     const hashedPassword = await bcrypt.hash(password, 10);
-    const { error: dbError, count } = await admin
+    const { error: dbError, count, data: updatedRows } = await admin
       .from(tableName)
       .update({ password: hashedPassword })
       .eq('email', normalizedEmail)
-      .select('id', { count: 'exact' });
+      .select('id', { count: 'exact', head: false }); // Correct Supabase v2+ syntax for count
 
     if (dbError) throw dbError;
-    if (count === 0) {
+    if (count === 0 || !updatedRows || updatedRows.length === 0) {
       console.warn(`[password-action] Auth updated but custom table record not found for: ${normalizedEmail}`);
     }
 
