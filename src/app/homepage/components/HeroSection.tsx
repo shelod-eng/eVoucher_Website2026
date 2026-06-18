@@ -6,12 +6,14 @@ interface HeroSectionProps {
   className?: string;
   onOpenMerchantModal?: () => void;
   onOpenCustomerModal?: () => void;
+  onOpenForgotModal?: () => void;
 }
 
 const HeroSection = ({
   className = '',
   onOpenMerchantModal,
   onOpenCustomerModal,
+  onOpenForgotModal,
 }: HeroSectionProps) => {
   return (
     <section
