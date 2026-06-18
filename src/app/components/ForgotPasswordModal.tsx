@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { X, Loader2, CheckCircle2, AlertCircle, Mail } from 'lucide-react';
 
 interface ForgotPasswordModalProps {
@@ -21,7 +21,7 @@ export default function ForgotPasswordModal({ isOpen, onClose, userType }: Forgo
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   if (!isOpen) return null; // Only render if open
 

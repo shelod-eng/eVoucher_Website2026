@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import Header from '@/components/common/Header';
@@ -14,7 +14,7 @@ export default function UpdatePasswordPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const router = useRouter();
 
   useEffect(() => {
