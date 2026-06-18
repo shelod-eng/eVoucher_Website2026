@@ -36,6 +36,7 @@ export default function HomepageLanding() {
           onOpenCustomerModal={() => setShowCustomerModal(true)}
           onOpenMerchantModal={() => setShowMerchantModal(true)}
           // When consumers click "Forgot Password" in the login area, trigger this:
+          // This will now open the refactored modal to request a reset email.
           onOpenForgotModal={() => openForgotModal('consumer')}
         />
         <TrustBadges />
@@ -49,6 +50,7 @@ export default function HomepageLanding() {
         <CTASection
           onOpenCustomerModal={() => setShowCustomerModal(true)}
           onOpenMerchantModal={() => setShowMerchantModal(true)}
+          // This will now open the refactored modal to request a reset email.
           onOpenForgotModal={() => openForgotModal('consumer')}
         />
       </main>

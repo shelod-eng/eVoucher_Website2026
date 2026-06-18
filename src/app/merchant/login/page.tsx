@@ -297,7 +297,7 @@ export default function MerchantLogin() {
             <button
               type="button"
               onClick={() => setIsForgotModalOpen(true)}
-              className="mt-4 w-full rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3 text-sm font-headline font-semibold text-secondary transition hover:bg-secondary/10 disabled:opacity-60"
+              className="mt-4 w-full rounded-lg border border-secondary/30 bg-secondary/5 px-4 py-3 text-sm font-headline font-semibold text-secondary transition hover:bg-secondary/10 disabled:opacity-60 active:scale-[0.98]"
             >
               Forgot Password?
             </button>
