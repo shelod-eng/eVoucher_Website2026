@@ -31,7 +31,8 @@ export default function UpdatePasswordPage() {
     });
 
     // Initial check in case the session is already set from the URL
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data }) => {
+      const session: Session | null = data.session;
       if (session) {
         setIsAuthReady(true);
       } else {
