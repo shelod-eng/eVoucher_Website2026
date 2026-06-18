@@ -43,10 +43,12 @@ export async function GET() {
     // 3. Fetch latest settlement status (BankServ Adaptor Telemetry)
     // Note: We use a left join logic here to show 'No Payouts Yet' for new merchants
     const { data: settlements, error: settlementError } = await admin
-      .from('merchant_payouts') // Assuming the adaptor writes to this table
-      .select('merchant_id, status, last_settlement_at, batch_reference')
+      .from('merchant_payouts')
+      .select('id, merchant_id, status, payout_date, created_at')
       .in('merchant_id', merchantIds)
-      .order('last_settlement_at', { ascending: false });
+      .order('created_at', { ascending: false });
+
+    if (settlementError) throw settlementError;
 
     // 4. Consolidate the report
     const report = (merchants || []).map(m => {
@@ -65,8 +67,8 @@ export async function GET() {
         })),
         payoutTelemetry: {
           status: latestSettlement?.status || 'NOT_READY', // CREATED, VALIDATED, SUBMITTED, SETTLED
-          lastSettlement: latestSettlement?.last_settlement_at || null,
-          batchRef: latestSettlement?.batch_reference || 'N/A'
+          lastSettlement: latestSettlement?.payout_date || latestSettlement?.created_at || null,
+          batchRef: latestSettlement?.id ? `PAY-${String(latestSettlement.id).slice(0, 8).toUpperCase()}` : 'N/A'
         },
         isSponsorReady: m.status === 'active' && merchantProducts.length > 0
       };

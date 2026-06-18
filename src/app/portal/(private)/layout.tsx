@@ -8,6 +8,7 @@ const navigation = [
   { href: '/portal/bankserv', label: 'BankServ', code: 'BS' },
   { href: '/portal/dashboard', label: 'Overview', code: 'OV' },
   { href: '/portal/merchants', label: 'Merchants', code: 'MR' },
+  { href: '/portal/merchant-report', label: 'Merchant Report', code: 'MP' },
   { href: '/portal/compliance', label: 'Compliance', code: 'KY' },
   { href: '/portal/vouchers', label: 'Vouchers', code: 'VC' },
   { href: '/portal/redemptions', label: 'Redemptions', code: 'RD' },
