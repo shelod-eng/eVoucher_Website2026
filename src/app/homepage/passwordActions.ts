@@ -25,14 +25,14 @@ export async function updatePasswordHash(
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const { error, count } = await admin
+    const { error, data } = await admin
       .from(tableName)
       .update({ password: hashedPassword })
       .eq('email', email.toLowerCase().trim())
-      .select('id', { count: 'exact' });
+      .select('id');
 
     if (error) throw error;
-    if (count === 0) throw new Error('No account found with that email address.');
+    if (!data || data.length === 0) throw new Error('No account found with that email address.');
     
     console.info(`[password-action] Successfully updated ${userType} password for ${email}`);
   } catch (err: any) {
