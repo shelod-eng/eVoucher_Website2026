@@ -1,5 +1,17 @@
 -- Seed launch merchants and starter voucher products
 
+-- Ensure a UNIQUE constraint exists on merchants.email for ON CONFLICT to work.
+-- This is idempotent and safe to re-run.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'merchants_email_key' AND conrelid = 'public.merchants'::regclass
+    ) THEN
+        ALTER TABLE public.merchants ADD CONSTRAINT merchants_email_key UNIQUE (email);
+    END IF;
+END;
+$$;
+
 WITH merchants_seed AS (
     SELECT * FROM (VALUES
         ('Shoprite', 'Shoprite Onboarding', 'onboarding@shoprite.example', '+27 10 001 0001', 'retail', 'Shoprite', 'Shoprite Main', 'Johannesburg', 'Gauteng', 'chain', 'active', 'approved', 5)

@@ -45,38 +45,35 @@ async function main() {
 
   console.log(`Setting admin role for user ID: ${userId} (${email})`);
 
-  // Insert/upsert user_profiles
-  const { data: profileData, error: profileError } = await supabase
-    .from('user_profiles')
-    .upsert({
-      id: userId,
-      email: email,
-      role: 'admin',
-      full_name: 'System Admin',
-      phone: ''
-    });
+  try {
+    const [profileResult, roleResult] = await Promise.all([
+      // Upsert into user_profiles
+      supabase.from('user_profiles').upsert({
+        id: userId,
+        email: email,
+        role: 'admin',
+        full_name: 'System Admin', // Default name for new admin profiles
+        phone: '', // Default phone for new admin profiles
+      }).select().single(),
 
-  if (profileError) {
-    console.error('Error upserting user_profiles:', profileError);
-  } else {
-    console.log('user_profiles updated successfully.');
-  }
+      // Upsert into portal_user_roles
+      supabase.from('portal_user_roles').upsert({
+        user_id: userId,
+        role: 'admin',
+      }).select().single(),
+    ]);
 
-  // Insert/upsert portal_user_roles
-  const { data: roleData, error: roleError } = await supabase
-    .from('portal_user_roles')
-    .upsert({
-      user_id: userId,
-      role: 'admin'
-    });
+    if (profileResult.error) throw profileResult.error;
+    if (roleResult.error) throw roleResult.error;
 
-  if (roleError) {
-    console.error('Error upserting portal_user_roles:', roleError);
-  } else {
-    console.log('portal_user_roles updated successfully.');
+    console.log('\n✅ Admin role assignment successful!');
+    console.log('   - Updated user_profiles for:', profileResult.data.email);
+    console.log('   - Updated portal_user_roles for user_id:', roleResult.data.user_id);
+  } catch (error) {
+    console.error('\n❌ Failed to assign admin role.');
+    console.error('Error details:', error.message);
+    process.exit(1);
   }
 }
 
-main().catch(err => {
-  console.error(err);
-});
+main();

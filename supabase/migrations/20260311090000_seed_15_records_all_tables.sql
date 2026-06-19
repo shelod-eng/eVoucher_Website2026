@@ -5,6 +5,8 @@
 -- In production it will no-op, keeping the database clean for real onboarding.
 
 -- 1) Create 15 auth users (customers) if auth schema exists
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 DO $$
 BEGIN
   IF EXISTS (
@@ -29,7 +31,7 @@ BEGIN
       'authenticated',
       'authenticated',
       format('demo.customer%02s@evoucher.co.za', gs),
-      crypt('demo123', gen_salt('bf')),
+      crypt('demo123', gen_salt('bf'::text)),
       NOW(),
       jsonb_build_object('provider', 'email', 'providers', ARRAY['email']),
       jsonb_build_object('full_name', format('Demo Customer %02s', gs), 'role', 'customer'),
@@ -191,7 +193,7 @@ WITH customers AS (
   LIMIT 15
 ),
 products AS (
-  SELECT mp.*, m.business_name, m.parent_brand
+  SELECT mp.*, m.business_name
   FROM public.merchant_products mp
   JOIN public.merchants m ON m.id = mp.merchant_id
   ORDER BY mp.face_value
