@@ -113,9 +113,7 @@ export default function CartPage() {
                           <p className="text-xs text-primary mt-1">
                             Branch: {item.selectedBranchName}
                             {item.selectedBranchCity ? ` - ${item.selectedBranchCity}` : ''}
-                            {item.selectedBranchProvince
-                              ? `, ${item.selectedBranchProvince}`
-                              : ''}
+                            {item.selectedBranchProvince ? `, ${item.selectedBranchProvince}` : ''}
                           </p>
                         )}
                       </div>

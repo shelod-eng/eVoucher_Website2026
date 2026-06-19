@@ -8,7 +8,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 function isMockEnabled() {
-  const flag = String(process.env.BILLING_ENABLE_MOCK_ENDPOINTS ?? '').trim().toLowerCase();
+  const flag = String(process.env.BILLING_ENABLE_MOCK_ENDPOINTS ?? '')
+    .trim()
+    .toLowerCase();
   if (flag === 'true' || flag === '1' || flag === 'yes') return true;
   return process.env.NODE_ENV !== 'production';
 }
@@ -54,4 +56,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

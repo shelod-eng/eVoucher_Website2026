@@ -6,10 +6,7 @@ import {
   listSandboxWebhookEvents,
 } from '@/server/services/payment/sandbox-transaction-store';
 
-export async function GET(
-  _request: Request,
-  { params }: { params: { ref: string } }
-) {
+export async function GET(_request: Request, { params }: { params: { ref: string } }) {
   const access = await requireSandboxAccess();
   if (!access.allowed) {
     return NextResponse.json(access.body, { status: access.status });

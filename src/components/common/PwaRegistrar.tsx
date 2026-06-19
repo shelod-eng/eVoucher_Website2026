@@ -50,7 +50,10 @@ export default function PwaRegistrar() {
       return;
     }
     // Skip in dev unless explicitly enabled
-    if (process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_ENABLE_PWA_DEV !== 'true') {
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      process.env.NEXT_PUBLIC_ENABLE_PWA_DEV !== 'true'
+    ) {
       setSwState('ready');
       return;
     }
@@ -68,10 +71,7 @@ export default function PwaRegistrar() {
           if (!installingWorker) return;
 
           installingWorker.addEventListener('statechange', () => {
-            if (
-              installingWorker.state === 'installed' &&
-              navigator.serviceWorker.controller
-            ) {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
               // A new version is available
               setSwState('update-available');
             }
@@ -79,11 +79,14 @@ export default function PwaRegistrar() {
         });
 
         // Periodically check for updates (every hour)
-        setInterval(() => {
-          registration.update().catch(() => {
-            // Silently ignore update check failures
-          });
-        }, 60 * 60 * 1000);
+        setInterval(
+          () => {
+            registration.update().catch(() => {
+              // Silently ignore update check failures
+            });
+          },
+          60 * 60 * 1000
+        );
       })
       .catch((error) => {
         console.warn('[PWA] Service worker registration failed:', error);

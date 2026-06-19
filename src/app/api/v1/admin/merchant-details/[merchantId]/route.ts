@@ -95,10 +95,7 @@ async function fetchMerchantDetails(merchantId: string): Promise<{
   return { data: data as unknown as Record<string, unknown>, error: null };
 }
 
-export async function GET(
-  _request: Request,
-  { params }: { params: { merchantId: string } }
-) {
+export async function GET(_request: Request, { params }: { params: { merchantId: string } }) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) {

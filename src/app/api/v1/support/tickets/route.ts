@@ -53,7 +53,10 @@ export async function POST(request: Request) {
       },
     };
 
-    const jira = await tryForwardToPlatform(process.env.SUPPORT_JIRA_WEBHOOK_URL, integrationPayload);
+    const jira = await tryForwardToPlatform(
+      process.env.SUPPORT_JIRA_WEBHOOK_URL,
+      integrationPayload
+    );
     const serviceNow = await tryForwardToPlatform(
       process.env.SUPPORT_SERVICENOW_WEBHOOK_URL,
       integrationPayload

@@ -47,7 +47,7 @@ function isSchemaError(error: any) {
     code === '42p01' || // Table does not exist
     code.startsWith('pgrst') ||
     message.includes('schema cache') ||
-    message.includes('column') && message.includes('does not exist')
+    (message.includes('column') && message.includes('does not exist'))
   );
 }
 
@@ -138,10 +138,7 @@ export async function POST(request: Request) {
     }
 
     if (!fileUrl) {
-      return NextResponse.json(
-        { error: 'File upload failed. Please try again.' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'File upload failed. Please try again.' }, { status: 500 });
     }
 
     let { data, error }: { data: any; error: any } = await admin
@@ -173,11 +170,11 @@ export async function POST(request: Request) {
             document_type: documentType,
             document_url: fileUrl,
             // Try status for older schemas
-            status: 'submitted', 
+            status: 'submitted',
             uploaded_by: user.id,
           })
           .select('id,merchant_id,document_type,document_url,uploaded_by,uploaded_at');
-        
+
         if (!legacyResult.error) {
           data = Array.isArray(legacyResult.data) ? legacyResult.data[0] : legacyResult.data;
           error = null;
@@ -191,7 +188,10 @@ export async function POST(request: Request) {
 
     if (error) {
       // Cleanup: Remove the uploaded file if database persistence failed
-      await admin.storage.from(bucket).remove([objectPath]).catch(() => null);
+      await admin.storage
+        .from(bucket)
+        .remove([objectPath])
+        .catch(() => null);
       return NextResponse.json(
         {
           error: error.message || 'Failed to save compliance document.',

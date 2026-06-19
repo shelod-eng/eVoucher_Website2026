@@ -19,10 +19,7 @@ function parseLegacyStorageUrl(documentUrl: string | null) {
   return { bucket, path };
 }
 
-export async function GET(
-  _request: Request,
-  context: { params: { documentId: string } }
-) {
+export async function GET(_request: Request, context: { params: { documentId: string } }) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
@@ -66,10 +63,7 @@ export async function GET(
     const path = data.storage_path ?? parsed?.path;
 
     if (!path) {
-      return NextResponse.json(
-        { error: 'Document storage path is missing.' },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: 'Document storage path is missing.' }, { status: 409 });
     }
 
     const expiresIn = 60 * 5;

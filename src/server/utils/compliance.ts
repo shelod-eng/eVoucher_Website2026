@@ -233,8 +233,10 @@ export async function getMerchantComplianceSnapshot(
       documentType: doc.type,
       label: doc.label,
       description: doc.description,
-      status: row ? mapVerificationStatus(row.verification_status) : ('PENDING' as ComplianceStatusValue),
-      fileName: row ? row.original_file_name ?? inferFileNameFromUrl(row.document_url) : null,
+      status: row
+        ? mapVerificationStatus(row.verification_status)
+        : ('PENDING' as ComplianceStatusValue),
+      fileName: row ? (row.original_file_name ?? inferFileNameFromUrl(row.document_url)) : null,
       fileUrl: row?.document_url?.startsWith('http') ? row.document_url : null,
       storageBucket: row?.storage_bucket ?? null,
       storagePath: row?.storage_path ?? null,
@@ -263,14 +265,17 @@ export async function getMerchantComplianceSnapshot(
       updated_at: row.uploaded_at,
     }))
   );
-  
+
   const hasFailure = docs.some((doc) => doc.status === 'FAILED');
   const hasExpired = docs.some((doc) => doc.status === 'EXPIRED');
   const allVerified = docs.every((doc) => doc.status === 'VERIFIED');
-  
+
   // Map the new overall status to the expected return type
-  const overallStatus: MerchantComplianceSnapshot['overallStatus'] = 
-    gaps.isComplete ? 'VERIFIED' : (hasFailure ? 'FAILED' : 'PENDING');
+  const overallStatus: MerchantComplianceSnapshot['overallStatus'] = gaps.isComplete
+    ? 'VERIFIED'
+    : hasFailure
+      ? 'FAILED'
+      : 'PENDING';
 
   const complianceApproved = merchantApproved && allVerified;
 

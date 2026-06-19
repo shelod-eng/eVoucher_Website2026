@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireSandboxAccess } from '@/server/services/payment/sandbox-access';
-import { getSandboxTransaction, updateSandboxTransaction } from '@/server/services/payment/sandbox-transaction-store';
+import {
+  getSandboxTransaction,
+  updateSandboxTransaction,
+} from '@/server/services/payment/sandbox-transaction-store';
 import { applyPayfastReturn } from '@/server/services/payment/sandbox-state-machine';
 
 export async function POST(request: Request) {

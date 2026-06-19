@@ -13,7 +13,9 @@ function buildBatchNumber() {
 }
 
 function buildSettlementReference(invoiceNumber: string) {
-  const safeInvoice = String(invoiceNumber ?? 'INV').replace(/[^A-Za-z0-9-]/g, '').slice(0, 12);
+  const safeInvoice = String(invoiceNumber ?? 'INV')
+    .replace(/[^A-Za-z0-9-]/g, '')
+    .slice(0, 12);
   const suffix = Math.random().toString(36).slice(2, 8).toUpperCase(); // 6 chars
   const raw = `EVS-${safeInvoice}-${suffix}`;
   return raw.slice(0, 20); // BankServ max 20 chars
@@ -149,10 +151,7 @@ export async function POST(request: Request) {
         branch_code: linkage?.branch_code ?? merchant?.branch_code ?? null,
         account_number: last4 ? `****${last4}` : null,
         account_holder:
-          linkage?.account_holder_name ??
-          merchant?.contact_name ??
-          merchant?.business_name ??
-          null,
+          linkage?.account_holder_name ?? merchant?.contact_name ?? merchant?.business_name ?? null,
         reference: settlementReference,
         status: 'pending',
         settlement_reference: settlementReference,
@@ -172,7 +171,9 @@ export async function POST(request: Request) {
       };
     });
 
-    const { error: settlementError } = await admin.from('billing_settlements').insert(settlementRows);
+    const { error: settlementError } = await admin
+      .from('billing_settlements')
+      .insert(settlementRows);
     if (settlementError) throw settlementError;
 
     // Link invoices to the created settlement batch so we don't settle twice.

@@ -5,10 +5,7 @@ import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pric
 import { ensureCompletedPurchaseArtifacts } from '@/server/services/billing/purchase-completion';
 import { jsonNoStore } from '@/server/services/billing/no-store';
 import { requirePortalUser } from '@/server/services/billing/portal-guard';
-import {
-  generateSecureVoucherCode,
-  generateTransactionReference,
-} from '@/server/utils/security';
+import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -144,12 +141,18 @@ async function simulatePurchase(
   const faceValue = safeNumber(body.faceValue, 100);
   const totalDiscountPct = safeNumber(body.totalDiscountPct, DEFAULT_TOTAL_DISCOUNT_PCT);
   const pricing = calculateDiscountPricing(faceValue, totalDiscountPct);
-  const paymentMethod = String(body.paymentMethod ?? 'eft').trim().toLowerCase();
-  const accessChannel = String(body.accessChannel ?? 'web').trim().toLowerCase();
+  const paymentMethod = String(body.paymentMethod ?? 'eft')
+    .trim()
+    .toLowerCase();
+  const accessChannel = String(body.accessChannel ?? 'web')
+    .trim()
+    .toLowerCase();
   const transactionReference =
     String(body.transactionReference ?? '').trim() || generateTransactionReference('SIM');
 
-  const requestedStatus = String(body.paymentStatus ?? '').trim().toLowerCase();
+  const requestedStatus = String(body.paymentStatus ?? '')
+    .trim()
+    .toLowerCase();
   const paymentStatus =
     requestedStatus === 'completed' || requestedStatus === 'failed' || requestedStatus === 'pending'
       ? requestedStatus
@@ -190,8 +193,11 @@ async function simulatePurchase(
     (isMissingSchemaField(insertError, 'payment_method') ||
       isMissingSchemaField(insertError, 'access_channel'))
   ) {
-    const { payment_method: _paymentMethod, access_channel: _accessChannel, ...legacyPayload } =
-      txPayload as any;
+    const {
+      payment_method: _paymentMethod,
+      access_channel: _accessChannel,
+      ...legacyPayload
+    } = txPayload as any;
     const legacyInsert = await admin.from('payment_transactions').insert(legacyPayload);
     insertError = legacyInsert.error;
   }
@@ -256,7 +262,11 @@ async function simulateWebhookLikeEvent(
     return jsonNoStore({ error: 'transactionReference is required.' }, { status: 400 });
   }
 
-  const status = forcedStatus ?? String(body.status ?? 'completed').trim().toLowerCase();
+  const status =
+    forcedStatus ??
+    String(body.status ?? 'completed')
+      .trim()
+      .toLowerCase();
   const secret = String(process.env.PAYMENTS_WEBHOOK_SECRET ?? '').trim();
   if (!secret) {
     return jsonNoStore(
@@ -330,8 +340,7 @@ async function simulateSettlementCycle(
   }
 
   const periodStart =
-    String(body.periodStart ?? '').trim() ||
-    String(events[0]?.occurred_at ?? '').slice(0, 10);
+    String(body.periodStart ?? '').trim() || String(events[0]?.occurred_at ?? '').slice(0, 10);
   const periodEnd =
     String(body.periodEnd ?? '').trim() ||
     String(events[events.length - 1]?.occurred_at ?? '').slice(0, 10);
@@ -358,9 +367,7 @@ async function simulateSettlementCycle(
     role
   );
 
-  const batchId = String(
-    (engine as { data?: { batchId?: string } })?.data?.batchId ?? ''
-  ).trim();
+  const batchId = String((engine as { data?: { batchId?: string } })?.data?.batchId ?? '').trim();
   if (!batchId) {
     return jsonNoStore({
       success: true,
@@ -382,10 +389,13 @@ async function simulateSettlementCycle(
       { method: 'POST', body: {} },
       role
     );
-    exported = await fetch(new URL(`/api/billing/settlement-batches/${batchId}/export`, request.url), {
-      method: 'POST',
-      headers: portalHeaders(request, role),
-    });
+    exported = await fetch(
+      new URL(`/api/billing/settlement-batches/${batchId}/export`, request.url),
+      {
+        method: 'POST',
+        headers: portalHeaders(request, role),
+      }
+    );
     await callInternalJson(
       request,
       `/api/billing/settlement-batches/${batchId}/submit`,
@@ -429,7 +439,9 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-    const action = String(body.action ?? 'purchase').trim().toLowerCase() as SimulatorAction;
+    const action = String(body.action ?? 'purchase')
+      .trim()
+      .toLowerCase() as SimulatorAction;
 
     if (action === 'purchase') return await simulatePurchase(request, role, body);
     if (action === 'webhook') return await simulateWebhookLikeEvent(request, role, body);

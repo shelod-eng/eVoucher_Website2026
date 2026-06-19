@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireSandboxAccess } from '@/server/services/payment/sandbox-access';
-import { getSandboxTransaction, updateSandboxTransaction } from '@/server/services/payment/sandbox-transaction-store';
+import {
+  getSandboxTransaction,
+  updateSandboxTransaction,
+} from '@/server/services/payment/sandbox-transaction-store';
 import { applyPayShapResponse } from '@/server/services/payment/sandbox-state-machine';
 
 export async function POST(request: Request) {
@@ -11,7 +14,9 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const transactionReference = String(body.transactionReference ?? '').trim();
-  const outcome = String(body.outcome ?? '').trim().toLowerCase();
+  const outcome = String(body.outcome ?? '')
+    .trim()
+    .toLowerCase();
 
   if (!transactionReference) {
     return NextResponse.json({ error: 'transactionReference is required.' }, { status: 400 });

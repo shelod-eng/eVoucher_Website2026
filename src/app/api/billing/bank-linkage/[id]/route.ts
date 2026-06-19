@@ -14,8 +14,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
     if (!linkageId) return jsonNoStore({ error: 'Linkage id is required.' }, { status: 400 });
 
     const body = await request.json().catch(() => ({}));
-    const isActive =
-      body?.isActive === undefined ? undefined : Boolean(body.isActive);
+    const isActive = body?.isActive === undefined ? undefined : Boolean(body.isActive);
     const verificationStatus = body?.verificationStatus
       ? String(body.verificationStatus).trim()
       : undefined;
@@ -47,4 +46,3 @@ export async function PUT(request: Request, context: { params: { id: string } })
     );
   }
 }
-

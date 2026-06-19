@@ -28,7 +28,9 @@ export async function GET(request: Request) {
 
     return jsonNoStore({ success: true, data: data ?? [] });
   } catch (error: any) {
-    return jsonNoStore({ error: error?.message || 'Failed to list billing events.' }, { status: 500 });
+    return jsonNoStore(
+      { error: error?.message || 'Failed to list billing events.' },
+      { status: 500 }
+    );
   }
 }
-

@@ -16,4 +16,3 @@ export function jsonNoStore(body: unknown, init?: ResponseInit) {
     headers: noStoreHeaders(init?.headers),
   });
 }
-

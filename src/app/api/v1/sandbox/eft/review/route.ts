@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireSandboxAccess } from '@/server/services/payment/sandbox-access';
-import { appendSandboxEftProof, getSandboxTransaction, updateSandboxTransaction } from '@/server/services/payment/sandbox-transaction-store';
+import {
+  appendSandboxEftProof,
+  getSandboxTransaction,
+  updateSandboxTransaction,
+} from '@/server/services/payment/sandbox-transaction-store';
 import { applyEftReview } from '@/server/services/payment/sandbox-state-machine';
 
 export async function POST(request: Request) {
@@ -11,7 +15,9 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const transactionReference = String(body.transactionReference ?? '').trim();
-  const outcome = String(body.outcome ?? '').trim().toLowerCase();
+  const outcome = String(body.outcome ?? '')
+    .trim()
+    .toLowerCase();
   const proofName = String(body.proofName ?? 'eft-proof').trim();
 
   if (!transactionReference) {

@@ -90,10 +90,7 @@ export async function POST(request: Request) {
     const { data: payouts, error: payoutsError } = await payoutsQuery;
     if (payoutsError) throw payoutsError;
     if (!payouts || payouts.length === 0) {
-      return NextResponse.json(
-        { error: 'No pending payouts to batch.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No pending payouts to batch.' }, { status: 400 });
     }
 
     const merchantIds = Array.from(new Set(payouts.map((p) => p.merchant_id)));

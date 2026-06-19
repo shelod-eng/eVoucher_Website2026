@@ -8,7 +8,9 @@ export const dynamic = 'force-dynamic';
 
 async function redeemVoucher(formData: FormData) {
   'use server';
-  const voucherCode = String(formData.get('voucherCode') ?? '').trim().toUpperCase();
+  const voucherCode = String(formData.get('voucherCode') ?? '')
+    .trim()
+    .toUpperCase();
   const amount = Number(formData.get('amount') ?? 0);
 
   const { supabase, user } = await getAuthenticatedUser();

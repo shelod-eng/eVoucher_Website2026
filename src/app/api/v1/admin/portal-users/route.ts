@@ -16,7 +16,9 @@ function normalizeEmail(value: unknown) {
 }
 
 function normalizeRole(value: unknown) {
-  return String(value ?? '').trim().toLowerCase();
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 function generateTemporaryPassword() {

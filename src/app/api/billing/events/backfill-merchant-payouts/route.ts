@@ -48,7 +48,10 @@ export async function POST(request: Request) {
       created += 1;
     }
 
-    return jsonNoStore({ success: true, data: { status, scanned: (payouts ?? []).length, created } });
+    return jsonNoStore({
+      success: true,
+      data: { status, scanned: (payouts ?? []).length, created },
+    });
   } catch (error: any) {
     return jsonNoStore(
       { error: error?.message || 'Failed to backfill from merchant_payouts.' },
@@ -56,4 +59,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

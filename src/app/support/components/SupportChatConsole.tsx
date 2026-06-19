@@ -161,7 +161,7 @@ export default function SupportChatConsole() {
             <input
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-                placeholder="Ask about shopping, wallet support, redeeming, merchant onboarding, billing..."
+              placeholder="Ask about shopping, wallet support, redeeming, merchant onboarding, billing..."
               className="flex-1 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 font-body text-sm text-white outline-none ring-0 placeholder:text-slate-500"
             />
             <button
@@ -181,15 +181,32 @@ export default function SupportChatConsole() {
             </p>
             <ul className="mt-4 space-y-3 font-body text-sm text-slate-700">
               <li className="flex gap-3">
-                <Icon name="CheckCircleIcon" size={18} variant="solid" className="mt-0.5 text-sky-600" />
-                <span>Merchant shopping guidance for groceries and other participating offers.</span>
+                <Icon
+                  name="CheckCircleIcon"
+                  size={18}
+                  variant="solid"
+                  className="mt-0.5 text-sky-600"
+                />
+                <span>
+                  Merchant shopping guidance for groceries and other participating offers.
+                </span>
               </li>
               <li className="flex gap-3">
-                <Icon name="CheckCircleIcon" size={18} variant="solid" className="mt-0.5 text-sky-600" />
+                <Icon
+                  name="CheckCircleIcon"
+                  size={18}
+                  variant="solid"
+                  className="mt-0.5 text-sky-600"
+                />
                 <span>Wallet top-up, balance support, and voucher redemption prompts.</span>
               </li>
               <li className="flex gap-3">
-                <Icon name="CheckCircleIcon" size={18} variant="solid" className="mt-0.5 text-sky-600" />
+                <Icon
+                  name="CheckCircleIcon"
+                  size={18}
+                  variant="solid"
+                  className="mt-0.5 text-sky-600"
+                />
                 <span>Escalation cues when a billing or outage case needs a human path.</span>
               </li>
             </ul>

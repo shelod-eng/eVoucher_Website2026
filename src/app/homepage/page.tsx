@@ -20,12 +20,17 @@ export default function UpdatePasswordPage() {
 
   useEffect(() => {
     // Supabase Auth needs a moment to process the URL hash with the access_token
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       if (event === 'SIGNED_IN' && session) {
         setIsAuthReady(true);
       } else if (event === 'SIGNED_OUT') {
         // If user signs out before setting password, they'll need to restart
-        setMessage({ type: 'error', text: 'Session expired or invalid. Please request a new reset link.' });
+        setMessage({
+          type: 'error',
+          text: 'Session expired or invalid. Please request a new reset link.',
+        });
         setIsAuthReady(false);
       }
     });
@@ -36,7 +41,10 @@ export default function UpdatePasswordPage() {
       if (session) {
         setIsAuthReady(true);
       } else {
-        setMessage({ type: 'error', text: 'Invalid or expired reset link. Please request a new one.' });
+        setMessage({
+          type: 'error',
+          text: 'Invalid or expired reset link. Please request a new one.',
+        });
       }
     });
 
@@ -66,8 +74,11 @@ export default function UpdatePasswordPage() {
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'Password updated successfully! Redirecting to login...' });
-      
+      setMessage({
+        type: 'success',
+        text: 'Password updated successfully! Redirecting to login...',
+      });
+
       // Redirect to merchant login after successful update
       setTimeout(() => {
         router.push('/merchant/login'); // Or a generic /login page
@@ -85,16 +96,31 @@ export default function UpdatePasswordPage() {
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-md mx-auto bg-card/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-border">
           <div className="text-center mb-8">
-            <Icon name="LockClosedIcon" size={32} variant="solid" className="text-primary mx-auto mb-4" />
-            <h1 className="font-headline font-bold text-3xl text-foreground mb-2">Set New Password</h1>
+            <Icon
+              name="LockClosedIcon"
+              size={32}
+              variant="solid"
+              className="text-primary mx-auto mb-4"
+            />
+            <h1 className="font-headline font-bold text-3xl text-foreground mb-2">
+              Set New Password
+            </h1>
             <p className="text-muted-foreground font-body">Enter your new password below.</p>
           </div>
 
           {message && (
-            <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 ${
-              message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'
-            }`}>
-              {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" /> : <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />}
+            <div
+              className={`mb-6 p-4 rounded-xl flex items-start gap-3 ${
+                message.type === 'success'
+                  ? 'bg-green-50 text-green-700 border border-green-100'
+                  : 'bg-red-50 text-red-700 border border-red-100'
+              }`}
+            >
+              {message.type === 'success' ? (
+                <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />
+              ) : (
+                <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+              )}
               <p className="text-sm font-medium">{message.text}</p>
             </div>
           )}
@@ -102,14 +128,45 @@ export default function UpdatePasswordPage() {
           {isAuthReady ? (
             <form onSubmit={handleUpdatePassword} className="space-y-6">
               <div>
-                <label htmlFor="password" className="block text-sm font-headline font-semibold text-foreground mb-2">New Password</label>
-                <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-body" placeholder="••••••••" />
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
+                  New Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-body"
+                  placeholder="••••••••"
+                />
               </div>
               <div>
-                <label htmlFor="confirm-password" className="block text-sm font-headline font-semibold text-foreground mb-2">Confirm New Password</label>
-                <input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-body" placeholder="••••••••" />
+                <label
+                  htmlFor="confirm-password"
+                  className="block text-sm font-headline font-semibold text-foreground mb-2"
+                >
+                  Confirm New Password
+                </label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-body"
+                  placeholder="••••••••"
+                />
               </div>
-              <button type="submit" disabled={isLoading} className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-headline font-semibold hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-headline font-semibold hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
+              >
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Update Password'}
               </button>
             </form>

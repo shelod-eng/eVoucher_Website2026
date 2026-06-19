@@ -9,11 +9,15 @@ export interface FNBSubmitResponse {
 }
 
 function isRealMode() {
-  const mode = String(process.env.BILLING_BANKSERV_MODE ?? 'mock').trim().toLowerCase();
+  const mode = String(process.env.BILLING_BANKSERV_MODE ?? 'mock')
+    .trim()
+    .toLowerCase();
   return mode === 'real';
 }
 
-export async function submitBankServBatch(instructions: BankServInstruction[]): Promise<FNBSubmitResponse> {
+export async function submitBankServBatch(
+  instructions: BankServInstruction[]
+): Promise<FNBSubmitResponse> {
   if (!isRealMode()) {
     return {
       batchId: `MOCK-${randomUUID()}`,
@@ -29,7 +33,9 @@ export async function submitBankServBatch(instructions: BankServInstruction[]): 
   const sponsorAccount = String(process.env.FNB_SPONSOR_ACCOUNT ?? '').trim();
 
   if (!base || !apiKey || !clientId || !sponsorAccount) {
-    throw new Error('Missing FNB CIB env vars (FNB_CIB_API_URL, FNB_CIB_API_KEY, FNB_CIB_CLIENT_ID, FNB_SPONSOR_ACCOUNT).');
+    throw new Error(
+      'Missing FNB CIB env vars (FNB_CIB_API_URL, FNB_CIB_API_KEY, FNB_CIB_CLIENT_ID, FNB_SPONSOR_ACCOUNT).'
+    );
   }
 
   const response = await fetch(`${base.replace(/\/$/, '')}/eft/batch`, {
@@ -63,7 +69,9 @@ export async function submitBankServBatch(instructions: BankServInstruction[]): 
     } catch {
       // ignore
     }
-    throw new Error(`FNB CIB API error ${response.status}: ${body ? JSON.stringify(body) : 'unknown'}`);
+    throw new Error(
+      `FNB CIB API error ${response.status}: ${body ? JSON.stringify(body) : 'unknown'}`
+    );
   }
 
   return (await response.json()) as FNBSubmitResponse;

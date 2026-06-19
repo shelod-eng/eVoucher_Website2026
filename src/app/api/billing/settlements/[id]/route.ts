@@ -7,7 +7,7 @@ export const revalidate = 0;
 
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '');
-  return message.includes(`relation \"${relationName}\" does not exist`);
+  return message.includes(`relation "${relationName}" does not exist`);
 }
 
 export async function GET(request: Request, context: { params: { id: string } }) {
@@ -37,10 +37,6 @@ export async function GET(request: Request, context: { params: { id: string } })
 
     return jsonNoStore({ success: true, data });
   } catch (error: any) {
-    return jsonNoStore(
-      { error: error?.message || 'Failed to fetch settlement.' },
-      { status: 500 }
-    );
+    return jsonNoStore({ error: error?.message || 'Failed to fetch settlement.' }, { status: 500 });
   }
 }
-

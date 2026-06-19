@@ -251,8 +251,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const signedInUser = sessionData?.user ?? null;
       const resolvedRole =
-        String(payload?.user?.role ?? '').toLowerCase().trim() ||
-        (await resolveUserRole(signedInUser));
+        String(payload?.user?.role ?? '')
+          .toLowerCase()
+          .trim() || (await resolveUserRole(signedInUser));
       setUser(signedInUser);
       setRole(resolvedRole || null);
       setLoading(false);

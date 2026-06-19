@@ -157,7 +157,13 @@ function BuyVouchersContent() {
       merchantReceivableAfterTotalDiscount,
       merchantReceivableAfterEvoucherBenefit,
     };
-  }, [cartCheckout, previewPricing, checkoutCartItems, cartSummary.totalConsumerPrice, cartSummary.totalSavings]);
+  }, [
+    cartCheckout,
+    previewPricing,
+    checkoutCartItems,
+    cartSummary.totalConsumerPrice,
+    cartSummary.totalSavings,
+  ]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -799,12 +805,17 @@ function BuyVouchersContent() {
                   className="text-primary"
                 />
                 <h2 className="font-headline font-bold text-2xl text-foreground">
-                  {walletTopupMode ? 'Top-Up Amount' : cartCheckout ? 'Checkout Cart' : 'Select Merchant'}
+                  {walletTopupMode
+                    ? 'Top-Up Amount'
+                    : cartCheckout
+                      ? 'Checkout Cart'
+                      : 'Select Merchant'}
                 </h2>
               </div>
               {walletTopupMode ? (
                 <p className="text-sm text-muted-foreground">
-                  Choose the top-up amount, then select a payment method to fund your wallet balance.
+                  Choose the top-up amount, then select a payment method to fund your wallet
+                  balance.
                 </p>
               ) : cartCheckout ? (
                 <div className="space-y-3">
@@ -870,9 +881,7 @@ function BuyVouchersContent() {
                         {selectedBranchNameFromQuery && (
                           <p className="text-xs text-primary font-body mt-1">
                             Branch: {selectedBranchNameFromQuery}
-                            {selectedBranchCityFromQuery
-                              ? ` - ${selectedBranchCityFromQuery}`
-                              : ''}
+                            {selectedBranchCityFromQuery ? ` - ${selectedBranchCityFromQuery}` : ''}
                             {selectedBranchProvinceFromQuery
                               ? `, ${selectedBranchProvinceFromQuery}`
                               : ''}

@@ -36,4 +36,3 @@ export async function GET(request: Request, context: { params: { id: string } })
     return jsonNoStore({ error: error?.message || 'Failed to fetch batch.' }, { status: 500 });
   }
 }
-

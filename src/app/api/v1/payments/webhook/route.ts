@@ -30,7 +30,9 @@ export async function POST(request: Request) {
     const signature = request.headers.get('x-webhook-signature');
     const timestamp = request.headers.get('x-webhook-timestamp');
     const provider = request.headers.get('x-payment-provider') || 'production';
-    const paymentProvider = createPaymentProvider(provider === 'sandbox' ? 'sandbox' : 'production');
+    const paymentProvider = createPaymentProvider(
+      provider === 'sandbox' ? 'sandbox' : 'production'
+    );
     const admin = createAdminClient();
 
     const verified = await paymentProvider.verifyWebhook({
@@ -165,7 +167,8 @@ export async function POST(request: Request) {
           paymentMethod: String(transaction.payment_method ?? ''),
           accessChannel: String(transaction.access_channel ?? 'web'),
           settlementAmount: deriveSettlementAmount({
-            merchantReceivableAfterTotalDiscount: transaction.merchant_receivable_after_total_discount,
+            merchantReceivableAfterTotalDiscount:
+              transaction.merchant_receivable_after_total_discount,
             merchantReceivableAfterEvoucherBenefit:
               transaction.merchant_receivable_after_evoucher_benefit,
             faceValue,

@@ -30,4 +30,3 @@ export function formatUssdResponseForTwilio(input: { action: 'CON' | 'END'; mess
     response: `${input.action} ${input.message}`,
   };
 }
-

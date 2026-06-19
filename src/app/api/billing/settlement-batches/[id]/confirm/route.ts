@@ -67,7 +67,10 @@ export async function POST(request: Request, context: { params: { id: string } }
       const { data: existingLedger } = await admin
         .from('billing_ledger_entries')
         .select('source_id')
-        .in('source_id', settlementRefs.map((r) => `settlement:${r}`))
+        .in(
+          'source_id',
+          settlementRefs.map((r) => `settlement:${r}`)
+        )
         .limit(5000);
 
       const existing = new Set((existingLedger ?? []).map((r: any) => String(r.source_id)));
@@ -99,9 +102,6 @@ export async function POST(request: Request, context: { params: { id: string } }
 
     return jsonNoStore({ success: true, data: { batchId, confirmedAt: now } });
   } catch (error: any) {
-    return jsonNoStore(
-      { error: error?.message || 'Failed to confirm batch.' },
-      { status: 500 }
-    );
+    return jsonNoStore({ error: error?.message || 'Failed to confirm batch.' }, { status: 500 });
   }
 }

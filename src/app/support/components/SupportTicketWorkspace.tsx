@@ -121,21 +121,29 @@ export default function SupportTicketWorkspace() {
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block">
-              <span className="mb-2 block font-body text-sm font-semibold text-slate-700">Name</span>
+              <span className="mb-2 block font-body text-sm font-semibold text-slate-700">
+                Name
+              </span>
               <input
                 value={form.name}
-                onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, name: event.target.value }))
+                }
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-body text-sm text-slate-900 outline-none focus:border-violet-400"
                 placeholder="Lebo Mpeta"
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block font-body text-sm font-semibold text-slate-700">Email</span>
+              <span className="mb-2 block font-body text-sm font-semibold text-slate-700">
+                Email
+              </span>
               <input
                 type="email"
                 value={form.email}
-                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, email: event.target.value }))
+                }
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-body text-sm text-slate-900 outline-none focus:border-violet-400"
                 placeholder="support.user@evoucher.co.za"
               />
@@ -181,10 +189,14 @@ export default function SupportTicketWorkspace() {
           </div>
 
           <label className="block">
-            <span className="mb-2 block font-body text-sm font-semibold text-slate-700">Subject</span>
+            <span className="mb-2 block font-body text-sm font-semibold text-slate-700">
+              Subject
+            </span>
             <input
               value={form.subject}
-              onChange={(event) => setForm((current) => ({ ...current, subject: event.target.value }))}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, subject: event.target.value }))
+              }
               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-body text-sm text-slate-900 outline-none focus:border-violet-400"
               placeholder="Voucher payment failed during checkout"
             />
@@ -228,16 +240,28 @@ export default function SupportTicketWorkspace() {
           </p>
           <ul className="mt-4 space-y-3 font-body text-sm text-slate-700">
             <li className="flex gap-3">
-              <Icon name="EnvelopeIcon" size={18} variant="solid" className="mt-0.5 text-amber-600" />
+              <Icon
+                name="EnvelopeIcon"
+                size={18}
+                variant="solid"
+                className="mt-0.5 text-amber-600"
+              />
               <span>`support@evoucher.co.za` routes into categorized queues automatically.</span>
             </li>
             <li className="flex gap-3">
-              <Icon name="QueueListIcon" size={18} variant="solid" className="mt-0.5 text-amber-600" />
+              <Icon
+                name="QueueListIcon"
+                size={18}
+                variant="solid"
+                className="mt-0.5 text-amber-600"
+              />
               <span>Categories supported: merchant, consumer, technical, and billing.</span>
             </li>
             <li className="flex gap-3">
               <Icon name="ClockIcon" size={18} variant="solid" className="mt-0.5 text-amber-600" />
-              <span>SLA timer starts immediately on intake with priority-aware response windows.</span>
+              <span>
+                SLA timer starts immediately on intake with priority-aware response windows.
+              </span>
             </li>
           </ul>
         </div>
@@ -249,7 +273,9 @@ export default function SupportTicketWorkspace() {
           {result ? (
             <div className="mt-4 space-y-4">
               <div className="rounded-2xl bg-white p-4">
-                <p className="font-headline text-lg font-semibold text-slate-900">{result.ticketId}</p>
+                <p className="font-headline text-lg font-semibold text-slate-900">
+                  {result.ticketId}
+                </p>
                 <p className="mt-1 font-body text-sm text-slate-600">
                   {result.category} routed to {result.queue} via {result.assignedPlatform}
                 </p>

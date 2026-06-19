@@ -1658,8 +1658,7 @@ export async function resendMerchantCredentials(args: {
     return {
       ok: false as const,
       status: 409,
-      error:
-        'Merchant must be pending, approved, or active before credentials can be resent.',
+      error: 'Merchant must be pending, approved, or active before credentials can be resent.',
     };
   }
 

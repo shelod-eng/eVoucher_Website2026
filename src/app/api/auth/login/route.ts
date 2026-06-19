@@ -36,14 +36,13 @@ function getSupabasePublicClient() {
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const email = String(body?.email ?? body?.username ?? '').trim().toLowerCase();
+    const email = String(body?.email ?? body?.username ?? '')
+      .trim()
+      .toLowerCase();
     const password = String(body?.password ?? '');
 
     if (!email || !password) {
-      return jsonNoStore(
-        { error: 'Email/username and password are required.' },
-        { status: 400 }
-      );
+      return jsonNoStore({ error: 'Email/username and password are required.' }, { status: 400 });
     }
 
     const supabase = getSupabasePublicClient();
@@ -82,9 +81,6 @@ export async function POST(request: Request) {
       session: data.session,
     });
   } catch (error: any) {
-    return jsonNoStore(
-      { error: error?.message || 'Login failed.' },
-      { status: 500 }
-    );
+    return jsonNoStore({ error: error?.message || 'Login failed.' }, { status: 500 });
   }
 }

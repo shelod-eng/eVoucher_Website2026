@@ -128,7 +128,11 @@ export async function processUssdMenuState(input: {
           data
         );
       }
-      return continueResponse('REGISTER_FIRST_NAME', 'Enter first name:', clearRegistrationDraft(data));
+      return continueResponse(
+        'REGISTER_FIRST_NAME',
+        'Enter first name:',
+        clearRegistrationDraft(data)
+      );
     }
 
     if (latest === '2') {
@@ -142,7 +146,11 @@ export async function processUssdMenuState(input: {
         );
       }
       if (data.isAuthenticated) {
-        return continueResponse('MAIN_MENU', ['Already logged in.', renderMainMenu(data)].join('\n\n'), data);
+        return continueResponse(
+          'MAIN_MENU',
+          ['Already logged in.', renderMainMenu(data)].join('\n\n'),
+          data
+        );
       }
       return continueResponse('LOGIN_PIN', 'Enter your 4-digit PIN:', data);
     }
@@ -178,7 +186,11 @@ export async function processUssdMenuState(input: {
       if (blocked) return blocked;
 
       const balance = await getWalletBalanceForCustomerUssd(String(data.userId ?? ''));
-      return continueResponse('WALLET_MENU', [`Wallet balance: R${balance.toFixed(2)}`, '0. Back'].join('\n'), data);
+      return continueResponse(
+        'WALLET_MENU',
+        [`Wallet balance: R${balance.toFixed(2)}`, '0. Back'].join('\n'),
+        data
+      );
     }
 
     if (latest === '5') {
@@ -191,12 +203,18 @@ export async function processUssdMenuState(input: {
       return endResponse('Thank you for using eVoucher.', data);
     }
 
-    return continueResponse('MAIN_MENU', ['Invalid option.', renderMainMenu(data)].join('\n\n'), data);
+    return continueResponse(
+      'MAIN_MENU',
+      ['Invalid option.', renderMainMenu(data)].join('\n\n'),
+      data
+    );
   }
 
   if (input.session.state === 'REGISTER_FIRST_NAME') {
-    if (latest === '0') return continueResponse('MAIN_MENU', renderMainMenu(data), clearRegistrationDraft(data));
-    if (latest.length < 2) return continueResponse('REGISTER_FIRST_NAME', 'First name too short. Try again:', data);
+    if (latest === '0')
+      return continueResponse('MAIN_MENU', renderMainMenu(data), clearRegistrationDraft(data));
+    if (latest.length < 2)
+      return continueResponse('REGISTER_FIRST_NAME', 'First name too short. Try again:', data);
     return continueResponse('REGISTER_SURNAME', 'Enter surname:', {
       ...data,
       pendingFirstName: latest,
@@ -204,8 +222,10 @@ export async function processUssdMenuState(input: {
   }
 
   if (input.session.state === 'REGISTER_SURNAME') {
-    if (latest === '0') return continueResponse('MAIN_MENU', renderMainMenu(data), clearRegistrationDraft(data));
-    if (latest.length < 2) return continueResponse('REGISTER_SURNAME', 'Surname too short. Try again:', data);
+    if (latest === '0')
+      return continueResponse('MAIN_MENU', renderMainMenu(data), clearRegistrationDraft(data));
+    if (latest.length < 2)
+      return continueResponse('REGISTER_SURNAME', 'Surname too short. Try again:', data);
     return continueResponse('REGISTER_PROVINCE', renderProvinces(), {
       ...data,
       pendingSurname: latest,
@@ -213,7 +233,8 @@ export async function processUssdMenuState(input: {
   }
 
   if (input.session.state === 'REGISTER_PROVINCE') {
-    if (latest === '0') return continueResponse('MAIN_MENU', renderMainMenu(data), clearRegistrationDraft(data));
+    if (latest === '0')
+      return continueResponse('MAIN_MENU', renderMainMenu(data), clearRegistrationDraft(data));
     const index = Number(latest);
     if (!Number.isInteger(index) || index < 1 || index > PROVINCES.length) {
       return continueResponse('REGISTER_PROVINCE', `Invalid choice.\n\n${renderProvinces()}`, data);
@@ -225,8 +246,10 @@ export async function processUssdMenuState(input: {
   }
 
   if (input.session.state === 'REGISTER_PIN_CREATE') {
-    if (latest === '0') return continueResponse('MAIN_MENU', renderMainMenu(data), clearRegistrationDraft(data));
-    if (!isNumericPin(latest)) return continueResponse('REGISTER_PIN_CREATE', 'PIN must be 4 digits. Enter PIN:', data);
+    if (latest === '0')
+      return continueResponse('MAIN_MENU', renderMainMenu(data), clearRegistrationDraft(data));
+    if (!isNumericPin(latest))
+      return continueResponse('REGISTER_PIN_CREATE', 'PIN must be 4 digits. Enter PIN:', data);
     return continueResponse('REGISTER_PIN_CONFIRM', 'Confirm 4-digit PIN:', {
       ...data,
       pendingPin: latest,
@@ -234,8 +257,10 @@ export async function processUssdMenuState(input: {
   }
 
   if (input.session.state === 'REGISTER_PIN_CONFIRM') {
-    if (latest === '0') return continueResponse('MAIN_MENU', renderMainMenu(data), clearRegistrationDraft(data));
-    if (!isNumericPin(latest)) return continueResponse('REGISTER_PIN_CONFIRM', 'PIN must be 4 digits. Confirm PIN:', data);
+    if (latest === '0')
+      return continueResponse('MAIN_MENU', renderMainMenu(data), clearRegistrationDraft(data));
+    if (!isNumericPin(latest))
+      return continueResponse('REGISTER_PIN_CONFIRM', 'PIN must be 4 digits. Confirm PIN:', data);
     if (latest !== String(data.pendingPin ?? '')) {
       return continueResponse('REGISTER_PIN_CREATE', 'PIN mismatch. Create PIN again:', {
         ...data,
@@ -247,7 +272,11 @@ export async function processUssdMenuState(input: {
     const surname = String(data.pendingSurname ?? '').trim();
     const province = String(data.pendingProvince ?? '').trim();
     if (!firstName || !surname || !province) {
-      return continueResponse('REGISTER_FIRST_NAME', 'Registration reset. Enter first name:', clearRegistrationDraft(data));
+      return continueResponse(
+        'REGISTER_FIRST_NAME',
+        'Registration reset. Enter first name:',
+        clearRegistrationDraft(data)
+      );
     }
 
     const registered = ussdUserStore.register({
@@ -275,7 +304,8 @@ export async function processUssdMenuState(input: {
 
   if (input.session.state === 'LOGIN_PIN') {
     if (latest === '0') return continueResponse('MAIN_MENU', renderMainMenu(data), data);
-    if (!isNumericPin(latest)) return continueResponse('LOGIN_PIN', 'Enter a valid 4-digit PIN:', data);
+    if (!isNumericPin(latest))
+      return continueResponse('LOGIN_PIN', 'Enter a valid 4-digit PIN:', data);
 
     const check = ussdUserStore.verifyPin(input.session.msisdn, latest);
     if (!check.ok || !check.user) {
@@ -290,7 +320,11 @@ export async function processUssdMenuState(input: {
       isAuthenticated: true,
     };
 
-    return continueResponse('MAIN_MENU', ['Login successful.', renderMainMenu(nextData)].join('\n\n'), nextData);
+    return continueResponse(
+      'MAIN_MENU',
+      ['Login successful.', renderMainMenu(nextData)].join('\n\n'),
+      nextData
+    );
   }
 
   if (input.session.state === 'SHOP_MERCHANTS_MENU') {
@@ -357,7 +391,11 @@ export async function processUssdMenuState(input: {
   if (input.session.state === 'SHOP_PRODUCTS_MENU') {
     if (latest === '0') {
       const merchants = await getShopMerchantsForUssd();
-      const pageData = paginate(merchants, Number(data.selectedMerchantPage ?? 0), MERCHANTS_PAGE_SIZE);
+      const pageData = paginate(
+        merchants,
+        Number(data.selectedMerchantPage ?? 0),
+        MERCHANTS_PAGE_SIZE
+      );
       const lines = ['Select store:'];
       pageData.items.forEach((merchant, index) => {
         lines.push(`${index + 1}. ${merchant.displayName} (${merchant.productCount})`);
@@ -429,7 +467,11 @@ export async function processUssdMenuState(input: {
     if (latest === '0') return continueResponse('MAIN_MENU', renderMainMenu(data), data);
     const voucherCode = latest.toUpperCase();
     if (!voucherCode || voucherCode.length < 4) {
-      return continueResponse('REDEEM_INPUT_MENU', 'Invalid voucher code. Enter valid code or 0.', data);
+      return continueResponse(
+        'REDEEM_INPUT_MENU',
+        'Invalid voucher code. Enter valid code or 0.',
+        data
+      );
     }
     return endResponse(`Redeem request received for code ${voucherCode}.`, data);
   }
@@ -441,4 +483,3 @@ export async function processUssdMenuState(input: {
 
   return endResponse('Session ended.', data);
 }
-

@@ -1,5 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getBankservAdaptorOverview, isBankservAdaptorCompatibilityError } from '@/server/services/bankserv/adaptor';
+import {
+  getBankservAdaptorOverview,
+  isBankservAdaptorCompatibilityError,
+} from '@/server/services/bankserv/adaptor';
 import { jsonNoStore } from '@/server/services/billing/no-store';
 import { requirePortalUser } from '@/server/services/billing/portal-guard';
 

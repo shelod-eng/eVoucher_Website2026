@@ -33,14 +33,11 @@ export default function UssdConsolePage() {
   const [copied, setCopied] = useState(false);
 
   const quickKeys = useMemo(() => ['1', '2', '3', '4', '5', '8', '9', '0'], []);
-  const currentUrl =
-    typeof window !== 'undefined' ? `${window.location.origin}/ussd-console` : '';
+  const currentUrl = typeof window !== 'undefined' ? `${window.location.origin}/ussd-console` : '';
   const qrUrl = currentUrl
     ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(currentUrl)}`
     : '';
-  const lastUssdMessage = [...transcript]
-    .reverse()
-    .find((entry) => entry.from === 'ussd')?.text;
+  const lastUssdMessage = [...transcript].reverse().find((entry) => entry.from === 'ussd')?.text;
 
   async function sendToSimulator(inputText: string) {
     if (!msisdn.trim()) return;
@@ -170,8 +167,8 @@ export default function UssdConsolePage() {
                 *120*384#
               </div>
               <pre className="mt-3 min-h-[210px] whitespace-pre-wrap text-[13px] leading-6">
-{lastUssdMessage ||
-`Welcome to eVoucher
+                {lastUssdMessage ||
+                  `Welcome to eVoucher
 
 1. Register
 2. Login / Continue
@@ -205,7 +202,8 @@ export default function UssdConsolePage() {
 
             <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
               <div>
-                <span className="font-semibold">Session Started:</span> {sessionStarted ? 'Yes' : 'No'}
+                <span className="font-semibold">Session Started:</span>{' '}
+                {sessionStarted ? 'Yes' : 'No'}
               </div>
               <div className="mt-1">
                 <span className="font-semibold">State:</span> {lastState || '-'}
@@ -289,7 +287,9 @@ export default function UssdConsolePage() {
                       }`}
                     >
                       <div className="mb-1 text-[11px] font-semibold opacity-80">
-                        {entry.from === 'user' ? 'You' : `USSD${entry.action ? ` (${entry.action})` : ''}`}
+                        {entry.from === 'user'
+                          ? 'You'
+                          : `USSD${entry.action ? ` (${entry.action})` : ''}`}
                       </div>
                       <pre className="whitespace-pre-wrap font-sans">{entry.text}</pre>
                     </div>
@@ -303,4 +303,3 @@ export default function UssdConsolePage() {
     </div>
   );
 }
-

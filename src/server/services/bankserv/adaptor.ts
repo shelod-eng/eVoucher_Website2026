@@ -164,7 +164,12 @@ function buildLifecycleStatus(statuses: string[]): BankservLifecycleStatus {
   return 'PENDING';
 }
 
-function buildAckRef(prefix: string, dateToken: string, status: BankservLifecycleStatus, suffix: string) {
+function buildAckRef(
+  prefix: string,
+  dateToken: string,
+  status: BankservLifecycleStatus,
+  suffix: string
+) {
   if (status === 'PENDING') return 'Pending';
   return `${prefix}${status === 'NACKED' ? 'NCK' : 'ACK'}_${dateToken}_${suffix}`;
 }
@@ -173,7 +178,9 @@ function railCutOff(rail: string) {
   return String(rail).toUpperCase() === 'CARD' ? '23:59 SAST' : '14:00 SAST';
 }
 
-export function mapPaymentMethodToBankservRail(paymentMethod: string | null | undefined): BankservPaymentRail {
+export function mapPaymentMethodToBankservRail(
+  paymentMethod: string | null | undefined
+): BankservPaymentRail {
   const method = normalize(paymentMethod);
   if (method === 'visa_secure' || method === 'debit_credit' || method === 'card') return 'CARD';
   if (method === 'eft') return 'EFT';
@@ -255,7 +262,10 @@ export async function queueBankservSettlementTransaction(
   const linkage = await resolveActiveBankLinkage(admin, merchantId);
   const paymentRail = mapPaymentMethodToBankservRail(input.paymentMethod);
   const paymentMethod = String(input.paymentMethod ?? 'unknown').trim() || 'unknown';
-  const sourceChannel = String(input.accessChannel ?? 'web').trim().toLowerCase() || 'web';
+  const sourceChannel =
+    String(input.accessChannel ?? 'web')
+      .trim()
+      .toLowerCase() || 'web';
   const grossAmount = round2(safeNumber(input.grossAmount));
 
   const payload = {
@@ -418,7 +428,8 @@ export async function getBankservEftProcessingView(admin: SupabaseClient) {
 
     return {
       rail,
-      label: rail === 'CARD' ? 'Card Payments' : rail === 'WALLET' ? 'Wallet Payments' : 'EFT Payments',
+      label:
+        rail === 'CARD' ? 'Card Payments' : rail === 'WALLET' ? 'Wallet Payments' : 'EFT Payments',
       transactionCount: railTransactions.length,
       totalValue: round2(
         railTransactions.reduce((sum, row) => sum + safeNumber(row.settlement_amount), 0)
@@ -461,7 +472,9 @@ export async function getBankservEftProcessingView(admin: SupabaseClient) {
     totalValue: 0,
     ackReference: buildAckRef('ESGBZ1C_', dateToken, sodStatus, '001'),
     timestamp: buildLocalTimestamp(today, 8, 0),
-    opsLabel: hasActivity ? 'Auto-generated and submitted to BankServ' : 'Awaiting system-start trigger',
+    opsLabel: hasActivity
+      ? 'Auto-generated and submitted to BankServ'
+      : 'Awaiting system-start trigger',
     controlSum: 0,
     fileHash: buildHash(`SOD:${dateToken}:${sodStatus}`),
     rail: 'SYSTEM',
@@ -482,7 +495,11 @@ export async function getBankservEftProcessingView(admin: SupabaseClient) {
       });
 
     const chunkSize = 5000;
-    const chunkCount = Math.max(Math.ceil(railTransactions.length / chunkSize), persisted.length, railTransactions.length ? 1 : 0);
+    const chunkCount = Math.max(
+      Math.ceil(railTransactions.length / chunkSize),
+      persisted.length,
+      railTransactions.length ? 1 : 0
+    );
 
     for (let index = 0; index < chunkCount; index += 1) {
       const chunk = railTransactions.slice(index * chunkSize, (index + 1) * chunkSize);
@@ -494,7 +511,9 @@ export async function getBankservEftProcessingView(admin: SupabaseClient) {
           ? safeNumber(persistedBatch.total_amount)
           : chunk.reduce((sum, row) => sum + safeNumber(row.settlement_amount), 0)
       );
-      const transactionCount = persistedBatch ? safeNumber(persistedBatch.transaction_count) : chunk.length;
+      const transactionCount = persistedBatch
+        ? safeNumber(persistedBatch.transaction_count)
+        : chunk.length;
       const status = buildLifecycleStatus(
         persistedBatch ? [persistedBatch.status] : chunk.map((row) => row.status)
       );
@@ -510,8 +529,7 @@ export async function getBankservEftProcessingView(admin: SupabaseClient) {
         fileType: batchLabelForRail(rail),
         fileCode,
         fileName:
-          persistedBatch?.bankserv_file_ref ??
-          `${fileCode}_${dateToken}_${pad(index + 1, 4)}.txt`,
+          persistedBatch?.bankserv_file_ref ?? `${fileCode}_${dateToken}_${pad(index + 1, 4)}.txt`,
         status,
         cutOffTime: railCutOff(rail),
         transactionCount,
@@ -528,10 +546,7 @@ export async function getBankservEftProcessingView(admin: SupabaseClient) {
               : rail === 'CARD'
                 ? 'Receiving live card-funded settlement entries'
                 : 'Aggregating live EFT queue until cut-off',
-        controlSum: round2(
-          persistedBatch?.control_sum_amount ??
-            totalValue
-        ),
+        controlSum: round2(persistedBatch?.control_sum_amount ?? totalValue),
         fileHash: buildHash(
           `${fileCode}:${dateToken}:${transactionCount}:${totalValue}:${status}:${timestamp}`
         ),
@@ -586,7 +601,8 @@ export async function getBankservEftProcessingView(admin: SupabaseClient) {
     summary: {
       sodStatus,
       eodStatus,
-      liveQueueCount: items.filter((row) => row.status === 'queued' || row.status === 'batched').length,
+      liveQueueCount: items.filter((row) => row.status === 'queued' || row.status === 'batched')
+        .length,
       inFlightFiles: batchRows.filter((row) => row.status === 'PENDING').length,
       ackedFiles: batchRows.filter((row) => row.status === 'ACKED').length,
       nackFiles: batchRows.filter((row) => row.status === 'NACKED').length,

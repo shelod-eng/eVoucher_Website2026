@@ -47,7 +47,10 @@ export async function POST(request: Request) {
     const { role } = await resolveUserRole(supabase, user);
     if (!isConsumerRole(role)) {
       return NextResponse.json(
-        { error: 'Only signed-in consumers can top up wallet.', code: 'consumer_only_wallet_topup' },
+        {
+          error: 'Only signed-in consumers can top up wallet.',
+          code: 'consumer_only_wallet_topup',
+        },
         { status: 403 }
       );
     }
@@ -55,12 +58,17 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validationError = validate(body);
     if (validationError) {
-      return NextResponse.json({ error: validationError, code: 'invalid_wallet_topup' }, { status: 400 });
+      return NextResponse.json(
+        { error: validationError, code: 'invalid_wallet_topup' },
+        { status: 400 }
+      );
     }
 
     const amount = Number(body.amount);
     const paymentMethod = String(body.paymentMethod);
-    const accessChannel = String(body.accessChannel ?? 'web').trim().toLowerCase();
+    const accessChannel = String(body.accessChannel ?? 'web')
+      .trim()
+      .toLowerCase();
     const transactionReference = generateTransactionReference();
     const paymentProvider = createPaymentProvider('production');
     const payment = await paymentProvider.createPayment({
@@ -103,8 +111,11 @@ export async function POST(request: Request) {
       (isMissingSchemaField(txRes.error, 'payment_method') ||
         isMissingSchemaField(txRes.error, 'access_channel'))
     ) {
-      const { payment_method: _paymentMethod, access_channel: _accessChannel, ...legacyPayload } =
-        txPayload as any;
+      const {
+        payment_method: _paymentMethod,
+        access_channel: _accessChannel,
+        ...legacyPayload
+      } = txPayload as any;
       txRes = await admin.from('payment_transactions').insert(legacyPayload);
     }
     if (txRes.error) throw txRes.error;

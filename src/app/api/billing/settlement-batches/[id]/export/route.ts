@@ -33,7 +33,9 @@ export async function POST(request: Request, context: { params: { id: string } }
       return jsonNoStore({ error: 'No settlements found for this batch.' }, { status: 422 });
     }
 
-    const invoiceIds = Array.from(new Set(settlements.map((s: any) => String(s.invoice_id)).filter(Boolean)));
+    const invoiceIds = Array.from(
+      new Set(settlements.map((s: any) => String(s.invoice_id)).filter(Boolean))
+    );
     const linkageIds = Array.from(
       new Set(settlements.map((s: any) => String(s.bank_linkage_id)).filter(Boolean))
     );
@@ -50,28 +52,33 @@ export async function POST(request: Request, context: { params: { id: string } }
       .in('id', linkageIds);
     const linkageMap = new Map((linkages ?? []).map((l: any) => [String(l.id), l]));
 
-    const rows = settlements.map((s: any) => {
-      const inv = invoiceMap.get(String(s.invoice_id));
-      const linkage = linkageMap.get(String(s.bank_linkage_id));
-      if (!inv || !linkage) return null;
-      return {
-        settlementId: String(s.id),
-        settlementReference: String(s.settlement_reference ?? '').trim(),
-        amount: Number(s.amount ?? 0),
-        invoiceId: String(s.invoice_id),
-        invoiceNumber: String(inv.invoice_number ?? inv.id),
-        merchantId: String(s.merchant_id),
-        linkage: {
-          branchCode: String(linkage.branch_code ?? ''),
-          accountType: String(linkage.account_type ?? ''),
-          accountHolderName: String(linkage.account_holder_name ?? ''),
-          accountNumberEnc: String(linkage.account_number_enc ?? ''),
-        },
-      };
-    }).filter(Boolean) as any[];
+    const rows = settlements
+      .map((s: any) => {
+        const inv = invoiceMap.get(String(s.invoice_id));
+        const linkage = linkageMap.get(String(s.bank_linkage_id));
+        if (!inv || !linkage) return null;
+        return {
+          settlementId: String(s.id),
+          settlementReference: String(s.settlement_reference ?? '').trim(),
+          amount: Number(s.amount ?? 0),
+          invoiceId: String(s.invoice_id),
+          invoiceNumber: String(inv.invoice_number ?? inv.id),
+          merchantId: String(s.merchant_id),
+          linkage: {
+            branchCode: String(linkage.branch_code ?? ''),
+            accountType: String(linkage.account_type ?? ''),
+            accountHolderName: String(linkage.account_holder_name ?? ''),
+            accountNumberEnc: String(linkage.account_number_enc ?? ''),
+          },
+        };
+      })
+      .filter(Boolean) as any[];
 
     if (rows.length === 0) {
-      return jsonNoStore({ error: 'Settlements missing invoice or bank linkage.' }, { status: 422 });
+      return jsonNoStore(
+        { error: 'Settlements missing invoice or bank linkage.' },
+        { status: 422 }
+      );
     }
 
     const instructions = formatBankServBatch(rows);
@@ -100,4 +107,3 @@ export async function POST(request: Request, context: { params: { id: string } }
     );
   }
 }
-

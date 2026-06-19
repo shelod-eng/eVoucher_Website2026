@@ -37,7 +37,7 @@ export type ComplianceSummary = {
 export function getComplianceGaps(uploadedDocs: any[]): ComplianceSummary {
   const details: DocumentStatus[] = REQUIRED_MERCHANT_DOCUMENTS.map((type) => {
     const doc = uploadedDocs.find((d) => d.document_type === type);
-    
+
     if (!doc) {
       return { type, status: 'missing' };
     }
@@ -51,20 +51,22 @@ export function getComplianceGaps(uploadedDocs: any[]): ComplianceSummary {
   });
 
   const missingTypes = details.filter((d) => d.status === 'missing').map((d) => d.type);
-  const requiresAction = details.filter((d) => d.status === 'rejected' || d.status === 'missing').map((d) => d.type);
+  const requiresAction = details
+    .filter((d) => d.status === 'rejected' || d.status === 'missing')
+    .map((d) => d.type);
 
   // Determine the primary reason for the block to show on the dashboard
   let blockingReason = null;
   if (missingTypes.length > 0) {
     blockingReason = `Missing ${missingTypes.length} required document(s).`;
-  } else if (details.some(d => d.status === 'rejected')) {
-    blockingReason = "Some documents were rejected. Please check reviewer notes and resubmit.";
-  } else if (details.some(d => d.status === 'pending')) {
-    blockingReason = "Documents are currently under review by the compliance team.";
+  } else if (details.some((d) => d.status === 'rejected')) {
+    blockingReason = 'Some documents were rejected. Please check reviewer notes and resubmit.';
+  } else if (details.some((d) => d.status === 'pending')) {
+    blockingReason = 'Documents are currently under review by the compliance team.';
   }
 
   return {
-    isComplete: missingTypes.length === 0 && details.every(d => d.status === 'approved'),
+    isComplete: missingTypes.length === 0 && details.every((d) => d.status === 'approved'),
     missingTypes,
     requiresAction,
     details,

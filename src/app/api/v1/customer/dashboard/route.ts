@@ -95,7 +95,9 @@ export async function GET() {
         .limit(10),
       admin
         .from('payment_transactions')
-        .select('id,merchant_id,voucher_code,amount,card_brand,card_last_four,payment_status,created_at')
+        .select(
+          'id,merchant_id,voucher_code,amount,card_brand,card_last_four,payment_status,created_at'
+        )
         .eq('customer_id', user.id)
         .order('created_at', { ascending: false })
         .limit(200),
@@ -133,10 +135,15 @@ export async function GET() {
     ) {
       const fallbackVouchersRes = await supabase
         .from('customer_vouchers')
-        .select('id,merchant_name,voucher_code,face_value,discount_percent,current_balance,is_active,expires_at,issued_at')
+        .select(
+          'id,merchant_name,voucher_code,face_value,discount_percent,current_balance,is_active,expires_at,issued_at'
+        )
         .eq('customer_id', user.id)
         .order('issued_at', { ascending: false });
-      if (fallbackVouchersRes.error && !isMissingRelation(fallbackVouchersRes.error, 'public.customer_vouchers')) {
+      if (
+        fallbackVouchersRes.error &&
+        !isMissingRelation(fallbackVouchersRes.error, 'public.customer_vouchers')
+      ) {
         vouchersError = fallbackVouchersRes.error;
       } else {
         vouchersError = null;
@@ -226,7 +233,8 @@ export async function GET() {
       const status = String(tx?.payment_status ?? '')
         .toLowerCase()
         .trim();
-      const isCompleted = !status || status === 'completed' || status === 'paid' || status === 'success';
+      const isCompleted =
+        !status || status === 'completed' || status === 'paid' || status === 'success';
       if (!isCompleted) return sum;
       const isWalletTopup = !tx?.voucher_code && !tx?.merchant_id;
       if (!isWalletTopup) return sum;
@@ -237,7 +245,8 @@ export async function GET() {
       const status = String(tx?.payment_status ?? '')
         .toLowerCase()
         .trim();
-      const isCompleted = !status || status === 'completed' || status === 'paid' || status === 'success';
+      const isCompleted =
+        !status || status === 'completed' || status === 'paid' || status === 'success';
       if (!isCompleted) return sum;
       const brand = String(tx?.card_brand ?? '')
         .toUpperCase()

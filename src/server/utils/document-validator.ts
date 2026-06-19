@@ -16,7 +16,11 @@ export const VALID_DOCUMENT_TYPES = new Set(
 
 export type DocumentValidationResult =
   | { ok: true }
-  | { ok: false; error: string; code: 'invalid_type' | 'invalid_file' | 'empty_file' | 'too_large' | 'mime_type' };
+  | {
+      ok: false;
+      error: string;
+      code: 'invalid_type' | 'invalid_file' | 'empty_file' | 'too_large' | 'mime_type';
+    };
 
 export function sanitizeDocumentFilename(name: string) {
   const safeName = String(name || 'document')

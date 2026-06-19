@@ -180,8 +180,8 @@ export default function MerchantDetailsModal({ merchantId, onClose }: MerchantDe
               {details?.business_name || 'Merchant Details'}
             </h2>
             <p className="text-sm text-slate-500 mt-0.5">
-              {details?.merchant_type === 'private' ? 'Private Merchant' : 'Chain Merchant'} &middot;{' '}
-              {details?.business_type || '—'}
+              {details?.merchant_type === 'private' ? 'Private Merchant' : 'Chain Merchant'}{' '}
+              &middot; {details?.business_type || '—'}
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0 ml-4">
@@ -209,8 +209,8 @@ export default function MerchantDetailsModal({ merchantId, onClose }: MerchantDe
               <p className="mt-1 text-xs text-red-500">{error}</p>
               {missingColumns && (
                 <p className="mt-2 text-xs text-slate-500">
-                  Some newer columns haven't been added to this environment yet. Basic info is
-                  still shown below.
+                  Some newer columns haven't been added to this environment yet. Basic info is still
+                  shown below.
                 </p>
               )}
             </div>
@@ -229,14 +229,22 @@ export default function MerchantDetailsModal({ merchantId, onClose }: MerchantDe
                 <DetailRow icon={Tag} label="Branch Name" value={details.branch_name} />
                 <DetailRow icon={Tag} label="Merchant Type" value={details.merchant_type} />
                 <DetailRow icon={Tag} label="Business Type" value={details.business_type} />
-                <DetailRow icon={Percent} label="Discount %" value={details.default_total_discount_pct} />
+                <DetailRow
+                  icon={Percent}
+                  label="Discount %"
+                  value={details.default_total_discount_pct}
+                />
 
                 <SectionTitle>Settlement Account</SectionTitle>
                 <DetailRow icon={Landmark} label="Bank Name" value={details.bank_name} />
                 <DetailRow icon={User} label="Account Holder" value={details.account_holder_name} />
                 <DetailRow icon={Hash} label="Account Number" value={details.account_number} />
                 <DetailRow icon={Hash} label="Branch Code" value={details.branch_code} />
-                <DetailRow icon={MapPin} label="Physical Address" value={details.physical_address} />
+                <DetailRow
+                  icon={MapPin}
+                  label="Physical Address"
+                  value={details.physical_address}
+                />
                 <DetailRow icon={MapPin} label="City" value={details.city} />
                 <DetailRow icon={MapPin} label="Province" value={details.province} />
               </div>
@@ -244,7 +252,11 @@ export default function MerchantDetailsModal({ merchantId, onClose }: MerchantDe
               {/* Column 2 */}
               <div>
                 <SectionTitle>Compliance Details</SectionTitle>
-                <DetailRow icon={FileText} label="Reg. Number" value={details.registration_number} />
+                <DetailRow
+                  icon={FileText}
+                  label="Reg. Number"
+                  value={details.registration_number}
+                />
                 <DetailRow icon={Hash} label="Tax / VAT Number" value={details.tax_number} />
                 <DetailRow
                   icon={FileText}
@@ -257,11 +269,19 @@ export default function MerchantDetailsModal({ merchantId, onClose }: MerchantDe
                   value={details.responsible_pharmacist_name}
                 />
                 <DetailRow icon={Hash} label="Owner ID Number" value={details.owner_id_number} />
-                <DetailRow icon={FileText} label="Proof of Premises" value={details.proof_of_premises} />
+                <DetailRow
+                  icon={FileText}
+                  label="Proof of Premises"
+                  value={details.proof_of_premises}
+                />
 
                 <SectionTitle>Onboarding Status</SectionTitle>
                 <DetailRow icon={ShieldCheck} label="Status" value={details.status} />
-                <DetailRow icon={ShieldCheck} label="Vetting Status" value={details.vetting_status} />
+                <DetailRow
+                  icon={ShieldCheck}
+                  label="Vetting Status"
+                  value={details.vetting_status}
+                />
                 <DetailRow
                   icon={CheckCircle2}
                   label="Email Verified"

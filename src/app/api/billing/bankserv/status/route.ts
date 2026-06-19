@@ -1,7 +1,10 @@
 import { jsonNoStore } from '@/server/services/billing/no-store';
 import { requirePortalUser } from '@/server/services/billing/portal-guard';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getBankservAdaptorOverview, isBankservAdaptorCompatibilityError } from '@/server/services/bankserv/adaptor';
+import {
+  getBankservAdaptorOverview,
+  isBankservAdaptorCompatibilityError,
+} from '@/server/services/bankserv/adaptor';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -15,10 +18,17 @@ export async function GET(request: Request) {
   if (!allowed) return jsonNoStore({ error: 'Forbidden' }, { status: 403 });
 
   try {
-    const mode = String(process.env.BILLING_BANKSERV_MODE ?? 'mock').trim().toLowerCase();
+    const mode = String(process.env.BILLING_BANKSERV_MODE ?? 'mock')
+      .trim()
+      .toLowerCase();
     const partner = String(process.env.BILLING_SETTLEMENT_PARTNER ?? 'RMB / FNB CIB / VISA').trim();
 
-    const required = ['FNB_CIB_API_URL', 'FNB_CIB_API_KEY', 'FNB_CIB_CLIENT_ID', 'FNB_SPONSOR_ACCOUNT'];
+    const required = [
+      'FNB_CIB_API_URL',
+      'FNB_CIB_API_KEY',
+      'FNB_CIB_CLIENT_ID',
+      'FNB_SPONSOR_ACCOUNT',
+    ];
     const missing = mode === 'real' ? missingEnv(required) : [];
 
     let adaptorSummary = null;
@@ -66,4 +76,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

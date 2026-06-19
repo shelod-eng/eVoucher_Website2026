@@ -20,7 +20,9 @@ export interface AVSResult {
  * - In staging/dev, use deterministic mock.
  */
 export async function validateAccountAVS(req: AVSRequest): Promise<AVSResult> {
-  const mockMode = String(process.env.BILLING_AVS_MODE ?? 'mock').trim().toLowerCase();
+  const mockMode = String(process.env.BILLING_AVS_MODE ?? 'mock')
+    .trim()
+    .toLowerCase();
   if (mockMode !== 'real') {
     const normalized = `${req.bankName}|${req.branchCode}|${req.accountHolderName}`.toLowerCase();
     const isVerified = !normalized.includes('mismatch') && !normalized.includes('fail');
@@ -34,4 +36,3 @@ export async function validateAccountAVS(req: AVSRequest): Promise<AVSResult> {
 
   throw new Error('AVS real mode is not implemented yet.');
 }
-

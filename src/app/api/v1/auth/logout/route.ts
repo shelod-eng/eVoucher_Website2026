@@ -46,7 +46,10 @@ export async function POST() {
     const supabase = await createClient();
     const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) {
-      const response = jsonNoStore({ error: error.message, code: 'logout_failed' }, { status: 500 });
+      const response = jsonNoStore(
+        { error: error.message, code: 'logout_failed' },
+        { status: 500 }
+      );
       return await expireSupabaseAuthCookies(response);
     }
     const response = jsonNoStore({ success: true });

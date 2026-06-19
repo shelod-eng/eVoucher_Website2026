@@ -30,7 +30,7 @@ export async function GET() {
 
     if (merchantError) throw merchantError;
 
-    const merchantIds = (merchants || []).map(m => m.id);
+    const merchantIds = (merchants || []).map((m) => m.id);
 
     // 2. Fetch all products for these merchants
     const { data: products, error: productError } = await admin
@@ -51,33 +51,35 @@ export async function GET() {
     if (settlementError) throw settlementError;
 
     // 4. Consolidate the report
-    const report = (merchants || []).map(m => {
-      const merchantProducts = (products || []).filter(p => p.merchant_id === m.id);
-      const latestSettlement = (settlements || []).find(s => s.merchant_id === m.id);
+    const report = (merchants || []).map((m) => {
+      const merchantProducts = (products || []).filter((p) => p.merchant_id === m.id);
+      const latestSettlement = (settlements || []).find((s) => s.merchant_id === m.id);
 
       return {
         merchantName: m.business_name,
         email: m.email,
         onboardingStatus: m.status, // Pending, Approved, Active
         productCount: merchantProducts.length,
-        productCatalogue: merchantProducts.map(p => ({
+        productCatalogue: merchantProducts.map((p) => ({
           name: p.product_name,
           value: p.face_value,
-          active: p.is_active
+          active: p.is_active,
         })),
         payoutTelemetry: {
           status: latestSettlement?.status || 'NOT_READY', // CREATED, VALIDATED, SUBMITTED, SETTLED
           lastSettlement: latestSettlement?.payout_date || latestSettlement?.created_at || null,
-          batchRef: latestSettlement?.id ? `PAY-${String(latestSettlement.id).slice(0, 8).toUpperCase()}` : 'N/A'
+          batchRef: latestSettlement?.id
+            ? `PAY-${String(latestSettlement.id).slice(0, 8).toUpperCase()}`
+            : 'N/A',
         },
-        isSponsorReady: m.status === 'active' && merchantProducts.length > 0
+        isSponsorReady: m.status === 'active' && merchantProducts.length > 0,
       };
     });
 
     return NextResponse.json({
       timestamp: new Date().toISOString(),
       refreshIntervalSeconds: 60,
-      report
+      report,
     });
   } catch (error: any) {
     return NextResponse.json(

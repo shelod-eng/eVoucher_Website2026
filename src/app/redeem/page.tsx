@@ -260,7 +260,7 @@ function RedeemPageContent() {
         body: JSON.stringify({
           voucherCode: voucher.code,
           amount,
-          merchantId: isMerchant ? merchantId ?? undefined : selectedMerchantId || undefined,
+          merchantId: isMerchant ? (merchantId ?? undefined) : selectedMerchantId || undefined,
           idempotencyKey: createIdempotencyKey(),
         }),
       });
@@ -436,7 +436,8 @@ function RedeemPageContent() {
                         Select Participating Store
                       </p>
                       <p className="text-sm text-muted-foreground mb-3">
-                        Choose any active eVoucher merchant store where redemption is being processed.
+                        Choose any active eVoucher merchant store where redemption is being
+                        processed.
                       </p>
                       <select
                         value={selectedMerchantId}

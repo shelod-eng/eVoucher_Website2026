@@ -69,4 +69,3 @@ export class InMemoryUssdUserStore {
 }
 
 export const ussdUserStore = new InMemoryUssdUserStore();
-

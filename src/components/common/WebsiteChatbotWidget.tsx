@@ -271,7 +271,12 @@ export default function WebsiteChatbotWidget() {
         aria-label="Open eVoucher chatbot"
       >
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/12">
-          <Icon name="ChatBubbleBottomCenterTextIcon" size={24} variant="solid" className="text-white" />
+          <Icon
+            name="ChatBubbleBottomCenterTextIcon"
+            size={24}
+            variant="solid"
+            className="text-white"
+          />
         </div>
         <div className="text-left">
           <p className="font-headline text-sm font-semibold">Chat with eVoucher</p>

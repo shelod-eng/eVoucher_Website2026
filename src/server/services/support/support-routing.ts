@@ -124,7 +124,16 @@ const CHATBOT_KNOWLEDGE: Array<{
   },
   {
     intent: 'merchant_shopping',
-    keywords: ['buy groceries', 'groceries', 'grocery', 'shop', 'shopping', 'checkout', 'buy', 'purchase'],
+    keywords: [
+      'buy groceries',
+      'groceries',
+      'grocery',
+      'shop',
+      'shopping',
+      'checkout',
+      'buy',
+      'purchase',
+    ],
     answer:
       'Consumers can shop from participating merchants, add products or voucher-backed offers to checkout, and pay by card, EFT, PayFast, or wallet depending on the flow.',
     suggestedActions: ['Open Shop', 'Open Wallet', 'Talk to support if payment failed'],
@@ -145,13 +154,25 @@ const CHATBOT_KNOWLEDGE: Array<{
     keywords: ['merchant', 'onboarding', 'documents', 'compliance', 'kyb', 'become a merchant'],
     answer:
       'Merchant onboarding covers business registration, compliance checks, banking details, and product setup before approval.',
-    suggestedActions: ['Open Merchant page', 'Prepare required documents', 'Request onboarding support'],
+    suggestedActions: [
+      'Open Merchant page',
+      'Prepare required documents',
+      'Request onboarding support',
+    ],
     actionIds: ['open_merchants', 'email_support', 'open_support'],
     suggestedChannel: 'email',
   },
   {
     intent: 'wallet_topup',
-    keywords: ['top up', 'top-up', 'topup', 'wallet top up', 'wallet balance', 'fund wallet', 'add money'],
+    keywords: [
+      'top up',
+      'top-up',
+      'topup',
+      'wallet top up',
+      'wallet balance',
+      'fund wallet',
+      'add money',
+    ],
     answer:
       'The wallet can be topped up from the consumer flow, and the balance can then be used for supported purchases while keeping transaction history visible in the wallet view.',
     suggestedActions: ['Open Wallet', 'Open Shop', 'View payment options'],
@@ -190,13 +211,22 @@ const CHATBOT_KNOWLEDGE: Array<{
 
 function normalizeText(...values: Array<string | undefined>) {
   return values
-    .map((value) => String(value ?? '').trim().toLowerCase())
+    .map((value) =>
+      String(value ?? '')
+        .trim()
+        .toLowerCase()
+    )
     .filter(Boolean)
     .join(' ');
 }
 
 export function classifySupportCategory(input: SupportTicketInput): SupportCategory {
-  const normalized = normalizeText(input.category, input.requesterType, input.subject, input.description);
+  const normalized = normalizeText(
+    input.category,
+    input.requesterType,
+    input.subject,
+    input.description
+  );
 
   for (const entry of CATEGORY_KEYWORDS) {
     if (entry.keywords.some((keyword) => normalized.includes(keyword))) {
@@ -292,7 +322,7 @@ export function buildWhatsappLaunch(message?: string) {
         ? 'Hi eVoucher, I need help with a billing or payment issue.'
         : reply.intent === 'cash_withdrawal_support'
           ? 'Hi eVoucher, I need help with a wallet cash withdrawal request.'
-        : fallbackMessage;
+          : fallbackMessage;
 
   return {
     phoneNumber,
@@ -351,7 +381,11 @@ export function buildChatbotReply(message: string): SupportChatReply {
     intent: 'general_support',
     answer:
       'I can help with merchant shopping, wallet top-ups, voucher redemption, cash withdrawal support, merchant onboarding, billing, USSD, and WhatsApp journeys. If the issue is urgent, I can route you to a human support path.',
-    suggestedActions: ['Ask about merchant shopping', 'Ask about wallet support', 'Log a support ticket'],
+    suggestedActions: [
+      'Ask about merchant shopping',
+      'Ask about wallet support',
+      'Log a support ticket',
+    ],
     actionIds: ['open_shop', 'open_wallet', 'log_ticket'],
     suggestedChannel: 'chatbot',
     escalationRecommended: false,

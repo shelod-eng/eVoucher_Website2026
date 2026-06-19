@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { 
-  RefreshCw, 
-  CheckCircle2, 
-  XCircle, 
-  AlertCircle, 
-  Layers, 
-  Search, 
-  Calendar, 
-  Coins, 
-  ChevronDown, 
+import {
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Layers,
+  Search,
+  Calendar,
+  Coins,
+  ChevronDown,
   ChevronUp,
   Sparkles,
-  Inbox
+  Inbox,
 } from 'lucide-react';
 
 type ProductCatalogItem = {
@@ -91,7 +91,9 @@ export default function MerchantReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PENDING' | 'SPONSOR_READY'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PENDING' | 'SPONSOR_READY'>(
+    'ALL'
+  );
   const [expandedMerchant, setExpandedMerchant] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(60);
 
@@ -140,7 +142,7 @@ export default function MerchantReportPage() {
 
   // Filter report entries
   const filteredReport = reportData.filter((item) => {
-    const matchesSearch = 
+    const matchesSearch =
       item.merchantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.email.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -153,9 +155,13 @@ export default function MerchantReportPage() {
 
   // KPI calculations
   const totalMerchants = reportData.length;
-  const activeMerchants = reportData.filter(m => String(m.onboardingStatus).toLowerCase() === 'active').length;
-  const sponsorReadyMerchants = reportData.filter(m => m.isSponsorReady).length;
-  const pendingVerification = reportData.filter(m => String(m.onboardingStatus).toLowerCase() === 'pending').length;
+  const activeMerchants = reportData.filter(
+    (m) => String(m.onboardingStatus).toLowerCase() === 'active'
+  ).length;
+  const sponsorReadyMerchants = reportData.filter((m) => m.isSponsorReady).length;
+  const pendingVerification = reportData.filter(
+    (m) => String(m.onboardingStatus).toLowerCase() === 'pending'
+  ).length;
 
   const toggleExpandMerchant = (merchantName: string) => {
     if (expandedMerchant === merchantName) {
@@ -183,9 +189,12 @@ export default function MerchantReportPage() {
                 Refreshes in {countdown}s
               </span>
             </div>
-            <h1 className="text-4xl font-extrabold text-white tracking-tight">Merchant Product Report</h1>
+            <h1 className="text-4xl font-extrabold text-white tracking-tight">
+              Merchant Product Report
+            </h1>
             <p className="max-w-3xl text-sm leading-6 text-teal-50">
-              Provides real-time visibility of onboarded merchants, active product catalogs, and BankServ Adaptor payout readiness.
+              Provides real-time visibility of onboarded merchants, active product catalogs, and
+              BankServ Adaptor payout readiness.
             </p>
           </div>
 
@@ -199,7 +208,9 @@ export default function MerchantReportPage() {
               Refresh
             </button>
             <div className="rounded-[1.4rem] border border-white/20 bg-white/10 px-5 py-3 text-xs text-white">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-100">Telemetry Source</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-100">
+                Telemetry Source
+              </p>
               <p className="mt-0.5 font-bold">BankServ Live Ingestion</p>
             </div>
           </div>
@@ -209,23 +220,39 @@ export default function MerchantReportPage() {
       {/* Overview Cards */}
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">Total Portfolio</p>
-          <p className="mt-3 text-4xl font-extrabold text-slate-800">{loading && totalMerchants === 0 ? '...' : totalMerchants}</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">
+            Total Portfolio
+          </p>
+          <p className="mt-3 text-4xl font-extrabold text-slate-800">
+            {loading && totalMerchants === 0 ? '...' : totalMerchants}
+          </p>
           <p className="mt-2 text-xs text-slate-500">Merchants onboarded in system</p>
         </div>
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">Active Merchants</p>
-          <p className="mt-3 text-4xl font-extrabold text-[#00a89d]">{loading && activeMerchants === 0 ? '...' : activeMerchants}</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">
+            Active Merchants
+          </p>
+          <p className="mt-3 text-4xl font-extrabold text-[#00a89d]">
+            {loading && activeMerchants === 0 ? '...' : activeMerchants}
+          </p>
           <p className="mt-2 text-xs text-slate-500">Active status merchants</p>
         </div>
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">Sponsor Ready</p>
-          <p className="mt-3 text-4xl font-extrabold text-[#00a89d]">{loading && sponsorReadyMerchants === 0 ? '...' : sponsorReadyMerchants}</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">
+            Sponsor Ready
+          </p>
+          <p className="mt-3 text-4xl font-extrabold text-[#00a89d]">
+            {loading && sponsorReadyMerchants === 0 ? '...' : sponsorReadyMerchants}
+          </p>
           <p className="mt-2 text-xs text-slate-500">Active & catalog loaded</p>
         </div>
         <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">Pending Verification</p>
-          <p className="mt-3 text-4xl font-extrabold text-[#f97316]">{loading && pendingVerification === 0 ? '...' : pendingVerification}</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">
+            Pending Verification
+          </p>
+          <p className="mt-3 text-4xl font-extrabold text-[#f97316]">
+            {loading && pendingVerification === 0 ? '...' : pendingVerification}
+          </p>
           <p className="mt-2 text-xs text-slate-500">Awaiting compliance review</p>
         </div>
       </section>
@@ -244,12 +271,14 @@ export default function MerchantReportPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {([
-            { key: 'ALL', label: 'All Portfolio' },
-            { key: 'ACTIVE', label: 'Active Only' },
-            { key: 'PENDING', label: 'Pending Verification' },
-            { key: 'SPONSOR_READY', label: 'Sponsor Ready ✨' }
-          ] as const).map((tab) => (
+          {(
+            [
+              { key: 'ALL', label: 'All Portfolio' },
+              { key: 'ACTIVE', label: 'Active Only' },
+              { key: 'PENDING', label: 'Pending Verification' },
+              { key: 'SPONSOR_READY', label: 'Sponsor Ready ✨' },
+            ] as const
+          ).map((tab) => (
             <button
               key={tab.key}
               onClick={() => setStatusFilter(tab.key)}
@@ -281,7 +310,9 @@ export default function MerchantReportPage() {
           <div className="flex flex-col items-center justify-center py-20 text-slate-500">
             <RefreshCw className="h-8 w-8 animate-spin text-[#00a89d] mb-4" />
             <p className="text-base font-semibold">Generating live telemetry report...</p>
-            <p className="text-sm text-slate-400">Performing joins across merchants, products, and settlements</p>
+            <p className="text-sm text-slate-400">
+              Performing joins across merchants, products, and settlements
+            </p>
           </div>
         ) : filteredReport.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -321,7 +352,9 @@ export default function MerchantReportPage() {
 
                         {/* Onboarding Status */}
                         <td className="px-6 py-5">
-                          <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${onboardingStatusTone(merchant.onboardingStatus)}`}>
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${onboardingStatusTone(merchant.onboardingStatus)}`}
+                          >
                             {merchant.onboardingStatus}
                           </span>
                         </td>
@@ -336,12 +369,17 @@ export default function MerchantReportPage() {
                           {merchant.productCatalogue.length > 0 && (
                             <div className="text-xs text-slate-500 mt-1.5 flex flex-wrap gap-1">
                               {merchant.productCatalogue.slice(0, 3).map((p, idx) => (
-                                <span key={idx} className="bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                                <span
+                                  key={idx}
+                                  className="bg-slate-50 px-2 py-0.5 rounded border border-slate-200"
+                                >
                                   {formatCurrency(p.value)}
                                 </span>
                               ))}
                               {merchant.productCatalogue.length > 3 && (
-                                <span className="text-[#00a89d] font-bold">+{merchant.productCatalogue.length - 3} more</span>
+                                <span className="text-[#00a89d] font-bold">
+                                  +{merchant.productCatalogue.length - 3} more
+                                </span>
                               )}
                             </div>
                           )}
@@ -350,7 +388,9 @@ export default function MerchantReportPage() {
                         {/* Payout Telemetry */}
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-2">
-                            <span className={`inline-flex rounded border px-2 py-0.5 text-[10px] font-bold uppercase ${telemetryStatusTone(merchant.payoutTelemetry.status)}`}>
+                            <span
+                              className={`inline-flex rounded border px-2 py-0.5 text-[10px] font-bold uppercase ${telemetryStatusTone(merchant.payoutTelemetry.status)}`}
+                            >
                               {merchant.payoutTelemetry.status}
                             </span>
                             {merchant.payoutTelemetry.batchRef !== 'N/A' && (
@@ -361,7 +401,10 @@ export default function MerchantReportPage() {
                           </div>
                           <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1.5">
                             <Coins className="h-3.5 w-3.5 text-slate-400" />
-                            <span>Last Settled: {formatDateTime(merchant.payoutTelemetry.lastSettlement)}</span>
+                            <span>
+                              Last Settled:{' '}
+                              {formatDateTime(merchant.payoutTelemetry.lastSettlement)}
+                            </span>
                           </div>
                         </td>
 
@@ -384,7 +427,11 @@ export default function MerchantReportPage() {
 
                         {/* Chevron Collapse */}
                         <td className="pr-6 pl-2 py-5 text-slate-400">
-                          {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                          {isExpanded ? (
+                            <ChevronUp className="h-5 w-5" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5" />
+                          )}
                         </td>
                       </tr>
 
@@ -402,7 +449,9 @@ export default function MerchantReportPage() {
                                 </span>
                               </div>
                               {merchant.productCatalogue.length === 0 ? (
-                                <p className="text-sm text-slate-500 py-2">No products configured for this merchant.</p>
+                                <p className="text-sm text-slate-500 py-2">
+                                  No products configured for this merchant.
+                                </p>
                               ) : (
                                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                                   {merchant.productCatalogue.map((prod, idx) => (
@@ -415,10 +464,16 @@ export default function MerchantReportPage() {
                                       }`}
                                     >
                                       <div>
-                                        <p className="font-bold text-slate-700 text-sm">{prod.name}</p>
-                                        <p className="text-xs text-slate-400 mt-1">Status: {prod.active ? 'Active' : 'Inactive'}</p>
+                                        <p className="font-bold text-slate-700 text-sm">
+                                          {prod.name}
+                                        </p>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                          Status: {prod.active ? 'Active' : 'Inactive'}
+                                        </p>
                                       </div>
-                                      <p className="text-lg font-bold text-[#00a89d]">{formatCurrency(prod.value)}</p>
+                                      <p className="text-lg font-bold text-[#00a89d]">
+                                        {formatCurrency(prod.value)}
+                                      </p>
                                     </div>
                                   ))}
                                 </div>
@@ -439,7 +494,9 @@ export default function MerchantReportPage() {
       {/* Bottom Status Summary Info */}
       {lastUpdated && (
         <section className="text-center text-xs text-slate-400/80">
-          <span>Report Generated at: <b>{formatDateTime(lastUpdated)}</b></span>
+          <span>
+            Report Generated at: <b>{formatDateTime(lastUpdated)}</b>
+          </span>
           <span className="mx-2">•</span>
           <span>Security Protocol: POPIA and PCI compliant</span>
         </section>

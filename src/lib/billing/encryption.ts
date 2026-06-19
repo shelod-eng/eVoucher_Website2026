@@ -59,4 +59,3 @@ export function decryptSensitive(ciphertext: string): string {
   const plain = Buffer.concat([decipher.update(cipherBuf), decipher.final()]);
   return plain.toString('utf8');
 }
-

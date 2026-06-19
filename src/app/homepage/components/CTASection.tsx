@@ -7,7 +7,11 @@ interface CTASectionProps {
   onOpenForgotModal?: () => void;
 }
 
-const CTASection = ({ onOpenCustomerModal, onOpenMerchantModal, onOpenForgotModal }: CTASectionProps) => {
+const CTASection = ({
+  onOpenCustomerModal,
+  onOpenMerchantModal,
+  onOpenForgotModal,
+}: CTASectionProps) => {
   return (
     <section className="py-20 bg-gradient-to-br from-primary via-primary/90 to-secondary relative overflow-hidden">
       {/* Background Pattern */}

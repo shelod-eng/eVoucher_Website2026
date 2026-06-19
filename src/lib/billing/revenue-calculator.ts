@@ -39,4 +39,3 @@ export function calculateRevenue(faceValue: number): RevenueBreakdown {
     platformRevenue,
   };
 }
-

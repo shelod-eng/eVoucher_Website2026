@@ -45,12 +45,9 @@ export async function GET(request: Request) {
         '',
         'payment_method,count,amount,percentage',
         ...overview.reports.dailyTransactionSummary.paymentMethodSplit.map((row) =>
-          [
-            escapeCsv(row.method),
-            row.count,
-            row.amount.toFixed(2),
-            row.percentage.toFixed(2),
-          ].join(',')
+          [escapeCsv(row.method), row.count, row.amount.toFixed(2), row.percentage.toFixed(2)].join(
+            ','
+          )
         ),
       ]);
     }

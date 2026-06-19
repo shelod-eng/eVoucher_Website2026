@@ -25,7 +25,7 @@ function toCsv(rows: Array<Record<string, any>>) {
     const line = headers
       .map((header) => {
         const value = row[header] ?? '';
-        const safe = String(value).replace(/\"/g, '""');
+        const safe = String(value).replace(/"/g, '""');
         return `"${safe}"`;
       })
       .join(',');
@@ -124,7 +124,7 @@ export async function POST(request: Request, context: { params: { id: string } }
       status: 200,
       headers: {
         'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename=\"${batch.batch_number}.csv\"`,
+        'Content-Disposition': `attachment; filename="${batch.batch_number}.csv"`,
       },
     });
   } catch (error: any) {

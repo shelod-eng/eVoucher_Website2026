@@ -14,19 +14,8 @@ export type SandboxScenarioKey =
 export type SandboxScenarioDefinition = {
   key: SandboxScenarioKey;
   label: string;
-  flowType:
-    | 'card_3ds'
-    | 'card'
-    | 'payfast_redirect'
-    | 'eft_proof'
-    | 'payshap_rtp'
-    | 'wallet_topup';
-  paymentMethod:
-    | 'visa_secure'
-    | 'debit_credit'
-    | 'payfast'
-    | 'eft'
-    | 'wallet';
+  flowType: 'card_3ds' | 'card' | 'payfast_redirect' | 'eft_proof' | 'payshap_rtp' | 'wallet_topup';
+  paymentMethod: 'visa_secure' | 'debit_credit' | 'payfast' | 'eft' | 'wallet';
   initialStatus: 'pending' | 'completed' | 'failed';
   finalStatus: 'completed' | 'failed';
   requiresAuthorization?: boolean;

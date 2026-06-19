@@ -18,7 +18,8 @@ const fallbackMetrics: ImpactMetrics = {
   payoutsProcessed: 1280,
   payoutValueProcessed: 2400000,
   consumersReached: 12847,
-  nationalReachLabel: 'Designed for web, USSD, mobile onboarding, and sponsor-scale payout governance',
+  nationalReachLabel:
+    'Designed for web, USSD, mobile onboarding, and sponsor-scale payout governance',
 };
 
 function formatInteger(value: number) {

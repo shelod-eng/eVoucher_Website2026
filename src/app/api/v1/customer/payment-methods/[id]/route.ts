@@ -59,10 +59,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (body.isActive !== undefined) updatePayload.is_active = Boolean(body.isActive);
 
     if (Object.keys(updatePayload).length === 0) {
-      return jsonNoStore(
-        { error: 'No updates provided.', code: 'no_updates' },
-        { status: 400 }
-      );
+      return jsonNoStore({ error: 'No updates provided.', code: 'no_updates' }, { status: 400 });
     }
 
     const { data, error } = await supabase

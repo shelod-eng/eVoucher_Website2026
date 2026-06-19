@@ -29,7 +29,10 @@ export async function POST(request: Request) {
       text: String(body?.text ?? ''),
       provider: 'simulator',
     });
-    return NextResponse.json({ success: true, ...result }, { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json(
+      { success: true, ...result },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error?.message || 'USSD simulation failed.' },
@@ -37,4 +40,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

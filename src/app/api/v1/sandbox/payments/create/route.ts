@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import { createPaymentProvider } from '@/server/services/payment/payment-provider-factory';
 import { requireSandboxAccess } from '@/server/services/payment/sandbox-access';
 import { getSandboxScenario } from '@/server/services/payment/sandbox-scenario-engine';
-import { getInitialDetailedState, getInitialStateHistory } from '@/server/services/payment/sandbox-state-machine';
+import {
+  getInitialDetailedState,
+  getInitialStateHistory,
+} from '@/server/services/payment/sandbox-state-machine';
 import { createSandboxTransaction } from '@/server/services/payment/sandbox-transaction-store';
 
 function buildReference() {

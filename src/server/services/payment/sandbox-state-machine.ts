@@ -73,7 +73,11 @@ export function getInitialStateHistory(scenario: SandboxScenarioDefinition) {
       cancelled: 'Sandbox transaction cancelled.',
     };
     transitions.push(
-      buildTransition(detailedState, scenario.initialStatus, messageMap[detailedState] ?? scenario.label)
+      buildTransition(
+        detailedState,
+        scenario.initialStatus,
+        messageMap[detailedState] ?? scenario.label
+      )
     );
   }
 
@@ -105,10 +109,16 @@ export function applyAuthorizationOutcome(
     transitions.push(buildTransition('authorized', 'pending', 'OTP accepted.', metadata));
     if (transaction.redirectFlow) {
       transitions.push(
-        buildTransition('awaiting_callback', 'pending', 'Authorization succeeded. Awaiting callback.')
+        buildTransition(
+          'awaiting_callback',
+          'pending',
+          'Authorization succeeded. Awaiting callback.'
+        )
       );
     } else {
-      transitions.push(buildTransition('completed', 'completed', 'Sandbox payment completed.', metadata));
+      transitions.push(
+        buildTransition('completed', 'completed', 'Sandbox payment completed.', metadata)
+      );
     }
   } else if (outcome === 'expired') {
     transitions.push(buildTransition('expired', 'failed', 'OTP challenge expired.', metadata));
@@ -125,11 +135,7 @@ export function applyAuthorizationOutcome(
         ? 'expired'
         : 'failed';
   const nextStatus: SandboxTransactionRecord['currentStatus'] =
-    outcome === 'completed'
-      ? transaction.redirectFlow
-        ? 'pending'
-        : 'completed'
-      : 'failed';
+    outcome === 'completed' ? (transaction.redirectFlow ? 'pending' : 'completed') : 'failed';
 
   return {
     ...transaction,
@@ -146,7 +152,11 @@ export function applyWebhookDelivery(
 ) {
   const transitions = [...transaction.stateHistory];
   const currentDetailedState: SandboxDetailedState =
-    targetStatus === 'completed' ? 'completed' : targetStatus === 'failed' ? 'failed' : 'awaiting_callback';
+    targetStatus === 'completed'
+      ? 'completed'
+      : targetStatus === 'failed'
+        ? 'failed'
+        : 'awaiting_callback';
   const message =
     targetStatus === 'completed'
       ? 'Webhook delivered and payment completed.'
@@ -200,7 +210,12 @@ export function applyEftReview(
       detailedState: 'completed' as SandboxDetailedState,
       stateHistory: [
         ...transaction.stateHistory,
-        buildTransition('completed', 'completed', 'EFT proof approved and payment completed.', metadata),
+        buildTransition(
+          'completed',
+          'completed',
+          'EFT proof approved and payment completed.',
+          metadata
+        ),
       ],
     };
   }

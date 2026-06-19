@@ -119,7 +119,11 @@ type EftProcessingPayload = {
   auditLog: AuditEntry[];
 };
 
-type BankservTab = 'batch-engine' | 'reconciliation' | 'eft-batch-processing' | 'settlement-dashboard';
+type BankservTab =
+  | 'batch-engine'
+  | 'reconciliation'
+  | 'eft-batch-processing'
+  | 'settlement-dashboard';
 
 function money(value: number) {
   return `R${Number(value ?? 0).toFixed(2)}`;
@@ -154,10 +158,21 @@ function shortDate(value: string | null | undefined) {
 
 function statusTone(status: string) {
   const normalized = String(status ?? '').toLowerCase();
-  if (normalized === 'settled' || normalized === 'confirmed' || normalized === 'acked' || normalized === 'ack received') {
+  if (
+    normalized === 'settled' ||
+    normalized === 'confirmed' ||
+    normalized === 'acked' ||
+    normalized === 'ack received'
+  ) {
     return 'border-emerald-400/30 bg-emerald-400/14 text-emerald-100';
   }
-  if (normalized === 'queued' || normalized === 'batched' || normalized === 'pending_approval' || normalized === 'pending' || normalized === 'ack pending') {
+  if (
+    normalized === 'queued' ||
+    normalized === 'batched' ||
+    normalized === 'pending_approval' ||
+    normalized === 'pending' ||
+    normalized === 'ack pending'
+  ) {
     return 'border-sky-400/30 bg-sky-400/14 text-sky-100';
   }
   if (
@@ -169,7 +184,14 @@ function statusTone(status: string) {
   ) {
     return 'border-amber-400/30 bg-amber-400/14 text-amber-100';
   }
-  if (normalized === 'rejected' || normalized === 'ignored' || normalized === 'failed' || normalized === 'nacked' || normalized === 'ack failed' || normalized === 'nck') {
+  if (
+    normalized === 'rejected' ||
+    normalized === 'ignored' ||
+    normalized === 'failed' ||
+    normalized === 'nacked' ||
+    normalized === 'ack failed' ||
+    normalized === 'nck'
+  ) {
     return 'border-rose-400/30 bg-rose-400/14 text-rose-100';
   }
   return 'border-slate-400/30 bg-slate-400/10 text-slate-100';
@@ -307,7 +329,13 @@ const fallbackEftProcessingData: EftProcessingPayload = {
   liveFeed: [
     { rail: 'EFT', label: 'EFT Payments', transactionCount: 0, totalValue: 0, recentEntries: [] },
     { rail: 'CARD', label: 'Card Payments', transactionCount: 0, totalValue: 0, recentEntries: [] },
-    { rail: 'WALLET', label: 'Wallet Payments', transactionCount: 0, totalValue: 0, recentEntries: [] },
+    {
+      rail: 'WALLET',
+      label: 'Wallet Payments',
+      transactionCount: 0,
+      totalValue: 0,
+      recentEntries: [],
+    },
   ],
   auditLog: [],
 };
@@ -416,7 +444,10 @@ export default function BankservPortalPage() {
   const selectedBatch = useMemo(() => {
     if (!viewData.recentBatches.length) return null;
     if (!selectedBatchId) return viewData.recentBatches[0];
-    return viewData.recentBatches.find((batch) => batch.id === selectedBatchId) ?? viewData.recentBatches[0];
+    return (
+      viewData.recentBatches.find((batch) => batch.id === selectedBatchId) ??
+      viewData.recentBatches[0]
+    );
   }, [selectedBatchId, viewData.recentBatches]);
 
   useEffect(() => {
@@ -427,9 +458,21 @@ export default function BankservPortalPage() {
 
   const tiles = useMemo(
     () => [
-      { label: 'Queued Transactions', value: String(viewData.summary.queuedCount), accent: 'text-sky-100' },
-      { label: 'Queued Amount', value: money(viewData.summary.queuedAmount), accent: 'text-cyan-100' },
-      { label: 'Settled Amount', value: money(viewData.summary.settledAmount), accent: 'text-emerald-100' },
+      {
+        label: 'Queued Transactions',
+        value: String(viewData.summary.queuedCount),
+        accent: 'text-sky-100',
+      },
+      {
+        label: 'Queued Amount',
+        value: money(viewData.summary.queuedAmount),
+        accent: 'text-cyan-100',
+      },
+      {
+        label: 'Settled Amount',
+        value: money(viewData.summary.settledAmount),
+        accent: 'text-emerald-100',
+      },
       {
         label: 'In-Flight Batches',
         value: String(viewData.summary.submittedCount + viewData.summary.clearingCount),
@@ -462,7 +505,9 @@ export default function BankservPortalPage() {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload?.error || 'Failed to create settlement batch.');
       await loadBankservWorkspace();
-      setActionMessage(`Batch engine ran successfully. Batch ID: ${payload?.data?.batchId ?? 'created'}`);
+      setActionMessage(
+        `Batch engine ran successfully. Batch ID: ${payload?.data?.batchId ?? 'created'}`
+      );
     } catch (err: any) {
       setActionMessage(String(err?.message || 'Failed to create settlement batch.'));
     } finally {
@@ -478,14 +523,19 @@ export default function BankservPortalPage() {
     try {
       setActionLoading(action);
       setActionMessage('');
-      const response = await fetch(`/api/billing/settlement-batches/${selectedBatch.id}/${action}`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      const response = await fetch(
+        `/api/billing/settlement-batches/${selectedBatch.id}/${action}`,
+        {
+          method: 'POST',
+          credentials: 'include',
+        }
+      );
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload?.error || `Failed to ${action} batch.`);
       await loadBankservWorkspace();
-      setActionMessage(`${action[0].toUpperCase()}${action.slice(1)} action completed for ${selectedBatch.batch_number}.`);
+      setActionMessage(
+        `${action[0].toUpperCase()}${action.slice(1)} action completed for ${selectedBatch.batch_number}.`
+      );
     } catch (err: any) {
       setActionMessage(String(err?.message || `Failed to ${action} batch.`));
     } finally {
@@ -504,7 +554,9 @@ export default function BankservPortalPage() {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload?.error || 'Failed to run reconciliation.');
       await loadBankservWorkspace();
-      setActionMessage(`Reconciliation complete. Updated ${payload?.data?.updated ?? 0} settlement rows.`);
+      setActionMessage(
+        `Reconciliation complete. Updated ${payload?.data?.updated ?? 0} settlement rows.`
+      );
     } catch (err: any) {
       setActionMessage(String(err?.message || 'Failed to run reconciliation.'));
     } finally {
@@ -534,16 +586,23 @@ export default function BankservPortalPage() {
               <p className="text-[12px] font-bold uppercase tracking-[0.38em] text-cyan-200">
                 Settlement Portal
               </p>
-              <h1 className="mt-3 text-4xl font-semibold text-white">BankServ Adaptor Control Tower</h1>
+              <h1 className="mt-3 text-4xl font-semibold text-white">
+                BankServ Adaptor Control Tower
+              </h1>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-200">
                 Dedicated payout operations workspace for batch creation, submission control,
-                reconciliation, and merchant settlement visibility behind the eVoucher checkout flow.
+                reconciliation, and merchant settlement visibility behind the eVoucher checkout
+                flow.
               </p>
             </div>
 
             <div className="rounded-[1.4rem] border border-amber-300/35 bg-amber-300/12 px-5 py-4 text-sm text-amber-50">
-              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-amber-100">Mode</p>
-              <p className="mt-1 font-semibold">Operational prototype with live repo integrations</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-amber-100">
+                Mode
+              </p>
+              <p className="mt-1 font-semibold">
+                Operational prototype with live repo integrations
+              </p>
             </div>
           </div>
         </section>
@@ -577,31 +636,33 @@ export default function BankservPortalPage() {
 
           <section className="rounded-[1.7rem] border border-cyan-300/22 bg-[#091b35]/96 p-4 shadow-[0_18px_56px_rgba(2,8,23,0.38)]">
             <div className="flex flex-wrap gap-3">
-            {([
-              { key: 'batch-engine', label: 'Batch Engine' },
-              { key: 'reconciliation', label: 'Reconciliation' },
-              { key: 'eft-batch-processing', label: 'EFT Batch Processing' },
-              { key: 'settlement-dashboard', label: 'Settlement Dashboard' },
-            ] as Array<{ key: BankservTab; label: string }>).map((tab) => {
-              const active = activeTab === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`min-w-[220px] rounded-[1.2rem] border px-5 py-4 text-left text-sm font-semibold tracking-[0.04em] transition ${
-                    active
-                      ? 'border-cyan-200 bg-[linear-gradient(135deg,#67e8f9,#22d3ee)] text-slate-950 shadow-[0_12px_36px_rgba(34,211,238,0.28)]'
-                      : 'border-sky-300/26 bg-[#10284b] text-white hover:border-cyan-300/70 hover:bg-[#153766]'
-                  }`}
-                >
-                  <span className="block text-[11px] font-bold uppercase tracking-[0.24em] opacity-75">
-                    Workspace
-                  </span>
-                  <span className="mt-1 block text-base font-semibold">{tab.label}</span>
-                </button>
-              );
-            })}
+              {(
+                [
+                  { key: 'batch-engine', label: 'Batch Engine' },
+                  { key: 'reconciliation', label: 'Reconciliation' },
+                  { key: 'eft-batch-processing', label: 'EFT Batch Processing' },
+                  { key: 'settlement-dashboard', label: 'Settlement Dashboard' },
+                ] as Array<{ key: BankservTab; label: string }>
+              ).map((tab) => {
+                const active = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`min-w-[220px] rounded-[1.2rem] border px-5 py-4 text-left text-sm font-semibold tracking-[0.04em] transition ${
+                      active
+                        ? 'border-cyan-200 bg-[linear-gradient(135deg,#67e8f9,#22d3ee)] text-slate-950 shadow-[0_12px_36px_rgba(34,211,238,0.28)]'
+                        : 'border-sky-300/26 bg-[#10284b] text-white hover:border-cyan-300/70 hover:bg-[#153766]'
+                    }`}
+                  >
+                    <span className="block text-[11px] font-bold uppercase tracking-[0.24em] opacity-75">
+                      Workspace
+                    </span>
+                    <span className="mt-1 block text-base font-semibold">{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </section>
 
@@ -635,7 +696,9 @@ export default function BankservPortalPage() {
                     <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-300">
                       Batch Engine
                     </p>
-                    <h2 className="mt-2 text-2xl font-semibold text-white">Create and operate settlement batches</h2>
+                    <h2 className="mt-2 text-2xl font-semibold text-white">
+                      Create and operate settlement batches
+                    </h2>
                   </div>
                   <div className="flex flex-wrap gap-3">
                     <button
@@ -679,7 +742,10 @@ export default function BankservPortalPage() {
                     </p>
                     <div className="mt-4 space-y-3">
                       {viewData.rails.map((rail) => (
-                        <div key={rail.rail} className="rounded-xl border border-sky-300/10 bg-[#112544] px-4 py-3">
+                        <div
+                          key={rail.rail}
+                          className="rounded-xl border border-sky-300/10 bg-[#112544] px-4 py-3"
+                        >
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <p className="font-semibold text-white">{rail.rail}</p>
@@ -688,8 +754,12 @@ export default function BankservPortalPage() {
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold text-cyan-100">{money(rail.totalAmount)}</p>
-                              <p className="mt-1 text-xs text-slate-300">{rail.transactionCount} transactions</p>
+                              <p className="font-semibold text-cyan-100">
+                                {money(rail.totalAmount)}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-300">
+                                {rail.transactionCount} transactions
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -706,31 +776,51 @@ export default function BankservPortalPage() {
                         <div className="rounded-xl border border-sky-300/10 bg-[#112544] p-4">
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <p className="text-lg font-semibold text-white">{selectedBatch.batch_number}</p>
+                              <p className="text-lg font-semibold text-white">
+                                {selectedBatch.batch_number}
+                              </p>
                               <p className="mt-1 text-sm text-slate-300">
                                 {selectedBatch.settlement_rail || 'Mixed rail'} batch
                               </p>
                             </div>
-                            <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(selectedBatch.status)}`}>
+                            <span
+                              className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(selectedBatch.status)}`}
+                            >
                               {selectedBatch.status}
                             </span>
                           </div>
                           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                             <div>
-                              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Amount</p>
-                              <p className="mt-1 font-semibold text-emerald-100">{money(selectedBatch.total_amount)}</p>
+                              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">
+                                Amount
+                              </p>
+                              <p className="mt-1 font-semibold text-emerald-100">
+                                {money(selectedBatch.total_amount)}
+                              </p>
                             </div>
                             <div>
-                              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Transactions</p>
-                              <p className="mt-1 font-semibold text-white">{selectedBatch.transaction_count}</p>
+                              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">
+                                Transactions
+                              </p>
+                              <p className="mt-1 font-semibold text-white">
+                                {selectedBatch.transaction_count}
+                              </p>
                             </div>
                             <div>
-                              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Merchants</p>
-                              <p className="mt-1 font-semibold text-white">{selectedBatch.merchant_count}</p>
+                              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">
+                                Merchants
+                              </p>
+                              <p className="mt-1 font-semibold text-white">
+                                {selectedBatch.merchant_count}
+                              </p>
                             </div>
                             <div>
-                              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Created</p>
-                              <p className="mt-1 font-semibold text-white">{formatDate(selectedBatch.created_at)}</p>
+                              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">
+                                Created
+                              </p>
+                              <p className="mt-1 font-semibold text-white">
+                                {formatDate(selectedBatch.created_at)}
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -740,14 +830,16 @@ export default function BankservPortalPage() {
                             State Machine Reference
                           </p>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            {['CREATED', 'VALIDATED', 'SUBMITTED', 'CLEARING', 'SETTLED'].map((step) => (
-                              <span
-                                key={step}
-                                className="rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-2 text-xs font-semibold text-sky-100"
-                              >
-                                {step}
-                              </span>
-                            ))}
+                            {['CREATED', 'VALIDATED', 'SUBMITTED', 'CLEARING', 'SETTLED'].map(
+                              (step) => (
+                                <span
+                                  key={step}
+                                  className="rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-2 text-xs font-semibold text-sky-100"
+                                >
+                                  {step}
+                                </span>
+                              )
+                            )}
                             <span className="rounded-full border border-rose-300/25 bg-rose-300/12 px-3 py-2 text-xs font-semibold text-rose-100">
                               ANY -&gt; REJECTED
                             </span>
@@ -767,7 +859,9 @@ export default function BankservPortalPage() {
                 <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-300">
                   Recent Batches
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">Batch queue and transaction intake</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Batch queue and transaction intake
+                </h2>
 
                 <div className="mt-5 space-y-3">
                   {viewData.recentBatches.length === 0 ? (
@@ -796,11 +890,17 @@ export default function BankservPortalPage() {
                               <p className="mt-1 text-sm text-slate-300">
                                 {batch.transaction_count} txns | {batch.settlement_rail || 'Mixed'}
                               </p>
-                              <p className="mt-1 text-xs text-slate-400">{formatDate(batch.created_at)}</p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                {formatDate(batch.created_at)}
+                              </p>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold text-emerald-100">{money(batch.total_amount)}</p>
-                              <span className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(batch.status)}`}>
+                              <p className="font-semibold text-emerald-100">
+                                {money(batch.total_amount)}
+                              </p>
+                              <span
+                                className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(batch.status)}`}
+                              >
                                 {batch.status}
                               </span>
                             </div>
@@ -824,18 +924,29 @@ export default function BankservPortalPage() {
                       </div>
                     ) : (
                       viewData.pendingTransactions.slice(0, 6).map((transaction) => (
-                        <div key={transaction.id} className="rounded-xl border border-sky-300/10 bg-[#112544] p-4">
+                        <div
+                          key={transaction.id}
+                          className="rounded-xl border border-sky-300/10 bg-[#112544] p-4"
+                        >
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <p className="font-semibold text-white">{transaction.transaction_reference}</p>
+                              <p className="font-semibold text-white">
+                                {transaction.transaction_reference}
+                              </p>
                               <p className="mt-1 text-sm text-slate-300">
                                 {transaction.payment_rail} via {transaction.payment_method}
                               </p>
-                              <p className="mt-1 text-xs text-slate-400">{formatDate(transaction.created_at)}</p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                {formatDate(transaction.created_at)}
+                              </p>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold text-emerald-100">{money(transaction.settlement_amount)}</p>
-                              <span className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(transaction.status)}`}>
+                              <p className="font-semibold text-emerald-100">
+                                {money(transaction.settlement_amount)}
+                              </p>
+                              <span
+                                className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(transaction.status)}`}
+                              >
                                 {transaction.status}
                               </span>
                             </div>
@@ -857,11 +968,13 @@ export default function BankservPortalPage() {
                     <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-300">
                       EFT Batch Processing
                     </p>
-                    <h2 className="mt-2 text-3xl font-semibold text-white">Real-time file lifecycle overview</h2>
+                    <h2 className="mt-2 text-3xl font-semibold text-white">
+                      Real-time file lifecycle overview
+                    </h2>
                     <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-200">
-                      Sponsor-facing command view for Start-of-Day, dynamic EFT and card batch creation,
-                      ACK/NCK posture, and End-of-Day file readiness as transactions flow in from
-                      eVoucher checkout.
+                      Sponsor-facing command view for Start-of-Day, dynamic EFT and card batch
+                      creation, ACK/NCK posture, and End-of-Day file readiness as transactions flow
+                      in from eVoucher checkout.
                     </p>
                   </div>
                   <button
@@ -887,7 +1000,9 @@ export default function BankservPortalPage() {
                       Start-of-Day
                     </p>
                     <div className="mt-3 flex items-center justify-between gap-3">
-                      <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(eftView.summary.sodStatus)}`}>
+                      <span
+                        className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(eftView.summary.sodStatus)}`}
+                      >
                         {eftView.summary.sodStatus}
                       </span>
                       <span className="text-sm font-semibold text-cyan-100">ESGBZ1C</span>
@@ -897,22 +1012,32 @@ export default function BankservPortalPage() {
                     <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">
                       Live Queue
                     </p>
-                    <p className="mt-3 text-3xl font-semibold text-white">{eftView.summary.liveQueueCount}</p>
-                    <p className="mt-1 text-sm text-slate-300">Queued adaptor transactions awaiting file assignment</p>
+                    <p className="mt-3 text-3xl font-semibold text-white">
+                      {eftView.summary.liveQueueCount}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-300">
+                      Queued adaptor transactions awaiting file assignment
+                    </p>
                   </div>
                   <div className="rounded-[1.2rem] border border-sky-300/10 bg-slate-950/22 p-4">
                     <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">
                       ACKED Files
                     </p>
-                    <p className="mt-3 text-3xl font-semibold text-emerald-100">{eftView.summary.ackedFiles}</p>
-                    <p className="mt-1 text-sm text-slate-300">Files already acknowledged by BankServ/FNB flow</p>
+                    <p className="mt-3 text-3xl font-semibold text-emerald-100">
+                      {eftView.summary.ackedFiles}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-300">
+                      Files already acknowledged by BankServ/FNB flow
+                    </p>
                   </div>
                   <div className="rounded-[1.2rem] border border-sky-300/10 bg-slate-950/22 p-4">
                     <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">
                       End-of-Day
                     </p>
                     <div className="mt-3 flex items-center justify-between gap-3">
-                      <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(eftView.summary.eodStatus)}`}>
+                      <span
+                        className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(eftView.summary.eodStatus)}`}
+                      >
                         {eftView.summary.eodStatus}
                       </span>
                       <span className="text-sm font-semibold text-cyan-100">ESGBZ9C</span>
@@ -923,10 +1048,12 @@ export default function BankservPortalPage() {
 
               <section className="overflow-hidden rounded-[1.7rem] border border-sky-300/18 bg-[#0b1d3a]/95 shadow-[0_18px_56px_rgba(2,8,23,0.38)]">
                 <div className="border-b border-sky-300/10 px-6 py-5">
-                  <h3 className="text-xl font-semibold text-white">Unified BankServ batch file table</h3>
+                  <h3 className="text-xl font-semibold text-white">
+                    Unified BankServ batch file table
+                  </h3>
                   <p className="mt-1 text-sm text-slate-300">
-                    SOD, EFT, Card, and EOD files tracked together with cut-off guidance, ACK/NCK status,
-                    control sums, and operations context.
+                    SOD, EFT, Card, and EOD files tracked together with cut-off guidance, ACK/NCK
+                    status, control sums, and operations context.
                   </p>
                 </div>
                 <div className="overflow-x-auto">
@@ -959,15 +1086,23 @@ export default function BankservPortalPage() {
                               <p className="mt-1 text-xs text-slate-400">{row.rail}</p>
                             </div>
                           </td>
-                          <td className="px-4 py-4 font-semibold text-white">{row.transactionCount}</td>
+                          <td className="px-4 py-4 font-semibold text-white">
+                            {row.transactionCount}
+                          </td>
                           <td className="px-4 py-4">
                             <div>
-                              <p className="font-semibold text-emerald-100">{money(row.totalValue)}</p>
-                              <p className="mt-1 text-xs text-slate-400">Control sum {money(row.controlSum)}</p>
+                              <p className="font-semibold text-emerald-100">
+                                {money(row.totalValue)}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                Control sum {money(row.controlSum)}
+                              </p>
                             </div>
                           </td>
                           <td className="px-4 py-4">
-                            <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(row.status)}`}>
+                            <span
+                              className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusTone(row.status)}`}
+                            >
                               {row.status}
                             </span>
                           </td>
@@ -1006,11 +1141,16 @@ export default function BankservPortalPage() {
                   <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-300">
                     Live Transaction Feed
                   </p>
-                  <h3 className="mt-2 text-2xl font-semibold text-white">Rail intake before cut-off</h3>
+                  <h3 className="mt-2 text-2xl font-semibold text-white">
+                    Rail intake before cut-off
+                  </h3>
 
                   <div className="mt-5 grid gap-4 xl:grid-cols-3">
                     {eftView.liveFeed.map((rail) => (
-                      <div key={rail.rail} className="rounded-[1.2rem] border border-sky-300/10 bg-slate-950/22 p-4">
+                      <div
+                        key={rail.rail}
+                        className="rounded-[1.2rem] border border-sky-300/10 bg-slate-950/22 p-4"
+                      >
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className="font-semibold text-white">{rail.label}</p>
@@ -1030,15 +1170,26 @@ export default function BankservPortalPage() {
                             </div>
                           ) : (
                             rail.recentEntries.map((entry) => (
-                              <div key={entry.id} className="rounded-xl border border-sky-300/10 bg-[#112544] px-3 py-3">
+                              <div
+                                key={entry.id}
+                                className="rounded-xl border border-sky-300/10 bg-[#112544] px-3 py-3"
+                              >
                                 <div className="flex items-center justify-between gap-3">
                                   <div>
-                                    <p className="font-medium text-white">{entry.transactionReference}</p>
-                                    <p className="mt-1 text-xs text-slate-400">{compactDate(entry.createdAt)}</p>
+                                    <p className="font-medium text-white">
+                                      {entry.transactionReference}
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-400">
+                                      {compactDate(entry.createdAt)}
+                                    </p>
                                   </div>
                                   <div className="text-right">
-                                    <p className="font-semibold text-emerald-100">{money(entry.amount)}</p>
-                                    <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] ${statusTone(entry.status)}`}>
+                                    <p className="font-semibold text-emerald-100">
+                                      {money(entry.amount)}
+                                    </p>
+                                    <span
+                                      className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] ${statusTone(entry.status)}`}
+                                    >
                                       {entry.status}
                                     </span>
                                   </div>
@@ -1056,7 +1207,9 @@ export default function BankservPortalPage() {
                   <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-300">
                     OPS Audit Log
                   </p>
-                  <h3 className="mt-2 text-2xl font-semibold text-white">ACK/NCK and file metadata trail</h3>
+                  <h3 className="mt-2 text-2xl font-semibold text-white">
+                    ACK/NCK and file metadata trail
+                  </h3>
 
                   <div className="mt-5 space-y-3">
                     {eftView.auditLog.length === 0 ? (
@@ -1065,20 +1218,35 @@ export default function BankservPortalPage() {
                       </div>
                     ) : (
                       eftView.auditLog.map((entry) => (
-                        <div key={entry.id} className="rounded-[1.1rem] border border-sky-300/10 bg-slate-950/22 p-4">
+                        <div
+                          key={entry.id}
+                          className="rounded-[1.1rem] border border-sky-300/10 bg-slate-950/22 p-4"
+                        >
                           <div className="flex items-start justify-between gap-4">
                             <div>
                               <p className="font-semibold text-white">{entry.fileCode}</p>
                               <p className="mt-1 text-sm text-slate-300">{entry.fileName}</p>
-                              <p className="mt-1 text-xs text-slate-400">{compactDate(entry.timestamp)}</p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                {compactDate(entry.timestamp)}
+                              </p>
                             </div>
-                            <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${statusTone(entry.status)}`}>
+                            <span
+                              className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${statusTone(entry.status)}`}
+                            >
                               {entry.status}
                             </span>
                           </div>
                           <div className="mt-3 grid gap-2 text-xs text-slate-300">
-                            <p>ACK/NCK Ref: <span className="font-semibold text-cyan-100">{entry.ackReference}</span></p>
-                            <p>File Hash: <span className="font-semibold text-cyan-100">{entry.fileHash}</span></p>
+                            <p>
+                              ACK/NCK Ref:{' '}
+                              <span className="font-semibold text-cyan-100">
+                                {entry.ackReference}
+                              </span>
+                            </p>
+                            <p>
+                              File Hash:{' '}
+                              <span className="font-semibold text-cyan-100">{entry.fileHash}</span>
+                            </p>
                             <p>{entry.detail}</p>
                           </div>
                         </div>
@@ -1098,7 +1266,9 @@ export default function BankservPortalPage() {
                     <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-300">
                       Reconciliation Screen
                     </p>
-                    <h2 className="mt-2 text-2xl font-semibold text-white">CSV matching and statement review</h2>
+                    <h2 className="mt-2 text-2xl font-semibold text-white">
+                      CSV matching and statement review
+                    </h2>
                   </div>
                   <button
                     type="button"
@@ -1111,21 +1281,39 @@ export default function BankservPortalPage() {
 
                 <div className="mt-6 grid gap-4 md:grid-cols-3">
                   <div className="rounded-[1.2rem] border border-sky-300/10 bg-slate-950/22 p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">Matched</p>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">
+                      Matched
+                    </p>
                     <p className="mt-3 text-3xl font-semibold text-emerald-100">
-                      {settlements.filter((row) => String(row.reconciliation_status).toLowerCase() === 'matched').length}
+                      {
+                        settlements.filter(
+                          (row) => String(row.reconciliation_status).toLowerCase() === 'matched'
+                        ).length
+                      }
                     </p>
                   </div>
                   <div className="rounded-[1.2rem] border border-sky-300/10 bg-slate-950/22 p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">Pending</p>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">
+                      Pending
+                    </p>
                     <p className="mt-3 text-3xl font-semibold text-amber-100">
-                      {settlements.filter((row) => String(row.reconciliation_status).toLowerCase() === 'pending').length}
+                      {
+                        settlements.filter(
+                          (row) => String(row.reconciliation_status).toLowerCase() === 'pending'
+                        ).length
+                      }
                     </p>
                   </div>
                   <div className="rounded-[1.2rem] border border-sky-300/10 bg-slate-950/22 p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">Disputed</p>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">
+                      Disputed
+                    </p>
                     <p className="mt-3 text-3xl font-semibold text-rose-100">
-                      {settlements.filter((row) => String(row.reconciliation_status).toLowerCase() === 'disputed').length}
+                      {
+                        settlements.filter(
+                          (row) => String(row.reconciliation_status).toLowerCase() === 'disputed'
+                        ).length
+                      }
                     </p>
                   </div>
                 </div>
@@ -1162,7 +1350,9 @@ export default function BankservPortalPage() {
                 <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-300">
                   Reconciliation Result Grid
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">Settlement statement comparison</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  Settlement statement comparison
+                </h2>
 
                 <div className="mt-5 overflow-hidden rounded-[1.2rem] border border-sky-300/10">
                   <table className="min-w-full divide-y divide-sky-300/10 text-sm">
@@ -1184,15 +1374,21 @@ export default function BankservPortalPage() {
                       ) : (
                         settlements.slice(0, 10).map((row) => (
                           <tr key={row.id} className="text-slate-100">
-                            <td className="px-4 py-3">{row.settlement_reference || row.id.slice(0, 8)}</td>
+                            <td className="px-4 py-3">
+                              {row.settlement_reference || row.id.slice(0, 8)}
+                            </td>
                             <td className="px-4 py-3">{money(row.amount)}</td>
                             <td className="px-4 py-3">
-                              <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${statusTone(row.status)}`}>
+                              <span
+                                className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${statusTone(row.status)}`}
+                              >
                                 {row.status}
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${statusTone(row.reconciliation_status || 'pending')}`}>
+                              <span
+                                className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${statusTone(row.reconciliation_status || 'pending')}`}
+                              >
                                 {row.reconciliation_status || 'pending'}
                               </span>
                             </td>
@@ -1214,7 +1410,9 @@ export default function BankservPortalPage() {
                     <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-300">
                       Settlement Dashboard / Calendar
                     </p>
-                    <h2 className="mt-2 text-2xl font-semibold text-white">{calendar.monthLabel}</h2>
+                    <h2 className="mt-2 text-2xl font-semibold text-white">
+                      {calendar.monthLabel}
+                    </h2>
                   </div>
                   <div className="rounded-full border border-cyan-300/28 bg-cyan-300/10 px-4 py-2 text-sm font-semibold text-cyan-50">
                     Sponsor calendar view
@@ -1231,7 +1429,9 @@ export default function BankservPortalPage() {
 
                 <div className="grid grid-cols-7 gap-2">
                   {calendar.cells.map((cell, index) => {
-                    const amount = cell.iso ? projectedSettlements.get(shortDate(cell.iso)) ?? 0 : 0;
+                    const amount = cell.iso
+                      ? (projectedSettlements.get(shortDate(cell.iso)) ?? 0)
+                      : 0;
                     return (
                       <div
                         key={`${cell.label}-${index}`}
@@ -1242,7 +1442,13 @@ export default function BankservPortalPage() {
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className={cell.isCurrentMonth ? 'text-sm font-semibold text-white' : 'text-sm text-slate-600'}>
+                          <span
+                            className={
+                              cell.isCurrentMonth
+                                ? 'text-sm font-semibold text-white'
+                                : 'text-sm text-slate-600'
+                            }
+                          >
                             {cell.label}
                           </span>
                           {amount > 0 ? (
@@ -1266,15 +1472,24 @@ export default function BankservPortalPage() {
 
                   <div className="mt-5 space-y-3">
                     {settlements.slice(0, 6).map((row) => (
-                      <div key={row.id} className="rounded-[1.1rem] border border-sky-300/10 bg-slate-950/22 p-4">
+                      <div
+                        key={row.id}
+                        className="rounded-[1.1rem] border border-sky-300/10 bg-slate-950/22 p-4"
+                      >
                         <div className="flex items-start justify-between gap-4">
                           <div>
-                            <p className="font-semibold text-white">{row.settlement_reference || row.id.slice(0, 8)}</p>
-                            <p className="mt-1 text-sm text-slate-300">{formatDate(row.confirmed_at ?? row.created_at ?? null)}</p>
+                            <p className="font-semibold text-white">
+                              {row.settlement_reference || row.id.slice(0, 8)}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-300">
+                              {formatDate(row.confirmed_at ?? row.created_at ?? null)}
+                            </p>
                           </div>
                           <div className="text-right">
                             <p className="font-semibold text-emerald-100">{money(row.amount)}</p>
-                            <span className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${statusTone(row.status)}`}>
+                            <span
+                              className={`mt-2 inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] ${statusTone(row.status)}`}
+                            >
                               {row.status}
                             </span>
                           </div>
@@ -1295,7 +1510,10 @@ export default function BankservPortalPage() {
                   </p>
                   <div className="mt-5 space-y-3">
                     {Object.entries(viewData.cutOffs).map(([rail, cutOff]) => (
-                      <div key={rail} className="flex items-center justify-between rounded-[1rem] border border-sky-300/10 bg-slate-950/22 px-4 py-3">
+                      <div
+                        key={rail}
+                        className="flex items-center justify-between rounded-[1rem] border border-sky-300/10 bg-slate-950/22 px-4 py-3"
+                      >
                         <span className="font-semibold text-white">{rail}</span>
                         <span className="text-sm font-semibold text-cyan-100">{cutOff}</span>
                       </div>

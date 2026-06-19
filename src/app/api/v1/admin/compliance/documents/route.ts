@@ -30,8 +30,12 @@ export async function GET(request: Request) {
     }
 
     const url = new URL(request.url);
-    const status = String(url.searchParams.get('status') ?? '').trim().toLowerCase();
-    const documentType = String(url.searchParams.get('documentType') ?? '').trim().toUpperCase();
+    const status = String(url.searchParams.get('status') ?? '')
+      .trim()
+      .toLowerCase();
+    const documentType = String(url.searchParams.get('documentType') ?? '')
+      .trim()
+      .toUpperCase();
     const limit = Math.min(Number(url.searchParams.get('limit') ?? '50') || 50, 100);
 
     const admin = createAdminClient();

@@ -34,7 +34,9 @@ export async function POST(request: Request, context: { params: { id: string } }
       return jsonNoStore({ error: 'No settlements found for this batch.' }, { status: 422 });
     }
 
-    const invoiceIds = Array.from(new Set(settlements.map((s: any) => String(s.invoice_id)).filter(Boolean)));
+    const invoiceIds = Array.from(
+      new Set(settlements.map((s: any) => String(s.invoice_id)).filter(Boolean))
+    );
     const linkageIds = Array.from(
       new Set(settlements.map((s: any) => String(s.bank_linkage_id)).filter(Boolean))
     );
@@ -99,4 +101,3 @@ export async function POST(request: Request, context: { params: { id: string } }
     );
   }
 }
-

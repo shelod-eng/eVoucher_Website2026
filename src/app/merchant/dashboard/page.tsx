@@ -218,7 +218,9 @@ export default function MerchantDashboard() {
       : 'evoucher_logistics_inventory_default';
   }, [merchant?.id]);
   const logisticsOrdersKey = useMemo(() => {
-    return merchant?.id ? `evoucher_logistics_orders_${merchant.id}` : 'evoucher_logistics_orders_default';
+    return merchant?.id
+      ? `evoucher_logistics_orders_${merchant.id}`
+      : 'evoucher_logistics_orders_default';
   }, [merchant?.id]);
 
   useEffect(() => {
@@ -337,12 +339,7 @@ export default function MerchantDashboard() {
       sourceProductId: product.id,
     }));
     setLogisticsInventory(seeded);
-  }, [
-    merchant?.id,
-    merchantProducts,
-    logisticsInventoryKey,
-    logisticsInventory.length,
-  ]);
+  }, [merchant?.id, merchantProducts, logisticsInventoryKey, logisticsInventory.length]);
 
   useEffect(() => {
     if (!merchant?.id || merchantProducts.length === 0) return;
@@ -582,9 +579,7 @@ export default function MerchantDashboard() {
 
   const handleRestockItem = (inventoryId: string, amount = 10) => {
     setLogisticsInventory((prev) =>
-      prev.map((item) =>
-        item.id === inventoryId ? { ...item, stock: item.stock + amount } : item
-      )
+      prev.map((item) => (item.id === inventoryId ? { ...item, stock: item.stock + amount } : item))
     );
     setLogisticsMessage('Inventory updated.');
   };
@@ -610,9 +605,7 @@ export default function MerchantDashboard() {
 
   const handleCreateLogisticsOrder = () => {
     setLogisticsMessage('');
-    const selectedItem = logisticsInventory.find(
-      (item) => item.id === logisticsForm.inventoryId
-    );
+    const selectedItem = logisticsInventory.find((item) => item.id === logisticsForm.inventoryId);
     if (!selectedItem) {
       setLogisticsMessage('Select a product to dispatch.');
       return;
@@ -650,9 +643,7 @@ export default function MerchantDashboard() {
     setLogisticsOrders((prev) => [newOrder, ...prev]);
     setLogisticsInventory((prev) =>
       prev.map((item) =>
-        item.id === selectedItem.id
-          ? { ...item, stock: item.stock - logisticsForm.quantity }
-          : item
+        item.id === selectedItem.id ? { ...item, stock: item.stock - logisticsForm.quantity } : item
       )
     );
     setLogisticsForm({
@@ -712,11 +703,7 @@ export default function MerchantDashboard() {
       }
 
       setProductMessage('Voucher product created.');
-      setProductForm(
-        buildDefaultProductForm(
-          Number(merchant?.default_total_discount_pct ?? 4)
-        )
-      );
+      setProductForm(buildDefaultProductForm(Number(merchant?.default_total_discount_pct ?? 4)));
       await fetchDashboardData();
     } catch (productError: any) {
       setProductMessage(productError?.message || 'Failed to create product.');
@@ -1293,7 +1280,8 @@ export default function MerchantDashboard() {
                   </button>
 
                   <p className="text-xs text-muted-foreground font-body">
-                    Merchant-controlled setup: set your own discount %, specials, scope, and priority before creating each product.
+                    Merchant-controlled setup: set your own discount %, specials, scope, and
+                    priority before creating each product.
                   </p>
 
                   {productMessage && (

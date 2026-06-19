@@ -315,16 +315,14 @@ export async function POST(request: Request) {
       'all_branches';
     let productValidProvinces: string[] = [];
     let productValidBranchIds: string[] = [];
-    let selectedBranchContext:
-      | {
-          id: string;
-          business_name: string;
-          parent_brand: string | null;
-          branch_name: string | null;
-          city: string | null;
-          province: string | null;
-        }
-      | null = null;
+    let selectedBranchContext: {
+      id: string;
+      business_name: string;
+      parent_brand: string | null;
+      branch_name: string | null;
+      city: string | null;
+      province: string | null;
+    } | null = null;
     let pricing: ReturnType<typeof calculateDiscountPricing>;
 
     if (body.productId) {
@@ -562,8 +560,11 @@ export async function POST(request: Request) {
       (isMissingSchemaField(transactionError, 'payment_method') ||
         isMissingSchemaField(transactionError, 'access_channel'))
     ) {
-      const { payment_method: _paymentMethod, access_channel: _accessChannel, ...legacyPayload } =
-        transactionInsertPayload as any;
+      const {
+        payment_method: _paymentMethod,
+        access_channel: _accessChannel,
+        ...legacyPayload
+      } = transactionInsertPayload as any;
       const legacyInsert = await admin.from('payment_transactions').insert(legacyPayload);
       transactionError = legacyInsert.error;
     }

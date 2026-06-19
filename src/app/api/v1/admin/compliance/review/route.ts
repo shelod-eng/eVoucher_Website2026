@@ -69,7 +69,9 @@ export async function PATCH(request: Request) {
     const notes = body.notes ? String(body.notes).slice(0, 500) : null;
     if ((status === 'FAILED' || status === 'NEEDS_MORE') && !notes) {
       return NextResponse.json(
-        { error: 'Reviewer notes are required for rejected documents or more information requests.' },
+        {
+          error: 'Reviewer notes are required for rejected documents or more information requests.',
+        },
         { status: 400 }
       );
     }

@@ -163,7 +163,9 @@ export async function getShopMerchantsForUssd(): Promise<UssdMerchant[]> {
   return live.length > 0 ? live : DEMO_MERCHANTS;
 }
 
-export async function getProductsForMerchantUssd(merchantId: string): Promise<UssdMerchantProduct[]> {
+export async function getProductsForMerchantUssd(
+  merchantId: string
+): Promise<UssdMerchantProduct[]> {
   if (!merchantId) return [];
   if (merchantId in DEMO_PRODUCTS_BY_MERCHANT) {
     return DEMO_PRODUCTS_BY_MERCHANT[merchantId] ?? [];

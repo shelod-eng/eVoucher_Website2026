@@ -34,8 +34,8 @@ export default function OfflinePage() {
         </h1>
 
         <p className="mb-6 text-base text-gray-700">
-          It looks like you've lost your internet connection.
-          Don't worry &mdash; your saved pages are still available.
+          It looks like you've lost your internet connection. Don't worry &mdash; your saved pages
+          are still available.
         </p>
 
         <div className="space-y-3">

@@ -7,7 +7,7 @@ export const revalidate = 0;
 
 function isMissingRelation(error: any, relationName: string) {
   const message = String(error?.message ?? '');
-  return message.includes(`relation \"${relationName}\" does not exist`);
+  return message.includes(`relation "${relationName}" does not exist`);
 }
 
 export async function GET(request: Request, context: { params: { id: string } }) {
@@ -31,10 +31,7 @@ export async function GET(request: Request, context: { params: { id: string } })
     }
     return jsonNoStore({ success: true, data });
   } catch (error: any) {
-    return jsonNoStore(
-      { error: error?.message || 'Failed to fetch invoice.' },
-      { status: 500 }
-    );
+    return jsonNoStore({ error: error?.message || 'Failed to fetch invoice.' }, { status: 500 });
   }
 }
 
@@ -47,7 +44,9 @@ export async function PUT(request: Request, context: { params: { id: string } })
     if (!id) return jsonNoStore({ error: 'Invoice id is required.' }, { status: 400 });
     const body = await request.json().catch(() => ({}));
     const status = String(body?.status ?? '').trim();
-    const paymentReference = body?.paymentReference ? String(body.paymentReference).slice(0, 120) : null;
+    const paymentReference = body?.paymentReference
+      ? String(body.paymentReference).slice(0, 120)
+      : null;
 
     if (!status) {
       return jsonNoStore({ error: 'status is required.' }, { status: 400 });
@@ -60,7 +59,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
         status,
         payment_reference: paymentReference,
         paid_at: status === 'paid' ? new Date().toISOString() : null,
-        approved_by: status === 'approved' ? user?.id ?? null : null,
+        approved_by: status === 'approved' ? (user?.id ?? null) : null,
         approved_at: status === 'approved' ? new Date().toISOString() : null,
         metadata: {
           updatedByRole: role ?? null,
@@ -83,10 +82,6 @@ export async function PUT(request: Request, context: { params: { id: string } })
 
     return jsonNoStore({ success: true, data });
   } catch (error: any) {
-    return jsonNoStore(
-      { error: error?.message || 'Failed to update invoice.' },
-      { status: 500 }
-    );
+    return jsonNoStore({ error: error?.message || 'Failed to update invoice.' }, { status: 500 });
   }
 }
-

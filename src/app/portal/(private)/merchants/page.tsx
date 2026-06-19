@@ -172,7 +172,9 @@ export default async function PortalMerchantsPage({
                       </td>
                       <td className="py-3 pr-4">
                         {isApproved ? (
-                          <div className="text-xs text-emerald-700">Approval workflow completed</div>
+                          <div className="text-xs text-emerald-700">
+                            Approval workflow completed
+                          </div>
                         ) : (
                           <form action={approveMerchantAction}>
                             <input type="hidden" name="merchantId" value={merchant.id} />

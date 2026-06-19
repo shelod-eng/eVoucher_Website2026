@@ -6,11 +6,15 @@ const PORTAL_ROLES = new Set(['admin', 'finance_approver', 'auditor']);
 type PortalRole = 'admin' | 'finance_approver' | 'auditor';
 
 function normalizeRole(role: unknown): string {
-  return String(role ?? '').trim().toLowerCase();
+  return String(role ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 function normalizeEmail(email: unknown): string {
-  return String(email ?? '').trim().toLowerCase();
+  return String(email ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 async function findAuthUserByEmail(admin: ReturnType<typeof createAdminClient>, email: string) {

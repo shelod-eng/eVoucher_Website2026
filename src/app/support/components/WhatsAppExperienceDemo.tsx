@@ -42,7 +42,8 @@ const scenarios: DemoScenario[] = [
   {
     id: 'merchant_shopping',
     label: 'Grocery shopping',
-    userMessage: 'Hi eVoucher, I want to buy groceries from a participating merchant and check out today.',
+    userMessage:
+      'Hi eVoucher, I want to buy groceries from a participating merchant and check out today.',
     requesterType: 'consumer',
     supportEmail: 'consumer.demo@evoucher.co.za',
   },
@@ -63,7 +64,8 @@ const scenarios: DemoScenario[] = [
   {
     id: 'cash_withdrawal',
     label: 'Cash withdrawal',
-    userMessage: 'My cash withdrawal is delayed and I need help checking my wallet transaction status.',
+    userMessage:
+      'My cash withdrawal is delayed and I need help checking my wallet transaction status.',
     requesterType: 'consumer',
     supportEmail: 'cashout.demo@evoucher.co.za',
   },
@@ -165,7 +167,11 @@ export default function WhatsAppExperienceDemo() {
     return payload.data as ChatReply;
   }
 
-  async function maybeCreateTicket(reply: ChatReply, scenario: DemoScenario | null, message: string) {
+  async function maybeCreateTicket(
+    reply: ChatReply,
+    scenario: DemoScenario | null,
+    message: string
+  ) {
     if (!reply.escalationRecommended) {
       setTicket(null);
       return;
@@ -297,9 +303,7 @@ export default function WhatsAppExperienceDemo() {
                   </div>
                   <div>
                     <p className="font-headline text-lg font-semibold">eVoucher Support</p>
-                    <p className="font-body text-xs text-emerald-100">
-                      Demo line online now
-                    </p>
+                    <p className="font-body text-xs text-emerald-100">Demo line online now</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-emerald-50/90">
@@ -314,7 +318,10 @@ export default function WhatsAppExperienceDemo() {
               <div className="h-full overflow-y-auto rounded-[24px] bg-[rgba(255,255,255,0.18)] p-3">
                 <div className="space-y-3">
                   {messages.map((message) => (
-                    <div key={message.id} className={message.from === 'system' ? 'text-center' : ''}>
+                    <div
+                      key={message.id}
+                      className={message.from === 'system' ? 'text-center' : ''}
+                    >
                       {message.from === 'system' ? (
                         <div className="mx-auto max-w-[88%] rounded-2xl bg-[#d9fdd3] px-4 py-2 text-left shadow-sm">
                           <p className="font-body text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">
@@ -441,20 +448,51 @@ export default function WhatsAppExperienceDemo() {
             </p>
             <ul className="mt-4 space-y-3 font-body text-sm text-slate-700">
               <li className="flex gap-3">
-                <Icon name="CheckCircleIcon" size={18} variant="solid" className="mt-0.5 text-emerald-600" />
-                <span>Message bubbles, timestamps, and delivery states for outbound user messages.</span>
+                <Icon
+                  name="CheckCircleIcon"
+                  size={18}
+                  variant="solid"
+                  className="mt-0.5 text-emerald-600"
+                />
+                <span>
+                  Message bubbles, timestamps, and delivery states for outbound user messages.
+                </span>
               </li>
               <li className="flex gap-3">
-                <Icon name="CheckCircleIcon" size={18} variant="solid" className="mt-0.5 text-emerald-600" />
-                <span>Typing indicator and support-routing replies based on the existing eVoucher assistant logic.</span>
+                <Icon
+                  name="CheckCircleIcon"
+                  size={18}
+                  variant="solid"
+                  className="mt-0.5 text-emerald-600"
+                />
+                <span>
+                  Typing indicator and support-routing replies based on the existing eVoucher
+                  assistant logic.
+                </span>
               </li>
               <li className="flex gap-3">
-                <Icon name="CheckCircleIcon" size={18} variant="solid" className="mt-0.5 text-emerald-600" />
-                <span>Journeys for merchant shopping, wallet top-up, voucher redemption, billing, and assisted cash withdrawal support.</span>
+                <Icon
+                  name="CheckCircleIcon"
+                  size={18}
+                  variant="solid"
+                  className="mt-0.5 text-emerald-600"
+                />
+                <span>
+                  Journeys for merchant shopping, wallet top-up, voucher redemption, billing, and
+                  assisted cash withdrawal support.
+                </span>
               </li>
               <li className="flex gap-3">
-                <Icon name="CheckCircleIcon" size={18} variant="solid" className="mt-0.5 text-emerald-600" />
-                <span>Escalation events that create a ticket in the demo support backend when the case is urgent.</span>
+                <Icon
+                  name="CheckCircleIcon"
+                  size={18}
+                  variant="solid"
+                  className="mt-0.5 text-emerald-600"
+                />
+                <span>
+                  Escalation events that create a ticket in the demo support backend when the case
+                  is urgent.
+                </span>
               </li>
             </ul>
           </div>
@@ -498,7 +536,9 @@ export default function WhatsAppExperienceDemo() {
             {ticket ? (
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl bg-white p-4">
-                  <p className="font-headline text-lg font-semibold text-slate-900">{ticket.ticketId}</p>
+                  <p className="font-headline text-lg font-semibold text-slate-900">
+                    {ticket.ticketId}
+                  </p>
                   <p className="mt-1 font-body text-sm text-slate-600">
                     {ticket.category} queue, {ticket.priority} priority, {ticket.assignedPlatform}{' '}
                     handoff
@@ -515,7 +555,9 @@ export default function WhatsAppExperienceDemo() {
                     <p className="font-body text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
                       SLA
                     </p>
-                    <p className="mt-1 font-body text-sm text-slate-800">{ticket.slaHours} hour(s)</p>
+                    <p className="mt-1 font-body text-sm text-slate-800">
+                      {ticket.slaHours} hour(s)
+                    </p>
                   </div>
                 </div>
                 <div className="rounded-2xl border border-violet-100 bg-white p-4 font-body text-sm text-slate-700">

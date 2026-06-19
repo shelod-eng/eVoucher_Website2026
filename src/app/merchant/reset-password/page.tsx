@@ -147,15 +147,20 @@ export default function MerchantResetPasswordPage() {
           <div className="bg-card/95 backdrop-blur-sm border border-border rounded-2xl shadow-lg p-8">
             {status && (
               <div className="mb-4 rounded-lg border border-primary/20 bg-primary/10 p-3 flex items-start gap-2">
-                <Icon name="InformationCircleIcon" size={18} variant="solid" className="text-primary mt-0.5" />
+                <Icon
+                  name="InformationCircleIcon"
+                  size={18}
+                  variant="solid"
+                  className="text-primary mt-0.5"
+                />
                 <p className="text-sm text-foreground font-body">{status}</p>
               </div>
             )}
 
             {!ready ? (
               <div className="rounded-xl border border-border bg-background px-4 py-5 text-sm text-muted-foreground">
-                Open the password recovery email first. Once the recovery session is active, this page
-                will let you set a new password.
+                Open the password recovery email first. Once the recovery session is active, this
+                page will let you set a new password.
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">

@@ -104,11 +104,17 @@ export function formatBankServBatch(rows: BankServFormatInput[]): BankServInstru
   return rows.map((row) => {
     const destBranch = String(row.linkage.branchCode ?? '').trim() || '250655';
     const isFnbToFnb = destBranch === '250655';
-    const actionDate = isFnbToFnb ? formatYYYYMMDD(new Date()) : formatYYYYMMDD(addBusinessDays(new Date(), 1));
+    const actionDate = isFnbToFnb
+      ? formatYYYYMMDD(new Date())
+      : formatYYYYMMDD(addBusinessDays(new Date(), 1));
 
-    const reference = String(row.settlementReference ?? '').trim().slice(0, 20);
+    const reference = String(row.settlementReference ?? '')
+      .trim()
+      .slice(0, 20);
     const destinationAccount = decryptSensitive(String(row.linkage.accountNumberEnc));
-    const holderName = String(row.linkage.accountHolderName ?? '').trim().slice(0, 30);
+    const holderName = String(row.linkage.accountHolderName ?? '')
+      .trim()
+      .slice(0, 30);
 
     return {
       settlementId: row.settlementId,
@@ -184,14 +190,14 @@ export function renderBankservPain001Document(
         '      <CdtTrfTxInf>',
         '        <PmtId>',
         `          <EndToEndId>${escapeXml(
-            String(instruction.reference || `EVR-${index + 1}`).slice(0, 35)
-          )}</EndToEndId>`,
+          String(instruction.reference || `EVR-${index + 1}`).slice(0, 35)
+        )}</EndToEndId>`,
         '        </PmtId>',
         `        <Amt><InstdAmt Ccy="ZAR">${amount}</InstdAmt></Amt>`,
         '        <CdtrAgt>',
         `          <FinInstnId><ClrSysMmbId><MmbId>${escapeXml(
-            instruction.destinationBank
-          )}</MmbId></ClrSysMmbId></FinInstnId>`,
+          instruction.destinationBank
+        )}</MmbId></ClrSysMmbId></FinInstnId>`,
         '        </CdtrAgt>',
         '        <Cdtr>',
         `          <Nm>${escapeXml(instruction.holderName || instruction.merchantId)}</Nm>`,
@@ -258,4 +264,3 @@ export function renderBankservPain001Document(
     xml,
   };
 }
-

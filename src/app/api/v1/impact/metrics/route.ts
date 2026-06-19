@@ -41,7 +41,9 @@ export async function GET() {
     ] = await Promise.all([
       safeCount(admin, 'merchants'),
       safeCount(admin, 'customer_vouchers'),
-      safeCount(admin, 'settlement_batches', (query) => query.in('status', ['confirmed', 'settled', 'paid'])),
+      safeCount(admin, 'settlement_batches', (query) =>
+        query.in('status', ['confirmed', 'settled', 'paid'])
+      ),
       safeAmountSum(admin, 'settlement_batches', 'total_amount', (query) =>
         query.in('status', ['confirmed', 'settled', 'paid'])
       ),
@@ -55,7 +57,8 @@ export async function GET() {
         payoutsProcessed,
         payoutValueProcessed,
         consumersReached,
-        nationalReachLabel: 'Designed for web, USSD, mobile onboarding, and sponsor-scale payout governance',
+        nationalReachLabel:
+          'Designed for web, USSD, mobile onboarding, and sponsor-scale payout governance',
         refreshedAt: new Date().toISOString(),
       },
       {

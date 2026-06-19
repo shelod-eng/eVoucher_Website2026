@@ -13,7 +13,9 @@ function generateVoucherCode() {
 
 async function createVoucher(formData: FormData) {
   'use server';
-  const email = String(formData.get('customerEmail') ?? '').trim().toLowerCase();
+  const email = String(formData.get('customerEmail') ?? '')
+    .trim()
+    .toLowerCase();
   const merchantName = String(formData.get('merchantName') ?? '').trim();
   const faceValue = Number(formData.get('faceValue') ?? 0);
   const discountPercent = Number(formData.get('discountPercent') ?? 0);

@@ -218,7 +218,9 @@ export async function recordVoucherPurchaseBillingEvent(
   const faceValue = safeNumber(input.faceValue);
   const totalDiscountPct = safeNumber(input.totalDiscountPct);
   const totalDiscountAmount = round2(faceValue - consumerPrice);
-  const platformRevenue = round2(totalDiscountAmount * (Number(input.metadata?.platformRevenuePct ?? 0.012)));
+  const platformRevenue = round2(
+    totalDiscountAmount * Number(input.metadata?.platformRevenuePct ?? 0.012)
+  );
   const consumerBenefit = round2(totalDiscountAmount - platformRevenue);
 
   // First: idempotent event record.

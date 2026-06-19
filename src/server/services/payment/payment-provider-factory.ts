@@ -5,7 +5,9 @@ import { SandboxPaymentProvider } from '@/server/services/payment/sandbox-provid
 export type PaymentProviderMode = 'production' | 'sandbox';
 
 export function getPaymentModeFromEnv(): PaymentProviderMode {
-  return String(process.env.PAYMENT_MODE ?? 'production').trim().toLowerCase() === 'sandbox'
+  return String(process.env.PAYMENT_MODE ?? 'production')
+    .trim()
+    .toLowerCase() === 'sandbox'
     ? 'sandbox'
     : 'production';
 }

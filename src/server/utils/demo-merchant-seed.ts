@@ -235,7 +235,11 @@ async function ensureDemoMerchantAuthUser(admin: any, seed: DemoMerchantSeed) {
 }
 
 function buildDemoKpiRows(seed: DemoMerchantSeed, merchantId: string) {
-  const brandPrefix = seed.brandKey.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'DEMO';
+  const brandPrefix =
+    seed.brandKey
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 8) || 'DEMO';
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const rows = [
@@ -282,7 +286,10 @@ async function seedDemoKpiData(admin: any, seed: DemoMerchantSeed, merchantId: s
   const transactionRows = buildDemoKpiRows(seed, merchantId);
   if (transactionRows.length === 0) return;
 
-  const referencePrefix = `DEMO-${seed.brandKey.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)}-`;
+  const referencePrefix = `DEMO-${seed.brandKey
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 8)}-`;
   const existingTx = await admin
     .from('payment_transactions')
     .select('id,transaction_reference', { count: 'exact' })
@@ -309,8 +316,7 @@ async function seedDemoKpiData(admin: any, seed: DemoMerchantSeed, merchantId: s
         evoucher_benefit_pct: row.evoucher_benefit_pct,
         total_discount_amount: row.total_discount_amount,
         merchant_receivable_after_total_discount: row.merchant_receivable_after_total_discount,
-        merchant_receivable_after_evoucher_benefit:
-          row.merchant_receivable_after_evoucher_benefit,
+        merchant_receivable_after_evoucher_benefit: row.merchant_receivable_after_evoucher_benefit,
       }))
     );
 
@@ -350,7 +356,10 @@ async function seedDemoKpiData(admin: any, seed: DemoMerchantSeed, merchantId: s
     {
       merchant_id: merchantId,
       amount: Number(
-        transactionRows.slice(0, 3).reduce((sum, row) => sum + row.amount, 0).toFixed(2)
+        transactionRows
+          .slice(0, 3)
+          .reduce((sum, row) => sum + row.amount, 0)
+          .toFixed(2)
       ),
       status: 'completed',
       payout_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -359,7 +368,10 @@ async function seedDemoKpiData(admin: any, seed: DemoMerchantSeed, merchantId: s
     {
       merchant_id: merchantId,
       amount: Number(
-        transactionRows.slice(3).reduce((sum, row) => sum + row.amount, 0).toFixed(2)
+        transactionRows
+          .slice(3)
+          .reduce((sum, row) => sum + row.amount, 0)
+          .toFixed(2)
       ),
       status: 'pending',
       payout_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),

@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireSandboxAccess } from '@/server/services/payment/sandbox-access';
 import { applyAuthorizationOutcome } from '@/server/services/payment/sandbox-state-machine';
-import { getSandboxTransaction, updateSandboxTransaction } from '@/server/services/payment/sandbox-transaction-store';
+import {
+  getSandboxTransaction,
+  updateSandboxTransaction,
+} from '@/server/services/payment/sandbox-transaction-store';
 
 export async function POST(request: Request) {
   const access = await requireSandboxAccess();

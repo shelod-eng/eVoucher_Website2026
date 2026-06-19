@@ -21,7 +21,7 @@ export async function GET() {
     }
 
     const admin = createAdminClient();
-    
+
     // Get merchants currently in the onboarding process
     const { data: merchants, error } = await admin
       .from('merchants')

@@ -33,7 +33,9 @@ export async function getAuthenticatedUser() {
         if (!profile) {
           const metadata = user.user_metadata || {};
           const email = user.email || '';
-          const role = String(metadata.role || 'customer').toLowerCase().trim();
+          const role = String(metadata.role || 'customer')
+            .toLowerCase()
+            .trim();
           const fullName = String(metadata.full_name || email.split('@')[0]);
           const phone = String(metadata.phone || '');
 

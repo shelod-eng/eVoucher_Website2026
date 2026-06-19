@@ -427,16 +427,19 @@ export default async function PortalReportsPage() {
               EFT, PayShap, and future bank integrations.
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {['Gateway governance', 'Settlement traceability', 'Sponsor reconciliation', 'Bank-grade controls'].map(
-                (item) => (
-                  <div
-                    key={item}
-                    className="rounded-[1rem] border border-emerald-300/16 bg-slate-950/18 p-3 text-sm font-semibold text-emerald-50"
-                  >
-                    {item}
-                  </div>
-                )
-              )}
+              {[
+                'Gateway governance',
+                'Settlement traceability',
+                'Sponsor reconciliation',
+                'Bank-grade controls',
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-[1rem] border border-emerald-300/16 bg-slate-950/18 p-3 text-sm font-semibold text-emerald-50"
+                >
+                  {item}
+                </div>
+              ))}
             </div>
           </div>
         </div>

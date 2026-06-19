@@ -94,7 +94,10 @@ export default function PortalCompliancePage() {
     [documents]
   );
 
-  const reviewDocument = async (documentId: string, status: 'VERIFIED' | 'FAILED' | 'NEEDS_MORE') => {
+  const reviewDocument = async (
+    documentId: string,
+    status: 'VERIFIED' | 'FAILED' | 'NEEDS_MORE'
+  ) => {
     setSavingId(documentId);
     setError('');
     setMessage('');
@@ -176,7 +179,10 @@ export default function PortalCompliancePage() {
             ['Approved', counts.verified],
             ['Rejected', counts.failed],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-[1.3rem] border border-sky-400/12 bg-[#102647]/80 p-4">
+            <div
+              key={label}
+              className="rounded-[1.3rem] border border-sky-400/12 bg-[#102647]/80 p-4"
+            >
               <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-sky-100/80">
                 {label}
               </p>
@@ -218,7 +224,9 @@ export default function PortalCompliancePage() {
             <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusBadge(document.status)}`}>
+                  <span
+                    className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] ${statusBadge(document.status)}`}
+                  >
                     {document.status}
                   </span>
                   <span className="text-xs uppercase tracking-[0.22em] text-slate-400">
@@ -229,7 +237,9 @@ export default function PortalCompliancePage() {
                 <h2 className="mt-3 truncate text-2xl font-semibold text-white">
                   {document.merchantName ?? 'Unnamed merchant'}
                 </h2>
-                <p className="mt-1 text-sm text-slate-300">{document.merchantEmail ?? 'No email captured'}</p>
+                <p className="mt-1 text-sm text-slate-300">
+                  {document.merchantEmail ?? 'No email captured'}
+                </p>
 
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                   <div className="rounded-[1rem] border border-sky-400/10 bg-[#102647]/80 p-3">
@@ -245,7 +255,9 @@ export default function PortalCompliancePage() {
                     </p>
                   </div>
                   <div className="rounded-[1rem] border border-sky-400/10 bg-[#102647]/80 p-3">
-                    <p className="text-[10px] uppercase tracking-[0.24em] text-slate-400">Uploaded</p>
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-slate-400">
+                      Uploaded
+                    </p>
                     <p className="mt-1 text-sm font-semibold text-white">
                       {formatDateTime(document.uploadedAt)}
                     </p>
