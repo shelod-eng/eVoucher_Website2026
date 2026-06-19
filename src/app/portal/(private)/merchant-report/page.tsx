@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   RefreshCw, 
   CheckCircle2, 
@@ -63,26 +63,26 @@ function formatDateTime(value: string | null | undefined) {
 function onboardingStatusTone(status: string) {
   const normalized = String(status ?? '').toLowerCase();
   if (normalized === 'active' || normalized === 'approved') {
-    return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300';
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   }
   if (normalized === 'pending') {
-    return 'border-sky-400/30 bg-sky-400/10 text-sky-300';
+    return 'border-amber-200 bg-amber-50 text-amber-700';
   }
-  return 'border-slate-500/30 bg-slate-500/10 text-slate-300';
+  return 'border-slate-200 bg-slate-100 text-slate-600';
 }
 
 function telemetryStatusTone(status: string) {
   const normalized = String(status ?? '').toUpperCase();
   if (normalized === 'SETTLED' || normalized === 'ACKED') {
-    return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300';
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   }
   if (['CREATED', 'VALIDATED', 'SUBMITTED', 'PENDING'].includes(normalized)) {
-    return 'border-amber-400/30 bg-amber-400/10 text-amber-300';
+    return 'border-amber-200 bg-amber-50 text-amber-700';
   }
   if (normalized === 'NOT_READY') {
-    return 'border-slate-500/30 bg-slate-500/10 text-slate-400';
+    return 'border-slate-200 bg-slate-100 text-slate-400';
   }
-  return 'border-rose-400/30 bg-rose-400/10 text-rose-300';
+  return 'border-rose-200 bg-rose-50 text-rose-700';
 }
 
 export default function MerchantReportPage() {
@@ -166,25 +166,25 @@ export default function MerchantReportPage() {
   };
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8 text-slate-800">
       {/* Title Header Block */}
-      <section className="overflow-hidden rounded-[2rem] border border-cyan-300/26 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(10,28,53,0.96),rgba(8,51,68,0.85))] p-6 shadow-[0_26px_90px_rgba(2,8,23,0.55)]">
+      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,#00a89d,#0d9488)] p-6 shadow-sm">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-cyan-400/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-cyan-300">
+              <span className="rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-white">
                 Sponsor Command Centre
               </span>
-              <span className="flex items-center gap-1.5 rounded-full border border-sky-400/30 bg-[#0d223f] px-2.5 py-1 text-[11px] font-semibold text-slate-300">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-300"></span>
+              <span className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-200 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-100"></span>
                 </span>
                 Refreshes in {countdown}s
               </span>
             </div>
-            <h1 className="text-4xl font-semibold text-white">Merchant Product Report</h1>
-            <p className="max-w-3xl text-sm leading-7 text-slate-200">
+            <h1 className="text-4xl font-extrabold text-white tracking-tight">Merchant Product Report</h1>
+            <p className="max-w-3xl text-sm leading-6 text-teal-50">
               Provides real-time visibility of onboarded merchants, active product catalogs, and BankServ Adaptor payout readiness.
             </p>
           </div>
@@ -193,14 +193,14 @@ export default function MerchantReportPage() {
             <button
               onClick={handleManualRefresh}
               disabled={loading}
-              className="flex items-center gap-2.5 rounded-full border border-cyan-300/30 bg-[#122e57] px-5 py-3 text-sm font-semibold text-white transition hover:border-cyan-200 hover:bg-[#183d73] disabled:opacity-50"
+              className="flex items-center gap-2.5 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-xs font-bold text-white transition hover:bg-white/20 disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </button>
-            <div className="rounded-[1.4rem] border border-cyan-400/24 bg-cyan-400/10 px-5 py-3 text-sm text-cyan-50">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200/80">Telemetry Source</p>
-              <p className="mt-1 font-semibold">BankServ Live Ingestion</p>
+            <div className="rounded-[1.4rem] border border-white/20 bg-white/10 px-5 py-3 text-xs text-white">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-100">Telemetry Source</p>
+              <p className="mt-0.5 font-bold">BankServ Live Ingestion</p>
             </div>
           </div>
         </div>
@@ -208,30 +208,30 @@ export default function MerchantReportPage() {
 
       {/* Overview Cards */}
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-[1.5rem] border border-sky-300/18 bg-[#0b1d3a]/95 p-5 shadow-lg">
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">Total Portfolio</p>
-          <p className="mt-3 text-4xl font-semibold text-white">{loading && totalMerchants === 0 ? '...' : totalMerchants}</p>
-          <p className="mt-2 text-xs text-slate-300">Merchants onboarded in system</p>
+          <p className="mt-3 text-4xl font-extrabold text-slate-800">{loading && totalMerchants === 0 ? '...' : totalMerchants}</p>
+          <p className="mt-2 text-xs text-slate-500">Merchants onboarded in system</p>
         </div>
-        <div className="rounded-[1.5rem] border border-sky-300/18 bg-[#0b1d3a]/95 p-5 shadow-lg">
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">Active Merchants</p>
-          <p className="mt-3 text-4xl font-semibold text-cyan-300">{loading && activeMerchants === 0 ? '...' : activeMerchants}</p>
-          <p className="mt-2 text-xs text-slate-300">Active status merchants</p>
+          <p className="mt-3 text-4xl font-extrabold text-[#00a89d]">{loading && activeMerchants === 0 ? '...' : activeMerchants}</p>
+          <p className="mt-2 text-xs text-slate-500">Active status merchants</p>
         </div>
-        <div className="rounded-[1.5rem] border border-sky-300/18 bg-[#0b1d3a]/95 p-5 shadow-lg">
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">Sponsor Ready</p>
-          <p className="mt-3 text-4xl font-semibold text-emerald-300">{loading && sponsorReadyMerchants === 0 ? '...' : sponsorReadyMerchants}</p>
-          <p className="mt-2 text-xs text-slate-300">Active & catalog loaded</p>
+          <p className="mt-3 text-4xl font-extrabold text-[#00a89d]">{loading && sponsorReadyMerchants === 0 ? '...' : sponsorReadyMerchants}</p>
+          <p className="mt-2 text-xs text-slate-500">Active & catalog loaded</p>
         </div>
-        <div className="rounded-[1.5rem] border border-sky-300/18 bg-[#0b1d3a]/95 p-5 shadow-lg">
+        <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-400">Pending Verification</p>
-          <p className="mt-3 text-4xl font-semibold text-amber-300">{loading && pendingVerification === 0 ? '...' : pendingVerification}</p>
-          <p className="mt-2 text-xs text-slate-300">Awaiting compliance review</p>
+          <p className="mt-3 text-4xl font-extrabold text-[#f97316]">{loading && pendingVerification === 0 ? '...' : pendingVerification}</p>
+          <p className="mt-2 text-xs text-slate-500">Awaiting compliance review</p>
         </div>
       </section>
 
       {/* Filter and Search Bar */}
-      <section className="rounded-[1.6rem] border border-sky-300/18 bg-[#0b1d3a]/95 p-4 shadow-lg flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <section className="rounded-[1.6rem] border border-slate-200 bg-white p-4 shadow-sm flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
           <input
@@ -239,7 +239,7 @@ export default function MerchantReportPage() {
             placeholder="Search merchant business name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-xl border border-sky-300/12 bg-slate-900/60 py-3 pl-11 pr-4 text-sm text-white focus:border-cyan-300 focus:outline-none"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:border-[#00a89d] focus:outline-none focus:ring-1 focus:ring-[#00a89d]/10"
           />
         </div>
 
@@ -253,10 +253,10 @@ export default function MerchantReportPage() {
             <button
               key={tab.key}
               onClick={() => setStatusFilter(tab.key)}
-              className={`rounded-full px-4 py-2 text-xs font-semibold tracking-wider transition ${
+              className={`rounded-full px-4 py-2 text-xs font-bold tracking-wider transition ${
                 statusFilter === tab.key
-                  ? 'bg-cyan-400 text-slate-950 shadow-md'
-                  : 'border border-sky-300/16 bg-slate-950/20 text-slate-300 hover:bg-[#122e57]'
+                  ? 'bg-[#00a89d] text-white shadow-sm'
+                  : 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
               }`}
             >
               {tab.label}
@@ -267,25 +267,25 @@ export default function MerchantReportPage() {
 
       {/* Error message */}
       {error && (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
           <div className="flex gap-2">
-            <AlertCircle className="h-5 w-5 shrink-0 text-rose-400" />
+            <AlertCircle className="h-5 w-5 shrink-0 text-rose-500" />
             <p>{error}</p>
           </div>
         </div>
       )}
 
       {/* Main Report Table */}
-      <section className="overflow-hidden rounded-[1.8rem] border border-sky-300/16 bg-[#0b1d3a]/92 shadow-2xl">
+      <section className="overflow-hidden rounded-[1.8rem] border border-slate-200 bg-white shadow-sm">
         {loading && reportData.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-300">
-            <RefreshCw className="h-8 w-8 animate-spin text-cyan-300 mb-4" />
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+            <RefreshCw className="h-8 w-8 animate-spin text-[#00a89d] mb-4" />
             <p className="text-base font-semibold">Generating live telemetry report...</p>
             <p className="text-sm text-slate-400">Performing joins across merchants, products, and settlements</p>
           </div>
         ) : filteredReport.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-            <Inbox className="h-12 w-12 text-slate-500 mb-4" />
+            <Inbox className="h-12 w-12 text-slate-300 mb-4" />
             <p className="text-base font-semibold">No records match the current filters.</p>
             <p className="text-sm">Try modifying your search query or filter selection.</p>
           </div>
@@ -293,7 +293,7 @@ export default function MerchantReportPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-sky-300/12 bg-slate-950/30 text-xs font-semibold uppercase tracking-widest text-slate-300">
+                <tr className="border-b border-slate-100 bg-slate-50 text-xs font-bold uppercase tracking-widest text-slate-500">
                   <th className="px-6 py-4">Merchant Business</th>
                   <th className="px-6 py-4">Onboarding Status</th>
                   <th className="px-6 py-4">Voucher Catalog</th>
@@ -302,22 +302,21 @@ export default function MerchantReportPage() {
                   <th className="w-10"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sky-300/8">
+              <tbody className="divide-y divide-slate-100">
                 {filteredReport.map((merchant) => {
                   const isExpanded = expandedMerchant === merchant.merchantName;
                   return (
-                    <>
+                    <React.Fragment key={merchant.merchantName}>
                       <tr
-                        key={merchant.merchantName}
-                        className="transition hover:bg-slate-900/40 cursor-pointer"
+                        className="transition hover:bg-slate-50/75 cursor-pointer"
                         onClick={() => toggleExpandMerchant(merchant.merchantName)}
                       >
                         {/* Name & Contact */}
                         <td className="px-6 py-5">
-                          <div className="font-semibold text-white text-base">
+                          <div className="font-bold text-slate-900 text-base">
                             {merchant.merchantName}
                           </div>
-                          <div className="text-xs text-slate-300 mt-0.5">{merchant.email}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{merchant.email}</div>
                         </td>
 
                         {/* Onboarding Status */}
@@ -329,20 +328,20 @@ export default function MerchantReportPage() {
 
                         {/* Products Summary */}
                         <td className="px-6 py-5">
-                          <div className="flex items-center gap-2 text-sm text-slate-200">
-                            <Layers className="h-4 w-4 text-cyan-300" />
-                            <span className="font-semibold">{merchant.productCount}</span>
+                          <div className="flex items-center gap-2 text-sm text-slate-700">
+                            <Layers className="h-4 w-4 text-[#00a89d]" />
+                            <span className="font-bold">{merchant.productCount}</span>
                             <span>{merchant.productCount === 1 ? 'Product' : 'Products'}</span>
                           </div>
                           {merchant.productCatalogue.length > 0 && (
-                            <div className="text-xs text-slate-400 mt-1 flex flex-wrap gap-1">
+                            <div className="text-xs text-slate-500 mt-1.5 flex flex-wrap gap-1">
                               {merchant.productCatalogue.slice(0, 3).map((p, idx) => (
-                                <span key={idx} className="bg-slate-900/60 px-2 py-0.5 rounded border border-white/5">
+                                <span key={idx} className="bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
                                   {formatCurrency(p.value)}
                                 </span>
                               ))}
                               {merchant.productCatalogue.length > 3 && (
-                                <span className="text-cyan-300 font-medium">+{merchant.productCatalogue.length - 3} more</span>
+                                <span className="text-[#00a89d] font-bold">+{merchant.productCatalogue.length - 3} more</span>
                               )}
                             </div>
                           )}
@@ -355,13 +354,13 @@ export default function MerchantReportPage() {
                               {merchant.payoutTelemetry.status}
                             </span>
                             {merchant.payoutTelemetry.batchRef !== 'N/A' && (
-                              <span className="text-xs font-mono text-slate-300 bg-slate-900/40 px-2 py-0.5 rounded">
+                              <span className="text-xs font-mono text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
                                 {merchant.payoutTelemetry.batchRef}
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1.5">
-                            <Coins className="h-3 w-3 text-emerald-400" />
+                          <div className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1.5">
+                            <Coins className="h-3.5 w-3.5 text-slate-400" />
                             <span>Last Settled: {formatDateTime(merchant.payoutTelemetry.lastSettlement)}</span>
                           </div>
                         </td>
@@ -370,13 +369,13 @@ export default function MerchantReportPage() {
                         <td className="px-6 py-5 text-center">
                           <div className="inline-flex items-center justify-center">
                             {merchant.isSponsorReady ? (
-                              <div className="flex items-center gap-1.5 text-emerald-300 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-400/20 text-xs font-semibold">
-                                <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                              <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 text-xs font-bold">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                                 Ready
                               </div>
                             ) : (
-                              <div className="flex items-center gap-1.5 text-slate-400 bg-slate-500/10 px-3 py-1 rounded-full border border-slate-500/20 text-xs font-semibold">
-                                <XCircle className="h-4 w-4 text-slate-500 shrink-0" />
+                              <div className="flex items-center gap-1.5 text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-200 text-xs font-bold">
+                                <XCircle className="h-4 w-4 text-slate-400 shrink-0" />
                                 Unready
                               </div>
                             )}
@@ -391,35 +390,35 @@ export default function MerchantReportPage() {
 
                       {/* Expanded Catalogue Detail */}
                       {isExpanded && (
-                        <tr className="bg-slate-950/40">
-                          <td colSpan={6} className="px-6 py-4 border-t border-b border-sky-300/8">
+                        <tr className="bg-slate-50/50">
+                          <td colSpan={6} className="px-6 py-4 border-t border-b border-slate-100">
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
-                                <p className="text-xs font-bold uppercase tracking-widest text-cyan-200">
+                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                                   Full Product Catalogue for {merchant.merchantName}
                                 </p>
-                                <span className="text-xs text-slate-300">
+                                <span className="text-xs text-slate-400">
                                   Idempotency Verified Integration
                                 </span>
                               </div>
                               {merchant.productCatalogue.length === 0 ? (
-                                <p className="text-sm text-slate-400 py-2">No products configured for this merchant.</p>
+                                <p className="text-sm text-slate-500 py-2">No products configured for this merchant.</p>
                               ) : (
                                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                                   {merchant.productCatalogue.map((prod, idx) => (
                                     <div
                                       key={idx}
-                                      className={`rounded-xl border p-3 flex items-center justify-between ${
+                                      className={`rounded-xl border p-3 flex items-center justify-between bg-white ${
                                         prod.active
-                                          ? 'border-sky-400/10 bg-[#112544]'
-                                          : 'border-slate-800 bg-slate-900/20 opacity-60'
+                                          ? 'border-slate-200 shadow-sm'
+                                          : 'border-slate-200/60 bg-slate-50/60 opacity-60'
                                       }`}
                                     >
                                       <div>
-                                        <p className="font-semibold text-white text-sm">{prod.name}</p>
+                                        <p className="font-bold text-slate-700 text-sm">{prod.name}</p>
                                         <p className="text-xs text-slate-400 mt-1">Status: {prod.active ? 'Active' : 'Inactive'}</p>
                                       </div>
-                                      <p className="text-lg font-bold text-cyan-300">{formatCurrency(prod.value)}</p>
+                                      <p className="text-lg font-bold text-[#00a89d]">{formatCurrency(prod.value)}</p>
                                     </div>
                                   ))}
                                 </div>
@@ -428,7 +427,7 @@ export default function MerchantReportPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -439,7 +438,7 @@ export default function MerchantReportPage() {
 
       {/* Bottom Status Summary Info */}
       {lastUpdated && (
-        <section className="text-center text-xs text-slate-300/75">
+        <section className="text-center text-xs text-slate-400/80">
           <span>Report Generated at: <b>{formatDateTime(lastUpdated)}</b></span>
           <span className="mx-2">•</span>
           <span>Security Protocol: POPIA and PCI compliant</span>

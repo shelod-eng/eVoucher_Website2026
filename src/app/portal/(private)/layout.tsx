@@ -27,30 +27,35 @@ export default async function PortalLayout({ children }: { children: React.React
   }
 
   return (
-    <div className="min-h-screen bg-[#07172e] text-white">
-      <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.12),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(249,115,22,0.08),_transparent_24%),linear-gradient(180deg,#06142a_0%,#081a33_42%,#07152b_100%)]" />
-      <div className="fixed inset-0 -z-10 bg-[linear-gradient(rgba(96,165,250,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(96,165,250,0.06)_1px,transparent_1px)] bg-[size:36px_36px]" />
+    <div className="min-h-screen bg-[#f4fbfa] text-slate-900">
+      <div 
+        className="fixed inset-0 -z-10" 
+        style={{ 
+          backgroundImage: 'linear-gradient(rgba(13,148,136,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(13,148,136,0.03) 1px, transparent 1px)',
+          backgroundSize: '36px 36px'
+        }} 
+      />
 
       <PortalHeader />
 
       <div className="mx-auto flex w-full max-w-[1680px] gap-6 px-4 py-6 xl:px-6">
         <aside className="hidden w-[272px] flex-shrink-0 xl:block">
-          <div className="sticky top-24 overflow-hidden rounded-[2rem] border border-cyan-300/22 bg-[#0a1d39] p-5 shadow-[0_24px_80px_rgba(2,8,23,0.58)]">
-            <div className="rounded-[1.5rem] border border-amber-300/28 bg-[linear-gradient(180deg,rgba(251,146,60,0.18),rgba(15,23,42,0.08))] p-5">
-              <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-cyan-100">
+          <div className="sticky top-24 overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(0,0,0,0.04)]">
+            <div className="rounded-[1.5rem] bg-[linear-gradient(135deg,#00a89d,#0d9488)] p-5 text-white shadow-sm">
+              <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-teal-100">
                 Sponsor Direction
               </p>
-              <h2 className="mt-4 text-3xl font-semibold leading-tight text-white">
+              <h2 className="mt-4 text-2xl font-bold leading-tight text-white">
                 eVoucher reporting with boardroom polish.
               </h2>
-              <p className="mt-4 text-sm leading-6 text-slate-200">
+              <p className="mt-4 text-xs leading-5 text-teal-50">
                 Premium operational visibility for finance, sponsor oversight, cyber governance, and
                 growth intelligence.
               </p>
             </div>
 
             <div className="mt-6">
-              <p className="px-1 text-[11px] font-bold uppercase tracking-[0.32em] text-slate-300">
+              <p className="px-1 text-[11px] font-bold uppercase tracking-[0.32em] text-slate-400">
                 Navigation
               </p>
               <nav className="mt-4 space-y-2">
@@ -58,9 +63,9 @@ export default async function PortalLayout({ children }: { children: React.React
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center gap-3 rounded-[1.25rem] border border-sky-300/24 bg-[#10284b] px-4 py-3 text-sm font-semibold text-white transition hover:border-cyan-300/65 hover:bg-[#153666]"
+                    className="flex items-center gap-3 rounded-[1.25rem] border border-slate-200/80 bg-slate-50/50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#00a89d]/50 hover:bg-slate-100/80"
                   >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/35 bg-[#0d315a] text-[11px] font-bold tracking-[0.18em] text-cyan-100">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-[11px] font-bold tracking-[0.18em] text-[#00a89d]">
                       {item.code}
                     </span>
                     <span>{item.label}</span>
@@ -69,12 +74,12 @@ export default async function PortalLayout({ children }: { children: React.React
               </nav>
             </div>
 
-            <div className="mt-6 rounded-[1.5rem] border border-cyan-300/18 bg-[#0d2749] p-5">
-              <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-cyan-100">
+            <div className="mt-6 rounded-[1.5rem] border border-slate-100 bg-slate-50/70 p-5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-[#00a89d]">
                 Session
               </p>
-              <p className="mt-3 text-lg font-semibold text-white">{user.email}</p>
-              <p className="mt-1 text-sm capitalize text-slate-200">{role.replace(/_/g, ' ')}</p>
+              <p className="mt-3 text-sm font-bold text-slate-800 truncate">{user.email}</p>
+              <p className="mt-1 text-xs capitalize text-slate-500">{role.replace(/_/g, ' ')}</p>
             </div>
           </div>
         </aside>
