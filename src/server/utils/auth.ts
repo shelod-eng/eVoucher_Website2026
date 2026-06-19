@@ -22,6 +22,40 @@ export async function getAuthenticatedUser() {
       throw error;
     }
 
+    if (user) {
+      try {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (!profile) {
+          const metadata = user.user_metadata || {};
+          const email = user.email || '';
+          const role = String(metadata.role || 'customer').toLowerCase().trim();
+          const fullName = String(metadata.full_name || email.split('@')[0]);
+          const phone = String(metadata.phone || '');
+
+          await supabase.from('user_profiles').insert({
+            id: user.id,
+            email,
+            full_name: fullName,
+            phone,
+            role,
+            acquisition_channel: String(metadata.acquisition_channel ?? 'web'),
+            primary_access_channel: String(metadata.primary_access_channel ?? 'web'),
+            consumer_segment: String(metadata.consumer_segment ?? 'unknown'),
+            popia_consent_at: metadata.popia_consent_at ?? null,
+            popia_consent_version: metadata.popia_consent_version ?? null,
+            marketing_consent: Boolean(metadata.marketing_consent ?? false),
+          });
+        }
+      } catch (profileError) {
+        console.warn('[auth-utility] Defensive user profile creation warning:', profileError);
+      }
+    }
+
     return { supabase, user };
   } catch (error: any) {
     const message = String(error?.message ?? '').toLowerCase();
