@@ -19,7 +19,7 @@ import {
   XCircle,
   Clock,
   Store,
-  Bank,
+  Landmark,
 } from 'lucide-react';
 
 interface MerchantDetailsData {
@@ -232,7 +232,7 @@ export default function MerchantDetailsModal({ merchantId, onClose }: MerchantDe
                 <DetailRow icon={Percent} label="Discount %" value={details.default_total_discount_pct} />
 
                 <SectionTitle>Settlement Account</SectionTitle>
-                <DetailRow icon={Bank} label="Bank Name" value={details.bank_name} />
+                <DetailRow icon={Landmark} label="Bank Name" value={details.bank_name} />
                 <DetailRow icon={User} label="Account Holder" value={details.account_holder_name} />
                 <DetailRow icon={Hash} label="Account Number" value={details.account_number} />
                 <DetailRow icon={Hash} label="Branch Code" value={details.branch_code} />
