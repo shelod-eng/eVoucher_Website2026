@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import ForgotPasswordModal from '@/app/components/ForgotPasswordModal';
 
 interface ConsumerLoginCardProps {
   redirectTo?: string;
@@ -37,6 +38,7 @@ export default function ConsumerLoginCard({
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const router = useRouter();
   const { signIn, signOut } = useAuth();
 
@@ -152,12 +154,13 @@ export default function ConsumerLoginCard({
         </div>
 
         <div className="text-right">
-          <Link
-            href="/support"
+          <button
+            type="button"
+            onClick={() => setIsForgotModalOpen(true)}
             className="text-primary text-sm font-headline font-semibold hover:underline"
           >
             Forgot Password?
-          </Link>
+          </button>
         </div>
 
         <button
@@ -213,6 +216,12 @@ export default function ConsumerLoginCard({
         <p className="text-sm text-foreground font-headline font-semibold">SSL/TLS enforced</p>
         <p className="text-xs text-muted-foreground font-body">Powered by eVoucher Platform</p>
       </div>
+
+      <ForgotPasswordModal
+        isOpen={isForgotModalOpen}
+        onClose={() => setIsForgotModalOpen(false)}
+        userType="consumer"
+      />
     </div>
   );
 }
