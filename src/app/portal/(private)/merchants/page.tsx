@@ -7,6 +7,7 @@ import {
   resendMerchantCredentials,
 } from '@/server/utils/merchant-onboarding';
 import { isAdminRole, resolveUserRole } from '@/server/utils/role';
+import { MerchantDetailsProvider, ViewDetailsButton } from './ViewDetailsButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -128,106 +129,112 @@ export default async function PortalMerchantsPage({
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="text-left text-xs uppercase tracking-wide text-slate-400">
-              <tr>
-                <th className="py-3 pr-4">Business</th>
-                <th className="py-3 pr-4">Email</th>
-                <th className="py-3 pr-4">Phone</th>
-                <th className="py-3 pr-4">Status</th>
-                <th className="py-3 pr-4">Workflow</th>
-                <th className="py-3 pr-4">Maintenance</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {merchants.map((merchant) => {
-                const status = String(merchant.status ?? '').toLowerCase();
-                const isApproved = status === 'approved' || status === 'active';
+        <MerchantDetailsProvider>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="text-left text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th className="py-3 pr-4">Business</th>
+                  <th className="py-3 pr-4">Email</th>
+                  <th className="py-3 pr-4">Phone</th>
+                  <th className="py-3 pr-4">Status</th>
+                  <th className="py-3 pr-4">Workflow</th>
+                  <th className="py-3 pr-4">Maintenance</th>
+                  <th className="py-3 pr-4">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {merchants.map((merchant) => {
+                  const status = String(merchant.status ?? '').toLowerCase();
+                  const isApproved = status === 'approved' || status === 'active';
 
-                return (
-                  <tr key={merchant.id} className="text-slate-700">
-                    <td className="py-3 pr-4">
-                      <div className="font-semibold text-slate-900">{merchant.business_name}</div>
-                      <div className="text-xs text-slate-400">
-                        {merchant.created_at
-                          ? new Date(merchant.created_at).toLocaleDateString()
-                          : '—'}
-                      </div>
-                    </td>
-                    <td className="py-3 pr-4">{merchant.email}</td>
-                    <td className="py-3 pr-4">{merchant.phone}</td>
-                    <td className="py-3 pr-4">
-                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                        {merchant.status}
-                      </span>
-                      {merchant.approved_at && (
-                        <div className="mt-1 text-xs text-slate-400">
-                          Approved {new Date(merchant.approved_at).toLocaleDateString()}
+                  return (
+                    <tr key={merchant.id} className="text-slate-700">
+                      <td className="py-3 pr-4">
+                        <div className="font-semibold text-slate-900">{merchant.business_name}</div>
+                        <div className="text-xs text-slate-400">
+                          {merchant.created_at
+                            ? new Date(merchant.created_at).toLocaleDateString()
+                            : '—'}
                         </div>
-                      )}
-                    </td>
-                    <td className="py-3 pr-4">
-                      {isApproved ? (
-                        <div className="text-xs text-emerald-700">Approval workflow completed</div>
-                      ) : (
-                        <form action={approveMerchantAction}>
-                          <input type="hidden" name="merchantId" value={merchant.id} />
-                          <button
-                            type="submit"
-                            className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
-                          >
-                            Approve Merchant
-                          </button>
-                        </form>
-                      )}
-                    </td>
-                    <td className="py-3 pr-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <form action={updateMerchantStatus} className="flex items-center gap-2">
-                          <input type="hidden" name="merchantId" value={merchant.id} />
-                          <select
-                            name="status"
-                            defaultValue={merchant.status}
-                            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"
-                          >
-                            <option value="pending">pending</option>
-                            <option value="approved">approved</option>
-                            <option value="active">active</option>
-                            <option value="suspended">suspended</option>
-                          </select>
-                          <button
-                            type="submit"
-                            className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
-                          >
-                            Update
-                          </button>
-                        </form>
+                      </td>
+                      <td className="py-3 pr-4">{merchant.email}</td>
+                      <td className="py-3 pr-4">{merchant.phone}</td>
+                      <td className="py-3 pr-4">
+                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                          {merchant.status}
+                        </span>
+                        {merchant.approved_at && (
+                          <div className="mt-1 text-xs text-slate-400">
+                            Approved {new Date(merchant.approved_at).toLocaleDateString()}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4">
+                        {isApproved ? (
+                          <div className="text-xs text-emerald-700">Approval workflow completed</div>
+                        ) : (
+                          <form action={approveMerchantAction}>
+                            <input type="hidden" name="merchantId" value={merchant.id} />
+                            <button
+                              type="submit"
+                              className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
+                            >
+                              Approve Merchant
+                            </button>
+                          </form>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <form action={updateMerchantStatus} className="flex items-center gap-2">
+                            <input type="hidden" name="merchantId" value={merchant.id} />
+                            <select
+                              name="status"
+                              defaultValue={merchant.status}
+                              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"
+                            >
+                              <option value="pending">pending</option>
+                              <option value="approved">approved</option>
+                              <option value="active">active</option>
+                              <option value="suspended">suspended</option>
+                            </select>
+                            <button
+                              type="submit"
+                              className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
+                            >
+                              Update
+                            </button>
+                          </form>
 
-                        <form action={resendCredentialsAction}>
-                          <input type="hidden" name="merchantId" value={merchant.id} />
-                          <button
-                            type="submit"
-                            className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
-                          >
-                            Reset Credentials
-                          </button>
-                        </form>
-                      </div>
+                          <form action={resendCredentialsAction}>
+                            <input type="hidden" name="merchantId" value={merchant.id} />
+                            <button
+                              type="submit"
+                              className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                            >
+                              Reset Credentials
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                      <td className="py-3 pr-4">
+                        <ViewDetailsButton merchantId={merchant.id} />
+                      </td>
+                    </tr>
+                  );
+                })}
+                {merchants.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-6 text-center text-slate-500">
+                      No merchants found yet.
                     </td>
                   </tr>
-                );
-              })}
-              {merchants.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-6 text-center text-slate-500">
-                    No merchants found yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </MerchantDetailsProvider>
       </section>
     </div>
   );
