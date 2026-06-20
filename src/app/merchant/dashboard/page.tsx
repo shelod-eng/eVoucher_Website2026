@@ -2037,6 +2037,8 @@ export default function MerchantDashboard() {
                   )}
                 </div>
               )}
+
+              {activeMerchantTab === 'payouts' && (
                 <div className="space-y-5">
                   <div className="grid md:grid-cols-3 gap-4">
                     <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
