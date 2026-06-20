@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .filter((name) => Boolean(name))
         .filter((name) => name.startsWith('sb-') || name.includes('auth-token'));
       cookieNames.forEach((name) => {
-        document.cookie = `${name}=; Max-Age=0; path=/; SameSite=Lax`;
+        document.cookie = `${name}=; Max-Age=0; path=/; SameSite=Strict`;
       });
     } catch (storageError) {
       console.warn('AuthContext: failed to clear local auth artifacts:', storageError);
@@ -77,14 +77,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const bestEffortLocalSignOut = async () => {
+  const bestEffortGlobalSignOut = async () => {
     try {
       await Promise.race([
-        supabase.auth.signOut({ scope: 'local' }),
+        supabase.auth.signOut({ scope: 'global' }),
         new Promise((resolve) => setTimeout(resolve, 4000)),
       ]);
     } catch (signOutError) {
-      console.warn('AuthContext: local signOut warning:', signOutError);
+      console.warn('AuthContext: global signOut warning:', signOutError);
     }
   };
 
@@ -113,6 +113,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return metadataRole || null;
   };
 
+  /** Periodically re-validate the session against the server.
+   *  If the session was revoked server-side (e.g., global sign-out from another
+   *  location), this detects it and force-clears local state — preventing stale
+   *  session reuse (POPIA violation).
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const heartbeat = async () => {
+      try {
+        const {
+          data: { user: freshUser },
+          error,
+        } = await supabase.auth.getUser();
+        if (error || !freshUser) {
+          // Session no longer valid on Supabase Auth server — force local clear.
+          clearLocalAuthArtifacts();
+          setUser(null);
+          setRole(null);
+        }
+      } catch {
+        // Network error; skip this heartbeat.
+      }
+    };
+    // Run heartbeat 3s after mount and then every 5 minutes
+    const initialTimer = window.setTimeout(() => void heartbeat(), 3000);
+    const intervalHandle = setInterval(heartbeat, 5 * 60 * 1000);
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(intervalHandle);
+    };
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -127,9 +159,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             data: { user: latestUser },
             error: latestUserError,
           } = await supabase.auth.getUser();
-          if (!latestUserError && latestUser) {
-            resolvedUser = latestUser;
+          if (latestUserError || !latestUser) {
+            // Server says this session is invalid: force clear.
+            clearLocalAuthArtifacts();
+            if (isMounted) {
+              setUser(null);
+              setRole(null);
+              setLoading(false);
+            }
+            return;
           }
+          resolvedUser = latestUser;
         } catch (latestUserLookupError) {
           console.warn('AuthContext: failed to fetch latest auth user:', latestUserLookupError);
         }
@@ -146,7 +186,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      await applySessionState(session);
+
+      // On initial bootstrap, validate the session server-side.
+      if (session?.access_token) {
+        const {
+          data: { user: freshUser },
+          error,
+        } = await supabase.auth.getUser();
+        if (error || !freshUser) {
+          // Stored session is invalid — clear everything.
+          clearLocalAuthArtifacts();
+          if (isMounted) {
+            setUser(null);
+            setRole(null);
+            setLoading(false);
+          }
+          return;
+        }
+        await applySessionState({ ...session, user: freshUser });
+      } else {
+        await applySessionState(session);
+      }
     };
 
     const {
@@ -188,10 +248,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .toLowerCase();
     const normalizedPassword = String(password ?? '').trim();
 
-    // Clear only the current browser session before a role/account switch.
-    // Do not revoke global sessions so other devices/users remain signed in.
+    // Clear the current browser session before a role/account switch.
+    // Use best-effort local sign-out so we do not revoke OTHER devices' sessions
+    // when a user is merely switching accounts on this browser.
     try {
-      await bestEffortLocalSignOut();
+      await bestEffortGlobalSignOut();
       await clearServerSession();
       clearLocalAuthArtifacts();
     } catch (preSignInClearError) {
@@ -322,7 +383,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRole(null);
     setLoading(false);
 
-    await bestEffortLocalSignOut();
+    await bestEffortGlobalSignOut();
     await clearServerSession();
     clearLocalAuthArtifacts();
   };

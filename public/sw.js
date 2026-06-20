@@ -1,6 +1,6 @@
 /* eslint-disable */
 /* ==========================================================================
-   eVoucher PWA Service Worker v2
+   eVoucher PWA Service Worker v3
    - Network-first for navigation (private pages never cached)
    - Cache-first for static assets (images, fonts, JS, CSS)
    - Never cache authenticated/private routes
@@ -8,19 +8,49 @@
    - Update notification via postMessage
    ========================================================================== */
 
-const CACHE_NAME = 'evoucher-pwa-v2';
-const STATIC_CACHE = 'evoucher-static-v2';
+const CACHE_NAME = 'evoucher-pwa-v3';
+const STATIC_CACHE = 'evoucher-static-v3';
 
-/** Pages that should NEVER be served from cache (auth required or private data). */
+/** Pages that should NEVER be served from cache (auth required or private data).
+ *  CRITICAL: If a page requires authentication or contains user-specific data,
+ *  it MUST be listed here. Failure to do so means one user's session data
+ *  can be served to another user from cache — a POPIA / compliance violation.
+ */
 const PRIVATE_PATHS = [
   '/customer/',
   '/merchant/',
+  '/portal/',
   '/profile',
+  '/profile/',
   '/wallet',
+  '/wallet/',
   '/cart',
+  '/cart/',
+  '/checkout',
+  '/checkout/',
   '/api/',
   '/signin',
   '/signin/',
+  '/signup',
+  '/signup/',
+  '/consumer',
+  '/consumer/',
+  '/consumer-experience',
+  '/consumer-experience/',
+  '/buy-vouchers',
+  '/buy-vouchers/',
+  '/benefits',
+  '/benefits/',
+  '/rewards',
+  '/rewards/',
+  '/redeem',
+  '/redeem/',
+  '/shop',
+  '/shop/',
+  '/analytics',
+  '/analytics/',
+  '/reset-password',
+  '/reset-password/',
 ];
 
 /* ---- Install: pre-cache minimal shell ---- */
@@ -29,7 +59,7 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE).then((cache) =>
       cache.addAll([
         '/',
-        '/index.html', // Ensure base HTML is always covered
+        '/index.html',
         '/offline',
         '/manifest.json',
         '/icons/icon-192x192.png',
@@ -71,8 +101,9 @@ self.addEventListener('fetch', (event) => {
 
   // ---- Private/authenticated paths: network-only, never cache ----
   if (PRIVATE_PATHS.some((p) => path.startsWith(p) || path === p)) {
-    // No event.respondWith — let the browser handle it naturally
+    // No event.respondWith — let the browser handle it naturally.
     // This ensures Cache-Control: private, no-store headers are respected
+    // and no user-specific data is ever served from cache.
     return;
   }
 

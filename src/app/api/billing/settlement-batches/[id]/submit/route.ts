@@ -3,6 +3,7 @@ import { formatBankServBatch } from '@/lib/billing/bankserv-formatter';
 import { submitBankServBatch } from '@/lib/billing/fnb-cib-client';
 import { jsonNoStore } from '@/server/services/billing/no-store';
 import { requirePortalUser } from '@/server/services/billing/portal-guard';
+import { enqueueAckNckTracking } from '@/server/services/bankserv/ack-nck-retry';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -92,6 +93,17 @@ export async function POST(request: Request, context: { params: { id: string } }
         initiated_at: now,
       })
       .eq('batch_id', batchId);
+
+    await enqueueAckNckTracking(admin, {
+      entityType: 'batch',
+      entityId: batchId,
+      ackRef: submitRes.batchId,
+      metadata: {
+        source: 'billing_settlement_batch_submit',
+        settlementCount: settlements.length,
+        bankservBatchId: submitRes.batchId,
+      },
+    });
 
     return jsonNoStore({ success: true, data: submitRes });
   } catch (error: any) {

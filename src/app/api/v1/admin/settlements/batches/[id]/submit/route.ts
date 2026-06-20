@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { getPortalUserFromHeaders, requirePortalRole } from '@/server/utils/portal-auth';
 import { writeAuditEvent } from '@/server/utils/audit';
+import { enqueueAckNckTracking } from '@/server/services/bankserv/ack-nck-retry';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -39,6 +40,16 @@ export async function POST(request: Request, context: { params: { id: string } }
       .update({ status: 'submitted_to_bank' })
       .eq('batch_id', batchId);
     if (settlementError) throw settlementError;
+
+    await enqueueAckNckTracking(admin, {
+      entityType: 'batch',
+      entityId: batchId,
+      ackRef: batch.bankserv_file_ref ?? batch.batch_number ?? null,
+      metadata: {
+        source: 'v1_admin_settlement_batch_submit',
+        batchNumber: batch.batch_number,
+      },
+    });
 
     try {
       await writeAuditEvent(admin, {

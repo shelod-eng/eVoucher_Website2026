@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { calculateRevenue } from '@/lib/billing/revenue-calculator';
 import { jsonNoStore } from '@/server/services/billing/no-store';
 import { requirePortalUser } from '@/server/services/billing/portal-guard';
 
@@ -219,10 +220,12 @@ export async function POST(request: Request) {
           Math.max(totalFaceValue - totalConsumerPrice, 0)
       );
 
-      const consumerBenefitAmount = toRoundedNumber(totalDiscountAmount * 0.7);
-      const platformRevenueAmount = toRoundedNumber(totalDiscountAmount - consumerBenefitAmount);
-      const bankFeeAmount = toRoundedNumber(body?.totals?.bankFeeAmount ?? 0);
-      const netPayable = toRoundedNumber(totalMerchantPayout - bankFeeAmount);
+      const trd = calculateRevenue(totalFaceValue);
+      const consumerBenefitAmount = trd.consumerBenefit;
+      const platformRevenueAmount = trd.platformRevenue;
+      const merchantGrossPayout = trd.merchantGrossPayout;
+      const bankFeeAmount = toRoundedNumber(body?.totals?.bankFeeAmount ?? trd.bankFee);
+      const netPayable = toRoundedNumber(merchantGrossPayout - bankFeeAmount);
 
       const invoiceNumber = buildInvoiceNumber();
       const dueDate = new Date(end.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -237,7 +240,7 @@ export async function POST(request: Request) {
           status: 'pending_approval',
           total_face_value: totalFaceValue,
           total_consumer_paid: totalConsumerPrice,
-          merchant_payout_amount: totalMerchantPayout,
+          merchant_payout_amount: merchantGrossPayout,
           platform_revenue_amount: platformRevenueAmount,
           consumer_benefit_amount: consumerBenefitAmount,
           bank_fee_amount: bankFeeAmount,
@@ -248,6 +251,9 @@ export async function POST(request: Request) {
             createdByRole: role ?? null,
             source: 'contract_branch_breakdown',
             merchantName: merchantName || null,
+            splitModel: 'trd_v2_96_2_8_1_2',
+            suppliedMerchantPayoutAmount: totalMerchantPayout,
+            suppliedTotalDiscountAmount: totalDiscountAmount,
             branchCount: Number(body?.branchCount ?? providedBranchBreakdown.length ?? 0),
             lineItemCount: Number(
               body?.lineItemCount ??
@@ -353,13 +359,11 @@ export async function POST(request: Request) {
         .toFixed(2)
     );
 
-    // 70/30 split for reporting (consumer benefit vs platform benefit).
-    const consumerBenefitAmount = Number((totalDiscountAmount * 0.7).toFixed(2));
-    const platformRevenueAmount = Number((totalDiscountAmount - consumerBenefitAmount).toFixed(2));
-
-    // Bank fees are introduced in P1 (BankServ integration). Keep 0 for P0.
-    const bankFeeAmount = 0;
-    const netPayable = Number((merchantPayoutAmount - bankFeeAmount).toFixed(2));
+    const trd = calculateRevenue(grossTotal);
+    const consumerBenefitAmount = trd.consumerBenefit;
+    const platformRevenueAmount = trd.platformRevenue;
+    const bankFeeAmount = trd.bankFee;
+    const netPayable = Number((trd.merchantGrossPayout - bankFeeAmount).toFixed(2));
 
     const invoiceNumber = buildInvoiceNumber();
     const dueDate = new Date(end.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -374,7 +378,7 @@ export async function POST(request: Request) {
         status: 'pending_approval',
         total_face_value: grossTotal,
         total_consumer_paid: grossTotal,
-        merchant_payout_amount: merchantPayoutAmount,
+        merchant_payout_amount: trd.merchantGrossPayout,
         platform_revenue_amount: platformRevenueAmount,
         consumer_benefit_amount: consumerBenefitAmount,
         bank_fee_amount: bankFeeAmount,
@@ -385,7 +389,9 @@ export async function POST(request: Request) {
           createdByRole: role ?? null,
           billingEventsCount: (events ?? []).length,
           source: 'billing_events',
-          splitModel: '70_30',
+          splitModel: 'trd_v2_96_2_8_1_2',
+          suppliedMerchantPayoutAmount: merchantPayoutAmount,
+          suppliedTotalDiscountAmount: totalDiscountAmount,
         },
       })
       .select('*')
