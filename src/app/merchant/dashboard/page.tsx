@@ -28,6 +28,23 @@ interface Merchant {
   is_branch?: boolean | null;
 }
 
+interface LedgerEntry {
+  id: string;
+  type: string;
+  amount: number;
+  grossAmount: number;
+  bankFee: number;
+  platformRevenue: number;
+  consumerBenefit: number;
+  settlementTarget: string;
+  status: string;
+  batchId: string | null;
+  batchNumber: string | null;
+  ackNckStatus: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface Payout {
   id: string;
   amount: number;
@@ -197,8 +214,14 @@ export default function MerchantDashboard() {
   const [productMessage, setProductMessage] = useState('');
   const [savingProduct, setSavingProduct] = useState(false);
   const [activeMerchantTab, setActiveMerchantTab] = useState<
-    'products' | 'studio' | 'payouts' | 'logistics'
+    'products' | 'studio' | 'payouts' | 'logistics' | 'ledger'
   >('studio');
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
+  const [ledgerMeta, setLedgerMeta] = useState<{ total: number; hasMore: boolean; page: number }>(
+    { total: 0, hasMore: false, page: 1 }
+  );
+  const [ledgerSettlementTarget, setLedgerSettlementTarget] = useState('sponsor_bank');
+  const [ledgerLoading, setLedgerLoading] = useState(false);
   const [productsFilter, setProductsFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [productsSearch, setProductsSearch] = useState('');
   const [productsPage, setProductsPage] = useState(1);
@@ -275,6 +298,26 @@ export default function MerchantDashboard() {
     }
   }, [user]);
 
+  const fetchLedger = async (page = 1) => {
+    try {
+      setLedgerLoading(true);
+      const res = await fetch(`/api/v1/merchant/ledger?page=${page}&limit=50`, {
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setLedgerEntries(data.entries ?? []);
+        setLedgerMeta(data.meta ?? { total: 0, hasMore: false, page });
+        setLedgerSettlementTarget(data.settlementTarget ?? 'sponsor_bank');
+      }
+    } catch {
+      // non-fatal
+    } finally {
+      setLedgerLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -294,7 +337,14 @@ export default function MerchantDashboard() {
     if (requestedTab === 'studio') {
       setActiveMerchantTab('studio');
     }
+    if (requestedTab === 'ledger') {
+      setActiveMerchantTab('ledger');
+    }
   }, []);
+
+  useEffect(() => {
+    if (activeMerchantTab === 'ledger' && user) void fetchLedger(1);
+  }, [activeMerchantTab, user]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1031,6 +1081,17 @@ export default function MerchantDashboard() {
                   }`}
                 >
                   Payouts
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMerchantTab('ledger')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-headline font-semibold transition-colors ${
+                    activeMerchantTab === 'ledger'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Ledger
                 </button>
               </div>
 
@@ -1787,7 +1848,195 @@ export default function MerchantDashboard() {
                 </div>
               )}
 
-              {activeMerchantTab === 'payouts' && (
+              {activeMerchantTab === 'ledger' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-headline font-semibold text-foreground">
+                        Billing Engine Ledger
+                      </p>
+                      <p className="text-xs text-muted-foreground font-body">
+                        Settlement target:{' '}
+                        <span
+                          className={`font-headline font-semibold ${
+                            ledgerSettlementTarget === 'evoucher_bank'
+                              ? 'text-primary'
+                              : 'text-success'
+                          }`}
+                        >
+                          {ledgerSettlementTarget === 'evoucher_bank'
+                            ? 'eVoucher Bank Account'
+                            : 'Sponsor Bank (FNB/RMB)'}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href="/api/v1/merchant/ledger?limit=100"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-1.5 rounded-lg border border-border text-xs font-headline font-semibold hover:bg-muted"
+                      >
+                        Download Statement
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => void fetchLedger(1)}
+                        disabled={ledgerLoading}
+                        className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-headline font-semibold disabled:opacity-50"
+                      >
+                        {ledgerLoading ? 'Loading...' : 'Refresh'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-3">
+                    <div className="rounded-xl border border-teal-200 bg-teal-50 p-4">
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-teal-700">
+                        Total Entries
+                      </p>
+                      <p className="text-3xl font-headline font-bold text-teal-700 mt-1">
+                        {ledgerMeta.total}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background p-4">
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-muted-foreground">
+                        Total Net Payable
+                      </p>
+                      <p className="text-3xl font-headline font-bold text-foreground mt-1">
+                        R
+                        {ledgerEntries
+                          .reduce((sum, e) => sum + e.amount, 0)
+                          .toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background p-4">
+                      <p className="text-xs font-headline uppercase tracking-[0.14em] text-muted-foreground">
+                        Total Bank Fees
+                      </p>
+                      <p className="text-3xl font-headline font-bold text-error mt-1">
+                        R
+                        {ledgerEntries
+                          .reduce((sum, e) => sum + e.bankFee, 0)
+                          .toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {ledgerLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((n) => (
+                        <div key={n} className="h-20 bg-muted animate-pulse rounded-xl" />
+                      ))}
+                    </div>
+                  ) : ledgerEntries.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Icon
+                        name="BanknotesIcon"
+                        size={40}
+                        variant="outline"
+                        className="text-muted-foreground mx-auto mb-3"
+                      />
+                      <p className="text-sm text-muted-foreground font-body">
+                        No ledger entries yet. Entries appear once settlements are processed.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {ledgerEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="rounded-xl border border-border bg-card p-4 shadow-sm"
+                        >
+                          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-xs font-headline font-semibold ${
+                                    entry.status === 'confirmed'
+                                      ? 'bg-success/10 text-success'
+                                      : entry.status === 'submitted_to_bank'
+                                        ? 'bg-primary/10 text-primary'
+                                        : entry.status === 'pending'
+                                          ? 'bg-warning/10 text-warning'
+                                          : 'bg-muted text-muted-foreground'
+                                  }`}
+                                >
+                                  {entry.status}
+                                </span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-xs font-headline font-semibold ${
+                                    entry.settlementTarget === 'evoucher_bank'
+                                      ? 'bg-primary/10 text-primary'
+                                      : 'bg-teal-50 text-teal-700'
+                                  }`}
+                                >
+                                  {entry.settlementTarget === 'evoucher_bank'
+                                    ? 'eVoucher Bank'
+                                    : 'Sponsor Bank'}
+                                </span>
+                                {entry.ackNckStatus && (
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-xs font-headline font-semibold ${
+                                      entry.ackNckStatus === 'acked'
+                                        ? 'bg-success/10 text-success'
+                                        : entry.ackNckStatus === 'escalated' ||
+                                            entry.ackNckStatus === 'failed'
+                                          ? 'bg-error/10 text-error'
+                                          : 'bg-warning/10 text-warning'
+                                    }`}
+                                  >
+                                    ACK: {entry.ackNckStatus}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground font-body">
+                                {entry.batchNumber && (
+                                  <span className="font-mono">Batch: {entry.batchNumber}</span>
+                                )}
+                                <span>
+                                  {new Date(entry.createdAt).toLocaleDateString(undefined, {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right space-y-1">
+                              <p className="font-headline font-bold text-foreground text-lg">
+                                R{entry.amount.toFixed(2)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Gross R{entry.grossAmount.toFixed(2)}
+                              </p>
+                              {entry.bankFee > 0 && (
+                                <p className="text-xs text-error">
+                                  Bank fee &minus;R{entry.bankFee.toFixed(2)}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                Platform R{entry.platformRevenue.toFixed(2)} · Benefit R
+                                {entry.consumerBenefit.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {ledgerMeta.hasMore && (
+                        <button
+                          type="button"
+                          onClick={() => void fetchLedger(ledgerMeta.page + 1)}
+                          className="w-full py-2 rounded-lg border border-border text-xs font-headline font-semibold hover:bg-muted"
+                        >
+                          Load more
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
                 <div className="space-y-5">
                   <div className="grid md:grid-cols-3 gap-4">
                     <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
@@ -2024,7 +2273,7 @@ export default function MerchantDashboard() {
               )}
             </div>
 
-            {activeMerchantTab !== 'payouts' && (
+            {activeMerchantTab !== 'payouts' && activeMerchantTab !== 'ledger' && (
               <div className="bg-card rounded-2xl shadow-lg p-6 border border-border">
                 <div className="mb-6 rounded-xl bg-slate-900 text-white p-4">
                   <p className="text-[10px] uppercase tracking-[0.22em] text-slate-300 font-headline">

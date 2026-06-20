@@ -1,0 +1,78 @@
+
+> evoucher-platform@0.1.0 predev
+> node -e "const fs=require('fs');for(const dir of ['.next','.next-local',process.env.DIST_DIR||'']){if(!dir)continue;try{fs.rmSync(dir,{recursive:true,force:true});}catch(e){}}"
+
+
+> evoucher-platform@0.1.0 dev
+> next dev -p 4028
+
+  ▲ Next.js 14.2.0
+  - Local:        http://localhost:4028
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 14s
+ ○ Compiling /src/middleware ...
+ ✓ Compiled /src/middleware in 4.1s (121 modules)
+ ○ Compiling /portal/login ...
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ Compiled /portal/login in 46.2s (1919 modules)
+ GET /portal/login 200 in 29869ms
+ GET /portal/login 200 in 27228ms
+ ✓ Compiled in 4s (967 modules)
+ ✓ Compiled in 584ms (952 modules)
+ GET /portal/login 200 in 305ms
+ GET /portal/login 200 in 277ms
+ ○ Compiling /portal/bankserv ...
+ ✓ Compiled /portal/bankserv in 9.1s (2010 modules)
+ GET /portal/bankserv 200 in 16243ms
+ GET /portal/bankserv 200 in 14551ms
+ ○ Compiling /api/billing/bankserv/overview ...
+ ✓ Compiled /api/billing/bankserv/eft-processing in 1520ms (1071 modules)
+ ✓ Compiled (1077 modules)
+ GET /api/billing/settlements 200 in 5132ms
+ GET /api/billing/settlements 200 in 4210ms
+ GET /api/billing/settlements 200 in 5179ms
+ GET /api/billing/settlements 200 in 4717ms
+ GET /api/billing/bankserv/overview 200 in 5261ms
+ GET /api/billing/bankserv/overview 200 in 4463ms
+ GET /api/billing/bankserv/overview 200 in 5293ms
+ GET /api/billing/bankserv/overview 200 in 4374ms
+ GET /api/billing/bankserv/eft-processing 200 in 5373ms
+ GET /api/billing/bankserv/eft-processing 200 in 4443ms
+ GET /api/billing/bankserv/eft-processing 200 in 5680ms
+ GET /api/billing/bankserv/eft-processing 200 in 4729ms
+ GET /api/billing/settlements 200 in 1742ms
+ GET /api/billing/settlements 200 in 1257ms
+ GET /api/billing/bankserv/eft-processing 200 in 1971ms
+ GET /api/billing/bankserv/eft-processing 200 in 1524ms
+ GET /api/billing/bankserv/overview 200 in 1981ms
+ GET /api/billing/bankserv/overview 200 in 1500ms
+ ○ Compiling /portal/dashboard ...
+ GET /api/billing/settlements 200 in 4555ms
+ GET /api/billing/settlements 200 in 3369ms
+ GET /api/billing/bankserv/eft-processing 200 in 5122ms
+ GET /api/billing/bankserv/eft-processing 200 in 4406ms
+ GET /api/billing/bankserv/overview 200 in 5135ms
+ GET /api/billing/bankserv/overview 200 in 4418ms
+ ✓ Compiled /portal/dashboard in 2s (2054 modules)
+ ○ Compiling /portal/merchants ...
+ ✓ Compiled /portal/merchants in 3.9s (2134 modules)
+ ○ Compiling /portal/merchant-report ...
+ ✓ Compiled /portal/merchant-report in 2.3s (2160 modules)
+ ○ Compiling /api/v1/admin/merchant-report ...
+ ✓ Compiled /api/v1/admin/merchant-report in 1145ms (1153 modules)
+ GET /api/v1/admin/merchant-report 200 in 3555ms
+ GET /api/v1/admin/merchant-report 200 in 2901ms
+ GET /api/v1/admin/merchant-report 200 in 3580ms
+ GET /api/v1/admin/merchant-report 200 in 3172ms
+ GET /api/v1/admin/merchant-report 200 in 2055ms
+ GET /api/v1/admin/merchant-report 200 in 1608ms
+ GET /api/v1/admin/merchant-report 200 in 2095ms
+ GET /api/v1/admin/merchant-report 200 in 1651ms
+ GET /api/v1/admin/merchant-report 200 in 5335ms
+ GET /api/v1/admin/merchant-report 200 in 3050ms
+ GET /api/v1/admin/merchant-report 200 in 5345ms
+ GET /api/v1/admin/merchant-report 200 in 3084ms

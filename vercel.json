@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/specials-expiry",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
