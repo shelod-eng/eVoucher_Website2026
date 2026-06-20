@@ -90,20 +90,25 @@ export async function GET() {
 
     const { data: payouts, error: payoutsError } = await admin
       .from('merchant_payouts')
-      .select('id,amount,status,payout_date,created_at,billing_settlement_id,bankserv_batch_id,bankserv_file_ref')
+      .select(
+        'id,amount,status,payout_date,created_at,billing_settlement_id,bankserv_batch_id,bankserv_file_ref'
+      )
       .eq('merchant_id', merchant.id)
       .order('created_at', { ascending: false });
 
-    if (payoutsError && !String(payoutsError.message ?? '').includes('does not exist')) throw payoutsError;
+    if (payoutsError && !String(payoutsError.message ?? '').includes('does not exist'))
+      throw payoutsError;
 
     const safePayouts = payouts ?? [];
 
     // Enrich payouts with ACK/NCK status from bankserv_ack_nck_tracking where available
-    const batchIds = Array.from(new Set(
-      safePayouts
-        .map((p: any) => String(p.bankserv_batch_id ?? p.billing_settlement_id ?? '').trim())
-        .filter(Boolean)
-    ));
+    const batchIds = Array.from(
+      new Set(
+        safePayouts
+          .map((p: any) => String(p.bankserv_batch_id ?? p.billing_settlement_id ?? '').trim())
+          .filter(Boolean)
+      )
+    );
 
     const ackNckMap = new Map<string, string>();
     if (batchIds.length > 0) {
@@ -121,9 +126,8 @@ export async function GET() {
       ...p,
       bankserv_batch_id: p.bankserv_batch_id ?? null,
       bankserv_file_ref: p.bankserv_file_ref ?? null,
-      ack_nck_status: ackNckMap.get(
-        String(p.bankserv_batch_id ?? p.billing_settlement_id ?? '')
-      ) ?? null,
+      ack_nck_status:
+        ackNckMap.get(String(p.bankserv_batch_id ?? p.billing_settlement_id ?? '')) ?? null,
     }));
     const complianceSnapshot = await getMerchantComplianceSnapshot(
       admin,

@@ -7,9 +7,9 @@ import {
 } from '@/server/services/settlement-service';
 
 // Settlement target is configured via env — 'sponsor_bank' (default) or 'evoucher_bank'
-const SETTLEMENT_TARGET = String(
-  process.env.SETTLEMENT_TARGET ?? 'sponsor_bank'
-).trim().toLowerCase();
+const SETTLEMENT_TARGET = String(process.env.SETTLEMENT_TARGET ?? 'sponsor_bank')
+  .trim()
+  .toLowerCase();
 
 export class DefaultSettlementService implements SettlementService {
   async queuePayouts(): Promise<SettlementQueueResult> {
@@ -45,7 +45,10 @@ export class DefaultSettlementService implements SettlementService {
         .in('id', voucherIds);
       if (vouchersError) throw vouchersError;
       (vouchers ?? []).forEach((voucher) => {
-        voucherFaceValueMap.set(voucher.id, Number(voucher.face_value ?? voucher.total_discount_pct ?? 0));
+        voucherFaceValueMap.set(
+          voucher.id,
+          Number(voucher.face_value ?? voucher.total_discount_pct ?? 0)
+        );
       });
     }
 

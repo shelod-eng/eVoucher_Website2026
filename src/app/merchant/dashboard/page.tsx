@@ -1851,7 +1851,8 @@ export default function MerchantDashboard() {
                                     {String(index + 1).padStart(3, '0')}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {new Date(payout.created_at).toLocaleDateString()} · {payout.status}
+                                    {new Date(payout.created_at).toLocaleDateString()} ·{' '}
+                                    {payout.status}
                                   </p>
                                   {payout.bankserv_batch_id && (
                                     <p className="text-xs text-muted-foreground font-mono mt-0.5">
@@ -1872,11 +1873,16 @@ export default function MerchantDashboard() {
                                     Awaiting
                                   </span>
                                   {payout.ack_nck_status && (
-                                    <p className={`text-[10px] font-headline font-semibold mt-0.5 ${
-                                      payout.ack_nck_status === 'acked' ? 'text-success' :
-                                      payout.ack_nck_status === 'escalated' || payout.ack_nck_status === 'failed' ? 'text-error' :
-                                      'text-warning'
-                                    }`}>
+                                    <p
+                                      className={`text-[10px] font-headline font-semibold mt-0.5 ${
+                                        payout.ack_nck_status === 'acked'
+                                          ? 'text-success'
+                                          : payout.ack_nck_status === 'escalated' ||
+                                              payout.ack_nck_status === 'failed'
+                                            ? 'text-error'
+                                            : 'text-warning'
+                                      }`}
+                                    >
                                       ACK: {payout.ack_nck_status}
                                     </p>
                                   )}
@@ -1913,7 +1919,8 @@ export default function MerchantDashboard() {
                                     {String(index + 1).padStart(3, '0')}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {new Date(payout.created_at).toLocaleDateString()} · EFT complete
+                                    {new Date(payout.created_at).toLocaleDateString()} · EFT
+                                    complete
                                   </p>
                                   {payout.bankserv_batch_id && (
                                     <p className="text-xs text-muted-foreground font-mono mt-0.5">
@@ -1934,9 +1941,13 @@ export default function MerchantDashboard() {
                                     Completed
                                   </span>
                                   {payout.ack_nck_status && (
-                                    <p className={`text-[10px] font-headline font-semibold mt-0.5 ${
-                                      payout.ack_nck_status === 'acked' ? 'text-success' : 'text-muted-foreground'
-                                    }`}>
+                                    <p
+                                      className={`text-[10px] font-headline font-semibold mt-0.5 ${
+                                        payout.ack_nck_status === 'acked'
+                                          ? 'text-success'
+                                          : 'text-muted-foreground'
+                                      }`}
+                                    >
                                       ACK: {payout.ack_nck_status}
                                     </p>
                                   )}
