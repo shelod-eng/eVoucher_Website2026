@@ -102,10 +102,7 @@ export async function assignBranchAdmin(
 
   if (authError) return { success: false, error: authError.message };
 
-  await admin
-    .from('merchants')
-    .update({ user_id: authUser.user.id })
-    .eq('id', branchId);
+  await admin.from('merchants').update({ user_id: authUser.user.id }).eq('id', branchId);
 
   return { success: true, userId: authUser.user.id };
 }
@@ -143,10 +140,7 @@ export async function revokeBranchAdmin(branchId: string, userId: string) {
 
   await admin.auth.admin.deleteUser(userId);
 
-  await admin
-    .from('merchants')
-    .update({ user_id: null })
-    .eq('id', branchId);
+  await admin.from('merchants').update({ user_id: null }).eq('id', branchId);
 
   return { success: true };
 }

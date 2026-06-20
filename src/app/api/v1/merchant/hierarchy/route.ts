@@ -38,7 +38,10 @@ export async function GET(request: Request) {
     const hierarchy = await getBranchHierarchy(merchant.id);
     return NextResponse.json(hierarchy);
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Failed to load hierarchy' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to load hierarchy' },
+      { status: 500 }
+    );
   }
 }
 
@@ -48,11 +51,7 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const admin = createAdminClient();
-    const merchant = await resolveMerchantForUser<any>(
-      admin,
-      user,
-      'id,merchant_type,is_branch'
-    );
+    const merchant = await resolveMerchantForUser<any>(admin, user, 'id,merchant_type,is_branch');
 
     if (!merchant || merchant.merchant_type !== 'chain' || merchant.is_branch) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
@@ -70,12 +69,10 @@ export async function POST(request: Request) {
       if (!body.adminEmail || !body.role) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       }
-      const result = await assignBranchAdmin(
-        body.branchId,
-        body.adminEmail,
-        body.role,
-        ['manage_products', 'view_dashboard']
-      );
+      const result = await assignBranchAdmin(body.branchId, body.adminEmail, body.role, [
+        'manage_products',
+        'view_dashboard',
+      ]);
       return NextResponse.json(result);
     }
 

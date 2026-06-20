@@ -34,7 +34,9 @@ export async function GET(request: Request) {
 
     if (action === 'performance') {
       const productId = searchParams.get('productId');
-      const periodDays = searchParams.get('periodDays') ? parseInt(searchParams.get('periodDays')!) : 7;
+      const periodDays = searchParams.get('periodDays')
+        ? parseInt(searchParams.get('periodDays')!)
+        : 7;
 
       if (!productId) {
         return NextResponse.json({ error: 'productId required' }, { status: 400 });

@@ -63,7 +63,12 @@ export async function scheduleSpecial(params: {
   const startAt = new Date(params.specialStartAt);
 
   if (startAt <= now) {
-    return activateSpecial(params.productId, params.specialTitle, params.specialEndAt, params.displayPriority);
+    return activateSpecial(
+      params.productId,
+      params.specialTitle,
+      params.specialEndAt,
+      params.displayPriority
+    );
   }
 
   const { data, error } = await admin
@@ -144,7 +149,9 @@ export async function getActiveSpecials(filters?: {
 
   let query = admin
     .from('merchant_products')
-    .select('id,product_name,face_value,consumer_price,special_title,special_end_at,display_priority,merchant_id,merchants(business_name,parent_brand)')
+    .select(
+      'id,product_name,face_value,consumer_price,special_title,special_end_at,display_priority,merchant_id,merchants(business_name,parent_brand)'
+    )
     .eq('is_special', true)
     .eq('is_active', true)
     .gt('special_end_at', now)

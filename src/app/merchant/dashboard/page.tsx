@@ -217,9 +217,11 @@ export default function MerchantDashboard() {
     'products' | 'studio' | 'payouts' | 'logistics' | 'ledger'
   >('studio');
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
-  const [ledgerMeta, setLedgerMeta] = useState<{ total: number; hasMore: boolean; page: number }>(
-    { total: 0, hasMore: false, page: 1 }
-  );
+  const [ledgerMeta, setLedgerMeta] = useState<{ total: number; hasMore: boolean; page: number }>({
+    total: 0,
+    hasMore: false,
+    page: 1,
+  });
   const [ledgerSettlementTarget, setLedgerSettlementTarget] = useState('sponsor_bank');
   const [ledgerLoading, setLedgerLoading] = useState(false);
   const [productsFilter, setProductsFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -1904,10 +1906,7 @@ export default function MerchantDashboard() {
                         Total Net Payable
                       </p>
                       <p className="text-3xl font-headline font-bold text-foreground mt-1">
-                        R
-                        {ledgerEntries
-                          .reduce((sum, e) => sum + e.amount, 0)
-                          .toFixed(2)}
+                        R{ledgerEntries.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
                       </p>
                     </div>
                     <div className="rounded-xl border border-border bg-background p-4">
@@ -1915,10 +1914,7 @@ export default function MerchantDashboard() {
                         Total Bank Fees
                       </p>
                       <p className="text-3xl font-headline font-bold text-error mt-1">
-                        R
-                        {ledgerEntries
-                          .reduce((sum, e) => sum + e.bankFee, 0)
-                          .toFixed(2)}
+                        R{ledgerEntries.reduce((sum, e) => sum + e.bankFee, 0).toFixed(2)}
                       </p>
                     </div>
                   </div>

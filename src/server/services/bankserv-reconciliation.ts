@@ -159,7 +159,11 @@ export async function retryFailedSettlement(settlementId: string) {
   const retryCount = Number(settlement.metadata?.retry_count || 0) + 1;
 
   if (retryCount > 3) {
-    return { success: false, error: 'Maximum retry attempts exceeded', requiresManualIntervention: true };
+    return {
+      success: false,
+      error: 'Maximum retry attempts exceeded',
+      requiresManualIntervention: true,
+    };
   }
 
   const { error: updateError } = await admin
@@ -230,7 +234,8 @@ export async function generateReconciliationReport(batchId: string) {
       totalSubmitted: result.totalSubmitted,
       totalAcknowledged: result.totalAcknowledged,
       totalFailed: result.totalFailed,
-      successRate: result.totalSubmitted > 0 ? (result.totalAcknowledged / result.totalSubmitted) * 100 : 0,
+      successRate:
+        result.totalSubmitted > 0 ? (result.totalAcknowledged / result.totalSubmitted) * 100 : 0,
     },
     discrepancies: result.discrepancies,
     failures: result.failures,
@@ -251,7 +256,9 @@ function generateRecommendations(result: ReconciliationResult): string[] {
   }
 
   if (result.discrepancies.length > 0) {
-    recommendations.push(`Investigate ${result.discrepancies.length} amount discrepancies with bank`);
+    recommendations.push(
+      `Investigate ${result.discrepancies.length} amount discrepancies with bank`
+    );
   }
 
   const retryableFailures = result.failures.filter((f) => f.retryable);
@@ -261,7 +268,9 @@ function generateRecommendations(result: ReconciliationResult): string[] {
 
   const manualInterventionNeeded = result.failures.filter((f) => !f.retryable || f.retryCount >= 3);
   if (manualInterventionNeeded.length > 0) {
-    recommendations.push(`${manualInterventionNeeded.length} settlements require manual intervention`);
+    recommendations.push(
+      `${manualInterventionNeeded.length} settlements require manual intervention`
+    );
   }
 
   return recommendations;

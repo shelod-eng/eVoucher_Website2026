@@ -21,9 +21,16 @@ export async function GET(request: Request) {
     const offset = (page - 1) * limit;
 
     // Pull billing_settlements as the ledger source of truth
-    const { data: settlements, error: settlementsError, count } = await admin
+    const {
+      data: settlements,
+      error: settlementsError,
+      count,
+    } = await admin
       .from('billing_settlements')
-      .select('id,amount,gross_amount,bank_fee_amount,platform_revenue_amount,consumer_benefit_amount,settlement_target,status,created_at,updated_at,batch_id', { count: 'exact' })
+      .select(
+        'id,amount,gross_amount,bank_fee_amount,platform_revenue_amount,consumer_benefit_amount,settlement_target,status,created_at,updated_at,batch_id',
+        { count: 'exact' }
+      )
       .eq('merchant_id', merchant.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
