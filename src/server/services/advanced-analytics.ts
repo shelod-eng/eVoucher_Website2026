@@ -3,7 +3,7 @@
  * Provides enhanced reporting, data visualization, and business intelligence
  */
 
-import { createServerClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 
 export interface AnalyticsTimeframe {
@@ -55,8 +55,8 @@ export async function getAdvancedMetrics(
   geographic: GeographicMetrics[];
   cohorts: CohortAnalysis[];
 }> {
-  const cookieStore = cookies();
-  const supabase = createServerClient(cookieStore);
+  const cookieStore = await cookies();
+  const supabase = await createClient();
 
   const { data: settlements } = await supabase
     .from('settlements')
@@ -65,12 +65,16 @@ export async function getAdvancedMetrics(
     .gte('created_at', timeframe.start.toISOString())
     .lte('created_at', timeframe.end.toISOString());
 
-  const totalRevenue = settlements?.reduce((sum, s) => sum + Number(s.gross_amount || 0), 0) || 0;
-  const merchantRevenue = settlements?.reduce((sum, s) => sum + Number(s.amount || 0), 0) || 0;
+  const totalRevenue =
+    settlements?.reduce((sum: number, s: any) => sum + Number(s.gross_amount || 0), 0) || 0;
+  const merchantRevenue =
+    settlements?.reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0) || 0;
   const platformRevenue =
-    settlements?.reduce((sum, s) => sum + Number(s.platform_revenue_amount || 0), 0) || 0;
+    settlements?.reduce((sum: number, s: any) => sum + Number(s.platform_revenue_amount || 0), 0) ||
+    0;
   const consumerSavings =
-    settlements?.reduce((sum, s) => sum + Number(s.consumer_benefit_amount || 0), 0) || 0;
+    settlements?.reduce((sum: number, s: any) => sum + Number(s.consumer_benefit_amount || 0), 0) ||
+    0;
 
   return {
     revenue: {
