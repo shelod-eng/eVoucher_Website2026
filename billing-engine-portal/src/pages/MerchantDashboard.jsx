@@ -46,17 +46,29 @@ export default function MerchantDashboard() {
     enabled: !!selectedMerchant
   });
   
+  // TRD v2 split: 96% merchant gross, 0.5% bank fee on gross, 2.8% consumer benefit, 1.2% platform revenue
+  function calcTrdV2(faceValue) {
+    const fv = Number(faceValue) || 0;
+    const merchantGross = Number((fv * 0.96).toFixed(2));
+    const bankFee = Number((merchantGross * 0.005).toFixed(2));
+    const merchantNet = Number((merchantGross - bankFee).toFixed(2));
+    const consumerBenefit = Number((fv * 0.028).toFixed(2));
+    const platformRevenue = Number((fv * 0.012).toFixed(2));
+    return { merchantGross, bankFee, merchantNet, consumerBenefit, platformRevenue };
+  }
+
   const createProductMutation = useMutation({
     mutationFn: async (productData) => {
       const faceValue = parseFloat(productData.faceValue);
+      const trd = calcTrdV2(faceValue);
       await base44.entities.VoucherProduct.create({
         merchantId: selectedMerchant.id,
         merchantName: selectedMerchant.name,
         description: productData.description,
         faceValue,
-        consumerPrice: faceValue * 0.96,
-        merchantPayout: faceValue * 0.92,
-        platformMargin: faceValue * 0.04,
+        consumerPrice: Number((faceValue * 0.96).toFixed(2)),
+        merchantPayout: trd.merchantNet,
+        platformMargin: trd.platformRevenue,
         status: 'active'
       });
     },
@@ -284,20 +296,37 @@ export default function MerchantDashboard() {
               />
             </div>
             
-            <div className="bg-[#0B0B0D] rounded-lg p-3 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-[#9CA3AF]">Consumer Price (4% off)</span>
-                <span className="text-[#D4AF37]">R{(parseFloat(newProduct.faceValue) * 0.96).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#9CA3AF]">Your Payout (92%)</span>
-                <span className="text-[#2DD4BF]">R{(parseFloat(newProduct.faceValue) * 0.92).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#9CA3AF]">Platform Margin</span>
-                <span className="text-white">R{(parseFloat(newProduct.faceValue) * 0.04).toFixed(2)}</span>
-              </div>
-            </div>
+            {(() => {
+              const trd = calcTrdV2(newProduct.faceValue);
+              return (
+                <div className="bg-[#0B0B0D] rounded-lg p-3 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#9CA3AF]">Consumer Price (96% of face value)</span>
+                    <span className="text-[#D4AF37]">R{(parseFloat(newProduct.faceValue) * 0.96).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#9CA3AF]">Merchant Gross (96%)</span>
+                    <span className="text-[#2DD4BF]">R{trd.merchantGross.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#9CA3AF]">Bank Fee (0.5% of gross)</span>
+                    <span className="text-red-400">−R{trd.bankFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold border-t border-white/10 pt-2">
+                    <span className="text-[#9CA3AF]">Your Net Payout</span>
+                    <span className="text-[#2DD4BF]">R{trd.merchantNet.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#9CA3AF]">Consumer Benefit (2.8%)</span>
+                    <span className="text-purple-300">R{trd.consumerBenefit.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#9CA3AF]">Platform Revenue (1.2%)</span>
+                    <span className="text-white">R{trd.platformRevenue.toFixed(2)}</span>
+                  </div>
+                </div>
+              );
+            })()}
             
             <GoldButton 
               className="w-full h-12" 

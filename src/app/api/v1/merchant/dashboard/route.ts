@@ -90,11 +90,41 @@ export async function GET() {
 
     const { data: payouts, error: payoutsError } = await admin
       .from('merchant_payouts')
-      .select('id,amount,status,payout_date,created_at')
+      .select('id,amount,status,payout_date,created_at,billing_settlement_id,bankserv_batch_id,bankserv_file_ref')
       .eq('merchant_id', merchant.id)
       .order('created_at', { ascending: false });
 
-    if (payoutsError) throw payoutsError;
+    if (payoutsError && !String(payoutsError.message ?? '').includes('does not exist')) throw payoutsError;
+
+    const safePayouts = payouts ?? [];
+
+    // Enrich payouts with ACK/NCK status from bankserv_ack_nck_tracking where available
+    const batchIds = Array.from(new Set(
+      safePayouts
+        .map((p: any) => String(p.bankserv_batch_id ?? p.billing_settlement_id ?? '').trim())
+        .filter(Boolean)
+    ));
+
+    const ackNckMap = new Map<string, string>();
+    if (batchIds.length > 0) {
+      const { data: ackRows } = await admin
+        .from('bankserv_ack_nck_tracking')
+        .select('entity_id,status')
+        .in('entity_id', batchIds)
+        .order('created_at', { ascending: false });
+      for (const row of ackRows ?? []) {
+        if (!ackNckMap.has(row.entity_id)) ackNckMap.set(row.entity_id, row.status);
+      }
+    }
+
+    const enrichedPayouts = safePayouts.map((p: any) => ({
+      ...p,
+      bankserv_batch_id: p.bankserv_batch_id ?? null,
+      bankserv_file_ref: p.bankserv_file_ref ?? null,
+      ack_nck_status: ackNckMap.get(
+        String(p.bankserv_batch_id ?? p.billing_settlement_id ?? '')
+      ) ?? null,
+    }));
     const complianceSnapshot = await getMerchantComplianceSnapshot(
       admin,
       merchant.id,
@@ -104,7 +134,7 @@ export async function GET() {
     return NextResponse.json(
       {
         merchant,
-        payouts: payouts ?? [],
+        payouts: enrichedPayouts,
         compliance: {
           overallStatus: complianceSnapshot.overallStatus,
           complianceApproved: complianceSnapshot.complianceApproved,
