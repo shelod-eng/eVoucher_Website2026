@@ -34,7 +34,9 @@ async function expireSupabaseAuthCookies(response: NextResponse) {
       path: '/',
       maxAge: 0,
       expires: new Date(0),
-      sameSite: 'lax',
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
     });
   });
 
@@ -44,20 +46,32 @@ async function expireSupabaseAuthCookies(response: NextResponse) {
 export async function POST() {
   try {
     const supabase = await createClient();
-    const { error } = await supabase.auth.signOut({ scope: 'local' });
+
+    // CRITICAL FIX: Use scope 'global' to revoke ALL sessions for this user
+    // on the Supabase Auth server. 'local' only clears browser cookies.
+    // Without global revocation, the session token remains valid server-side
+    // and can be reused (POPIA / compliance violation).
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
+
     if (error) {
+      // Even if the Supabase API call fails, we MUST still clear cookies
+      // to ensure the browser session is destroyed.
+      console.error('Logout route: supabase signOut error (non-fatal):', error.message);
       const response = jsonNoStore(
-        { error: error.message, code: 'logout_failed' },
-        { status: 500 }
+        { success: true, warning: 'Server session revocation encountered an issue; local session cleared.' },
+        { status: 200 }
       );
       return await expireSupabaseAuthCookies(response);
     }
+
     const response = jsonNoStore({ success: true });
     return await expireSupabaseAuthCookies(response);
   } catch (error: any) {
+    // Catch-all: still clear cookies even on unexpected errors
+    console.error('Logout route: unexpected error (non-fatal):', error?.message || error);
     const response = jsonNoStore(
-      { error: error?.message || 'Failed to log out.', code: 'logout_failed' },
-      { status: 500 }
+      { success: true, warning: 'Session cleared.' },
+      { status: 200 }
     );
     return await expireSupabaseAuthCookies(response);
   }
