@@ -1,0 +1,200 @@
+openapi: 3.0.3
+info:
+  title: eVoucher BankServ Adaptor and Billing Engine API
+  version: 0.1.0
+  description: REST/JSON contract for settlement batch ACK/NCK automation and ledger verification.
+servers:
+  - url: http://localhost:4028
+    description: Local Next.js development server
+security:
+  - PortalSession: []
+paths:
+  /api/billing/bankserv/ack-nck/process:
+    post:
+      summary: Process all due ACK/NCK records
+      tags: [BankServ]
+      responses:
+        "200":
+          description: Processing summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AckNckProcessResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/admin/settlements/batches/{id}/ack-nck:
+    get:
+      summary: Get ACK/NCK records for a settlement batch
+      tags: [BankServ]
+      parameters:
+        - $ref: "#/components/parameters/BatchId"
+      responses:
+        "200":
+          description: Batch ACK/NCK records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AckNckStatusResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/admin/settlements/batches/{id}/ack-nck/retry:
+    post:
+      summary: Retry ACK/NCK processing for a batch
+      tags: [BankServ]
+      parameters:
+        - $ref: "#/components/parameters/BatchId"
+      responses:
+        "200":
+          description: Retry result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AckNckRetryResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/admin/ledger/verify:
+    get:
+      summary: Verify the required 96/2.8/1.2 ledger split
+      tags: [Billing]
+      parameters:
+        - name: faceValue
+          in: query
+          schema:
+            type: number
+            default: 1000
+        - name: merchantPayout
+          in: query
+          schema:
+            type: number
+        - name: consumerBenefit
+          in: query
+          schema:
+            type: number
+        - name: platformRevenue
+          in: query
+          schema:
+            type: number
+        - name: bankFee
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Ledger verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerVerificationResponse"
+    post:
+      summary: Record an auditable ledger verification check
+      tags: [Billing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LedgerVerificationRequest"
+      responses:
+        "200":
+          description: Persisted verification check and computed result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+components:
+  securitySchemes:
+    PortalSession:
+      type: apiKey
+      in: cookie
+      name: evoucher_portal_session
+  parameters:
+    BatchId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Forbidden:
+      description: Portal user is not authorized for this operation
+  schemas:
+    AckNckProcessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            processed:
+              type: integer
+            acked:
+              type: integer
+            retrying:
+              type: integer
+            escalated:
+              type: integer
+    AckNckStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+        meta:
+          type: object
+          properties:
+            batchId:
+              type: string
+            latestStatus:
+              type: string
+    AckNckRetryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            recordId:
+              type: string
+            batchId:
+              type: string
+            advanced:
+              type: boolean
+            status:
+              type: string
+              enum: [acked, nacked, pending, retrying, failed, escalated]
+    LedgerVerificationRequest:
+      type: object
+      required: [faceValue]
+      properties:
+        faceValue:
+          type: number
+        merchantPayout:
+          type: number
+        consumerBenefit:
+          type: number
+        platformRevenue:
+          type: number
+        bankFee:
+          type: number
+        tolerance:
+          type: number
+          default: 0.01
+        notes:
+          type: string
+    LedgerVerificationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object

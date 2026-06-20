@@ -58,7 +58,10 @@ export async function POST() {
       // to ensure the browser session is destroyed.
       console.error('Logout route: supabase signOut error (non-fatal):', error.message);
       const response = jsonNoStore(
-        { success: true, warning: 'Server session revocation encountered an issue; local session cleared.' },
+        {
+          success: true,
+          warning: 'Server session revocation encountered an issue; local session cleared.',
+        },
         { status: 200 }
       );
       return await expireSupabaseAuthCookies(response);
@@ -69,10 +72,7 @@ export async function POST() {
   } catch (error: any) {
     // Catch-all: still clear cookies even on unexpected errors
     console.error('Logout route: unexpected error (non-fatal):', error?.message || error);
-    const response = jsonNoStore(
-      { success: true, warning: 'Session cleared.' },
-      { status: 200 }
-    );
+    const response = jsonNoStore({ success: true, warning: 'Session cleared.' }, { status: 200 });
     return await expireSupabaseAuthCookies(response);
   }
 }
