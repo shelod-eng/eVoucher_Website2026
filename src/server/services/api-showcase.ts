@@ -430,9 +430,9 @@ export function getAPIAdvantage(): {
 } {
   return {
     summary:
-      "eVoucher's API is 3x more comprehensive than Yoco's, covering payments, marketplace, subscriptions, analytics, compliance, and logistics. We're building an open ecosystem for fintech innovation.",
+      'eVoucher\'s API is 3x more comprehensive than Yoco\'s, covering payments, marketplace, subscriptions, analytics, compliance, and logistics. We\'re building an open ecosystem for fintech innovation.',
     keyPoints: [
-      '45+ REST endpoints vs Yoco's ~15',
+      '45+ REST endpoints vs Yoco\'s ~15',
       'Unique marketplace APIs - connect consumers to merchants',
       '8 payment methods including cash, USSD, SASSA cards',
       'Same-day settlements with zero fees',

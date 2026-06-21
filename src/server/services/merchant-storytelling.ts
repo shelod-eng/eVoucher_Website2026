@@ -98,7 +98,7 @@ export const STORY_TEMPLATES: Record<StoryCategory, StoryTemplate> = {
     instagramCaption:
       '💙 Building communities, one voucher at a time.\n\n5 jobs created. Countless families supported.\n\n#SocialImpact #eVoucher',
     whatsappMessage:
-      '🤝 This is about more than business. This is about community. Watch Zanele's story: [link]',
+      '🤝 This is about more than business. This is about community. Watch Zanele\'s story: [link]',
   },
   innovation: {
     category: 'innovation',

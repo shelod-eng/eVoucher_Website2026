@@ -470,7 +470,7 @@ export async function enableSocialCommerceForMerchant(
       'Verify your WhatsApp Business number',
       'Link your Instagram Business profile',
       'Select products to promote',
-      'We'll auto-generate your first posts',
+      'We\'ll auto-generate your first posts',
       'Start selling where your customers are!',
     ],
   };
