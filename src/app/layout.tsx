@@ -28,6 +28,12 @@ export const metadata = {
     address: true,
     email: true,
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'msapplication-TileColor': '#0f766e',
+    'msapplication-config': '/browserconfig.xml',
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', type: 'image/x-icon' },
