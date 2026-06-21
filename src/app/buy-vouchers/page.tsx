@@ -20,7 +20,15 @@ interface MerchantOption {
   defaultTotalDiscountPct: number;
 }
 
-type PaymentMethod = 'visa_secure' | 'debit_credit' | 'payfast' | 'eft' | 'wallet' | 'cash_voucher' | 'ussd' | 'airtime';
+type PaymentMethod =
+  | 'visa_secure'
+  | 'debit_credit'
+  | 'payfast'
+  | 'eft'
+  | 'wallet'
+  | 'cash_voucher'
+  | 'ussd'
+  | 'airtime';
 type PurchaseStatus = 'pending' | 'completed' | 'failed' | null;
 const WALLET_TOPUP_HINT_KEY = 'evoucher.wallet.topup.hint.v1';
 
@@ -1256,18 +1264,28 @@ function BuyVouchersContent() {
               {selectedPaymentMethod === 'cash_voucher' && (
                 <div className="rounded-xl border border-success/20 bg-success/5 p-4 mb-6 space-y-3">
                   <div className="flex items-center gap-2">
-                    <Icon name="CheckCircleIcon" size={20} variant="solid" className="text-success" />
-                    <p className="text-sm font-headline font-semibold text-success">No bank account needed!</p>
+                    <Icon
+                      name="CheckCircleIcon"
+                      size={20}
+                      variant="solid"
+                      className="text-success"
+                    />
+                    <p className="text-sm font-headline font-semibold text-success">
+                      No bank account needed!
+                    </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    After checkout, you'll receive a code. Take this code to any Shoprite, Pick n Pay, or Boxer till and pay with cash.
+                    After checkout, you'll receive a code. Take this code to any Shoprite, Pick n
+                    Pay, or Boxer till and pay with cash.
                   </p>
                   <div className="rounded-lg bg-background border border-border p-3">
                     <p className="text-xs text-muted-foreground mb-2">How it works:</p>
                     <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
                       <li>Complete checkout to get your cash voucher code</li>
                       <li>Visit any participating store within 24 hours</li>
-                      <li>Show code at till and pay R{checkoutPricing.consumerPrice.toFixed(2)} cash</li>
+                      <li>
+                        Show code at till and pay R{checkoutPricing.consumerPrice.toFixed(2)} cash
+                      </li>
                       <li>Your eVoucher will be activated immediately</li>
                     </ol>
                   </div>
@@ -1277,14 +1295,24 @@ function BuyVouchersContent() {
               {selectedPaymentMethod === 'ussd' && (
                 <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 mb-6 space-y-3">
                   <div className="flex items-center gap-2">
-                    <Icon name="DevicePhoneMobileIcon" size={20} variant="solid" className="text-primary" />
-                    <p className="text-sm font-headline font-semibold text-primary">Works on ANY phone!</p>
+                    <Icon
+                      name="DevicePhoneMobileIcon"
+                      size={20}
+                      variant="solid"
+                      className="text-primary"
+                    />
+                    <p className="text-sm font-headline font-semibold text-primary">
+                      Works on ANY phone!
+                    </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     No smartphone or data needed. Works on feature phones.
                   </p>
                   <div>
-                    <label htmlFor="ussd-phone" className="block text-xs text-muted-foreground mb-1">
+                    <label
+                      htmlFor="ussd-phone"
+                      className="block text-xs text-muted-foreground mb-1"
+                    >
                       Your Mobile Number
                     </label>
                     <input
@@ -1316,13 +1344,18 @@ function BuyVouchersContent() {
                 <div className="rounded-xl border border-warning/20 bg-warning/5 p-4 mb-6 space-y-3">
                   <div className="flex items-center gap-2">
                     <Icon name="SignalIcon" size={20} variant="solid" className="text-warning" />
-                    <p className="text-sm font-headline font-semibold text-warning">Perfect for SASSA grant recipients</p>
+                    <p className="text-sm font-headline font-semibold text-warning">
+                      Perfect for SASSA grant recipients
+                    </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Convert your airtime to eVoucher value. Small 3% convenience fee applies.
                   </p>
                   <div>
-                    <label htmlFor="airtime-phone" className="block text-xs text-muted-foreground mb-1">
+                    <label
+                      htmlFor="airtime-phone"
+                      className="block text-xs text-muted-foreground mb-1"
+                    >
                       Your Mobile Number
                     </label>
                     <input

@@ -98,7 +98,7 @@ export const STORY_TEMPLATES: Record<StoryCategory, StoryTemplate> = {
     instagramCaption:
       '💙 Building communities, one voucher at a time.\n\n5 jobs created. Countless families supported.\n\n#SocialImpact #eVoucher',
     whatsappMessage:
-      '🤝 This is about more than business. This is about community. Watch Zanele\'s story: [link]',
+      "🤝 This is about more than business. This is about community. Watch Zanele's story: [link]",
   },
   innovation: {
     category: 'innovation',
@@ -114,8 +114,7 @@ export const STORY_TEMPLATES: Record<StoryCategory, StoryTemplate> = {
       '💡 "WhatsApp + eVoucher = 80% digital sales. I reach my customers where they are." - Sipho, Umlazi',
     instagramCaption:
       '🔥 Innovation meets tradition.\n\nWhere spaza shops meet digital.\n\n#Innovation #eVoucher #Digital',
-    whatsappMessage:
-      '⚡ 80% digital sales from WhatsApp? See how Sipho does it: [link]',
+    whatsappMessage: '⚡ 80% digital sales from WhatsApp? See how Sipho does it: [link]',
   },
   community: {
     category: 'community',

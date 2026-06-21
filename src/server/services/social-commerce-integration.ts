@@ -285,9 +285,7 @@ export async function createSocialCampaign(campaignData: {
 /**
  * Get social commerce metrics
  */
-export async function getSocialCommerceMetrics(
-  merchantId: string
-): Promise<{
+export async function getSocialCommerceMetrics(merchantId: string): Promise<{
   totalReach: number;
   totalSales: number;
   totalRevenue: number;
@@ -306,10 +304,7 @@ export async function getSocialCommerceMetrics(
 /**
  * Generate TikTok hashtags for product
  */
-export function generateTikTokHashtags(product: {
-  category: string;
-  location: string;
-}): string[] {
+export function generateTikTokHashtags(product: { category: string; location: string }): string[] {
   const baseHashtags = [
     '#eVoucher',
     '#SaveMoney',
@@ -455,9 +450,7 @@ export function getSocialCommerceBestPractices(): {
 /**
  * Enable one-click social commerce for merchant
  */
-export async function enableSocialCommerceForMerchant(
-  merchantId: string
-): Promise<{
+export async function enableSocialCommerceForMerchant(merchantId: string): Promise<{
   enabled: boolean;
   platforms: SocialPlatform[];
   nextSteps: string[];
@@ -470,7 +463,7 @@ export async function enableSocialCommerceForMerchant(
       'Verify your WhatsApp Business number',
       'Link your Instagram Business profile',
       'Select products to promote',
-      'We\'ll auto-generate your first posts',
+      "We'll auto-generate your first posts",
       'Start selling where your customers are!',
     ],
   };
