@@ -20,7 +20,7 @@ interface MerchantOption {
   defaultTotalDiscountPct: number;
 }
 
-type PaymentMethod = 'visa_secure' | 'debit_credit' | 'payfast' | 'eft' | 'wallet';
+type PaymentMethod = 'visa_secure' | 'debit_credit' | 'payfast' | 'eft' | 'wallet' | 'cash_voucher' | 'ussd' | 'airtime';
 type PurchaseStatus = 'pending' | 'completed' | 'failed' | null;
 const WALLET_TOPUP_HINT_KEY = 'evoucher.wallet.topup.hint.v1';
 
@@ -80,6 +80,9 @@ function BuyVouchersContent() {
   const [eftReference, setEftReference] = useState('');
   const [eftProofName, setEftProofName] = useState<string | null>(null);
   const [walletBalanceMock, setWalletBalanceMock] = useState<number>(0);
+  const [cashVoucherCode, setCashVoucherCode] = useState<string>('');
+  const [ussdPhoneNumber, setUssdPhoneNumber] = useState<string>('');
+  const [airtimePhoneNumber, setAirtimePhoneNumber] = useState<string>('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const router = useRouter();
   const faceValueFromQuery = Number(searchParams.get('faceValue') ?? '');
@@ -297,34 +300,52 @@ function BuyVouchersContent() {
 
   const paymentMethods = [
     {
+      id: 'cash_voucher' as PaymentMethod,
+      name: 'Cash at Till',
+      icon: 'BanknotesIcon',
+      description: 'Pay cash at Shoprite, Pick n Pay, Boxer - No bank account needed',
+    },
+    {
+      id: 'ussd' as PaymentMethod,
+      name: 'USSD (*120*8682#)',
+      icon: 'DevicePhoneMobileIcon',
+      description: 'Works on any phone - No smartphone or data needed',
+    },
+    {
+      id: 'airtime' as PaymentMethod,
+      name: 'Airtime Payment',
+      icon: 'SignalIcon',
+      description: 'Convert airtime to voucher - Perfect for grant recipients',
+    },
+    {
+      id: 'wallet' as PaymentMethod,
+      name: 'eVoucher Wallet',
+      icon: 'WalletIcon',
+      description: 'Use your wallet balance - Instant',
+    },
+    {
       id: 'visa_secure' as PaymentMethod,
       name: 'VISA Secure (3DS2)',
       icon: 'CreditCardIcon',
-      description: 'Card + 3D Secure badge and OTP challenge',
+      description: 'Card + 3D Secure OTP challenge',
     },
     {
       id: 'debit_credit' as PaymentMethod,
       name: 'Debit / Credit Card',
       icon: 'CreditCardIcon',
-      description: 'Standard card payment (mocked gateway)',
+      description: 'Standard card payment',
     },
     {
       id: 'payfast' as PaymentMethod,
       name: 'PayFast',
-      icon: 'BanknotesIcon',
+      icon: 'CreditCardIcon',
       description: 'Redirect to PayFast checkout',
     },
     {
       id: 'eft' as PaymentMethod,
       name: 'EFT',
       icon: 'BuildingLibraryIcon',
-      description: 'Pay by bank transfer (upload proof)',
-    },
-    {
-      id: 'wallet' as PaymentMethod,
-      name: 'eVoucher Wallet',
-      icon: 'WalletIcon',
-      description: 'Use your wallet cash balance',
+      description: 'Bank transfer with proof upload',
     },
   ];
 
@@ -354,6 +375,16 @@ function BuyVouchersContent() {
     if (selectedPaymentMethod === 'wallet') {
       if (checkoutPricing.consumerPrice > walletBalanceMock) {
         errs.wallet = 'Insufficient wallet balance for this payment.';
+      }
+    }
+    if (selectedPaymentMethod === 'ussd') {
+      if (!/^0\d{9}$/.test(ussdPhoneNumber.replace(/\s+/g, ''))) {
+        errs.ussdPhoneNumber = 'Enter valid SA mobile number (10 digits)';
+      }
+    }
+    if (selectedPaymentMethod === 'airtime') {
+      if (!/^0\d{9}$/.test(airtimePhoneNumber.replace(/\s+/g, ''))) {
+        errs.airtimePhoneNumber = 'Enter valid SA mobile number (10 digits)';
       }
     }
     setFormErrors(errs);
@@ -1218,6 +1249,113 @@ function BuyVouchersContent() {
                     {formErrors.eftProofName && (
                       <p className="text-xs text-error mt-1">{formErrors.eftProofName}</p>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === 'cash_voucher' && (
+                <div className="rounded-xl border border-success/20 bg-success/5 p-4 mb-6 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Icon name="CheckCircleIcon" size={20} variant="solid" className="text-success" />
+                    <p className="text-sm font-headline font-semibold text-success">No bank account needed!</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    After checkout, you'll receive a code. Take this code to any Shoprite, Pick n Pay, or Boxer till and pay with cash.
+                  </p>
+                  <div className="rounded-lg bg-background border border-border p-3">
+                    <p className="text-xs text-muted-foreground mb-2">How it works:</p>
+                    <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                      <li>Complete checkout to get your cash voucher code</li>
+                      <li>Visit any participating store within 24 hours</li>
+                      <li>Show code at till and pay R{checkoutPricing.consumerPrice.toFixed(2)} cash</li>
+                      <li>Your eVoucher will be activated immediately</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === 'ussd' && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 mb-6 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Icon name="DevicePhoneMobileIcon" size={20} variant="solid" className="text-primary" />
+                    <p className="text-sm font-headline font-semibold text-primary">Works on ANY phone!</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    No smartphone or data needed. Works on feature phones.
+                  </p>
+                  <div>
+                    <label htmlFor="ussd-phone" className="block text-xs text-muted-foreground mb-1">
+                      Your Mobile Number
+                    </label>
+                    <input
+                      id="ussd-phone"
+                      type="tel"
+                      value={ussdPhoneNumber}
+                      onChange={(e) => setUssdPhoneNumber(e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="0821234567"
+                    />
+                    {formErrors.ussdPhoneNumber && (
+                      <p className="text-xs text-error mt-1">{formErrors.ussdPhoneNumber}</p>
+                    )}
+                  </div>
+                  <div className="rounded-lg bg-background border border-border p-3">
+                    <p className="text-xs text-muted-foreground mb-2">Next steps:</p>
+                    <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                      <li>Dial *120*8682# on your phone</li>
+                      <li>Select option 1 (Buy Voucher)</li>
+                      <li>Enter reference code we'll send via SMS</li>
+                      <li>Confirm payment on your phone</li>
+                      <li>Receive voucher code via SMS</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === 'airtime' && (
+                <div className="rounded-xl border border-warning/20 bg-warning/5 p-4 mb-6 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Icon name="SignalIcon" size={20} variant="solid" className="text-warning" />
+                    <p className="text-sm font-headline font-semibold text-warning">Perfect for SASSA grant recipients</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Convert your airtime to eVoucher value. Small 3% convenience fee applies.
+                  </p>
+                  <div>
+                    <label htmlFor="airtime-phone" className="block text-xs text-muted-foreground mb-1">
+                      Your Mobile Number
+                    </label>
+                    <input
+                      id="airtime-phone"
+                      type="tel"
+                      value={airtimePhoneNumber}
+                      onChange={(e) => setAirtimePhoneNumber(e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg"
+                      placeholder="0821234567"
+                    />
+                    {formErrors.airtimePhoneNumber && (
+                      <p className="text-xs text-error mt-1">{formErrors.airtimePhoneNumber}</p>
+                    )}
+                  </div>
+                  <div className="rounded-lg bg-background border border-border p-3">
+                    <p className="text-xs font-semibold text-foreground mb-1">Payment breakdown:</p>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <div className="flex justify-between">
+                        <span>Voucher value:</span>
+                        <span>R{checkoutPricing.consumerPrice.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Airtime fee (3%):</span>
+                        <span>R{(checkoutPricing.consumerPrice * 0.03).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-foreground border-t border-border pt-1">
+                        <span>Total airtime deducted:</span>
+                        <span>R{(checkoutPricing.consumerPrice * 1.03).toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      You'll receive SMS confirmation once airtime is deducted.
+                    </p>
                   </div>
                 </div>
               )}

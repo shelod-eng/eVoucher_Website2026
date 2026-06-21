@@ -62,6 +62,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="application-name" content="eVoucher" />
+        <meta name="msapplication-TileColor" content="#0f766e" />
+        <meta name="msapplication-TileImage" content="/icons/icon-512x512.png" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
+        <meta name="msapplication-tooltip" content="eVoucher Platform" />
+        <meta name="msapplication-starturl" content="/" />
+        <meta name="msapplication-navbutton-color" content="#0f766e" />
+      </head>
       <body>
         <AuthProvider>
           <PwaRegistrar />
