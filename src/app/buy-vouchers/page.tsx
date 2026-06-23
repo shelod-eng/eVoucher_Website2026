@@ -446,7 +446,6 @@ function BuyVouchersContent() {
             billingAddress,
             eftProofName,
           }),
-
         });
         const data = await response.json();
         if (!response.ok) {
@@ -1482,10 +1481,17 @@ function BuyVouchersContent() {
                   {/* SSL Secure - All Methods */}
                   <div className="rounded-lg border border-success/20 bg-success/5 px-2 py-2 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <Icon name="LockClosedIcon" size={12} variant="solid" className="text-success" />
+                      <Icon
+                        name="LockClosedIcon"
+                        size={12}
+                        variant="solid"
+                        className="text-success"
+                      />
                       <span className="text-xs font-semibold text-success">SSL Secure</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">End-to-end encryption</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      End-to-end encryption
+                    </p>
                   </div>
 
                   {/* PCI-DSS - Card Methods Only */}
@@ -1494,10 +1500,17 @@ function BuyVouchersContent() {
                     selectedPaymentMethod === 'payfast') && (
                     <div className="rounded-lg border border-primary/20 bg-primary/5 px-2 py-2 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <Icon name="ShieldCheckIcon" size={12} variant="solid" className="text-primary" />
+                        <Icon
+                          name="ShieldCheckIcon"
+                          size={12}
+                          variant="solid"
+                          className="text-primary"
+                        />
                         <span className="text-xs font-semibold text-primary">PCI-DSS Level 1</span>
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Card data protected</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Card data protected
+                      </p>
                     </div>
                   )}
 
@@ -1505,7 +1518,12 @@ function BuyVouchersContent() {
                   {selectedPaymentMethod === 'visa_secure' && (
                     <div className="rounded-lg border border-warning/20 bg-warning/5 px-2 py-2 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <Icon name="FingerPrintIcon" size={12} variant="solid" className="text-warning" />
+                        <Icon
+                          name="FingerPrintIcon"
+                          size={12}
+                          variant="solid"
+                          className="text-warning"
+                        />
                         <span className="text-xs font-semibold text-warning">3DS2 Auth</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5">OTP verification</p>
@@ -1515,7 +1533,12 @@ function BuyVouchersContent() {
                   {/* FNB Acquiring - All Methods */}
                   <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <Icon name="BuildingLibraryIcon" size={12} variant="solid" className="text-foreground" />
+                      <Icon
+                        name="BuildingLibraryIcon"
+                        size={12}
+                        variant="solid"
+                        className="text-foreground"
+                      />
                       <span className="text-xs font-semibold text-foreground">FNB Acquiring</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">BankServ settlement</p>
@@ -1524,7 +1547,12 @@ function BuyVouchersContent() {
                   {/* PASA Compliant - All Methods */}
                   <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <Icon name="DocumentCheckIcon" size={12} variant="solid" className="text-foreground" />
+                      <Icon
+                        name="DocumentCheckIcon"
+                        size={12}
+                        variant="solid"
+                        className="text-foreground"
+                      />
                       <span className="text-xs font-semibold text-foreground">PASA Compliant</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">5-year audit trail</p>
@@ -1533,17 +1561,28 @@ function BuyVouchersContent() {
                   {/* POPIA Compliant - All Methods */}
                   <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <Icon name="ShieldExclamationIcon" size={12} variant="solid" className="text-foreground" />
+                      <Icon
+                        name="ShieldExclamationIcon"
+                        size={12}
+                        variant="solid"
+                        className="text-foreground"
+                      />
                       <span className="text-xs font-semibold text-foreground">POPIA Secure</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">Data protection</p>
                   </div>
 
                   {/* USSD Specific - Offline Capability */}
-                  {(selectedPaymentMethod === 'ussd' || selectedPaymentMethod === 'cash_voucher') && (
+                  {(selectedPaymentMethod === 'ussd' ||
+                    selectedPaymentMethod === 'cash_voucher') && (
                     <div className="rounded-lg border border-success/20 bg-success/5 px-2 py-2 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <Icon name="SignalIcon" size={12} variant="solid" className="text-success" />
+                        <Icon
+                          name="SignalIcon"
+                          size={12}
+                          variant="solid"
+                          className="text-success"
+                        />
                         <span className="text-xs font-semibold text-success">Offline Capable</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5">No internet needed</p>
@@ -1557,7 +1596,9 @@ function BuyVouchersContent() {
                         <Icon name="BoltIcon" size={12} variant="solid" className="text-success" />
                         <span className="text-xs font-semibold text-success">Instant</span>
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Real-time settlement</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Real-time settlement
+                      </p>
                     </div>
                   )}
                 </div>
@@ -1566,9 +1607,10 @@ function BuyVouchersContent() {
               <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
                 <p className="text-xs font-semibold text-primary mb-1">🔒 Server-Side Security</p>
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  All payment processing, billing engine updates, and BankServ settlement instructions are executed server-side only. 
-                  Card details, banking credentials, and provider secrets never touch your browser. 
-                  PASA-compliant audit trail maintained for 5 years.
+                  All payment processing, billing engine updates, and BankServ settlement
+                  instructions are executed server-side only. Card details, banking credentials, and
+                  provider secrets never touch your browser. PASA-compliant audit trail maintained
+                  for 5 years.
                 </p>
               </div>
             </div>

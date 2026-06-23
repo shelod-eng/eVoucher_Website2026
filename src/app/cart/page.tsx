@@ -108,8 +108,9 @@ export default function CartPage() {
                         <div className="text-sm text-muted-foreground space-y-1 mt-2">
                           <p>Face Value: R{item.faceValue.toFixed(2)}</p>
                           <p className="text-success">
-                            Your Savings ({((item.consumerBenefitAmount / item.faceValue) * 100).toFixed(1)}%): 
-                            -R{item.consumerBenefitAmount.toFixed(2)}
+                            Your Savings (
+                            {((item.consumerBenefitAmount / item.faceValue) * 100).toFixed(1)}%): -R
+                            {item.consumerBenefitAmount.toFixed(2)}
                           </p>
                           <p className="text-primary font-semibold">
                             You Pay: R{item.consumerPrice.toFixed(2)}

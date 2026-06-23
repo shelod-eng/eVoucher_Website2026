@@ -41,7 +41,9 @@ interface BankServACKResponse {
  * Format amount for BankServ (cents, no decimal)
  */
 function formatBankServAmount(amount: number): string {
-  return Math.round(amount * 100).toString().padStart(11, '0');
+  return Math.round(amount * 100)
+    .toString()
+    .padStart(11, '0');
 }
 
 /**

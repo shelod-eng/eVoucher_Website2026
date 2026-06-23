@@ -2,7 +2,7 @@
  * Daily Settlement Batch Cron Job
  * Route: GET /api/cron/settlement
  * Runs daily at 23:00 to create settlement batches and submit to BankServ
- * 
+ *
  * Vercel Cron: Add to vercel.json:
  * {
  *   "crons": [{
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     // 4. In production: Submit file to BankServ SFTP/API
     // For now: Log success and return file reference
-    
+
     return NextResponse.json({
       success: true,
       message: 'Settlement batch created and submitted',

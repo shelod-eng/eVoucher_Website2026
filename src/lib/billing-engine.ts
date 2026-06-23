@@ -13,7 +13,7 @@ interface TransactionContext {
   productId?: string;
   voucherCode?: string;
   voucherId?: string;
-  
+
   // Pricing breakdown
   faceValue: number;
   totalDiscountPct: number;
@@ -24,20 +24,20 @@ interface TransactionContext {
   platformFeeAmount: number;
   consumerPaidAmount: number;
   merchantReceivableAmount: number;
-  
+
   // Payment details
   paymentMethod: string;
   paymentProvider?: string;
   paymentProviderReference?: string;
   cardLastFour?: string;
   cardBrand?: string;
-  
+
   // PASA compliance
   pasaEmail: string;
   pasaPhone: string;
   ipAddress?: string;
   userAgent?: string;
-  
+
   // Status
   status: 'pending' | 'completed' | 'failed';
 }
@@ -67,7 +67,7 @@ export async function recordBillingTransaction(
         product_id: context.productId,
         voucher_code: context.voucherCode,
         voucher_id: context.voucherId,
-        
+
         // Pricing
         face_value: context.faceValue,
         total_discount_pct: context.totalDiscountPct,
@@ -78,26 +78,26 @@ export async function recordBillingTransaction(
         platform_fee_amount: context.platformFeeAmount,
         consumer_paid_amount: context.consumerPaidAmount,
         merchant_receivable_amount: context.merchantReceivableAmount,
-        
+
         // Payment
         payment_method: context.paymentMethod,
         payment_provider: context.paymentProvider,
         payment_provider_reference: context.paymentProviderReference,
         card_last_four: context.cardLastFour,
         card_brand: context.cardBrand,
-        
+
         // PASA
         pasa_email: context.pasaEmail,
         pasa_phone: context.pasaPhone,
         pasa_consent_timestamp: now,
         ip_address: context.ipAddress,
         user_agent: context.userAgent,
-        
+
         // BankServ
         bankserv_ack_status: context.status === 'completed' ? 'PENDING' : null,
         settlement_status: context.status === 'completed' ? 'queued' : null,
         settlement_date: context.status === 'completed' ? settlementDateStr : null,
-        
+
         // Status
         status: context.status,
         completed_at: context.status === 'completed' ? now : null,
@@ -128,15 +128,20 @@ export async function recordBillingTransaction(
     // 3. Insert into platform_revenue (if completed)
     if (context.status === 'completed') {
       const revenueMonth = now.split('T')[0].substring(0, 7) + '-01'; // YYYY-MM-01
-      
+
       const { error: revenueError } = await supabase.from('platform_revenue').insert({
         transaction_id: transaction.id,
         platform_fee_amount: context.platformFeeAmount,
         merchant_id: context.merchantId,
         revenue_month: revenueMonth,
         payment_method: context.paymentMethod,
-        payment_processing_cost: calculateProcessingCost(context.paymentMethod, context.consumerPaidAmount),
-        net_revenue: context.platformFeeAmount - calculateProcessingCost(context.paymentMethod, context.consumerPaidAmount),
+        payment_processing_cost: calculateProcessingCost(
+          context.paymentMethod,
+          context.consumerPaidAmount
+        ),
+        net_revenue:
+          context.platformFeeAmount -
+          calculateProcessingCost(context.paymentMethod, context.consumerPaidAmount),
       });
 
       if (revenueError) {
@@ -231,10 +236,10 @@ export async function clearUserCart(userId: string): Promise<void> {
   // In a real implementation, this would clear server-side cart if we had one
   // For now, we rely on frontend localStorage clearing
   // But this function ensures backend can trigger it if needed
-  
+
   // Future: If we implement server-side cart storage:
   // await supabase.from('cart_items').delete().eq('user_id', userId);
-  
+
   console.log(`[BillingEngine] Cart cleared for user ${userId}`);
 }
 

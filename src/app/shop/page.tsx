@@ -711,21 +711,42 @@ export default function ShopPage() {
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Total Discount ({Number(product.total_discount_pct).toFixed(1)}%)</span>
+                          <span className="text-muted-foreground">
+                            Total Discount ({Number(product.total_discount_pct).toFixed(1)}%)
+                          </span>
                           <span className="font-headline font-semibold text-success">
-                            -R{(Number(product.face_value) * (Number(product.total_discount_pct) / 100)).toFixed(2)}
+                            -R
+                            {(
+                              Number(product.face_value) *
+                              (Number(product.total_discount_pct) / 100)
+                            ).toFixed(2)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between pl-3">
-                          <span className="text-xs text-muted-foreground">↳ Your Savings ({Number(product.consumer_benefit_pct).toFixed(1)}%)</span>
+                          <span className="text-xs text-muted-foreground">
+                            ↳ Your Savings ({Number(product.consumer_benefit_pct).toFixed(1)}%)
+                          </span>
                           <span className="text-xs font-headline font-semibold text-success">
                             -R{Number(product.consumer_benefit_amount).toFixed(2)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between pl-3">
-                          <span className="text-xs text-muted-foreground">↳ Platform Fee ({(Number(product.total_discount_pct) - Number(product.consumer_benefit_pct)).toFixed(1)}%)</span>
+                          <span className="text-xs text-muted-foreground">
+                            ↳ Platform Fee (
+                            {(
+                              Number(product.total_discount_pct) -
+                              Number(product.consumer_benefit_pct)
+                            ).toFixed(1)}
+                            %)
+                          </span>
                           <span className="text-xs font-headline font-semibold text-primary">
-                            R{(Number(product.face_value) * ((Number(product.total_discount_pct) - Number(product.consumer_benefit_pct)) / 100)).toFixed(2)}
+                            R
+                            {(
+                              Number(product.face_value) *
+                              ((Number(product.total_discount_pct) -
+                                Number(product.consumer_benefit_pct)) /
+                                100)
+                            ).toFixed(2)}
                           </span>
                         </div>
                         <div className="rounded-lg bg-background border border-border px-2 py-1">
