@@ -3,7 +3,7 @@
  * Handles offline functionality, push notifications, and caching
  */
 
-const CACHE_VERSION = 'evoucher-v1';
+const CACHE_VERSION = 'evoucher-v' + Date.now(); // Auto-increment on each deploy
 const CACHE_ASSETS = [
   '/',
   '/shop',
@@ -11,27 +11,28 @@ const CACHE_ASSETS = [
   '/offline.html',
 ];
 
-// Install service worker
+// Install service worker and take control immediately
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => {
       return cache.addAll(CACHE_ASSETS);
-    })
+    }).then(() => self.skipWaiting()) // Take control immediately
   );
 });
 
-// Activate service worker
+// Activate service worker and claim clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_VERSION) {
+            console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim()) // Take control of all pages immediately
   );
 });
 

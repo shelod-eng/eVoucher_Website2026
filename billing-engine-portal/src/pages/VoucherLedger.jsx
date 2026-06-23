@@ -17,7 +17,8 @@ import {
   Banknote,
   CreditCard,
   ExternalLink,
-  Info,
+  Users,
+  Store,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -31,19 +32,15 @@ export default function VoucherLedger() {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
 
-  const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
-  const usePortalApi = dataMode === 'portal';
-
-  const { data: transactions = [], refetch } = useQuery({
-    queryKey: ['ledger-transactions'],
-    queryFn: () =>
-      usePortalApi && session?.email
-        ? listBillingEvents(session, role, { limit: 500 }).then((response) => response?.data ?? [])
-        : Promise.resolve([]),
-    enabled: usePortalApi && Boolean(session?.email),
+  const { data: eventsResponse, refetch } = useQuery({
+    queryKey: ['voucher-ledger-events'],
+    queryFn: () => listBillingEvents(session, role, { limit: 1000 }),
+    enabled: Boolean(session?.email),
     refetchInterval: 5000,
     staleTime: 2000,
   });
+
+  const events = eventsResponse?.data ?? [];
 
   const formatCurrency = (value) => {
     const num = Number(value ?? 0);
@@ -51,80 +48,95 @@ export default function VoucherLedger() {
   };
 
   const getPaymentMethod = (metadata) => {
-    return (
-      metadata?.paymentMethod ??
-      metadata?.payment_method ??
-      metadata?.method ??
-      'Card'
-    );
+    const method = metadata?.paymentMethod ?? metadata?.payment_method ?? metadata?.method ?? 'Card';
+    const methodMap = {
+      card: 'Card',
+      '3ds': '3DS Secure',
+      payfast: 'PayFast',
+      payshap: 'PayShap',
+      cash: 'Cash at Till',
+      ussd: 'USSD',
+      airtime: 'Airtime',
+      wallet: 'Wallet',
+      eft: 'EFT',
+    };
+    return methodMap[method?.toLowerCase()] ?? method;
   };
 
-  const getStatusBadge = (status, metadata) => {
-    const settlementStatus = metadata?.settlementStatus ?? metadata?.settlement_status ?? status;
+  const getStatusBadge = (event) => {
+    const metadata = event.metadata ?? {};
+    const settlementStatus = metadata.settlementStatus ?? metadata.settlement_status;
     
-    if (settlementStatus === 'settled' || status === 'completed') {
+    if (settlementStatus === 'settled' || event.event_type === 'voucher_redemption') {
       return (
-        <Badge className="bg-green-100 text-green-800 border-green-200">
-          <CheckCircle2 className="w-3 h-3 mr-1" />
+        <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3" />
           Settled
         </Badge>
       );
     }
-    if (settlementStatus === 'queued' || settlementStatus === 'pending') {
+    if (settlementStatus === 'pending' || event.event_type === 'payment_transaction') {
       return (
-        <Badge className="bg-orange-100 text-orange-800 border-orange-200">
-          <Clock className="w-3 h-3 mr-1" />
+        <Badge className="bg-orange-100 text-orange-800 border-orange-200 flex items-center gap-1">
+          <Clock className="w-3 h-3" />
           Pending
         </Badge>
       );
     }
-    if (settlementStatus === 'failed' || status === 'failed') {
+    if (settlementStatus === 'failed') {
       return (
-        <Badge className="bg-red-100 text-red-800 border-red-200">
-          <XCircle className="w-3 h-3 mr-1" />
+        <Badge className="bg-red-100 text-red-800 border-red-200 flex items-center gap-1">
+          <XCircle className="w-3 h-3" />
           Failed
         </Badge>
       );
     }
     return (
-      <Badge className="bg-gray-100 text-gray-800">
-        <Clock className="w-3 h-3 mr-1" />
+      <Badge className="bg-gray-100 text-gray-800 flex items-center gap-1">
+        <Clock className="w-3 h-3" />
         Processing
       </Badge>
     );
   };
 
   const processedTransactions = useMemo(() => {
-    return transactions.map((txn) => {
-      const metadata = txn.metadata ?? {};
-      const grossAmount = Number(txn.gross_amount ?? 0);
-      const consumerSavings = grossAmount * 0.025;
-      const merchantSettlement = grossAmount * 0.96;
-      const platformRevenue = grossAmount * 0.012;
+    return events.map((event) => {
+      const metadata = event.metadata ?? {};
+      const grossAmount = Number(event.gross_amount ?? 0);
+      const discountAmount = Number(event.total_discount_amount ?? 0);
+      
+      // 70/30 split: 70% consumer benefit, 30% platform
+      const consumerSavings = discountAmount * 0.7; // 2.5% of face value
+      const platformRevenue = discountAmount * 0.3; // 1.2% of face value
+      
+      // Merchant gets 96% of face value
+      const merchantGross = grossAmount * 0.96;
+      const bankFee = merchantGross * 0.005; // 0.5% bank fee
+      const merchantNet = merchantGross - bankFee;
 
       return {
-        id: txn.id,
-        transactionId: metadata.transactionReference ?? metadata.transaction_reference ?? txn.id?.slice(0, 12),
-        dateTime: txn.occurred_at ?? txn.created_at,
-        consumerId: txn.customer_id ?? 'N/A',
-        consumerName: metadata.customerName ?? metadata.customer_name ?? 'Unknown',
-        merchantId: txn.merchant_id ?? 'N/A',
-        merchantName: metadata.merchantName ?? metadata.merchant_name ?? 'Unknown',
+        id: event.id,
+        transactionId: metadata.transactionReference ?? metadata.transaction_reference ?? event.id?.slice(0, 12),
+        dateTime: event.occurred_at ?? event.created_at,
+        consumerId: event.customer_id ?? 'N/A',
+        consumerName: metadata.customerName ?? metadata.customer_name ?? metadata.consumerName ?? 'Unknown Consumer',
+        merchantId: event.merchant_id ?? 'N/A',
+        merchantName: metadata.merchantName ?? metadata.merchant_name ?? 'Unknown Merchant',
         paymentMethod: getPaymentMethod(metadata),
         faceValue: grossAmount,
         consumerSavings,
-        merchantSettlement,
+        merchantSettlement: merchantNet,
         platformRevenue,
-        status: txn.event_type === 'payment_transaction' ? 'completed' : 'pending',
+        status: event.event_type,
         voucherCode: metadata.voucherCode ?? metadata.voucher_code ?? 'N/A',
         settlementBatchId: metadata.settlementBatchId ?? metadata.settlement_batch_id ?? null,
         bankservReference: metadata.bankservReference ?? metadata.bankserv_reference ?? null,
         ackStatus: metadata.ackStatus ?? metadata.ack_status ?? null,
         metadata,
-        eventType: txn.event_type,
+        eventType: event.event_type,
       };
     });
-  }, [transactions]);
+  }, [events]);
 
   const filteredTransactions = useMemo(() => {
     let filtered = processedTransactions;
@@ -183,13 +195,14 @@ export default function VoucherLedger() {
       'Merchant Name',
       'Payment Method',
       'Face Value',
-      'Consumer Savings (2.5%)',
-      'Merchant Settlement (96%)',
-      'Platform Revenue (1.2%)',
+      'Consumer Savings',
+      'Merchant Settlement',
+      'Platform Revenue',
       'Status',
       'Voucher Code',
       'Settlement Batch ID',
       'BankServ Reference',
+      'ACK Status',
     ];
 
     const rows = filteredTransactions.map((t) => [
@@ -208,6 +221,7 @@ export default function VoucherLedger() {
       t.voucherCode,
       t.settlementBatchId ?? 'N/A',
       t.bankservReference ?? 'N/A',
+      t.ackStatus ?? 'N/A',
     ]);
 
     const csvContent = [headers, ...rows].map((row) => row.join(',')).join('\n');
@@ -219,28 +233,27 @@ export default function VoucherLedger() {
   };
 
   return (
-    <div className="min-h-screen bg-transparent">
-      <div className="max-w-[1600px] mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      <div className="max-w-[1800px] mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to={createPageUrl('BillingEngine')}>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
             <div>
               <h1 className="text-3xl font-bold text-white">Voucher Ledger</h1>
-              <p className="text-white/60">Real-time transaction tracking & settlement monitoring</p>
+              <p className="text-white/60">Fintech-grade transaction tracking synced with www.evoucher.co.za</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+          <div className="flex items-center gap-3">
+            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 px-4 py-2">
               Live • {totals.count} Transactions
             </Badge>
             <Button
               onClick={exportToCSV}
-              variant="outline"
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              className="bg-[#00A89D] hover:bg-[#00A89D]/90 text-white"
             >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
@@ -249,7 +262,7 @@ export default function VoucherLedger() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-[#00A89D]/20 to-[#00A89D]/10 border-[#00A89D]/30 text-white">
+          <Card className="bg-gradient-to-br from-[#00A89D]/20 to-[#00A89D]/10 border-[#00A89D]/30">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-white/80 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
@@ -262,7 +275,7 @@ export default function VoucherLedger() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 border-emerald-500/30 text-white">
+          <Card className="bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 border-emerald-500/30">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-white/80 flex items-center gap-2">
                 <Banknote className="w-4 h-4" />
@@ -271,15 +284,15 @@ export default function VoucherLedger() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-white">{formatCurrency(totals.merchantPayouts)}</p>
-              <p className="text-xs text-white/60 mt-1">Awaiting settlement batches</p>
+              <p className="text-xs text-white/60 mt-1">Net after 0.5% bank fee</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-500/20 to-purple-500/10 border-purple-500/30 text-white">
+          <Card className="bg-gradient-to-br from-purple-500/20 to-purple-500/10 border-purple-500/30">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-white/80 flex items-center gap-2">
                 <CreditCard className="w-4 h-4" />
-                Member Benefits (2.8%)
+                Member Benefits (2.5%)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -288,7 +301,7 @@ export default function VoucherLedger() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-500/20 to-blue-500/10 border-blue-500/30 text-white">
+          <Card className="bg-gradient-to-br from-blue-500/20 to-blue-500/10 border-blue-500/30">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-white/80 flex items-center gap-2">
                 <DollarSign className="w-4 h-4" />
@@ -304,16 +317,20 @@ export default function VoucherLedger() {
 
         <Card className="bg-white/5 border-white/10">
           <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="bg-white/10 border border-white/20">
-                    <TabsTrigger value="all">All Transactions</TabsTrigger>
-                    <TabsTrigger value="purchases">Purchases</TabsTrigger>
-                    <TabsTrigger value="redemptions">Redemptions</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="bg-white/10 border border-white/20">
+                  <TabsTrigger value="all" className="data-[state=active]:bg-[#00A89D] data-[state=active]:text-white">
+                    All Transactions
+                  </TabsTrigger>
+                  <TabsTrigger value="purchases" className="data-[state=active]:bg-[#00A89D] data-[state=active]:text-white">
+                    Purchases
+                  </TabsTrigger>
+                  <TabsTrigger value="redemptions" className="data-[state=active]:bg-[#00A89D] data-[state=active]:text-white">
+                    Redemptions
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
 
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -322,7 +339,7 @@ export default function VoucherLedger() {
                     placeholder="Search by ID, Merchant, Consumer..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-64 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                    className="pl-10 w-72 bg-white/10 border-white/20 text-white placeholder:text-white/40"
                   />
                 </div>
 
@@ -331,10 +348,10 @@ export default function VoucherLedger() {
                   onChange={(e) => setDateFilter(e.target.value)}
                   className="h-10 px-3 rounded-md bg-white/10 border border-white/20 text-white text-sm"
                 >
-                  <option value="all">All Time</option>
-                  <option value="24h">Last 24 Hours</option>
-                  <option value="7d">Last 7 Days</option>
-                  <option value="30d">Last 30 Days</option>
+                  <option value="all" className="bg-slate-900">All Time</option>
+                  <option value="24h" className="bg-slate-900">Last 24 Hours</option>
+                  <option value="7d" className="bg-slate-900">Last 7 Days</option>
+                  <option value="30d" className="bg-slate-900">Last 30 Days</option>
                 </select>
               </div>
             </div>
@@ -361,8 +378,12 @@ export default function VoucherLedger() {
                 <tbody className="text-white">
                   {filteredTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan="11" className="px-4 py-8 text-center text-white/60">
-                        No transactions found. Process a payment on www.evoucher.co.za to see it appear here.
+                      <td colSpan="11" className="px-4 py-12 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <CreditCard className="w-12 h-12 text-white/20" />
+                          <p className="text-white/60">No transactions found</p>
+                          <p className="text-xs text-white/40">Process a payment on www.evoucher.co.za to see it appear here within 5 seconds</p>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -382,7 +403,7 @@ export default function VoucherLedger() {
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
                             <span className="font-medium">
-                              {moment(txn.dateTime).format('MMM D, YYYY')}
+                              {moment(txn.dateTime).format('DD MMM YYYY')}
                             </span>
                             <span className="text-xs text-white/60">
                               {moment(txn.dateTime).format('HH:mm:ss')}
@@ -390,15 +411,21 @@ export default function VoucherLedger() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex flex-col">
-                            <span className="font-medium">{txn.consumerName}</span>
-                            <span className="text-xs text-white/60 font-mono">{txn.consumerId}</span>
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-white/40" />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{txn.consumerName}</span>
+                              <span className="text-xs text-white/60 font-mono">{txn.consumerId.slice(0, 8)}</span>
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex flex-col">
-                            <span className="font-medium">{txn.merchantName}</span>
-                            <span className="text-xs text-white/60 font-mono">{txn.merchantId}</span>
+                          <div className="flex items-center gap-2">
+                            <Store className="w-4 h-4 text-white/40" />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{txn.merchantName}</span>
+                              <span className="text-xs text-white/60 font-mono">{txn.merchantId.slice(0, 8)}</span>
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3">
@@ -420,9 +447,9 @@ export default function VoucherLedger() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="group relative inline-block">
-                            {getStatusBadge(txn.status, txn.metadata)}
+                            {getStatusBadge(txn)}
                             {txn.bankservReference && (
-                              <div className="absolute left-0 top-full mt-2 w-64 p-3 bg-gray-900 border border-white/20 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                              <div className="absolute left-0 top-full mt-2 w-64 p-3 bg-slate-900 border border-white/20 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                                 <div className="text-xs space-y-2">
                                   <div>
                                     <span className="text-white/60">BankServ Reference:</span>
@@ -448,26 +475,15 @@ export default function VoucherLedger() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {txn.settlementBatchId && (
-                              <Link to={createPageUrl('SettlementPayouts')}>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 px-2 text-[#00A89D] hover:bg-[#00A89D]/20"
-                                >
-                                  <ExternalLink className="w-3 h-3" />
-                                </Button>
-                              </Link>
-                            )}
+                          <Link to={createPageUrl('SettlementPayouts')}>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 px-2 text-white/60 hover:text-white hover:bg-white/10"
+                              className="text-[#00A89D] hover:bg-[#00A89D]/20"
                             >
-                              <Info className="w-3 h-3" />
+                              <ExternalLink className="w-4 h-4" />
                             </Button>
-                          </div>
+                          </Link>
                         </td>
                       </tr>
                     ))

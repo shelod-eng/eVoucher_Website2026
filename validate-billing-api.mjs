@@ -7,7 +7,7 @@
 
 const API_BASE_URL = 'https://www.evoucher.co.za';
 const ADMIN_PASSCODE = 'eVoucherAdmin2024';
-const ADMIN_EMAIL = 'mpetalebo@outlook.com';
+const ADMIN_EMAIL = 'shelod@gmail.com';
 
 const endpoints = [
   { name: 'Dashboard', path: '/api/billing/dashboard' },

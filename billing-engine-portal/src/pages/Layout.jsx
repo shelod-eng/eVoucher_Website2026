@@ -14,6 +14,7 @@ export default function Layout({ children }) {
     path.startsWith('/billingengine') ||
     path.startsWith('/settlementpayouts') ||
     path.startsWith('/transactionhistory') ||
+    path.startsWith('/voucherledger') ||
     path.startsWith('/auditlog') ||
     path.startsWith('/userroles') ||
     path.startsWith('/banklinkage') ||
@@ -133,7 +134,7 @@ export default function Layout({ children }) {
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/BillingEngine">Overview</Link>
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/BillingEngine?tab=invoices">Invoices</Link>
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/SettlementPayouts">Settlements</Link>
-              <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/TransactionHistory">Voucher Ledger</Link>
+              <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/VoucherLedger">Voucher Ledger</Link>
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/BankLinkage">Bank Linkage</Link>
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/BankServ">BankServ</Link>
               <Link className="px-3 py-1 rounded-lg hover:bg-white/10" to="/Logistics">Logistics</Link>

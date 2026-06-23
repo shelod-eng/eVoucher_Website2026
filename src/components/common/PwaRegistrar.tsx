@@ -61,9 +61,12 @@ export default function PwaRegistrar() {
     setSwState('registering');
 
     navigator.serviceWorker
-      .register('/service-worker.js')
+      .register('/service-worker.js', { updateViaCache: 'none' }) // Force bypass cache
       .then((registration) => {
         setSwState('ready');
+
+        // AGGRESSIVE: Check for updates immediately
+        registration.update();
 
         // Check for updates on every page load
         registration.addEventListener('updatefound', () => {
@@ -72,20 +75,26 @@ export default function PwaRegistrar() {
 
           installingWorker.addEventListener('statechange', () => {
             if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // A new version is available
+              // A new version is available - auto-reload for Edge
               setSwState('update-available');
+              console.log('[PWA] Update detected, auto-reloading...');
+              setTimeout(() => {
+                navigator.serviceWorker.ready.then((reg) => {
+                  reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
+                });
+              }, 1000);
             }
           });
         });
 
-        // Periodically check for updates (every hour)
+        // Check for updates every 5 minutes (aggressive for Edge)
         setInterval(
           () => {
             registration.update().catch(() => {
               // Silently ignore update check failures
             });
           },
-          60 * 60 * 1000
+          5 * 60 * 1000 // 5 minutes instead of 1 hour
         );
       })
       .catch((error) => {
