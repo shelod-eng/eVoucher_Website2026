@@ -92,7 +92,7 @@ export async function submitSettlementInstruction(
       accountNumber: instruction.merchantAccountNumber || merchantProfile.bank_account_number,
       amount: formatBankServAmount(instruction.amount),
       reference: instruction.reference.substring(0, 20),
-      beneficiaryName: merchantProfile.business_name?.substring(0, 30) || 'MERCHANT',
+      beneficiaryName: (merchantProfile as any).business_name?.substring(0, 30) || 'MERCHANT',
       settlementDate: formatBankServDate(settlementDate),
       originatorBankCode: BANKSERV_CONFIG.originatorBankCode,
       originatorAccountNumber: BANKSERV_CONFIG.originatorAccountNumber,

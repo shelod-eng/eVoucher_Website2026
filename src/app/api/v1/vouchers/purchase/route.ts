@@ -670,7 +670,7 @@ export async function POST(request: Request) {
           merchantId: merchant.id,
           customerId: user.id,
           transactionReference,
-          voucherCode,
+          voucherCode: voucherCode ?? undefined,
           grossAmount: pricing.faceValue,
           totalDiscountAmount: pricing.totalDiscountAmount,
           paymentMethod: body.paymentMethod,
