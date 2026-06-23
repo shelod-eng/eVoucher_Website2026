@@ -65,7 +65,8 @@ export async function requirePortalRole(user: User, allowedRoles: PortalRole[]) 
   if ((user as any).id === 'portal-admin-mock') {
     return { role: 'admin' as PortalRole, allowed: allowedRoles.includes('admin') };
   }
-  
+
+
   const admin = createAdminClient();
   const role = await resolvePortalRole(admin, user);
   if (!role || !allowedRoles.includes(role)) {
@@ -91,7 +92,8 @@ export async function getPortalUserFromHeaders(request: Request) {
 
   const admin = createAdminClient();
   const user = await findAuthUserByEmail(admin, email);
-  
+
+
   // For demo: if user doesn't exist but passcode is valid, create a mock user object
   if (!user) {
     return {
@@ -103,6 +105,7 @@ export async function getPortalUserFromHeaders(request: Request) {
       created_at: new Date().toISOString(),
     } as any;
   }
-  
+
+
   return user;
 }
