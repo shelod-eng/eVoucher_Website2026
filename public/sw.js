@@ -1,160 +1,240 @@
-/* eslint-disable */
-/* ==========================================================================
-   eVoucher PWA Service Worker v3
-   - Network-first for navigation (private pages never cached)
-   - Cache-first for static assets (images, fonts, JS, CSS)
-   - Never cache authenticated/private routes
-   - Automatic cache cleanup on activate
-   - Update notification via postMessage
-   ========================================================================== */
-
-const CACHE_NAME = 'evoucher-pwa-v3';
-const STATIC_CACHE = 'evoucher-static-v3';
-
-/** Pages that should NEVER be served from cache (auth required or private data).
- *  CRITICAL: If a page requires authentication or contains user-specific data,
- *  it MUST be listed here. Failure to do so means one user's session data
- *  can be served to another user from cache — a POPIA / compliance violation.
+/**
+ * eVoucher PWA Service Worker
+ * Handles offline functionality, caching, and push notifications
  */
-const PRIVATE_PATHS = [
-  '/customer/',
-  '/merchant/',
-  '/portal/',
-  '/profile',
-  '/profile/',
-  '/wallet',
-  '/wallet/',
-  '/cart',
-  '/cart/',
-  '/checkout',
-  '/checkout/',
-  '/api/',
-  '/signin',
-  '/signin/',
-  '/signup',
-  '/signup/',
-  '/consumer',
-  '/consumer/',
-  '/consumer-experience',
-  '/consumer-experience/',
-  '/buy-vouchers',
-  '/buy-vouchers/',
-  '/benefits',
-  '/benefits/',
-  '/rewards',
-  '/rewards/',
-  '/redeem',
-  '/redeem/',
-  '/shop',
-  '/shop/',
-  '/analytics',
-  '/analytics/',
-  '/reset-password',
-  '/reset-password/',
+
+const CACHE_NAME = 'evoucher-v1.0.1';
+const RUNTIME_CACHE = 'evoucher-runtime';
+
+// Assets to cache on install
+const PRECACHE_ASSETS = [
+  '/',
+  '/offline.html',
+  '/manifest.json',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
 ];
 
-/* ---- Install: pre-cache minimal shell ---- */
+// Install event - precache essential assets
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing service worker...');
+  
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) =>
-      cache.addAll([
-        '/',
-        '/index.html',
-        '/offline',
-        '/manifest.json',
-        '/icons/icon-192x192.png',
-        '/icons/icon-512x512.png',
-      ])
-    ).catch(() => {
-      // Non-critical; app works without precache
-    })
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('[SW] Precaching assets');
+        return cache.addAll(PRECACHE_ASSETS);
+      })
+      .then(() => {
+        console.log('[SW] Service worker installed');
+        return self.skipWaiting(); // Activate immediately
+      })
+      .catch((error) => {
+        console.error('[SW] Install failed:', error);
+      })
   );
-  // Activate immediately without waiting for page reloads
-  self.skipWaiting();
 });
 
-/* ---- Activate: clean old caches, claim clients ---- */
+// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  const expectedCaches = [CACHE_NAME, STATIC_CACHE];
+  console.log('[SW] Activating service worker...');
+  
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => !expectedCaches.includes(key))
-          .map((key) => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
+              console.log('[SW] Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      })
+      .then(() => {
+        console.log('[SW] Service worker activated');
+        return self.clients.claim(); // Take control immediately
+      })
   );
 });
 
-/* ---- Fetch: decide caching strategy per request ---- */
+// Fetch event - network first, cache fallback strategy
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET') return;
-
   const url = new URL(request.url);
 
-  // Only handle same-origin requests
-  if (url.origin !== self.location.origin) return;
-
-  const path = url.pathname;
-
-  // ---- Private/authenticated paths: network-only, never cache ----
-  if (PRIVATE_PATHS.some((p) => path.startsWith(p) || path === p)) {
-    // No event.respondWith — let the browser handle it naturally.
-    // This ensures Cache-Control: private, no-store headers are respected
-    // and no user-specific data is ever served from cache.
+  // Skip cross-origin requests
+  if (url.origin !== location.origin) {
     return;
   }
 
-  // ---- Static assets (images, fonts, JS, CSS): cache-first ----
-  if (
-    path.startsWith('/assets/') ||
-    path.startsWith('/_next/static/') ||
-    path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff2?|ttf|eot)$/i)
-  ) {
+  // Skip API requests (always try network for fresh data)
+  if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        const fetchPromise = fetch(request).then((response) => {
-          if (response && response.ok && response.status < 400) {
-            const copy = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+      fetch(request).catch(() => {
+        // Return error response if API fails offline
+        return new Response(
+          JSON.stringify({ error: 'Offline - API unavailable' }),
+          { 
+            status: 503, 
+            headers: { 'Content-Type': 'application/json' } 
           }
-          return response;
-        }).catch(() => cached);
-        return cached || fetchPromise;
+        );
       })
     );
     return;
   }
 
-  // ---- Navigation & other same-origin pages: network-first ----
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        // Only cache successful, non-private responses
-        if (response && response.ok && response.status < 400) {
-          const contentType = response.headers.get('Content-Type') || '';
-          // Only cache HTML pages (not API responses that slip through)
-          if (contentType.includes('text/html')) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+  // Network-first strategy for HTML pages
+  if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Cache successful responses
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
           }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache
+          return caches.match(request)
+            .then((cachedResponse) => {
+              return cachedResponse || caches.match('/offline.html');
+            });
+        })
+    );
+    return;
+  }
+
+  // Cache-first strategy for assets (images, styles, scripts)
+  event.respondWith(
+    caches.match(request)
+      .then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
         }
-        return response;
-      })
-      .catch(() => {
-        // Offline: try the cache, fall back to /
-        return caches.match(request).then(
-          (cached) => cached || caches.match('/')
-        );
+
+        return fetch(request)
+          .then((response) => {
+            // Cache successful responses
+            if (response.ok && request.method === 'GET') {
+              const responseClone = response.clone();
+              caches.open(RUNTIME_CACHE).then((cache) => {
+                cache.put(request, responseClone);
+              });
+            }
+            return response;
+          })
+          .catch((error) => {
+            console.error('[SW] Fetch failed:', error);
+            // Return offline page for navigation requests
+            if (request.mode === 'navigate') {
+              return caches.match('/offline.html');
+            }
+            throw error;
+          });
       })
   );
 });
 
-/* ---- Message handler: skip-waiting for update prompt ---- */
+// Message event - handle commands from client
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[SW] Skipping waiting...');
     self.skipWaiting();
   }
+  
+  if (event.data && event.data.type === 'CACHE_URLS') {
+    const urlsToCache = event.data.urls || [];
+    event.waitUntil(
+      caches.open(RUNTIME_CACHE).then((cache) => {
+        return cache.addAll(urlsToCache);
+      })
+    );
+  }
 });
+
+// Push notification event
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification received');
+  
+  const data = event.data?.json() || {};
+  const title = data.title || 'eVoucher';
+  const options = {
+    body: data.body || 'You have a new notification',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
+    image: data.image || null,
+    vibrate: [200, 100, 200],
+    tag: data.tag || 'evoucher-notification',
+    requireInteraction: data.requireInteraction || false,
+    data: {
+      url: data.url || '/',
+      dateOfArrival: Date.now(),
+      primaryKey: data.primaryKey || 1,
+    },
+    actions: data.actions || [
+      {
+        action: 'open',
+        title: 'Open',
+        icon: '/icons/icon-192x192.png',
+      },
+      {
+        action: 'close',
+        title: 'Close',
+        icon: '/icons/icon-192x192.png',
+      },
+    ],
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Notification click event
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked:', event.action);
+  
+  event.notification.close();
+
+  if (event.action === 'close') {
+    return;
+  }
+
+  const urlToOpen = event.notification.data.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Check if there's already a window open
+        for (const client of clientList) {
+          if (client.url === urlToOpen && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // Open new window if none found
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});
+
+// Background sync event (for future implementation)
+self.addEventListener('sync', (event) => {
+  console.log('[SW] Background sync:', event.tag);
+  
+  if (event.tag === 'sync-transactions') {
+    event.waitUntil(
+      // Implement transaction sync logic here
+      Promise.resolve()
+    );
+  }
+});
+
+console.log('[SW] Service worker loaded');

@@ -662,6 +662,35 @@ export async function POST(request: Request) {
           throw error;
         }
       }
+
+      // 🔥 Record billing event for Billing Engine dashboard
+      try {
+        const { createBillingEvent } = await import('@/lib/billing/billing-event-recorder');
+        await createBillingEvent(admin, {
+          merchantId: merchant.id,
+          customerId: user.id,
+          transactionReference,
+          voucherCode,
+          grossAmount: pricing.faceValue,
+          totalDiscountAmount: pricing.totalDiscountAmount,
+          paymentMethod: body.paymentMethod,
+          metadata: {
+            accessChannel,
+            selectedBranchId: selectedBranchContext?.id,
+            selectedBranchName:
+              selectedBranchContext?.branch_name ??
+              selectedBranchContext?.business_name ??
+              body.selectedBranchName ??
+              null,
+            consumerPrice: pricing.consumerPrice,
+            platformFee: pricing.evoucherBenefitAmount,
+            consumerBenefit: pricing.consumerBenefitAmount,
+          },
+        });
+      } catch (billingEventError: any) {
+        // Log error but don't fail transaction
+        console.error('[VoucherPurchase] Failed to create billing event:', billingEventError);
+      }
     }
 
     await writeAuditEvent(admin, {

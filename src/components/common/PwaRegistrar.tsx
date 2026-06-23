@@ -61,7 +61,7 @@ export default function PwaRegistrar() {
     setSwState('registering');
 
     navigator.serviceWorker
-      .register('/sw.js')
+      .register('/service-worker.js')
       .then((registration) => {
         setSwState('ready');
 

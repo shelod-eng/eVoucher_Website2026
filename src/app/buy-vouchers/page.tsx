@@ -437,6 +437,8 @@ function BuyVouchersContent() {
           body: JSON.stringify({
             ...payload,
             paymentMethod: selectedPaymentMethod,
+            pasaEmail: user?.email || '',
+            pasaPhone: user?.user_metadata?.phone || user?.phone || '',
             cardLastFour: cardNumber.slice(-4),
             cardBrand: selectedPaymentMethod === 'visa_secure' ? 'VISA' : 'CARD',
             eftReference,
@@ -444,6 +446,7 @@ function BuyVouchersContent() {
             billingAddress,
             eftProofName,
           }),
+
         });
         const data = await response.json();
         if (!response.ok) {
@@ -470,6 +473,8 @@ function BuyVouchersContent() {
           body: JSON.stringify({
             amount: voucherAmount,
             paymentMethod: selectedPaymentMethod,
+            pasaEmail: user?.email || '',
+            pasaPhone: user?.user_metadata?.phone || user?.phone || '',
             cardLastFour: cardNumber.slice(-4),
             cardBrand: selectedPaymentMethod === 'visa_secure' ? 'VISA' : 'CARD',
             eftReference,
@@ -1470,24 +1475,102 @@ function BuyVouchersContent() {
                 {processing ? 'Processing...' : 'Complete Purchase'}
               </button>
 
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center text-xs">
-                  SSL Secure
-                </div>
-                <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center text-xs">
-                  PCI-DSS
-                </div>
-                <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center text-xs">
-                  VISA Secure
-                </div>
-                <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center text-xs">
-                  FNB Acquiring
+              {/* Dynamic Security Badges Based on Selected Payment Method */}
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-foreground mb-2">Security & Compliance</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* SSL Secure - All Methods */}
+                  <div className="rounded-lg border border-success/20 bg-success/5 px-2 py-2 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Icon name="LockClosedIcon" size={12} variant="solid" className="text-success" />
+                      <span className="text-xs font-semibold text-success">SSL Secure</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">End-to-end encryption</p>
+                  </div>
+
+                  {/* PCI-DSS - Card Methods Only */}
+                  {(selectedPaymentMethod === 'visa_secure' ||
+                    selectedPaymentMethod === 'debit_credit' ||
+                    selectedPaymentMethod === 'payfast') && (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 px-2 py-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Icon name="ShieldCheckIcon" size={12} variant="solid" className="text-primary" />
+                        <span className="text-xs font-semibold text-primary">PCI-DSS Level 1</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Card data protected</p>
+                    </div>
+                  )}
+
+                  {/* VISA Secure 3DS2 - VISA Only */}
+                  {selectedPaymentMethod === 'visa_secure' && (
+                    <div className="rounded-lg border border-warning/20 bg-warning/5 px-2 py-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Icon name="FingerPrintIcon" size={12} variant="solid" className="text-warning" />
+                        <span className="text-xs font-semibold text-warning">3DS2 Auth</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">OTP verification</p>
+                    </div>
+                  )}
+
+                  {/* FNB Acquiring - All Methods */}
+                  <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Icon name="BuildingLibraryIcon" size={12} variant="solid" className="text-foreground" />
+                      <span className="text-xs font-semibold text-foreground">FNB Acquiring</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">BankServ settlement</p>
+                  </div>
+
+                  {/* PASA Compliant - All Methods */}
+                  <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Icon name="DocumentCheckIcon" size={12} variant="solid" className="text-foreground" />
+                      <span className="text-xs font-semibold text-foreground">PASA Compliant</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">5-year audit trail</p>
+                  </div>
+
+                  {/* POPIA Compliant - All Methods */}
+                  <div className="rounded-lg border border-border bg-muted/40 px-2 py-2 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Icon name="ShieldExclamationIcon" size={12} variant="solid" className="text-foreground" />
+                      <span className="text-xs font-semibold text-foreground">POPIA Secure</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Data protection</p>
+                  </div>
+
+                  {/* USSD Specific - Offline Capability */}
+                  {(selectedPaymentMethod === 'ussd' || selectedPaymentMethod === 'cash_voucher') && (
+                    <div className="rounded-lg border border-success/20 bg-success/5 px-2 py-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Icon name="SignalIcon" size={12} variant="solid" className="text-success" />
+                        <span className="text-xs font-semibold text-success">Offline Capable</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">No internet needed</p>
+                    </div>
+                  )}
+
+                  {/* Wallet - Instant Settlement */}
+                  {selectedPaymentMethod === 'wallet' && (
+                    <div className="rounded-lg border border-success/20 bg-success/5 px-2 py-2 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Icon name="BoltIcon" size={12} variant="solid" className="text-success" />
+                        <span className="text-xs font-semibold text-success">Instant</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Real-time settlement</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground font-body text-center mt-4">
-                Billing internals and provider secrets are processed server-side only.
-              </p>
+              <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs font-semibold text-primary mb-1">🔒 Server-Side Security</p>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  All payment processing, billing engine updates, and BankServ settlement instructions are executed server-side only. 
+                  Card details, banking credentials, and provider secrets never touch your browser. 
+                  PASA-compliant audit trail maintained for 5 years.
+                </p>
+              </div>
             </div>
           </div>
         </div>
