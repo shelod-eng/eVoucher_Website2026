@@ -571,41 +571,6 @@ export async function POST(request: Request) {
 
     if (transactionError) throw transactionError;
 
-    // 🔥 CRITICAL: Record billing event IMMEDIATELY for all transactions
-    // This ensures Billing Engine tracks ALL purchases, not just completed ones
-    try {
-      const { createBillingEvent } = await import('@/lib/billing/billing-event-recorder');
-      await createBillingEvent(admin, {
-        merchantId: merchant.id,
-        customerId: user.id,
-        transactionReference,
-        voucherCode: voucherCode ?? undefined,
-        grossAmount: pricing.faceValue,
-        totalDiscountAmount: pricing.totalDiscountAmount,
-        paymentMethod: body.paymentMethod,
-        eventType: 'payment_transaction',
-        metadata: {
-          paymentStatus,
-          accessChannel,
-          selectedBranchId: selectedBranchContext?.id,
-          selectedBranchName:
-            selectedBranchContext?.branch_name ??
-            selectedBranchContext?.business_name ??
-            body.selectedBranchName ??
-            null,
-          consumerPrice: pricing.consumerPrice,
-          platformFee: pricing.evoucherBenefitAmount,
-          consumerBenefit: pricing.consumerBenefitAmount,
-          cardBrand,
-          cardLastFour,
-        },
-      });
-      console.log('[VoucherPurchase] Billing event created:', transactionReference);
-    } catch (billingEventError: any) {
-      // Log error but don't fail transaction
-      console.error('[VoucherPurchase] Failed to create billing event:', billingEventError);
-    }
-
     if (paymentStatus === 'completed' && body.paymentMethod === 'wallet') {
       await recordWalletDebit(admin, {
         customerId: user.id,
