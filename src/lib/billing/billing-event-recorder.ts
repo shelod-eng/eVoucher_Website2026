@@ -35,12 +35,11 @@ export async function createBillingEvent(
         event_type: event.eventType || 'payment_transaction',
         merchant_id: event.merchantId,
         customer_id: event.customerId,
-        transaction_reference: event.transactionReference, // 🔥 Add as separate column
         gross_amount: event.grossAmount,
         total_discount_amount: event.totalDiscountAmount,
         occurred_at: now,
         metadata: {
-          transactionReference: event.transactionReference, // Also keep in metadata for backward compatibility
+          transactionReference: event.transactionReference,
           voucherCode: event.voucherCode,
           paymentMethod: event.paymentMethod,
           source: 'www.evoucher.co.za -> website billing',
@@ -114,7 +113,7 @@ export async function billingEventExists(
     const { data, error } = await supabase
       .from('billing_events')
       .select('id')
-      .eq('transaction_reference', transactionReference) // 🔥 Use column instead of JSONB query
+      .eq('metadata->>transactionReference', transactionReference)
       .maybeSingle();
 
     if (error) {
@@ -143,7 +142,7 @@ export async function updateBillingEventMetadata(
     const { data: existingEvent, error: fetchError } = await supabase
       .from('billing_events')
       .select('id, metadata')
-      .eq('transaction_reference', transactionReference) // 🔥 Use column instead of JSONB query
+      .eq('metadata->>transactionReference', transactionReference)
       .maybeSingle();
 
     if (fetchError || !existingEvent) {

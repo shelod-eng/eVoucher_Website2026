@@ -395,9 +395,9 @@ export async function POST(request: Request) {
       paymentMethod: body.paymentMethod,
       reference: transactionReference,
     });
-    // Force success in production until real payment gateway is integrated
-    const paymentStatus = payment.status === 'pending' ? 'pending' : 'completed';
-    const checkoutUrl = payment.status === 'pending' ? (payment.checkoutUrl ?? null) : null;
+    const devForceSuccess = process.env.NODE_ENV === 'development';
+    const paymentStatus = devForceSuccess ? 'completed' : payment.status;
+    const checkoutUrl = devForceSuccess ? null : (payment.checkoutUrl ?? null);
 
     let voucherCode: string | null = null;
     if (paymentStatus === 'completed') {
