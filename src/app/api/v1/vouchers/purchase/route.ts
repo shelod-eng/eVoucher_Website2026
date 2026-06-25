@@ -10,6 +10,7 @@ import {
 } from '@/server/services/bankserv/adaptor';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { writeAuditEvent } from '@/server/utils/audit';
+import { createBillingEvent } from '@/lib/billing/billing-event-recorder';
 import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
@@ -570,6 +571,26 @@ export async function POST(request: Request) {
     }
 
     if (transactionError) throw transactionError;
+
+    // Create billing event immediately for all transactions (regardless of status)
+    await createBillingEvent(admin, {
+      merchantId: merchant.id,
+      customerId: user.id,
+      transactionReference,
+      voucherCode: voucherCode || undefined,
+      grossAmount: pricing.faceValue,
+      totalDiscountAmount: pricing.totalDiscountAmount,
+      paymentMethod: body.paymentMethod,
+      eventType: 'payment_transaction',
+      metadata: {
+        paymentStatus,
+        consumerPrice: pricing.consumerPrice,
+        merchantReceivableAfterTotalDiscount: pricing.merchantReceivableAfterTotalDiscount,
+        merchantReceivableAfterEvoucherBenefit: pricing.merchantReceivableAfterEvoucherBenefit,
+        accessChannel,
+        selectedBranchId: selectedBranchContext?.id ?? null,
+      },
+    });
 
     if (paymentStatus === 'completed' && body.paymentMethod === 'wallet') {
       await recordWalletDebit(admin, {
