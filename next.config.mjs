@@ -62,6 +62,13 @@ const nextConfig = {
       { key: 'Vary', value: 'Cookie, Authorization' },
     ];
 
+    const billingCorsHeaders = [
+      { key: 'Access-Control-Allow-Origin', value: '*' },
+      { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, PATCH, DELETE, OPTIONS' },
+      { key: 'Access-Control-Allow-Headers', value: 'Content-Type, X-Portal-Passcode, X-Portal-User, X-Portal-Role, Authorization' },
+      { key: 'Access-Control-Max-Age', value: '86400' },
+    ];
+
     return [
       {
         source: '/customer/:path*',
@@ -90,6 +97,14 @@ const nextConfig = {
       {
         source: '/api/v1/customer/:path*',
         headers: privateNoStoreHeaders,
+      },
+      {
+        source: '/api/billing/:path*',
+        headers: billingCorsHeaders,
+      },
+      {
+        source: '/api/v1/admin/:path*',
+        headers: billingCorsHeaders,
       },
     ];
   },
