@@ -8,7 +8,8 @@ export const revalidate = 0;
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Portal-Passcode, X-Portal-User, X-Portal-Role, Authorization',
+  'Access-Control-Allow-Headers':
+    'Content-Type, X-Portal-Passcode, X-Portal-User, X-Portal-Role, Authorization',
 };
 
 export async function OPTIONS() {
