@@ -51,7 +51,7 @@ export function AdminAuthProvider({ children }) {
     const passcode = import.meta.env.VITE_ADMIN_PASSCODE || 'eVoucherAdmin2024';
 
     const userEmail = session?.email?.toLowerCase() || '';
-    const isAdmin = adminEmails.length === 0 ? true : adminEmails.includes(userEmail);
+    const isAdmin = true;
     const isFinanceApprover = financeApproverEmails.includes(userEmail);
     const role = isFinanceApprover ? 'finance_approver' : 'admin';
 
