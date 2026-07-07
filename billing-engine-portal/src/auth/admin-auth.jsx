@@ -36,7 +36,7 @@ export function AdminAuthProvider({ children }) {
   }, []);
 
   const value = useMemo(() => {
-    const adminEmailsRaw = import.meta.env.VITE_ADMIN_EMAILS || 'shelod@gmail.com,mpetalebo@outlook.com';
+    const adminEmailsRaw = import.meta.env.VITE_ADMIN_EMAILS || '';
     const adminEmails = adminEmailsRaw
       .split(',')
       .map((s) => s.trim().toLowerCase())
