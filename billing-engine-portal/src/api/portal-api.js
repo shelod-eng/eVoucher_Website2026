@@ -1,4 +1,4 @@
-const API_BASE = (import.meta.env.VITE_PORTAL_API_BASE_URL || '').replace(/\/$/, '');
+const API_BASE = (import.meta.env.VITE_PORTAL_API_BASE_URL || 'https://www.evoucher.co.za').replace(/\/$/, '');
 
 function buildUrl(path) {
   if (!API_BASE) return path;

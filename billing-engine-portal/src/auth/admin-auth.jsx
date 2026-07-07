@@ -36,19 +36,19 @@ export function AdminAuthProvider({ children }) {
   }, []);
 
   const value = useMemo(() => {
-    const adminEmailsRaw = import.meta.env.VITE_ADMIN_EMAILS || '';
+    const adminEmailsRaw = import.meta.env.VITE_ADMIN_EMAILS || 'shelod@gmail.com,mpetalebo@outlook.com';
     const adminEmails = adminEmailsRaw
       .split(',')
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean);
 
-    const financeEmailsRaw = import.meta.env.VITE_FINANCE_APPROVER_EMAILS || '';
+    const financeEmailsRaw = import.meta.env.VITE_FINANCE_APPROVER_EMAILS || 'mpetalebo@outlook.com';
     const financeApproverEmails = financeEmailsRaw
       .split(',')
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean);
 
-    const passcode = import.meta.env.VITE_ADMIN_PASSCODE || '';
+    const passcode = import.meta.env.VITE_ADMIN_PASSCODE || 'eVoucherAdmin2024';
 
     const userEmail = session?.email?.toLowerCase() || '';
     const isAdmin = adminEmails.length === 0 ? true : adminEmails.includes(userEmail);
