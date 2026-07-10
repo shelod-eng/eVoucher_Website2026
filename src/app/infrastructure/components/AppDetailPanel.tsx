@@ -104,10 +104,7 @@ export default function AppDetailPanel({
             </p>
             <div className="grid grid-cols-2 gap-3">
               {app.footerMeta.map((meta) => (
-                <div
-                  key={meta.label}
-                  className={`rounded-lg border px-3 py-2 ${credBg}`}
-                >
+                <div key={meta.label} className={`rounded-lg border px-3 py-2 ${credBg}`}>
                   <p className={`text-xs ${textMuted}`}>{meta.label}</p>
                   <p className={`text-sm font-medium ${textMain}`}>{meta.value}</p>
                 </div>

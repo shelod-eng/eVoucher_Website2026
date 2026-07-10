@@ -45,7 +45,9 @@ function PlannedBadge() {
 function AsciiBlock({ children }: { children: string }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-indigo-500/15 bg-[#04080e] p-4">
-      <pre className="font-accent text-xs leading-relaxed text-cyan-300/90 whitespace-pre">{children}</pre>
+      <pre className="font-accent text-xs leading-relaxed text-cyan-300/90 whitespace-pre">
+        {children}
+      </pre>
     </div>
   );
 }
@@ -93,7 +95,11 @@ export default function ArchitectureTab() {
         </a>
       </div>
 
-      {view === 'production' ? <ProductionView /> : <SpecView section={specSection} onSectionChange={setSpecSection} />}
+      {view === 'production' ? (
+        <ProductionView />
+      ) : (
+        <SpecView section={specSection} onSectionChange={setSpecSection} />
+      )}
     </div>
   );
 }
@@ -102,14 +108,18 @@ function ProductionView() {
   return (
     <div className="space-y-6 animate-fade-in">
       <p className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-slate-300">
-        This view reflects the <strong className="text-cyan-400">live 2026 stack</strong> as deployed on Vercel + Supabase,
-        not the generic December 2025 specification document.
+        This view reflects the <strong className="text-cyan-400">live 2026 stack</strong> as
+        deployed on Vercel + Supabase, not the generic December 2025 specification document.
       </p>
 
       <div className="rounded-2xl border border-indigo-500/15 bg-[#0b132b] p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-white">System Architecture Diagram — January 2026</h3>
-          <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-400">VERIFIED</span>
+          <h3 className="text-base font-semibold text-white">
+            System Architecture Diagram — January 2026
+          </h3>
+          <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-400">
+            VERIFIED
+          </span>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -194,17 +204,47 @@ function ProductionView() {
       <ArchPanel title="Revenue Split — Per R100 Voucher Purchase">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {[
-            { pct: '96%', label: 'Merchant Payout', sub: 'R96.00 gross → R95.52 net after 0.5% bank fee', border: 'rgba(16,185,129,0.25)', bg: 'rgba(16,185,129,0.08)', accent: '#10b981' },
-            { pct: '2.8%', label: 'Member Benefit', sub: 'R2.80 credited to consumer wallet', border: 'rgba(139,92,246,0.25)', bg: 'rgba(139,92,246,0.08)', accent: '#8b5cf6' },
-            { pct: '1.2%', label: 'Platform Revenue', sub: 'R1.20 retained by eVoucher platform', border: 'rgba(6,182,212,0.25)', bg: 'rgba(6,182,212,0.08)', accent: '#06b6d4' },
-            { pct: 'T+2', label: 'Settlement Cycle', sub: 'Merchants paid within 2 business days via BankServ ACH', border: 'rgba(245,158,11,0.25)', bg: 'rgba(245,158,11,0.08)', accent: '#f59e0b' },
+            {
+              pct: '96%',
+              label: 'Merchant Payout',
+              sub: 'R96.00 gross → R95.52 net after 0.5% bank fee',
+              border: 'rgba(16,185,129,0.25)',
+              bg: 'rgba(16,185,129,0.08)',
+              accent: '#10b981',
+            },
+            {
+              pct: '2.8%',
+              label: 'Member Benefit',
+              sub: 'R2.80 credited to consumer wallet',
+              border: 'rgba(139,92,246,0.25)',
+              bg: 'rgba(139,92,246,0.08)',
+              accent: '#8b5cf6',
+            },
+            {
+              pct: '1.2%',
+              label: 'Platform Revenue',
+              sub: 'R1.20 retained by eVoucher platform',
+              border: 'rgba(6,182,212,0.25)',
+              bg: 'rgba(6,182,212,0.08)',
+              accent: '#06b6d4',
+            },
+            {
+              pct: 'T+2',
+              label: 'Settlement Cycle',
+              sub: 'Merchants paid within 2 business days via BankServ ACH',
+              border: 'rgba(245,158,11,0.25)',
+              bg: 'rgba(245,158,11,0.08)',
+              accent: '#f59e0b',
+            },
           ].map((item) => (
             <div
               key={item.label}
               className="rounded-xl border p-5 text-center"
               style={{ borderColor: item.border, backgroundColor: item.bg }}
             >
-              <div className="text-2xl font-bold" style={{ color: item.accent }}>{item.pct}</div>
+              <div className="text-2xl font-bold" style={{ color: item.accent }}>
+                {item.pct}
+              </div>
               <div className="mt-1 text-sm font-medium text-white">{item.label}</div>
               <div className="mt-1 text-xs text-slate-400">{item.sub}</div>
             </div>
@@ -214,12 +254,31 @@ function ProductionView() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {[
-          { title: 'Vercel Global CDN', text: 'Hosts the Next.js website, billing portal, and admin portal. Serverless API routes handle all payment and voucher logic.', color: 'border-l-violet-500' },
-          { title: 'Supabase (PostgreSQL + Auth + Storage)', text: 'Central data store with RLS on all sensitive tables. Supabase Auth handles JWT tokens for admin, merchant and consumer roles.', color: 'border-l-cyan-500' },
-          { title: 'BankServ Africa (ISO 20022)', text: 'ACH/NAEDO file submissions via FNB Sponsor Bank. ACK/NCK confirmations tracked in the billing portal per batch.', color: 'border-l-emerald-500' },
-          { title: 'Full Architecture PDF', text: 'Download the signed December 2025 specification document for DTI and formal architecture reviews.', color: 'border-l-amber-500' },
+          {
+            title: 'Vercel Global CDN',
+            text: 'Hosts the Next.js website, billing portal, and admin portal. Serverless API routes handle all payment and voucher logic.',
+            color: 'border-l-violet-500',
+          },
+          {
+            title: 'Supabase (PostgreSQL + Auth + Storage)',
+            text: 'Central data store with RLS on all sensitive tables. Supabase Auth handles JWT tokens for admin, merchant and consumer roles.',
+            color: 'border-l-cyan-500',
+          },
+          {
+            title: 'BankServ Africa (ISO 20022)',
+            text: 'ACH/NAEDO file submissions via FNB Sponsor Bank. ACK/NCK confirmations tracked in the billing portal per batch.',
+            color: 'border-l-emerald-500',
+          },
+          {
+            title: 'Full Architecture PDF',
+            text: 'Download the signed December 2025 specification document for DTI and formal architecture reviews.',
+            color: 'border-l-amber-500',
+          },
         ].map((note) => (
-          <div key={note.title} className={`rounded-xl border border-indigo-500/15 border-l-4 bg-[#0b132b] p-4 ${note.color}`}>
+          <div
+            key={note.title}
+            className={`rounded-xl border border-indigo-500/15 border-l-4 bg-[#0b132b] p-4 ${note.color}`}
+          >
             <h5 className="text-sm font-semibold text-white">{note.title}</h5>
             <p className="mt-1 text-sm text-slate-400">{note.text}</p>
           </div>
@@ -248,8 +307,9 @@ function SpecView({
   return (
     <div className="animate-fade-in">
       <p className="mb-4 rounded-lg border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-sm text-slate-300">
-        Mirrors the <strong className="text-violet-400">System Architecture - 2026.pdf</strong> specification.
-        Items marked <span className="text-amber-400 font-semibold">Planned</span> are in the signed spec but not yet in production.
+        Mirrors the <strong className="text-violet-400">System Architecture - 2026.pdf</strong>{' '}
+        specification. Items marked <span className="text-amber-400 font-semibold">Planned</span>{' '}
+        are in the signed spec but not yet in production.
       </p>
 
       <div className="mb-6 flex flex-wrap gap-2">
@@ -298,7 +358,10 @@ function SpecOverview() {
             { icon: MessageSquare, label: 'USSD Interface', sub: '*120*384#' },
             { icon: Store, label: 'Merchant POS', sub: 'QR Scanner' },
           ].map(({ icon: Icon, label, sub }) => (
-            <div key={label} className="rounded-lg border border-blue-500/15 bg-[#060b13] p-3 text-center">
+            <div
+              key={label}
+              className="rounded-lg border border-blue-500/15 bg-[#060b13] p-3 text-center"
+            >
               <Icon className="mx-auto mb-1 h-5 w-5 text-blue-400" />
               <p className="text-xs font-medium text-white">{label}</p>
               <p className="text-[10px] text-slate-500">{sub}</p>
@@ -307,7 +370,9 @@ function SpecOverview() {
         </div>
       </div>
 
-      <div className="flex justify-center"><ArrowDown className="h-5 w-5 text-slate-600" /></div>
+      <div className="flex justify-center">
+        <ArrowDown className="h-5 w-5 text-slate-600" />
+      </div>
 
       <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
         <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-emerald-300">
@@ -321,17 +386,26 @@ function SpecOverview() {
             { icon: Store, label: 'Merchant API', sub: 'Settlements' },
             { icon: Shield, label: 'Fraud Detection', sub: 'ML-based', planned: true },
           ].map(({ icon: Icon, label, sub, planned }) => (
-            <div key={label} className="rounded-lg border border-emerald-500/15 bg-[#060b13] p-3 text-center">
+            <div
+              key={label}
+              className="rounded-lg border border-emerald-500/15 bg-[#060b13] p-3 text-center"
+            >
               <Icon className="mx-auto mb-1 h-5 w-5 text-emerald-400" />
               <p className="text-xs font-medium text-white">{label}</p>
               <p className="text-[10px] text-slate-500">{sub}</p>
-              {planned && <div className="mt-1"><PlannedBadge /></div>}
+              {planned && (
+                <div className="mt-1">
+                  <PlannedBadge />
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      <div className="flex justify-center"><ArrowDown className="h-5 w-5 text-slate-600" /></div>
+      <div className="flex justify-center">
+        <ArrowDown className="h-5 w-5 text-slate-600" />
+      </div>
 
       <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
         <h4 className="mb-3 flex items-center gap-2 text-sm font-bold text-violet-300">
@@ -344,11 +418,18 @@ function SpecOverview() {
             { icon: Lock, label: 'Vault', sub: 'Secrets Mgmt', planned: true },
             { icon: BarChart3, label: 'Analytics DW', sub: 'Reporting', planned: true },
           ].map(({ icon: Icon, label, sub, planned }) => (
-            <div key={label} className="rounded-lg border border-violet-500/15 bg-[#060b13] p-3 text-center">
+            <div
+              key={label}
+              className="rounded-lg border border-violet-500/15 bg-[#060b13] p-3 text-center"
+            >
               <Icon className="mx-auto mb-1 h-5 w-5 text-violet-400" />
               <p className="text-xs font-medium text-white">{label}</p>
               <p className="text-[10px] text-slate-500">{sub}</p>
-              {planned && <div className="mt-1"><PlannedBadge /></div>}
+              {planned && (
+                <div className="mt-1">
+                  <PlannedBadge />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -401,7 +482,10 @@ function SpecTechStack() {
           <h3 className="mb-3 text-sm font-bold text-white">{col.title}</h3>
           <div className="space-y-2">
             {col.items.map((item) => (
-              <div key={item.name} className="rounded-lg border border-indigo-500/10 bg-[#060b13] p-3">
+              <div
+                key={item.name}
+                className="rounded-lg border border-indigo-500/10 bg-[#060b13] p-3"
+              >
                 <p className="text-sm font-medium text-white">
                   {item.name}
                   {'planned' in item && item.planned && <PlannedBadge />}
@@ -470,14 +554,71 @@ function FlowSteps({ steps }: { steps: { step: string; label: string; sub: strin
 
 function SpecERD() {
   const entities = [
-    { name: 'ConsumerProfile', color: 'blue', fields: ['id (PK)', 'userId, email, fullName', 'phone, walletBalance', 'rewardsTier, rewardsPoints'] },
-    { name: 'Merchant', color: 'emerald', fields: ['id (PK)', 'name, logo, category', 'email, status', 'bankName, accountNumber'] },
-    { name: 'VoucherProduct', color: 'amber', fields: ['id (PK)', 'merchantId (FK)', 'faceValue, consumerPrice', 'merchantPayout, platformMargin'] },
-    { name: 'VoucherInstance', color: 'violet', fields: ['id (PK)', 'voucherProductId (FK)', 'consumerId (FK)', 'voucherCode, remainingBalance'] },
-    { name: 'Transaction', color: 'red', fields: ['id (PK)', 'type, amount, status', 'userId, merchantId (FK)', 'paymentMethod, reference'] },
-    { name: 'LedgerEntry', color: 'indigo', fields: ['id (PK)', 'entryType, amount', 'transactionId (FK)', 'merchantId (FK)'] },
-    { name: 'WalletTransaction', color: 'teal', fields: ['id (PK)', 'userId (FK)', 'type, amount', 'balanceAfter, status'] },
-    { name: 'Referral', color: 'pink', fields: ['id (PK)', 'referrerUserId (FK)', 'referredUserId (FK)', 'referralCode, bonusAmount'] },
+    {
+      name: 'ConsumerProfile',
+      color: 'blue',
+      fields: [
+        'id (PK)',
+        'userId, email, fullName',
+        'phone, walletBalance',
+        'rewardsTier, rewardsPoints',
+      ],
+    },
+    {
+      name: 'Merchant',
+      color: 'emerald',
+      fields: ['id (PK)', 'name, logo, category', 'email, status', 'bankName, accountNumber'],
+    },
+    {
+      name: 'VoucherProduct',
+      color: 'amber',
+      fields: [
+        'id (PK)',
+        'merchantId (FK)',
+        'faceValue, consumerPrice',
+        'merchantPayout, platformMargin',
+      ],
+    },
+    {
+      name: 'VoucherInstance',
+      color: 'violet',
+      fields: [
+        'id (PK)',
+        'voucherProductId (FK)',
+        'consumerId (FK)',
+        'voucherCode, remainingBalance',
+      ],
+    },
+    {
+      name: 'Transaction',
+      color: 'red',
+      fields: [
+        'id (PK)',
+        'type, amount, status',
+        'userId, merchantId (FK)',
+        'paymentMethod, reference',
+      ],
+    },
+    {
+      name: 'LedgerEntry',
+      color: 'indigo',
+      fields: ['id (PK)', 'entryType, amount', 'transactionId (FK)', 'merchantId (FK)'],
+    },
+    {
+      name: 'WalletTransaction',
+      color: 'teal',
+      fields: ['id (PK)', 'userId (FK)', 'type, amount', 'balanceAfter, status'],
+    },
+    {
+      name: 'Referral',
+      color: 'pink',
+      fields: [
+        'id (PK)',
+        'referrerUserId (FK)',
+        'referredUserId (FK)',
+        'referralCode, bonusAmount',
+      ],
+    },
   ];
 
   return (
@@ -488,7 +629,9 @@ function SpecERD() {
             <h4 className="text-sm font-bold text-cyan-400">{e.name}</h4>
             <div className="mt-2 space-y-0.5">
               {e.fields.map((f) => (
-                <p key={f} className="font-accent text-[10px] text-slate-400">{f}</p>
+                <p key={f} className="font-accent text-[10px] text-slate-400">
+                  {f}
+                </p>
               ))}
             </div>
           </div>
@@ -525,7 +668,10 @@ function SpecSecurity() {
         <h3 className="mb-4 text-sm font-bold text-white">Security Layers</h3>
         <div className="space-y-2">
           {layers.map((l) => (
-            <div key={l.n} className="flex items-start gap-3 rounded-lg border border-indigo-500/10 bg-[#060b13] p-3">
+            <div
+              key={l.n}
+              className="flex items-start gap-3 rounded-lg border border-indigo-500/10 bg-[#060b13] p-3"
+            >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-red-500/15 text-sm font-bold text-red-400">
                 {l.n}
               </div>
@@ -541,7 +687,10 @@ function SpecSecurity() {
         <h3 className="mb-4 text-sm font-bold text-white">Compliance Framework</h3>
         <div className="grid grid-cols-2 gap-2">
           {compliance.map((c) => (
-            <div key={c} className="rounded-lg border border-emerald-500/15 bg-[#060b13] p-3 text-center">
+            <div
+              key={c}
+              className="rounded-lg border border-emerald-500/15 bg-[#060b13] p-3 text-center"
+            >
               <p className="text-sm font-bold text-emerald-400">{c}</p>
             </div>
           ))}
@@ -563,7 +712,12 @@ function SpecIntegrations() {
       title: 'Communication',
       icon: MessageSquare,
       color: 'text-emerald-400',
-      items: ['USSD Gateway (*120*384#)', 'SMS API (Clickatell)', 'Push Notifications', 'Email (SendGrid)'],
+      items: [
+        'USSD Gateway (*120*384#)',
+        'SMS API (Clickatell)',
+        'Push Notifications',
+        'Email (SendGrid)',
+      ],
     },
     {
       title: 'Third Party',

@@ -96,8 +96,8 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
           <div className="max-w-xl">
             <h2 className="text-lg font-semibold text-white">Share Dashboard with Stakeholders</h2>
             <p className="mt-2 text-sm text-slate-400">
-              This interactive page showcases our exact system topology, database layout, backups, and live
-              URLs. Copy the email handover template or view the GitHub repository.
+              This interactive page showcases our exact system topology, database layout, backups,
+              and live URLs. Copy the email handover template or view the GitHub repository.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

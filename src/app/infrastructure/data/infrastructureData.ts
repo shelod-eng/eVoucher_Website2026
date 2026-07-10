@@ -268,35 +268,40 @@ export const DATABASE_TABLES: DatabaseTable[] = [
   {
     category: 'Auth',
     name: 'auth.users',
-    purpose: 'System-level authentication data handled directly by Supabase Auth (emails, hashed credentials, metadata).',
+    purpose:
+      'System-level authentication data handled directly by Supabase Auth (emails, hashed credentials, metadata).',
     security: 'System Protected',
     securityTone: 'accent',
   },
   {
     category: 'Auth',
     name: 'public.user_profiles',
-    purpose: 'Extended customer, merchant, and administrator profile fields (FICA details, language preference, cell numbers).',
+    purpose:
+      'Extended customer, merchant, and administrator profile fields (FICA details, language preference, cell numbers).',
     security: 'RLS Configured',
     securityTone: 'success',
   },
   {
     category: 'Auth',
     name: 'public.user_roles',
-    purpose: 'Role assignment mapping (customer, merchant, admin) which dictates portal entry access permissions.',
+    purpose:
+      'Role assignment mapping (customer, merchant, admin) which dictates portal entry access permissions.',
     security: 'Admin Write Only',
     securityTone: 'accent',
   },
   {
     category: 'Merchants',
     name: 'public.merchants',
-    purpose: 'Primary business entities representing partners (Shoprite, Pick n Pay, Boxer, Spaza shops).',
+    purpose:
+      'Primary business entities representing partners (Shoprite, Pick n Pay, Boxer, Spaza shops).',
     security: 'RLS Configured',
     securityTone: 'success',
   },
   {
     category: 'Merchants',
     name: 'public.merchant_products',
-    purpose: 'Product catalog available for vouchers, with custom base prices and platform-allocated discounts.',
+    purpose:
+      'Product catalog available for vouchers, with custom base prices and platform-allocated discounts.',
     security: 'Public Read',
     securityTone: 'success',
   },
@@ -317,42 +322,48 @@ export const DATABASE_TABLES: DatabaseTable[] = [
   {
     category: 'Vouchers',
     name: 'public.customer_vouchers',
-    purpose: 'Lifecycle tracking of generated codes (Active, Redeemed, Expired) with linked barcodes/QR content.',
+    purpose:
+      'Lifecycle tracking of generated codes (Active, Redeemed, Expired) with linked barcodes/QR content.',
     security: 'RLS Secured',
     securityTone: 'success',
   },
   {
     category: 'Vouchers',
     name: 'public.voucher_redemptions',
-    purpose: 'Audit logging of voucher redemptions, capturing till IDs, timestamps, and merchant branch profiles.',
+    purpose:
+      'Audit logging of voucher redemptions, capturing till IDs, timestamps, and merchant branch profiles.',
     security: 'Read Only Ledger',
     securityTone: 'accent',
   },
   {
     category: 'Vouchers',
     name: 'public.voucher_templates',
-    purpose: 'Design templates defining custom background colors, layouts, and branding for corporate vouchers.',
+    purpose:
+      'Design templates defining custom background colors, layouts, and branding for corporate vouchers.',
     security: 'Public Read',
     securityTone: 'success',
   },
   {
     category: 'Payments',
     name: 'public.payment_transactions',
-    purpose: 'Records all transactional purchase requests with unique transaction IDs and status tracks.',
+    purpose:
+      'Records all transactional purchase requests with unique transaction IDs and status tracks.',
     security: 'FICA Compliant',
     securityTone: 'accent',
   },
   {
     category: 'Payments',
     name: 'public.wallet_ledger',
-    purpose: 'Double-entry account bookkeeping to track deposits, usage, and refunds for customer e-wallets.',
+    purpose:
+      'Double-entry account bookkeeping to track deposits, usage, and refunds for customer e-wallets.',
     security: 'System Protected',
     securityTone: 'accent',
   },
   {
     category: 'Billing',
     name: 'public.billing_events',
-    purpose: 'Audit trail recording system actions triggering fees or settlements, feeding the billing portal.',
+    purpose:
+      'Audit trail recording system actions triggering fees or settlements, feeding the billing portal.',
     security: 'Read Only Ledger',
     securityTone: 'accent',
   },
@@ -366,7 +377,8 @@ export const DATABASE_TABLES: DatabaseTable[] = [
   {
     category: 'Settlement',
     name: 'public.settlement_transactions',
-    purpose: 'Granular accounting records mapping individual voucher payouts inside a settlement batch.',
+    purpose:
+      'Granular accounting records mapping individual voucher payouts inside a settlement batch.',
     security: 'Encrypted Vault',
     securityTone: 'accent',
   },
@@ -380,28 +392,32 @@ export const DATABASE_TABLES: DatabaseTable[] = [
   {
     category: 'System',
     name: 'public.audit_logs',
-    purpose: 'Platform security logging tracking administrative tasks, modifications, and system shutdowns.',
+    purpose:
+      'Platform security logging tracking administrative tasks, modifications, and system shutdowns.',
     security: 'WORM Ledger',
     securityTone: 'accent',
   },
   {
     category: 'System',
     name: 'public.notification_queue',
-    purpose: 'Queued alerts (SMS, Email, Push notifications) waiting to be pushed to network services.',
+    purpose:
+      'Queued alerts (SMS, Email, Push notifications) waiting to be pushed to network services.',
     security: 'RLS Configured',
     securityTone: 'success',
   },
   {
     category: 'System',
     name: 'public.system_config',
-    purpose: 'Dynamic parameters, transaction caps, service fee percentages, and system maintenance switches.',
+    purpose:
+      'Dynamic parameters, transaction caps, service fee percentages, and system maintenance switches.',
     security: 'Admin Write Only',
     securityTone: 'accent',
   },
   {
     category: 'System',
     name: 'public.subscriptions',
-    purpose: 'Manages recurring savings bundles (SASSA Grant Saver, Family Essentials) and automated split vouchers.',
+    purpose:
+      'Manages recurring savings bundles (SASSA Grant Saver, Family Essentials) and automated split vouchers.',
     security: 'RLS Secured',
     securityTone: 'success',
   },
@@ -411,7 +427,8 @@ export const CRON_JOBS: CronJob[] = [
   {
     index: '01',
     title: 'Daily System Backup (`MASTER_BACKUP.bat`)',
-    description: 'Zips source codes (Next.js, mobile app) and pulls full Supabase SQL backups (schema + tables data).',
+    description:
+      'Zips source codes (Next.js, mobile app) and pulls full Supabase SQL backups (schema + tables data).',
     schedule: '02:00 AM Daily',
     status: 'active',
     statusLabel: 'ACTIVE',
@@ -419,7 +436,8 @@ export const CRON_JOBS: CronJob[] = [
   {
     index: '02',
     title: 'Settlement Batch Compilation',
-    description: "Aggregates previous day's redemptions, computes commission margins, and formats Bankserv ACB files.",
+    description:
+      "Aggregates previous day's redemptions, computes commission margins, and formats Bankserv ACB files.",
     schedule: '09:00 AM Weekdays',
     status: 'active',
     statusLabel: 'ACTIVE',
@@ -427,7 +445,8 @@ export const CRON_JOBS: CronJob[] = [
   {
     index: '03',
     title: 'Voucher Expiry Evaluation',
-    description: "Checks database for expired vouchers, marks statuses to 'expired', and sends SMS alerts to customers.",
+    description:
+      "Checks database for expired vouchers, marks statuses to 'expired', and sends SMS alerts to customers.",
     schedule: '04:00 AM Daily',
     status: 'dev',
     statusLabel: 'INTEGRATION READY',
@@ -435,7 +454,8 @@ export const CRON_JOBS: CronJob[] = [
   {
     index: '04',
     title: 'Notification Queue Processing',
-    description: 'Pulls unsent notification rows, fires SMS via Clickatell API, emails via Resend, and marks completion logs.',
+    description:
+      'Pulls unsent notification rows, fires SMS via Clickatell API, emails via Resend, and marks completion logs.',
     schedule: 'Every 5 Minutes',
     status: 'ready',
     statusLabel: 'READY',
@@ -443,7 +463,8 @@ export const CRON_JOBS: CronJob[] = [
   {
     index: '05',
     title: 'Weekly DB Vacuum and Clean',
-    description: 'Executes SQL vacuum analyzes, clears obsolete system audit entries older than 90 days, and checks indexing.',
+    description:
+      'Executes SQL vacuum analyzes, clears obsolete system audit entries older than 90 days, and checks indexing.',
     schedule: '03:00 AM Sundays',
     status: 'planned',
     statusLabel: 'PLANNED',

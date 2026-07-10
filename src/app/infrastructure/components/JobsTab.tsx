@@ -40,23 +40,26 @@ export default function JobsTab() {
       </div>
 
       <div className="rounded-2xl border border-cyan-500/15 bg-cyan-500/5 p-6">
-        <h3 className="mb-4 text-base font-semibold text-white">Storage Retention Policy Summary</h3>
+        <h3 className="mb-4 text-base font-semibold text-white">
+          Storage Retention Policy Summary
+        </h3>
         <ul className="grid gap-3 text-sm text-slate-400">
           <li>
-            <strong className="text-slate-300">Daily incremental backups</strong> are stored in subfolders
-            under <code className="text-cyan-400">BACKUPS/</code> and retained for 7 calendar days.
+            <strong className="text-slate-300">Daily incremental backups</strong> are stored in
+            subfolders under <code className="text-cyan-400">BACKUPS/</code> and retained for 7
+            calendar days.
           </li>
           <li>
-            <strong className="text-slate-300">Weekly full dumps</strong> are moved to offsite vault containers
-            on Sundays and retained for 4 weeks.
+            <strong className="text-slate-300">Weekly full dumps</strong> are moved to offsite vault
+            containers on Sundays and retained for 4 weeks.
           </li>
           <li>
-            <strong className="text-slate-300">Monthly cold snapshots</strong> are archived securely in
-            read-only directories and retained for 3 fiscal quarters.
+            <strong className="text-slate-300">Monthly cold snapshots</strong> are archived securely
+            in read-only directories and retained for 3 fiscal quarters.
           </li>
           <li>
-            <strong className="text-slate-300">Manual schema snapshots</strong> are captured prior to major
-            migrations using the Supabase CLI workflow.
+            <strong className="text-slate-300">Manual schema snapshots</strong> are captured prior
+            to major migrations using the Supabase CLI workflow.
           </li>
         </ul>
       </div>

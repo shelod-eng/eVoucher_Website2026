@@ -14,7 +14,7 @@ export default function DatabaseTab() {
       (t) =>
         t.category.toLowerCase().includes(q) ||
         t.name.toLowerCase().includes(q) ||
-        t.purpose.toLowerCase().includes(q),
+        t.purpose.toLowerCase().includes(q)
     );
   }, [search]);
 

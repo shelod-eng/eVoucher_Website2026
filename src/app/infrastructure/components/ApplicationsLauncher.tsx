@@ -58,13 +58,12 @@ export default function ApplicationsLauncher({ onViewArchitecture }: Application
     : 'text-slate-400 hover:bg-white/5 border-transparent';
 
   return (
-    <div className={`rounded-2xl border overflow-hidden ${isLight ? 'border-slate-200' : 'border-indigo-500/12'}`}>
+    <div
+      className={`rounded-2xl border overflow-hidden ${isLight ? 'border-slate-200' : 'border-indigo-500/12'}`}
+    >
       <div className={`flex min-h-[520px] ${shellBg}`}>
         {/* Workspace sidebar */}
-        <nav
-          className={`w-56 shrink-0 border-r p-4 ${sidebarBg}`}
-          aria-label="Workspaces"
-        >
+        <nav className={`w-56 shrink-0 border-r p-4 ${sidebarBg}`} aria-label="Workspaces">
           <p className={`mb-3 px-2 text-xs font-semibold uppercase tracking-wider ${textMuted}`}>
             Workspaces
           </p>
@@ -91,7 +90,9 @@ export default function ApplicationsLauncher({ onViewArchitecture }: Application
             type="button"
             onClick={() => setIsLight((v) => !v)}
             className={`mt-6 flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-              isLight ? 'border-slate-200 text-slate-600 hover:bg-slate-50' : 'border-indigo-500/15 text-slate-400 hover:bg-white/5'
+              isLight
+                ? 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                : 'border-indigo-500/15 text-slate-400 hover:bg-white/5'
             }`}
           >
             {isLight ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
