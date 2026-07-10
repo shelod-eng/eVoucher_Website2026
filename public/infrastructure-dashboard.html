@@ -80,7 +80,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #fff;
             box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
         }
 
@@ -298,6 +301,18 @@
             margin-bottom: 10px;
             color: #fff;
         }
+
+        .card-status {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-left: 6px;
+        }
+
+        .card-status-live { color: var(--success); }
+        .card-status-auth { color: var(--accent); }
+        .card-status-dev { color: var(--warning); }
 
         .card-desc {
             font-size: 14px;
@@ -717,7 +732,7 @@
         <!-- Header -->
         <header>
             <div class="brand">
-                <div class="brand-logo">ðŸš€</div>
+                <div class="brand-logo" aria-hidden="true">EV</div>
                 <div class="brand-text">
                     <h1>eVoucher Platform</h1>
                     <p>Infrastructure & hosting Overview</p>
@@ -759,25 +774,25 @@
         <!-- Share Dashboard Section -->
         <div class="share-panel">
             <div class="share-text">
-                <h2>ðŸ“Š Share Dashboard with Stakeholders</h2>
+                <h2>Share Dashboard with Stakeholders</h2>
                 <p>This interactive page showcases our exact system topology, database layout, backups, and live URLs. You can copy the layout to your team, host it on GitHub Pages/Vercel, or send the email handover templates directly.</p>
             </div>
             <div class="share-actions">
                 <button class="btn btn-primary" onclick="openShareModal()">
-                    ðŸ“§ Copy Email Template
+                    Copy Email Template
                 </button>
                 <a href="https://github.com/shelod-eng/eVoucher_Website2026" target="_blank" class="btn btn-secondary">
-                    ðŸ™ View GitHub Repo
+                    View GitHub Repo
                 </a>
             </div>
         </div>
 
         <!-- Tabs Switcher -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab(event, 'applications')">ðŸŒ Live Applications & APIs</button>
-            <button class="tab-btn" onclick="switchTab(event, 'database')">ðŸ—„ï¸ Database Tables</button>
-            <button class="tab-btn" onclick="switchTab(event, 'jobs')">ðŸ¤– Automated Jobs & Backups</button>
-            <button class="tab-btn" onclick="switchTab(event, 'architecture')">ðŸ—ï¸ Architecture Diagram</button>
+            <button class="tab-btn active" onclick="switchTab(event, 'applications')">Live Applications &amp; APIs</button>
+            <button class="tab-btn" onclick="switchTab(event, 'database')">Database Tables</button>
+            <button class="tab-btn" onclick="switchTab(event, 'jobs')">Automated Jobs &amp; Backups</button>
+            <button class="tab-btn" onclick="switchTab(event, 'architecture')">Architecture Diagram</button>
         </div>
 
         <!-- Tab 1: Live Applications -->
@@ -786,12 +801,8 @@
                 
                 <!-- Main Website -->
                 <div class="info-card">
-                    <div class="card-header">
-                        <div class="card-icon">ðŸŒ</div>
-                        <span class="card-badge badge-live">LIVE</span>
-                    </div>
+                    <h3 class="card-title">Main Website Portal <span class="card-status card-status-live">(LIVE)</span></h3>
                     <div>
-                        <h3 class="card-title">Main Website Portal</h3>
                         <p class="card-desc">Next.js 14 consumer-facing marketplace. Purchase vouchers, manage wallets, view stores and rewards. Fully responsive & PWA enabled for low data offline caching.</p>
                     </div>
                     <div>
@@ -805,16 +816,12 @@
 
                 <!-- Admin Portal -->
                 <div class="info-card">
-                    <div class="card-header">
-                        <div class="card-icon">ðŸ”</div>
-                        <span class="card-badge badge-auth">AUTH REQUIRED</span>
-                    </div>
+                    <h3 class="card-title">Admin Command Centre <span class="card-status card-status-auth">(AUTH REQUIRED)</span></h3>
                     <div>
-                        <h3 class="card-title">Admin Command Centre</h3>
                         <p class="card-desc">Sponsor reporting, merchant onboarding approvals, real-time platform metrics, and system configuration controls. Restricts access based on Supabase admin user roles.</p>
                         <div style="margin-top: 12px; background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--text-muted);">
-                            <div style="margin-bottom: 4px;">ðŸ”‘ <strong style="color:#c4b5fd;">Login:</strong> Supabase admin email &amp; password</div>
-                            <div>ðŸ“ <strong style="color:#c4b5fd;">URL:</strong> evoucher.co.za/portal/login</div>
+                            <div style="margin-bottom: 4px;"><strong style="color:#c4b5fd;">Login:</strong> Supabase admin email &amp; password</div>
+                            <div><strong style="color:#c4b5fd;">URL:</strong> evoucher.co.za/portal/login</div>
                         </div>
                     </div>
                     <div style="margin-top: 16px;">
@@ -828,16 +835,12 @@
 
                 <!-- Billing Engine -->
                 <div class="info-card">
-                    <div class="card-header">
-                        <div class="card-icon">ðŸ’µ</div>
-                        <span class="card-badge badge-live">LIVE</span>
-                    </div>
+                    <h3 class="card-title">Billing Engine Portal <span class="card-status card-status-live">(LIVE)</span></h3>
                     <div>
-                        <h3 class="card-title">Billing Engine Portal</h3>
                         <p class="card-desc">Integrated transaction ledger, automated Bankserv ACB file generation, reconciliation triggers, and payouts tracking. Built to comply with PASA guidelines.</p>
                         <div style="margin-top: 12px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--text-muted);">
-                            <div style="margin-bottom: 4px;">ðŸ”‘ <strong style="color:#6ee7b7;">Passcode:</strong> eVoucherAdmin2024</div>
-                            <div>ðŸ“§ <strong style="color:#6ee7b7;">Email:</strong> any email address</div>
+                            <div style="margin-bottom: 4px;"><strong style="color:#6ee7b7;">Passcode:</strong> eVoucherAdmin2024</div>
+                            <div><strong style="color:#6ee7b7;">Email:</strong> any email address</div>
                         </div>
                     </div>
                     <div style="margin-top: 16px;">
@@ -851,12 +854,8 @@
 
                 <!-- Supabase Backend -->
                 <div class="info-card">
-                    <div class="card-header">
-                        <div class="card-icon">ðŸ—„ï¸</div>
-                        <span class="card-badge badge-live">LIVE</span>
-                    </div>
+                    <h3 class="card-title">Supabase Cloud Platform <span class="card-status card-status-live">(LIVE)</span></h3>
                     <div>
-                        <h3 class="card-title">Supabase Cloud Platform</h3>
                         <p class="card-desc">PostgreSQL instance, automated real-time subscriptions, Row-Level Security (RLS) policies, and token-based user authentication. Hosts storage buckets for voucher QR codes.</p>
                     </div>
                     <div>
@@ -870,12 +869,8 @@
 
                 <!-- Mobile App -->
                 <div class="info-card">
-                    <div class="card-header">
-                        <div class="card-icon">ðŸ“±</div>
-                        <span class="card-badge badge-dev">READY TO DEPLOY</span>
-                    </div>
+                    <h3 class="card-title">React Native Mobile App <span class="card-status card-status-dev">(READY TO DEPLOY)</span></h3>
                     <div>
-                        <h3 class="card-title">React Native Mobile App</h3>
                         <p class="card-desc">Expo-powered mobile companion. Features camera scanner for instant QR-code redemption, offline voucher caching, and SMS-triggered updates for rural consumers.</p>
                     </div>
                     <div>
@@ -889,12 +884,8 @@
 
                 <!-- Payment Integration -->
                 <div class="info-card">
-                    <div class="card-header">
-                        <div class="card-icon">ðŸ’³</div>
-                        <span class="card-badge badge-live">INTEGRATED</span>
-                    </div>
+                    <h3 class="card-title">South African Payment Suite <span class="card-status card-status-live">(INTEGRATED)</span></h3>
                     <div>
-                        <h3 class="card-title">South African Payment Suite</h3>
                         <p class="card-desc">Unified checkout system incorporating PayFast (cards), Ozow (instant EFT), cash payments at retail checkouts (Shoprite, Boxer), USSD codes, and airtime conversions.</p>
                     </div>
                     <div>
@@ -913,7 +904,7 @@
         <div id="database" class="tab-content">
             <div class="table-controls">
                 <div class="search-wrapper">
-                    <span class="search-icon">ðŸ”</span>
+                    <span class="search-icon" aria-hidden="true">Search</span>
                     <input type="text" class="search-input" id="tableSearch" placeholder="Search database tables..." onkeyup="filterTables()">
                 </div>
                 <div style="font-size: 14px; color: var(--text-muted);">
@@ -1134,7 +1125,7 @@
             </div>
 
             <div style="margin-top: 30px; background: rgba(6, 182, 212, 0.04); border: 1px solid var(--border); padding: 25px; border-radius: 16px;">
-                <h3 style="margin-bottom: 15px; color: #fff; font-size: 16px;">ðŸ’¾ Storage Retention Policy Summary</h3>
+                <h3 style="margin-bottom: 15px; color: #fff; font-size: 16px;">Storage Retention Policy Summary</h3>
                 <ul style="margin-left: 20px; font-size: 14px; color: var(--text-muted); display: grid; gap: 10px;">
                     <li><strong>Daily Incremental backups</strong> are stored in subfolders under <code>BACKUPS/</code> and retained for 7 calendar days.</li>
                     <li><strong>Weekly full dumps</strong> are moved to offsite vault containers on Sundays and retained for 4 weeks.</li>
@@ -1144,7 +1135,6 @@
             </div>
         </div>
 
-        <!-- Tab 4: Architecture Diagram -->
         <!-- Tab 4: Architecture Diagram -->
         <div id="architecture" class="tab-content">
 
