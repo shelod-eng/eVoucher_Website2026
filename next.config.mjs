@@ -51,6 +51,11 @@ const nextConfig = {
         destination: '/merchant/dashboard',
         permanent: false,
       },
+      {
+        source: '/infrastructure-dashboard.html',
+        destination: '/infrastructure',
+        permanent: true,
+      },
     ];
   },
 
@@ -88,6 +93,10 @@ const nextConfig = {
       },
       {
         source: '/shop',
+        headers: privateNoStoreHeaders,
+      },
+      {
+        source: '/infrastructure',
         headers: privateNoStoreHeaders,
       },
       {
