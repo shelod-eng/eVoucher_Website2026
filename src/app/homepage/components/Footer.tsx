@@ -77,7 +77,7 @@ const Footer = () => {
                 variant="solid"
                 className="text-primary"
               />
-              <span className="font-accent text-lg font-bold text-foreground">*134*2468#</span>
+              <span className="font-accent text-lg font-bold text-foreground">*120*384#</span>
             </div>
           </div>
 

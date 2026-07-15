@@ -36,7 +36,7 @@ const CTASection = ({ onJoinClick }: CTASectionProps) => {
 
             <button className="flex items-center space-x-2 px-8 py-4 bg-transparent text-white border-2 border-white rounded-lg font-headline font-semibold text-lg hover:bg-white/10 transition-all duration-300">
               <Icon name="PhoneIcon" size={24} variant="solid" />
-              <span>Use USSD: *134*3827#</span>
+              <span>Use USSD: *120*384#</span>
             </button>
           </div>
 

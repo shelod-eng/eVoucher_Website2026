@@ -10,6 +10,7 @@ import {
   Bell,
   Layers,
   Clock,
+  MessageSquare,
 } from 'lucide-react';
 
 export type WorkspaceId = 'production' | 'data-apis' | 'operations' | 'architecture';
@@ -82,6 +83,26 @@ export const PORTAL_APPS: PortalApp[] = [
       { label: 'Port', value: '4028 (Local)' },
     ],
     keywords: ['website', 'marketplace', 'consumer', 'pwa', 'next.js'],
+  },
+  {
+    id: 'ussd-console',
+    name: 'USSD Console',
+    shortLabel: 'USSD',
+    workspace: 'production',
+    status: 'live',
+    statusLabel: 'LIVE',
+    description:
+      'Website-hosted USSD simulator and PWA-accessible feature-phone journey for registration, shopping, wallet balance checks, and voucher redemption using the target shortcode *120*384#.',
+    icon: MessageSquare,
+    color: '#14b8a6',
+    colorBg: 'rgba(20, 184, 166, 0.12)',
+    launchUrl: 'https://www.evoucher.co.za/ussd-console',
+    launchLabel: 'Open USSD Console',
+    footerMeta: [
+      { label: 'Shortcode', value: '*120*384#' },
+      { label: 'Endpoint', value: '/api/v1/ussd/session' },
+    ],
+    keywords: ['ussd', 'simulator', 'pwa', 'feature phone', 'shortcode'],
   },
   {
     id: 'admin',
@@ -177,7 +198,7 @@ export const PORTAL_APPS: PortalApp[] = [
     status: 'integrated',
     statusLabel: 'INTEGRATED',
     description:
-      'Unified checkout system incorporating PayFast (cards), Ozow (instant EFT), cash payments at retail checkouts (Shoprite, Boxer), USSD codes, and airtime conversions.',
+      'Unified checkout system incorporating PayFast (cards), Ozow (instant EFT), cash payments at retail checkouts (Shoprite, Boxer), USSD shortcode *120*384#, and airtime conversions.',
     icon: CreditCard,
     color: '#ec4899',
     colorBg: 'rgba(236, 72, 153, 0.12)',

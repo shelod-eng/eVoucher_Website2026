@@ -84,7 +84,7 @@ export default function ConsumerPage() {
                 <p className="font-body text-sm text-muted-foreground mb-2">
                   Access anytime via USSD
                 </p>
-                <p className="font-accent text-3xl font-bold text-primary">*134*2468#</p>
+                <p className="font-accent text-3xl font-bold text-primary">*120*384#</p>
               </div>
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function ConsumerPage() {
                   <p className="font-body text-sm text-muted-foreground mb-2">
                     Dial this code from any phone
                   </p>
-                  <p className="font-accent text-4xl font-bold text-primary mb-2">*134*2468#</p>
+                  <p className="font-accent text-4xl font-bold text-primary mb-2">*120*384#</p>
                   <p className="font-body text-xs text-muted-foreground">
                     No data required • Works on any network
                   </p>

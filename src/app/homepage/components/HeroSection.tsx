@@ -73,7 +73,7 @@ const HeroSection = ({
                   <p className="font-body text-sm text-muted-foreground">
                     Access without app store friction
                   </p>
-                  <p className="font-accent text-2xl font-bold text-foreground">PWA + *134*2468#</p>
+                  <p className="font-accent text-2xl font-bold text-foreground">PWA + *120*384#</p>
                 </div>
               </div>
             </div>

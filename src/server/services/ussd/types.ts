@@ -13,6 +13,8 @@ export type UssdMenuState =
   | 'SHOP_PRODUCTS_MENU'
   | 'WALLET_MENU'
   | 'REDEEM_INPUT_MENU'
+  | 'REDEEM_SHOP_MENU'
+  | 'REDEEM_CONFIRM_MENU'
   | 'HELP_MENU'
   | 'EXIT';
 
@@ -30,6 +32,14 @@ export type UssdSessionData = {
   selectedMerchantName?: string | null;
   selectedMerchantPage?: number;
   selectedProductPage?: number;
+  selectedRedeemShopId?: string | null;
+  selectedRedeemShopName?: string | null;
+  selectedRedeemShopPage?: number;
+  pendingRedeemVoucherCode?: string | null;
+  lastVoucherCode?: string | null;
+  lastVoucherAmount?: number | null;
+  walletBalance?: number | null;
+  caseId?: string | null;
 };
 
 export type UssdSession = {

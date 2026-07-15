@@ -3,7 +3,7 @@ import AppImage from '@/components/ui/AppImage';
 
 const USSDShowcase = () => {
   const ussdSteps = [
-    { code: '*134*3827#', label: 'Dial USSD Code' },
+    { code: '*120*384#', label: 'Dial USSD Code' },
     { code: '1', label: 'Select "Browse Vouchers"' },
     { code: '2', label: 'Choose Category' },
     { code: '3', label: 'Confirm Purchase' },
@@ -133,7 +133,7 @@ const USSDShowcase = () => {
                   </div>
 
                   <div className="mt-4 text-center">
-                    <p className="text-2xl font-headline font-bold text-primary">*134*3827#</p>
+                    <p className="text-2xl font-headline font-bold text-primary">*120*384#</p>
                     <p className="text-sm text-muted-foreground">Dial to access eVoucher</p>
                   </div>
                 </div>

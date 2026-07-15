@@ -38,6 +38,20 @@ curl -X POST http://localhost:4028/api/v1/ussd/simulator \
   -d "{\"sessionId\":\"sim-lebo-001\",\"msisdn\":\"27780589029\",\"text\":\"\"}"
 ```
 
+## Gateway-style session test
+
+Many USSD aggregators post `application/x-www-form-urlencoded` payloads and resend cumulative text
+such as `1*Nomsa*Dlamini*1*2468*2468`. The generic session endpoint accepts that shape:
+
+```bash
+curl -X POST http://localhost:4028/api/v1/ussd/session \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "sessionId=gw-001&msisdn=27710000000&serviceCode=*120*384%23&text=1*Nomsa*Dlamini*1*2468*2468"
+```
+
+If the in-memory session is unavailable, the service replays the cumulative `text` value from the
+main menu so feature-phone users can continue on normal gateway callbacks.
+
 ## Current real flow
 
 - Main menu:
@@ -58,6 +72,9 @@ curl -X POST http://localhost:4028/api/v1/ussd/simulator \
   - Voucher code capture
 
 > Note: For local demos when DB access is unavailable, simulator fallback merchants/products are shown.
+> USSD self-registration currently uses the local USSD credential store for PIN demo flow. Existing
+> customers are resolved from `user_profiles.phone`; durable production PIN storage should be added
+> with a dedicated credential table before live MTN/Vodacom launch.
 
 ## Twilio note
 

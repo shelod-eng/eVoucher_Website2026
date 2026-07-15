@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getUssdDemoShops, getUssdWalletBalance, USSD_DEMO_SHOPS } from './ussd-demo-ledger';
 
 export type UssdCustomer = {
   id: string;
@@ -16,30 +17,54 @@ export type UssdMerchantProduct = {
   id: string;
   productName: string;
   consumerPrice: number;
+  faceValue?: number;
 };
 
-const DEMO_MERCHANTS: UssdMerchant[] = [
-  { id: 'demo-shoprite', displayName: 'Shoprite', productCount: 3 },
-  { id: 'demo-picknpay', displayName: 'Pick n Pay', productCount: 3 },
-  { id: 'demo-checkers', displayName: 'Checkers', productCount: 2 },
-];
+const DEMO_MERCHANTS: UssdMerchant[] = USSD_DEMO_SHOPS.map((shop) => ({
+  id: shop.id,
+  displayName: shop.displayName,
+  productCount: shop.branchCount,
+}));
 
 const DEMO_PRODUCTS_BY_MERCHANT: Record<string, UssdMerchantProduct[]> = {
-  'demo-shoprite': [
-    { id: 'd-s-1000', productName: 'R1000 Grocery Voucher', consumerPrice: 975 },
-    { id: 'd-s-500', productName: 'R500 Grocery Voucher', consumerPrice: 487.5 },
-    { id: 'd-s-200', productName: 'R200 Grocery Voucher', consumerPrice: 195 },
-  ],
-  'demo-picknpay': [
-    { id: 'd-p-1000', productName: 'R1000 Grocery Voucher', consumerPrice: 975 },
-    { id: 'd-p-500', productName: 'R500 Grocery Voucher', consumerPrice: 487.5 },
-    { id: 'd-p-300', productName: 'R300 Grocery Voucher', consumerPrice: 292.5 },
-  ],
-  'demo-checkers': [
-    { id: 'd-c-1000', productName: 'R1000 Grocery Voucher', consumerPrice: 975 },
-    { id: 'd-c-500', productName: 'R500 Grocery Voucher', consumerPrice: 487.5 },
+  'super-precast-concrete': [
+    {
+      id: 'spc-500',
+      productName: 'R500 Building Material Voucher',
+      consumerPrice: 475,
+      faceValue: 500,
+    },
+    {
+      id: 'spc-1000',
+      productName: 'R1000 Cement & Blocks Voucher',
+      consumerPrice: 950,
+      faceValue: 1000,
+    },
   ],
 };
+
+function genericDemoProducts(merchantId: string): UssdMerchantProduct[] {
+  return [
+    {
+      id: `${merchantId}-100`,
+      productName: 'R100 Voucher',
+      consumerPrice: 95,
+      faceValue: 100,
+    },
+    {
+      id: `${merchantId}-250`,
+      productName: 'R250 Voucher',
+      consumerPrice: 237.5,
+      faceValue: 250,
+    },
+    {
+      id: `${merchantId}-500`,
+      productName: 'R500 Voucher',
+      consumerPrice: 475,
+      faceValue: 500,
+    },
+  ];
+}
 
 function normalizeMsisdn(msisdn: string) {
   const digits = String(msisdn ?? '').replace(/\D/g, '');
@@ -114,6 +139,15 @@ export async function resolveCustomerByMsisdn(msisdn: string): Promise<UssdCusto
 }
 
 export async function getShopMerchantsForUssd(): Promise<UssdMerchant[]> {
+  const demoShops = await getUssdDemoShops();
+  if (demoShops.length > 0) {
+    return demoShops.map((shop) => ({
+      id: shop.id,
+      displayName: shop.displayName,
+      productCount: shop.branchCount,
+    }));
+  }
+
   let admin: ReturnType<typeof createAdminClient>;
   try {
     admin = createAdminClient();
@@ -170,6 +204,9 @@ export async function getProductsForMerchantUssd(
   if (merchantId in DEMO_PRODUCTS_BY_MERCHANT) {
     return DEMO_PRODUCTS_BY_MERCHANT[merchantId] ?? [];
   }
+  if (USSD_DEMO_SHOPS.some((shop) => shop.id === merchantId)) {
+    return genericDemoProducts(merchantId);
+  }
   const rows = await getProductsFromMerchantProducts([merchantId]);
 
   const live = rows
@@ -190,14 +227,22 @@ export async function getProductsForMerchantUssd(
         id: String(row.id),
         productName: String(row.product_name ?? 'Voucher'),
         consumerPrice,
+        faceValue,
       };
     })
     .sort((first, second) => first.consumerPrice - second.consumerPrice);
 
-  return live.length > 0 ? live : DEMO_PRODUCTS_BY_MERCHANT['demo-shoprite'];
+  return live.length > 0 ? live : genericDemoProducts(merchantId);
 }
 
-export async function getWalletBalanceForCustomerUssd(customerId: string): Promise<number> {
+export async function getWalletBalanceForCustomerUssd(
+  customerId: string,
+  msisdn?: string
+): Promise<number> {
+  if (msisdn) {
+    const demoBalance = await getUssdWalletBalance(msisdn);
+    if (demoBalance > 0) return demoBalance;
+  }
   if (!customerId) return 0;
   const admin = createAdminClient();
   const { data, error } = await admin

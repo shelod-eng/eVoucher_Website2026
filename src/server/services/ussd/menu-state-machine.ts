@@ -3,6 +3,11 @@ import {
   getShopMerchantsForUssd,
   getWalletBalanceForCustomerUssd,
 } from './ussd-data-service';
+import {
+  purchaseUssdVoucher,
+  recordShopSelected,
+  redeemUssdVoucher,
+} from './ussd-demo-ledger';
 import { ussdUserStore } from './ussd-user-store';
 import { UssdResponsePayload, UssdSession, UssdSessionData } from './types';
 
@@ -96,6 +101,22 @@ function renderProvinces() {
   return lines.join('\n');
 }
 
+function renderMerchantMenu(
+  title: string,
+  merchants: Awaited<ReturnType<typeof getShopMerchantsForUssd>>,
+  page: number
+) {
+  const pageData = paginate(merchants, page, MERCHANTS_PAGE_SIZE);
+  const lines = [title];
+  pageData.items.forEach((merchant, index) => {
+    lines.push(`${index + 1}. ${merchant.displayName} (${merchant.productCount})`);
+  });
+  if (pageData.hasNext) lines.push('9. Next');
+  if (pageData.hasPrev) lines.push('8. Prev');
+  lines.push('0. Back');
+  return { pageData, message: lines.join('\n') };
+}
+
 function clearRegistrationDraft(data: UssdSessionData): UssdSessionData {
   return {
     ...data,
@@ -168,14 +189,8 @@ export async function processUssdMenuState(input: {
         );
       }
 
-      const pageData = paginate(merchants, 0, MERCHANTS_PAGE_SIZE);
-      const lines = ['Select store:'];
-      pageData.items.forEach((merchant, index) => {
-        lines.push(`${index + 1}. ${merchant.displayName} (${merchant.productCount})`);
-      });
-      if (pageData.hasNext) lines.push('9. Next');
-      lines.push('0. Back');
-      return continueResponse('SHOP_MERCHANTS_MENU', lines.join('\n'), {
+      const rendered = renderMerchantMenu('Select store:', merchants, 0);
+      return continueResponse('SHOP_MERCHANTS_MENU', rendered.message, {
         ...data,
         selectedMerchantPage: 0,
       });
@@ -185,18 +200,26 @@ export async function processUssdMenuState(input: {
       const blocked = guardAuthenticated(data);
       if (blocked) return blocked;
 
-      const balance = await getWalletBalanceForCustomerUssd(String(data.userId ?? ''));
+      const balance = await getWalletBalanceForCustomerUssd(
+        String(data.userId ?? ''),
+        input.session.msisdn
+      );
       return continueResponse(
         'WALLET_MENU',
         [`Wallet balance: R${balance.toFixed(2)}`, '0. Back'].join('\n'),
-        data
+        { ...data, walletBalance: balance }
       );
     }
 
     if (latest === '5') {
       const blocked = guardAuthenticated(data);
       if (blocked) return blocked;
-      return continueResponse('REDEEM_INPUT_MENU', 'Enter voucher code:\n(or 0 to go back)', data);
+      const merchants = await getShopMerchantsForUssd();
+      const rendered = renderMerchantMenu('Redeem at store:', merchants, 0);
+      return continueResponse('REDEEM_SHOP_MENU', rendered.message, {
+        ...data,
+        selectedRedeemShopPage: 0,
+      });
     }
 
     if (latest === '0') {
@@ -332,19 +355,12 @@ export async function processUssdMenuState(input: {
 
     const merchants = await getShopMerchantsForUssd();
     const currentPage = Number(data.selectedMerchantPage ?? 0);
-    const pageData = paginate(merchants, currentPage, MERCHANTS_PAGE_SIZE);
+    const { pageData } = renderMerchantMenu('Select store:', merchants, currentPage);
 
     if (latest === '9' && pageData.hasNext) {
       const nextPage = currentPage + 1;
-      const nextPageData = paginate(merchants, nextPage, MERCHANTS_PAGE_SIZE);
-      const lines = ['Select store:'];
-      nextPageData.items.forEach((merchant, index) => {
-        lines.push(`${index + 1}. ${merchant.displayName} (${merchant.productCount})`);
-      });
-      if (nextPageData.hasNext) lines.push('9. Next');
-      if (nextPageData.hasPrev) lines.push('8. Prev');
-      lines.push('0. Back');
-      return continueResponse('SHOP_MERCHANTS_MENU', lines.join('\n'), {
+      const rendered = renderMerchantMenu('Select store:', merchants, nextPage);
+      return continueResponse('SHOP_MERCHANTS_MENU', rendered.message, {
         ...data,
         selectedMerchantPage: nextPage,
       });
@@ -352,15 +368,8 @@ export async function processUssdMenuState(input: {
 
     if (latest === '8' && pageData.hasPrev) {
       const prevPage = currentPage - 1;
-      const prevPageData = paginate(merchants, prevPage, MERCHANTS_PAGE_SIZE);
-      const lines = ['Select store:'];
-      prevPageData.items.forEach((merchant, index) => {
-        lines.push(`${index + 1}. ${merchant.displayName} (${merchant.productCount})`);
-      });
-      if (prevPageData.hasNext) lines.push('9. Next');
-      if (prevPageData.hasPrev) lines.push('8. Prev');
-      lines.push('0. Back');
-      return continueResponse('SHOP_MERCHANTS_MENU', lines.join('\n'), {
+      const rendered = renderMerchantMenu('Select store:', merchants, prevPage);
+      return continueResponse('SHOP_MERCHANTS_MENU', rendered.message, {
         ...data,
         selectedMerchantPage: prevPage,
       });
@@ -369,6 +378,12 @@ export async function processUssdMenuState(input: {
     const pick = Number(latest);
     if (Number.isInteger(pick) && pick >= 1 && pick <= pageData.items.length) {
       const selectedMerchant = pageData.items[pick - 1];
+      await recordShopSelected({
+        sessionId: input.session.sessionId,
+        msisdn: input.session.msisdn,
+        shopId: selectedMerchant.id,
+        shopName: selectedMerchant.displayName,
+      });
       const products = await getProductsForMerchantUssd(selectedMerchant.id);
       const firstProducts = paginate(products, 0, PRODUCTS_PAGE_SIZE);
       const lines = [`${selectedMerchant.displayName} vouchers:`];
@@ -391,19 +406,12 @@ export async function processUssdMenuState(input: {
   if (input.session.state === 'SHOP_PRODUCTS_MENU') {
     if (latest === '0') {
       const merchants = await getShopMerchantsForUssd();
-      const pageData = paginate(
+      const rendered = renderMerchantMenu(
+        'Select store:',
         merchants,
-        Number(data.selectedMerchantPage ?? 0),
-        MERCHANTS_PAGE_SIZE
+        Number(data.selectedMerchantPage ?? 0)
       );
-      const lines = ['Select store:'];
-      pageData.items.forEach((merchant, index) => {
-        lines.push(`${index + 1}. ${merchant.displayName} (${merchant.productCount})`);
-      });
-      if (pageData.hasNext) lines.push('9. Next');
-      if (pageData.hasPrev) lines.push('8. Prev');
-      lines.push('0. Back');
-      return continueResponse('SHOP_MERCHANTS_MENU', lines.join('\n'), data);
+      return continueResponse('SHOP_MERCHANTS_MENU', rendered.message, data);
     }
 
     const merchantId = String(data.selectedMerchantId ?? '');
@@ -447,11 +455,32 @@ export async function processUssdMenuState(input: {
     const pick = Number(latest);
     if (Number.isInteger(pick) && pick >= 1 && pick <= pageData.items.length) {
       const product = pageData.items[pick - 1];
-      return endResponse(
-        `Purchase request captured: ${product.productName} at R${product.consumerPrice.toFixed(
-          2
-        )}. We will confirm by SMS.`,
-        data
+      const amount = Number((product.faceValue ?? product.consumerPrice).toFixed(2));
+      const purchase = await purchaseUssdVoucher({
+        sessionId: input.session.sessionId,
+        msisdn: input.session.msisdn,
+        shopId: merchantId,
+        shopName: merchantName,
+        productName: product.productName,
+        amount,
+      });
+      const nextData: UssdSessionData = {
+        ...data,
+        lastVoucherCode: purchase.voucherCode,
+        lastVoucherAmount: amount,
+        walletBalance: purchase.walletBalance,
+        caseId: purchase.caseId,
+      };
+
+      return continueResponse(
+        'MAIN_MENU',
+        [
+          `Voucher purchased: ${purchase.voucherCode}`,
+          `${merchantName} - ${product.productName}`,
+          `Wallet balance: R${purchase.walletBalance.toFixed(2)}`,
+          renderMainMenu(nextData),
+        ].join('\n\n'),
+        nextData
       );
     }
 
@@ -461,6 +490,44 @@ export async function processUssdMenuState(input: {
   if (input.session.state === 'WALLET_MENU') {
     if (latest === '0') return continueResponse('MAIN_MENU', renderMainMenu(data), data);
     return continueResponse('WALLET_MENU', 'Reply 0 to go back.', data);
+  }
+
+  if (input.session.state === 'REDEEM_SHOP_MENU') {
+    if (latest === '0') return continueResponse('MAIN_MENU', renderMainMenu(data), data);
+
+    const merchants = await getShopMerchantsForUssd();
+    const currentPage = Number(data.selectedRedeemShopPage ?? 0);
+    const { pageData } = renderMerchantMenu('Redeem at store:', merchants, currentPage);
+
+    if (latest === '9' && pageData.hasNext) {
+      const nextPage = currentPage + 1;
+      const rendered = renderMerchantMenu('Redeem at store:', merchants, nextPage);
+      return continueResponse('REDEEM_SHOP_MENU', rendered.message, {
+        ...data,
+        selectedRedeemShopPage: nextPage,
+      });
+    }
+
+    if (latest === '8' && pageData.hasPrev) {
+      const prevPage = currentPage - 1;
+      const rendered = renderMerchantMenu('Redeem at store:', merchants, prevPage);
+      return continueResponse('REDEEM_SHOP_MENU', rendered.message, {
+        ...data,
+        selectedRedeemShopPage: prevPage,
+      });
+    }
+
+    const pick = Number(latest);
+    if (Number.isInteger(pick) && pick >= 1 && pick <= pageData.items.length) {
+      const selectedMerchant = pageData.items[pick - 1];
+      return continueResponse('REDEEM_INPUT_MENU', 'Enter voucher code:\n(or 0 to go back)', {
+        ...data,
+        selectedRedeemShopId: selectedMerchant.id,
+        selectedRedeemShopName: selectedMerchant.displayName,
+      });
+    }
+
+    return continueResponse('REDEEM_SHOP_MENU', 'Invalid option.\n0. Back', data);
   }
 
   if (input.session.state === 'REDEEM_INPUT_MENU') {
@@ -473,7 +540,48 @@ export async function processUssdMenuState(input: {
         data
       );
     }
-    return endResponse(`Redeem request received for code ${voucherCode}.`, data);
+    return continueResponse(
+      'REDEEM_CONFIRM_MENU',
+      `Confirm redeem ${voucherCode}?\n1. Yes\n0. Back`,
+      {
+        ...data,
+        pendingRedeemVoucherCode: voucherCode,
+      }
+    );
+  }
+
+  if (input.session.state === 'REDEEM_CONFIRM_MENU') {
+    if (latest === '0') return continueResponse('MAIN_MENU', renderMainMenu(data), data);
+    if (latest !== '1') {
+      return continueResponse('REDEEM_CONFIRM_MENU', 'Reply 1 to confirm or 0 to go back.', data);
+    }
+
+    const voucherCode = String(data.pendingRedeemVoucherCode ?? '').toUpperCase();
+    const amount = Number(data.lastVoucherAmount ?? 100);
+    const redeem = await redeemUssdVoucher({
+      sessionId: input.session.sessionId,
+      msisdn: input.session.msisdn,
+      shopId: String(data.selectedRedeemShopId ?? data.selectedMerchantId ?? 'unknown'),
+      shopName: String(data.selectedRedeemShopName ?? data.selectedMerchantName ?? 'Merchant'),
+      voucherCode,
+      amount,
+    });
+    const nextData: UssdSessionData = {
+      ...data,
+      pendingRedeemVoucherCode: null,
+      walletBalance: redeem.walletBalance,
+      caseId: redeem.caseId,
+    };
+
+    return continueResponse(
+      'MAIN_MENU',
+      [
+        `Voucher redeemed: ${voucherCode}`,
+        `Wallet balance: R${redeem.walletBalance.toFixed(2)}`,
+        renderMainMenu(nextData),
+      ].join('\n\n'),
+      nextData
+    );
   }
 
   if (input.session.state === 'HELP_MENU') {

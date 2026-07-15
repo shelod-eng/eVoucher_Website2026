@@ -181,7 +181,7 @@ const FinancialModelInteractive = () => {
               <ul className="space-y-2">
                 <li className="text-sm text-muted-foreground">Email: invest@evoucher.co.za</li>
                 <li className="text-sm text-muted-foreground">Phone: +27 11 123 4567</li>
-                <li className="text-sm text-muted-foreground">USSD: *134*3872#</li>
+                <li className="text-sm text-muted-foreground">USSD: *120*384#</li>
               </ul>
             </div>
           </div>

@@ -48,6 +48,13 @@
       "description": "View your active vouchers",
       "url": "/customer/dashboard",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "USSD Console",
+      "short_name": "USSD",
+      "description": "Open the *120*384# simulator",
+      "url": "/ussd-console",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ],
   "categories": ["shopping", "finance", "lifestyle"],

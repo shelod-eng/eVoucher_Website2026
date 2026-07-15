@@ -62,7 +62,7 @@ const HeroSection = ({ className = '', onJoinClick }: HeroSectionProps) => {
                 <p className="text-sm font-body text-muted-foreground">
                   No smartphone? No problem!
                 </p>
-                <p className="text-2xl font-headline font-bold text-foreground">Dial *134*3827#</p>
+                <p className="text-2xl font-headline font-bold text-foreground">Dial *120*384#</p>
               </div>
             </div>
           </div>

@@ -200,7 +200,7 @@ export async function processUSSDPayment(request: PaymentRequest): Promise<Payme
     transactionId: `TXN-USSD-${Date.now()}`,
     ussdReference: ussdRef,
     smsDelivery: true,
-    message: `Dial *120*8682#, select option 1, enter reference: ${ussdRef}. Voucher will be sent via SMS.`,
+    message: `Dial *120*384#, select option 1, enter reference: ${ussdRef}. Voucher will be sent via SMS.`,
   };
 }
 
@@ -321,17 +321,17 @@ export async function sendVoucherViaSMS(
 
 export function generateUSSDMenu(language: string = 'en'): string {
   const menus: Record<string, string> = {
-    en: `*120*8682#
+    en: `*120*384#
 1. Buy Voucher
 2. Check Balance
 3. My Vouchers
 4. Help`,
-    zu: `*120*8682#
+    zu: `*120*384#
 1. Thenga i-Voucher
 2. Bheka Ibhalansi
 3. Ama-Voucher Ami
 4. Usizo`,
-    xh: `*120*8682#
+    xh: `*120*384#
 1. Thenga i-Voucher
 2. Khangela Ibhalansi
 3. Ii-Voucher Zam

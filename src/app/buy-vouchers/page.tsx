@@ -315,7 +315,7 @@ function BuyVouchersContent() {
     },
     {
       id: 'ussd' as PaymentMethod,
-      name: 'USSD (*120*8682#)',
+      name: 'USSD (*120*384#)',
       icon: 'DevicePhoneMobileIcon',
       description: 'Works on any phone - No smartphone or data needed',
     },
@@ -1334,7 +1334,7 @@ function BuyVouchersContent() {
                   <div className="rounded-lg bg-background border border-border p-3">
                     <p className="text-xs text-muted-foreground mb-2">Next steps:</p>
                     <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                      <li>Dial *120*8682# on your phone</li>
+                      <li>Dial *120*384# on your phone</li>
                       <li>Select option 1 (Buy Voucher)</li>
                       <li>Enter reference code we'll send via SMS</li>
                       <li>Confirm payment on your phone</li>
