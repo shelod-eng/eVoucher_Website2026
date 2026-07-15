@@ -50,7 +50,10 @@ export async function middleware(request: NextRequest) {
   const portalPublicArea = portalLogin || portalResetPassword;
   const infrastructureArea = path === '/infrastructure' || path.startsWith('/infrastructure/');
   const protectedArea =
-    customerArea || merchantProtectedArea || infrastructureArea || (portalArea && !portalPublicArea);
+    customerArea ||
+    merchantProtectedArea ||
+    infrastructureArea ||
+    (portalArea && !portalPublicArea);
 
   const hasSupabaseSessionCookie = request.cookies.getAll().some(({ name }) => {
     const normalizedName = name.toLowerCase();
