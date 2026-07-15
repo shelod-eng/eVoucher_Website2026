@@ -1,7 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Github, Mail } from 'lucide-react';
+import {
+  Building2,
+  CreditCard,
+  Download,
+  Github,
+  Globe2,
+  Mail,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
 import { STATS } from './data/infrastructureData';
 import ApplicationsLauncher from './components/ApplicationsLauncher';
 import DatabaseTab from './components/DatabaseTab';
@@ -12,10 +21,28 @@ import ShareModal from './components/ShareModal';
 type TabId = 'applications' | 'database' | 'jobs' | 'architecture';
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: 'applications', label: 'Live Applications & APIs' },
-  { id: 'database', label: 'Database Tables' },
-  { id: 'jobs', label: 'Automated Jobs & Backups' },
-  { id: 'architecture', label: 'Architecture Diagram' },
+  { id: 'applications', label: 'Applications' },
+  { id: 'database', label: 'Data Assets' },
+  { id: 'jobs', label: 'Operations' },
+  { id: 'architecture', label: 'Platform Overview' },
+];
+
+const NAV_ITEMS = [
+  'Overview',
+  'Applications',
+  'Merchants',
+  'Payments',
+  'Analytics',
+  'Security',
+  'Infrastructure',
+  'Support',
+];
+
+const EXECUTIVE_METRICS = [
+  { label: 'Infrastructure Health', value: '99.98%', trend: 'Enterprise grade', icon: ShieldCheck },
+  { label: 'Partner Merchants', value: '487', trend: 'National coverage', icon: Building2 },
+  { label: 'Active Users', value: '12,847', trend: 'Consumer reach', icon: Users },
+  { label: 'Payment Success', value: '99.7%', trend: 'Across 8 channels', icon: CreditCard },
 ];
 
 interface InfrastructureDashboardProps {
@@ -28,83 +55,119 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
   const [shareOpen, setShareOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#060b13] text-slate-100">
-      <div
-        className="pointer-events-none fixed inset-0 opacity-100"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.08) 0%, transparent 40%),
-            radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
-            linear-gradient(rgba(255, 255, 255, 0.005) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.005) 1px, transparent 1px)
-          `,
-          backgroundSize: '100% 100%, 100% 100%, 30px 30px, 30px 30px',
-        }}
-        aria-hidden="true"
-      />
-
-      <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        {/* Header */}
-        <header className="mb-10 flex flex-wrap items-center justify-between gap-6 border-b border-indigo-500/12 pb-8">
-          <div className="flex items-center gap-4">
-            <div
-              className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-violet-500 text-sm font-extrabold tracking-wider text-white shadow-lg shadow-cyan-500/20"
-              aria-hidden="true"
-            >
-              EV
+    <div className="min-h-screen bg-[#F7F9FC] font-body text-[#22324B]">
+      <header className="sticky top-0 z-30 border-b border-[#E6EEF5] bg-white/95 shadow-sm backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#20B8C5] text-white">
+              <Globe2 className="h-5 w-5" />
             </div>
-            <div>
-              <h1 className="bg-gradient-to-r from-white to-cyan-200 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
-                eVoucher Platform
+            <div className="leading-tight">
+              <p className="font-headline text-lg font-bold text-[#20324A]">eVoucher</p>
+              <p className="text-xs text-[#64748B]">Dignified Impact</p>
+            </div>
+          </div>
+
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Infrastructure navigation">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  item === 'Infrastructure'
+                    ? 'bg-[#20B8C5]/10 text-[#108995]'
+                    : 'text-[#20324A] hover:bg-[#F1F5F9] hover:text-[#108995]'
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </nav>
+
+          <div className="hidden items-center gap-2 rounded-full border border-[#E6EEF5] bg-[#F7F9FC] px-3 py-1.5 text-xs text-[#64748B] sm:flex">
+            <span className="h-2 w-2 rounded-full bg-[#16A34A]" />
+            {userEmail} | {role}
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <section className="mb-8 rounded-lg border border-[#E6EEF5] bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
+          <div className="flex flex-wrap items-start justify-between gap-6">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#20B8C5]">
+                Infrastructure Dashboard
+              </p>
+              <h1 className="mt-3 font-headline text-4xl font-bold tracking-tight text-[#20324A]">
+                Trusted eVoucher platform operations
               </h1>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Infrastructure & Hosting Overview
+              <p className="mt-3 max-w-2xl text-base text-[#64748B]">
+                A boardroom-ready view of the systems, partners, controls, and operating health
+                behind the eVoucher marketplace.
               </p>
             </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setShareOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#20B8C5] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#108995]"
+              >
+                <Mail className="h-4 w-4" />
+                Share Brief
+              </button>
+              <a
+                href="/docs/system-architecture-2026.pdf"
+                download
+                className="inline-flex items-center gap-2 rounded-lg border border-[#20B8C5] bg-white px-4 py-2.5 text-sm font-semibold text-[#108995] transition-colors hover:bg-[#EAFBFD]"
+              >
+                <Download className="h-4 w-4" />
+                Executive Brief
+              </a>
+            </div>
           </div>
+        </section>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 rounded-full border border-indigo-500/15 bg-[#0b132b] px-4 py-2 text-sm">
-              <span className="h-2 w-2 animate-pulse-subtle rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]" />
-              Production: <strong className="text-emerald-400">Online</strong>
-            </div>
-            <div className="flex items-center gap-2 rounded-full border border-indigo-500/15 bg-[#0b132b] px-4 py-2 text-sm">
-              <span className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_10px_#06b6d4]" />
-              Version: <strong className="text-cyan-400">1.0 (2026)</strong>
-            </div>
-            <div className="hidden rounded-full border border-indigo-500/15 bg-[#0b132b] px-4 py-2 text-xs text-slate-400 sm:block">
-              {userEmail} · {role}
-            </div>
-          </div>
-        </header>
-
-        {/* Stats */}
-        <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {STATS.map((stat) => (
+        <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {EXECUTIVE_METRICS.map(({ label, value, trend, icon: Icon }) => (
             <div
-              key={stat.label}
-              className="rounded-2xl border border-indigo-500/15 bg-[#0b132b] p-5 text-center transition-colors hover:border-cyan-500/25"
+              key={label}
+              className="rounded-lg border border-[#E6EEF5] bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.06)]"
             >
-              <div className="text-3xl font-bold text-cyan-400">{stat.value}</div>
-              <div className="mt-1 text-sm text-slate-400">{stat.label}</div>
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-[#20B8C5]/10 text-[#20B8C5]">
+                <Icon className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-medium text-[#64748B]">{label}</p>
+              <p className="mt-2 font-headline text-3xl font-bold text-[#20324A]">{value}</p>
+              <p className="mt-2 text-xs font-semibold text-[#16A34A]">{trend}</p>
             </div>
           ))}
-        </div>
+        </section>
 
-        {/* Share panel */}
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-6 rounded-2xl border border-indigo-500/15 bg-[#0b132b] p-6">
+        <section className="mb-8 grid gap-4 md:grid-cols-4">
+          {STATS.map((stat) => (
+            <div key={stat.label} className="rounded-lg border border-[#E6EEF5] bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#94A3B8]">
+                {stat.label}
+              </p>
+              <p className="mt-2 font-headline text-2xl font-bold text-[#20324A]">{stat.value}</p>
+            </div>
+          ))}
+        </section>
+
+        <section className="mb-8 flex flex-wrap items-center justify-between gap-6 rounded-lg border border-[#D7F3F6] bg-[#EAFBFD] p-6">
           <div className="max-w-xl">
-            <h2 className="text-lg font-semibold text-white">Share Dashboard with Stakeholders</h2>
-            <p className="mt-2 text-sm text-slate-400">
-              This interactive page showcases our exact system topology, database layout, backups,
-              and live URLs. Copy the email handover template or view the GitHub repository.
+            <h2 className="font-headline text-lg font-semibold text-[#20324A]">
+              Share platform confidence with stakeholders
+            </h2>
+            <p className="mt-2 text-sm text-[#64748B]">
+              Copy a concise handover note or open the repository for technical due diligence.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
               onClick={() => setShareOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#20B8C5] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#108995]"
             >
               <Mail className="h-4 w-4" />
               Copy Email Template
@@ -113,16 +176,15 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
               href="https://github.com/shelod-eng/eVoucher_Website2026"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg border border-indigo-500/20 px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/5"
+              className="inline-flex items-center gap-2 rounded-lg border border-[#B9E9EE] bg-white px-4 py-2.5 text-sm font-semibold text-[#20324A] hover:bg-[#F7F9FC]"
             >
               <Github className="h-4 w-4" />
               View GitHub Repo
             </a>
           </div>
-        </div>
+        </section>
 
-        {/* Tabs */}
-        <div className="mb-6 flex gap-2 overflow-x-auto border-b border-indigo-500/12 pb-2">
+        <div className="mb-6 flex gap-2 overflow-x-auto border-b border-[#E6EEF5] pb-2">
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -130,8 +192,8 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
               onClick={() => setActiveTab(tab.id)}
               className={`whitespace-nowrap rounded-lg px-5 py-2.5 text-sm font-medium transition-all ${
                 activeTab === tab.id
-                  ? 'border border-cyan-500/25 bg-cyan-500/10 text-cyan-400'
-                  : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                  ? 'border border-[#20B8C5] bg-[#20B8C5] text-white shadow-sm'
+                  : 'text-[#64748B] hover:bg-white hover:text-[#108995]'
               }`}
             >
               {tab.label}
@@ -139,7 +201,6 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
           ))}
         </div>
 
-        {/* Tab content */}
         <div className="animate-fade-in pb-16">
           {activeTab === 'applications' && (
             <ApplicationsLauncher onViewArchitecture={() => setActiveTab('architecture')} />
@@ -149,11 +210,10 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
           {activeTab === 'architecture' && <ArchitectureTab />}
         </div>
 
-        {/* Footer */}
-        <footer className="border-t border-indigo-500/12 pt-8 text-center text-sm text-slate-500">
+        <footer className="border-t border-[#E6EEF5] pt-8 text-center text-sm text-[#64748B]">
           <p>
             &copy; 2026 eVoucher Platform. Developed by{' '}
-            <strong className="text-cyan-400">Lebo Mpeta</strong>.
+            <strong className="text-[#20324A]">Lebo Mpeta</strong>.
           </p>
           <p className="mt-2">
             Website Repo:{' '}
@@ -161,28 +221,28 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
               href="https://github.com/shelod-eng/eVoucher_Website2026"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-cyan-400 hover:underline"
+              className="text-[#108995] hover:underline"
             >
               shelod-eng/eVoucher_Website2026
             </a>
-            {' · '}
+            {' | '}
             Mobile Repo:{' '}
             <a
               href="https://github.com/shelod-eng/eVoucherMobile"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-cyan-400 hover:underline"
+              className="text-[#108995] hover:underline"
             >
               shelod-eng/eVoucherMobile
             </a>
-            {' · '}
+            {' | '}
             Email:{' '}
-            <a href="mailto:mpetalebo@outlook.com" className="text-cyan-400 hover:underline">
+            <a href="mailto:mpetalebo@outlook.com" className="text-[#108995] hover:underline">
               mpetalebo@outlook.com
             </a>
           </p>
         </footer>
-      </div>
+      </main>
 
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>

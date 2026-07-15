@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Search, Sun, Moon } from 'lucide-react';
+import { Search } from 'lucide-react';
 import {
   PORTAL_APPS,
   WORKSPACES,
@@ -11,13 +11,13 @@ import {
 import AppDetailPanel from './AppDetailPanel';
 
 const STATUS_STYLES: Record<string, string> = {
-  live: 'bg-emerald-500/20 text-emerald-400',
-  auth: 'bg-violet-500/20 text-violet-400',
-  dev: 'bg-amber-500/20 text-amber-400',
-  integrated: 'bg-cyan-500/20 text-cyan-400',
-  active: 'bg-emerald-500/20 text-emerald-400',
-  ready: 'bg-blue-500/20 text-blue-400',
-  planned: 'bg-slate-500/20 text-slate-400',
+  live: 'bg-[#DCFCE7] text-[#166534]',
+  auth: 'bg-[#EAFBFD] text-[#108995]',
+  dev: 'bg-[#FEF3C7] text-[#92400E]',
+  integrated: 'bg-[#EAFBFD] text-[#108995]',
+  active: 'bg-[#DCFCE7] text-[#166534]',
+  ready: 'bg-[#EAFBFD] text-[#108995]',
+  planned: 'bg-[#F1F5F9] text-[#64748B]',
 };
 
 interface ApplicationsLauncherProps {
@@ -28,7 +28,6 @@ export default function ApplicationsLauncher({ onViewArchitecture }: Application
   const [workspace, setWorkspace] = useState<WorkspaceId>('production');
   const [search, setSearch] = useState('');
   const [selectedApp, setSelectedApp] = useState<PortalApp | null>(null);
-  const [isLight, setIsLight] = useState(false);
 
   const filteredApps = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -40,41 +39,26 @@ export default function ApplicationsLauncher({ onViewArchitecture }: Application
     });
   }, [workspace, search]);
 
-  const shellBg = isLight ? 'bg-slate-50' : 'bg-[#060b13]';
-  const sidebarBg = isLight ? 'bg-white border-slate-200' : 'bg-[#0b132b] border-indigo-500/15';
-  const textMain = isLight ? 'text-slate-900' : 'text-slate-100';
-  const textMuted = isLight ? 'text-slate-500' : 'text-slate-400';
-  const inputBg = isLight
-    ? 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400'
-    : 'bg-[#0b132b] border-indigo-500/15 text-slate-100 placeholder:text-slate-500';
-  const tileBg = isLight
-    ? 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-md'
-    : 'bg-[#0b132b] border-indigo-500/12 hover:border-cyan-500/30 hover:bg-[#111b35]';
-  const wsActive = isLight
-    ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
-    : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/25';
-  const wsIdle = isLight
-    ? 'text-slate-600 hover:bg-slate-50 border-transparent'
-    : 'text-slate-400 hover:bg-white/5 border-transparent';
-
   return (
-    <div
-      className={`rounded-2xl border overflow-hidden ${isLight ? 'border-slate-200' : 'border-indigo-500/12'}`}
-    >
-      <div className={`flex min-h-[520px] ${shellBg}`}>
-        {/* Workspace sidebar */}
-        <nav className={`w-56 shrink-0 border-r p-4 ${sidebarBg}`} aria-label="Workspaces">
-          <p className={`mb-3 px-2 text-xs font-semibold uppercase tracking-wider ${textMuted}`}>
+    <div className="overflow-hidden rounded-lg border border-[#E6EEF5] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+      <div className="grid min-h-[520px] lg:grid-cols-[240px_1fr]">
+        <nav
+          className="border-b border-[#E6EEF5] bg-[#F7F9FC] p-4 lg:border-b-0 lg:border-r"
+          aria-label="Workspaces"
+        >
+          <p className="mb-3 px-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#94A3B8]">
             Workspaces
           </p>
-          <ul className="space-y-1">
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
             {WORKSPACES.map((ws) => (
               <li key={ws.id}>
                 <button
                   type="button"
                   onClick={() => setWorkspace(ws.id)}
-                  className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm font-medium transition-all ${
-                    workspace === ws.id ? wsActive : wsIdle
+                  className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm font-semibold transition-all ${
+                    workspace === ws.id
+                      ? 'border-[#20B8C5] bg-white text-[#108995] shadow-sm'
+                      : 'border-transparent text-[#64748B] hover:border-[#E6EEF5] hover:bg-white'
                   }`}
                 >
                   {ws.label}
@@ -82,45 +66,31 @@ export default function ApplicationsLauncher({ onViewArchitecture }: Application
               </li>
             ))}
           </ul>
-          <p className={`mt-4 px-2 text-xs leading-relaxed ${textMuted}`}>
+          <p className="mt-4 px-2 text-xs leading-relaxed text-[#64748B]">
             {WORKSPACES.find((w) => w.id === workspace)?.description}
           </p>
-
-          <button
-            type="button"
-            onClick={() => setIsLight((v) => !v)}
-            className={`mt-6 flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-              isLight
-                ? 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                : 'border-indigo-500/15 text-slate-400 hover:bg-white/5'
-            }`}
-          >
-            {isLight ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
-            {isLight ? 'Dark workspace' : 'Light workspace'}
-          </button>
         </nav>
 
-        {/* Tile grid area */}
-        <div className="flex flex-1 flex-col p-6">
+        <div className="flex flex-1 flex-col p-5 sm:p-6">
           <div className="mb-6 flex flex-wrap items-center gap-4">
             <div className="relative min-w-[240px] flex-1">
-              <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${textMuted}`} />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
               <input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Filter apps by name..."
-                className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-cyan-500/40 ${inputBg}`}
+                placeholder="Search applications, services, or partners..."
+                className="w-full rounded-lg border border-[#E6EEF5] bg-white py-2.5 pl-10 pr-4 text-sm text-[#22324B] outline-none placeholder:text-[#94A3B8] focus:border-[#20B8C5] focus:ring-2 focus:ring-[#20B8C5]/20"
               />
             </div>
-            <p className={`text-sm ${textMuted}`}>
-              {filteredApps.length} app{filteredApps.length !== 1 ? 's' : ''}
+            <p className="text-sm text-[#64748B]">
+              <span className="font-semibold text-[#20324A]">{filteredApps.length}</span> assets
             </p>
           </div>
 
           {filteredApps.length === 0 ? (
-            <div className={`flex flex-1 items-center justify-center text-sm ${textMuted}`}>
-              No apps match your search in this workspace.
+            <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-[#DCE6EF] bg-[#F7F9FC] text-sm text-[#64748B]">
+              No platform assets match this search.
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -131,19 +101,19 @@ export default function ApplicationsLauncher({ onViewArchitecture }: Application
                     key={app.id}
                     type="button"
                     onClick={() => setSelectedApp(app)}
-                    className={`group flex flex-col items-center rounded-xl border p-5 transition-all ${tileBg}`}
+                    className="group flex min-h-[148px] flex-col items-center rounded-lg border border-[#E6EEF5] bg-white p-4 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#20B8C5] hover:shadow-[0_12px_24px_rgba(15,23,42,0.08)]"
                   >
                     <div
-                      className="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl transition-transform group-hover:scale-105"
+                      className="mb-3 flex h-14 w-14 items-center justify-center rounded-lg transition-transform group-hover:scale-105"
                       style={{ backgroundColor: app.colorBg, color: app.color }}
                     >
-                      <Icon className="h-8 w-8" />
+                      <Icon className="h-7 w-7" />
                     </div>
-                    <span className={`text-center text-sm font-medium leading-tight ${textMain}`}>
+                    <span className="text-sm font-semibold leading-tight text-[#20324A]">
                       {app.shortLabel}
                     </span>
                     <span
-                      className={`mt-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${STATUS_STYLES[app.status]}`}
+                      className={`mt-2 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${STATUS_STYLES[app.status]}`}
                     >
                       {app.statusLabel}
                     </span>
@@ -157,7 +127,6 @@ export default function ApplicationsLauncher({ onViewArchitecture }: Application
 
       <AppDetailPanel
         app={selectedApp}
-        isLight={isLight}
         onClose={() => setSelectedApp(null)}
         onViewArchitecture={onViewArchitecture}
       />

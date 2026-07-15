@@ -20,7 +20,7 @@ export default async function InfrastructurePage() {
   const { role } = await resolveUserRole(supabase, user);
 
   if (!ALLOWED_ROLES.includes(role)) {
-    redirect('/shop');
+    redirect('/portal/login?next=/infrastructure');
   }
 
   return <InfrastructureDashboard role={role} userEmail={user.email ?? ''} />;

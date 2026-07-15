@@ -57,10 +57,26 @@ export interface CronJob {
 }
 
 export const WORKSPACES: { id: WorkspaceId; label: string; description: string }[] = [
-  { id: 'production', label: 'Production', description: 'Live consumer and admin portals' },
-  { id: 'data-apis', label: 'Data & APIs', description: 'Backend services and integrations' },
-  { id: 'operations', label: 'Operations', description: 'Settlement, backups, and automation' },
-  { id: 'architecture', label: 'Architecture', description: 'System design and specifications' },
+  {
+    id: 'production',
+    label: 'Customer Experience',
+    description: 'Live consumer, merchant, and admin journeys',
+  },
+  {
+    id: 'data-apis',
+    label: 'Payments & Data',
+    description: 'Trusted services, payment channels, and platform records',
+  },
+  {
+    id: 'operations',
+    label: 'Operations',
+    description: 'Settlement, continuity, and customer communications',
+  },
+  {
+    id: 'architecture',
+    label: 'Platform Story',
+    description: 'Business architecture and executive overview',
+  },
 ];
 
 export const PORTAL_APPS: PortalApp[] = [
@@ -106,11 +122,11 @@ export const PORTAL_APPS: PortalApp[] = [
   },
   {
     id: 'admin',
-    name: 'Admin Command Centre',
+    name: 'Admin Intelligence Portal',
     shortLabel: 'Admin',
     workspace: 'production',
     status: 'auth',
-    statusLabel: 'AUTH REQUIRED',
+    statusLabel: 'SECURE',
     description:
       'Sponsor reporting, merchant onboarding approvals, real-time platform metrics, and system configuration controls. Restricts access based on Supabase admin user roles.',
     icon: Shield,
@@ -158,7 +174,7 @@ export const PORTAL_APPS: PortalApp[] = [
     shortLabel: 'Mobile',
     workspace: 'production',
     status: 'dev',
-    statusLabel: 'READY TO DEPLOY',
+    statusLabel: 'READY',
     description:
       'Expo-powered mobile companion. Features camera scanner for instant QR-code redemption, offline voucher caching, and SMS-triggered updates for rural consumers.',
     icon: Smartphone,
@@ -172,11 +188,11 @@ export const PORTAL_APPS: PortalApp[] = [
   },
   {
     id: 'supabase',
-    name: 'Supabase Cloud Platform',
-    shortLabel: 'Supabase',
+    name: 'Managed Data Platform',
+    shortLabel: 'Data Platform',
     workspace: 'data-apis',
     status: 'live',
-    statusLabel: 'LIVE',
+    statusLabel: 'PROTECTED',
     description:
       'PostgreSQL instance, automated real-time subscriptions, Row-Level Security (RLS) policies, and token-based user authentication. Hosts storage buckets for voucher QR codes.',
     icon: Database,
@@ -186,7 +202,7 @@ export const PORTAL_APPS: PortalApp[] = [
     launchLabel: 'Console Access',
     footerMeta: [
       { label: 'Provider', value: 'AWS (Supabase)' },
-      { label: 'Secured', value: 'RLS Enabled' },
+      { label: 'Secured', value: 'Protected' },
     ],
     keywords: ['supabase', 'postgresql', 'database', 'rls', 'auth'],
   },
@@ -196,7 +212,7 @@ export const PORTAL_APPS: PortalApp[] = [
     shortLabel: 'Payments',
     workspace: 'data-apis',
     status: 'integrated',
-    statusLabel: 'INTEGRATED',
+    statusLabel: 'ACTIVE',
     description:
       'Unified checkout system incorporating PayFast (cards), Ozow (instant EFT), cash payments at retail checkouts (Shoprite, Boxer), USSD shortcode *120*384#, and airtime conversions.',
     icon: CreditCard,
@@ -248,17 +264,17 @@ export const PORTAL_APPS: PortalApp[] = [
   },
   {
     id: 'architecture-overview',
-    name: 'System Architecture',
-    shortLabel: 'Architecture',
+    name: 'Platform Overview',
+    shortLabel: 'Overview',
     workspace: 'architecture',
     status: 'live',
     statusLabel: 'VERIFIED',
     description:
-      'Five-layer production architecture from consumer portals through payment APIs, Supabase, billing portal, and BankServ settlement. Includes revenue split and compliance notes.',
+      'Executive platform story showing how consumers, merchants, eVoucher, banks, government partners, and reporting connect.',
     icon: Layers,
     color: '#06b6d4',
     colorBg: 'rgba(6, 182, 212, 0.12)',
-    launchLabel: 'View Architecture Tab',
+    launchLabel: 'View Platform Overview',
     footerMeta: [
       { label: 'Layers', value: '5 Production' },
       { label: 'Spec', value: '6 PDF Sections' },
@@ -447,45 +463,43 @@ export const DATABASE_TABLES: DatabaseTable[] = [
 export const CRON_JOBS: CronJob[] = [
   {
     index: '01',
-    title: 'Daily System Backup (`MASTER_BACKUP.bat`)',
-    description:
-      'Zips source codes (Next.js, mobile app) and pulls full Supabase SQL backups (schema + tables data).',
+    title: 'Daily Platform Backup',
+    description: 'Captures application source and platform data snapshots for continuity planning.',
     schedule: '02:00 AM Daily',
     status: 'active',
     statusLabel: 'ACTIVE',
   },
   {
     index: '02',
-    title: 'Settlement Batch Compilation',
+    title: 'Merchant Settlement Preparation',
     description:
-      "Aggregates previous day's redemptions, computes commission margins, and formats Bankserv ACB files.",
+      "Aggregates previous day's redemptions, computes settlement values, and prepares banking files.",
     schedule: '09:00 AM Weekdays',
     status: 'active',
     statusLabel: 'ACTIVE',
   },
   {
     index: '03',
-    title: 'Voucher Expiry Evaluation',
+    title: 'Voucher Lifecycle Review',
     description:
-      "Checks database for expired vouchers, marks statuses to 'expired', and sends SMS alerts to customers.",
+      'Reviews voucher status, updates lifecycle records, and prepares customer notifications.',
     schedule: '04:00 AM Daily',
     status: 'dev',
     statusLabel: 'INTEGRATION READY',
   },
   {
     index: '04',
-    title: 'Notification Queue Processing',
+    title: 'Customer Communication Processing',
     description:
-      'Pulls unsent notification rows, fires SMS via Clickatell API, emails via Resend, and marks completion logs.',
+      'Processes pending SMS, email, and push notifications for customer and merchant updates.',
     schedule: 'Every 5 Minutes',
     status: 'ready',
     statusLabel: 'READY',
   },
   {
     index: '05',
-    title: 'Weekly DB Vacuum and Clean',
-    description:
-      'Executes SQL vacuum analyzes, clears obsolete system audit entries older than 90 days, and checks indexing.',
+    title: 'Weekly Data Hygiene Review',
+    description: 'Reviews platform data health, retention windows, and performance housekeeping.',
     schedule: '03:00 AM Sundays',
     status: 'planned',
     statusLabel: 'PLANNED',
@@ -493,19 +507,19 @@ export const CRON_JOBS: CronJob[] = [
 ];
 
 export const STATS = [
-  { value: '3', label: 'Production Environments' },
-  { value: '20', label: 'Relational Database Tables' },
-  { value: '8', label: 'Integrated Payment Channels' },
-  { value: '4', label: 'Secure Access Portals' },
+  { value: '3', label: 'Production Systems' },
+  { value: '20', label: 'Core Data Assets' },
+  { value: '8', label: 'Payment Channels' },
+  { value: '4', label: 'Secure Portals' },
 ];
 
 export const ARCHITECTURE_PDF_PATH = '/docs/system-architecture-2026.pdf';
 
-export const EMAIL_TEMPLATE = `Subject: eVoucher Platform - Infrastructure & Operations Overview Dashboard
+export const EMAIL_TEMPLATE = `Subject: eVoucher Platform - Executive Infrastructure Overview
 
 Dear Team,
 
-I have compiled a complete overview of our eVoucher platform infrastructure to assist in onboarding and handovers.
+I have compiled an executive overview of the eVoucher platform infrastructure to support stakeholder updates, onboarding, and due diligence.
 
 View the live interactive dashboard at:
 https://www.evoucher.co.za/infrastructure
@@ -514,11 +528,11 @@ You can also access the Billing Engine Portal at:
 https://evoucher-billing-portal.vercel.app/login (passcode: eVoucherAdmin2024)
 
 The dashboard includes:
-1. Live Hosted URL list (Main client site, Billing portal, Admin Command Centre).
-2. Database Schema (20 normalized Supabase PostgreSQL tables).
-3. Cron Tasks & daily automated backup setups.
-4. Full 5-layer system architecture with revenue split breakdown.
-5. Third-party clearing integrations (Bankserv ACB, Ozow, PayFast).
+1. Platform health and executive operating metrics.
+2. Live application and service overview.
+3. Business-readable data assets and protection status.
+4. Operations, continuity, and settlement routines.
+5. Platform value flow across consumers, merchants, banks, sponsors, and reporting.
 
 Please let me know if you need any additional credentials or support files.
 
