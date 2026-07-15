@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
   Building2,
   CreditCard,
@@ -28,15 +30,17 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 const NAV_ITEMS = [
-  'Overview',
-  'Applications',
-  'Merchants',
-  'Payments',
-  'Analytics',
-  'Security',
-  'Infrastructure',
-  'Support',
+  { label: 'Overview', href: '/portal/dashboard' },
+  { label: 'Applications', href: '/infrastructure?tab=applications' },
+  { label: 'Merchants', href: '/portal/merchants' },
+  { label: 'Payments', href: '/portal/redemptions' },
+  { label: 'Analytics', href: '/portal/reports' },
+  { label: 'Security', href: '/portal/compliance' },
+  { label: 'Infrastructure', href: '/infrastructure' },
+  { label: 'Support', href: '/support' },
 ];
+
+const TAB_IDS = new Set<TabId>(TABS.map((tab) => tab.id));
 
 const EXECUTIVE_METRICS = [
   { label: 'Infrastructure Health', value: '99.98%', trend: 'Enterprise grade', icon: ShieldCheck },
@@ -51,8 +55,16 @@ interface InfrastructureDashboardProps {
 }
 
 export default function InfrastructureDashboard({ role, userEmail }: InfrastructureDashboardProps) {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>('applications');
   const [shareOpen, setShareOpen] = useState(false);
+
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab') as TabId | null;
+    if (requestedTab && TAB_IDS.has(requestedTab)) {
+      setActiveTab(requestedTab);
+    }
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen bg-[#F7F9FC] font-body text-[#22324B]">
@@ -70,17 +82,17 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Infrastructure navigation">
             {NAV_ITEMS.map((item) => (
-              <button
-                key={item}
-                type="button"
+              <Link
+                key={item.href}
+                href={item.href}
                 className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  item === 'Infrastructure'
+                  item.label === 'Infrastructure'
                     ? 'bg-[#20B8C5]/10 text-[#108995]'
                     : 'text-[#20324A] hover:bg-[#F1F5F9] hover:text-[#108995]'
                 }`}
               >
-                {item}
-              </button>
+                {item.label}
+              </Link>
             ))}
           </nav>
 
@@ -186,9 +198,9 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
 
         <div className="mb-6 flex gap-2 overflow-x-auto border-b border-[#E6EEF5] pb-2">
           {TABS.map((tab) => (
-            <button
+            <Link
               key={tab.id}
-              type="button"
+              href={`/infrastructure?tab=${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
               className={`whitespace-nowrap rounded-lg px-5 py-2.5 text-sm font-medium transition-all ${
                 activeTab === tab.id
@@ -197,7 +209,7 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
               }`}
             >
               {tab.label}
-            </button>
+            </Link>
           ))}
         </div>
 

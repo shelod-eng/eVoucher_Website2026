@@ -24,6 +24,58 @@ export async function middleware(request: NextRequest) {
     return response;
   };
 
+  const path = request.nextUrl.pathname;
+  const pathWithSearch = `${path}${request.nextUrl.search}`;
+
+  const customerArea =
+    path.startsWith('/customer/dashboard') ||
+    path.startsWith('/buy-vouchers') ||
+    path.startsWith('/shop') ||
+    path.startsWith('/cart') ||
+    path.startsWith('/wallet') ||
+    path.startsWith('/benefits') ||
+    path.startsWith('/rewards') ||
+    path.startsWith('/analytics') ||
+    path.startsWith('/profile');
+
+  const merchantProtectedArea =
+    path.startsWith('/merchant/dashboard') ||
+    path.startsWith('/merchant/payouts') ||
+    path.startsWith('/merchant/create-product') ||
+    path.startsWith('/merchant/change-password');
+
+  const portalArea = path.startsWith('/portal');
+  const portalLogin = path.startsWith('/portal/login');
+  const portalResetPassword = path.startsWith('/portal/reset-password');
+  const portalPublicArea = portalLogin || portalResetPassword;
+  const infrastructureArea = path === '/infrastructure' || path.startsWith('/infrastructure/');
+  const protectedArea =
+    customerArea || merchantProtectedArea || infrastructureArea || (portalArea && !portalPublicArea);
+
+  const hasSupabaseSessionCookie = request.cookies.getAll().some(({ name }) => {
+    const normalizedName = name.toLowerCase();
+    return (
+      normalizedName === 'supabase-auth-token' ||
+      (normalizedName.startsWith('sb-') && normalizedName.includes('auth-token'))
+    );
+  });
+
+  if (protectedArea && !hasSupabaseSessionCookie) {
+    const url = request.nextUrl.clone();
+    if (portalArea || infrastructureArea) {
+      url.pathname = '/portal/login';
+      if (infrastructureArea) {
+        url.search = '';
+        url.searchParams.set('next', pathWithSearch);
+      }
+    } else if (merchantProtectedArea) {
+      url.pathname = '/merchant/login';
+    } else {
+      url.pathname = '/signin';
+    }
+    return applyNoStoreHeaders(NextResponse.redirect(url));
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -59,35 +111,16 @@ export async function middleware(request: NextRequest) {
     user = null;
   }
   const role = String(user?.user_metadata?.role ?? '').toLowerCase();
-  const path = request.nextUrl.pathname;
-
-  const customerArea =
-    path.startsWith('/customer/dashboard') ||
-    path.startsWith('/buy-vouchers') ||
-    path.startsWith('/shop') ||
-    path.startsWith('/cart') ||
-    path.startsWith('/wallet') ||
-    path.startsWith('/benefits') ||
-    path.startsWith('/rewards') ||
-    path.startsWith('/analytics') ||
-    path.startsWith('/profile');
-
-  const merchantProtectedArea =
-    path.startsWith('/merchant/dashboard') ||
-    path.startsWith('/merchant/payouts') ||
-    path.startsWith('/merchant/create-product') ||
-    path.startsWith('/merchant/change-password');
-
-  const portalArea = path.startsWith('/portal');
-  const portalLogin = path.startsWith('/portal/login');
-  const portalResetPassword = path.startsWith('/portal/reset-password');
-  const portalPublicArea = portalLogin || portalResetPassword;
 
   // Redirect to login if accessing protected routes without auth
-  if (!user && (customerArea || merchantProtectedArea || (portalArea && !portalPublicArea))) {
+  if (!user && protectedArea) {
     const url = request.nextUrl.clone();
-    if (portalArea) {
+    if (portalArea || infrastructureArea) {
       url.pathname = '/portal/login';
+      if (infrastructureArea) {
+        url.search = '';
+        url.searchParams.set('next', pathWithSearch);
+      }
     } else if (merchantProtectedArea) {
       url.pathname = '/merchant/login';
     } else {
