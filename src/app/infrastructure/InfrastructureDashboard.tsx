@@ -196,10 +196,10 @@ const MODULE_WORKSPACES: Record<
   ussd: {
     title: 'USSD Workspace',
     description:
-      'Monitor sessions, menus, simulator results, provider health, and support escalation.',
+      'Monitor citizen sessions, menus, provider health, service availability, and support escalation.',
     icon: Smartphone,
     stats: ['4,812 sessions', '99.4% completion', '2 live menus'],
-    navigation: ['Sessions', 'Menus', 'Simulator', 'Provider status', 'Escalations'],
+    navigation: ['Sessions', 'Menus', 'Service journeys', 'Provider status', 'Escalations'],
   },
   government: {
     title: 'Government Workspace',

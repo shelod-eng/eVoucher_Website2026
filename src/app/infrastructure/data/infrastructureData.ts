@@ -102,23 +102,23 @@ export const PORTAL_APPS: PortalApp[] = [
   },
   {
     id: 'ussd-console',
-    name: 'USSD Console',
+    name: 'eVoucher Universal Access Platform',
     shortLabel: 'USSD',
     workspace: 'production',
     status: 'live',
     statusLabel: 'LIVE',
     description:
-      'Website-hosted USSD simulator and PWA-accessible feature-phone journey for registration, shopping, wallet balance checks, and voucher redemption using the target shortcode *120*384#.',
+      'Secure USSD financial inclusion channel for registration, shopping, wallet balance checks, government benefits, and voucher redemption using the target shortcode *120*384#.',
     icon: MessageSquare,
     color: '#14b8a6',
     colorBg: 'rgba(20, 184, 166, 0.12)',
     launchUrl: 'https://www.evoucher.co.za/ussd-console',
-    launchLabel: 'Open USSD Console',
+    launchLabel: 'Open Universal Access',
     footerMeta: [
       { label: 'Shortcode', value: '*120*384#' },
       { label: 'Endpoint', value: '/api/v1/ussd/session' },
     ],
-    keywords: ['ussd', 'simulator', 'pwa', 'feature phone', 'shortcode'],
+    keywords: ['ussd', 'universal access', 'pwa', 'feature phone', 'shortcode'],
   },
   {
     id: 'admin',
