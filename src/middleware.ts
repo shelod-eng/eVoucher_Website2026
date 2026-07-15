@@ -110,7 +110,7 @@ export async function middleware(request: NextRequest) {
       return applyNoStoreHeaders(NextResponse.redirect(url));
     }
 
-    if (portalArea && role !== 'admin') {
+    if (portalArea && !portalPublicArea && role !== 'admin') {
       const url = request.nextUrl.clone();
       url.pathname = role === 'merchant' ? '/merchant/dashboard' : '/shop';
       return applyNoStoreHeaders(NextResponse.redirect(url));
