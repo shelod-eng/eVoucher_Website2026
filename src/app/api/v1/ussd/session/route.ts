@@ -18,8 +18,9 @@ export async function POST(request: Request) {
     const body = await readUssdRequestBody(request);
     const result = await handleUssdRequest({
       sessionId: String(body?.sessionId ?? body?.session_id ?? body?.sessionID ?? '').trim(),
-      msisdn: String(body?.msisdn ?? body?.phoneNumber ?? body?.phone_number ?? body?.mobile ?? '')
-        .trim(),
+      msisdn: String(
+        body?.msisdn ?? body?.phoneNumber ?? body?.phone_number ?? body?.mobile ?? ''
+      ).trim(),
       text: String(body?.text ?? '').trim(),
       networkCode:
         String(body?.networkCode ?? body?.network_code ?? body?.network ?? '').trim() || undefined,

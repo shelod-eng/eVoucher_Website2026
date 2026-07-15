@@ -140,7 +140,11 @@ async function insertAudit(
 
   const { error } = await admin.from('evoucher_audit_logs').insert(payload);
   if (error) {
-    memoryAuditLogs.push({ ...payload, created_at: new Date().toISOString(), db_error: error.message });
+    memoryAuditLogs.push({
+      ...payload,
+      created_at: new Date().toISOString(),
+      db_error: error.message,
+    });
   }
 }
 

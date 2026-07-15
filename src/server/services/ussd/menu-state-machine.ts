@@ -3,11 +3,7 @@ import {
   getShopMerchantsForUssd,
   getWalletBalanceForCustomerUssd,
 } from './ussd-data-service';
-import {
-  purchaseUssdVoucher,
-  recordShopSelected,
-  redeemUssdVoucher,
-} from './ussd-demo-ledger';
+import { purchaseUssdVoucher, recordShopSelected, redeemUssdVoucher } from './ussd-demo-ledger';
 import { ussdUserStore } from './ussd-user-store';
 import { UssdResponsePayload, UssdSession, UssdSessionData } from './types';
 

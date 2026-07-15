@@ -146,15 +146,10 @@ export async function handleUssdRequest(payload: UssdRequestPayload) {
       });
       ussdSessionStore.delete(normalized.sessionId);
     } else {
-      ussdSessionStore.upsert(
-        normalized.sessionId,
-        normalized.msisdn,
-        replayed.state,
-        {
-          ...replayed.data,
-          caseId: replayed.data?.caseId ?? baseData.caseId,
-        }
-      );
+      ussdSessionStore.upsert(normalized.sessionId, normalized.msisdn, replayed.state, {
+        ...replayed.data,
+        caseId: replayed.data?.caseId ?? baseData.caseId,
+      });
     }
 
     return {

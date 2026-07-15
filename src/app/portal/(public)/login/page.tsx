@@ -17,9 +17,10 @@ function PortalLoginForm() {
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const requestedNext = searchParams.get('next') ?? '';
-  const returnTo = requestedNext.startsWith('/') && !requestedNext.startsWith('//')
-    ? requestedNext
-    : '/portal/bankserv';
+  const returnTo =
+    requestedNext.startsWith('/') && !requestedNext.startsWith('//')
+      ? requestedNext
+      : '/portal/bankserv';
   const isInfrastructureLogin = returnTo === '/infrastructure';
 
   useEffect(() => {
