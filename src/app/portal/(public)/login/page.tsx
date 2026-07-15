@@ -6,6 +6,21 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
+const ADMIN_PORTAL_ROLES = new Set(['admin']);
+const INFRASTRUCTURE_ROLES = new Set([
+  'admin',
+  'finance_approver',
+  'auditor',
+  'sponsor',
+  'merchant',
+]);
+
+function normalizeRole(role: unknown) {
+  return String(role ?? '')
+    .toLowerCase()
+    .trim();
+}
+
 function PortalLoginForm() {
   const { user, role, signIn } = useAuth();
   const router = useRouter();
@@ -24,10 +39,29 @@ function PortalLoginForm() {
   const isInfrastructureLogin = returnTo === '/infrastructure';
 
   useEffect(() => {
-    if (user && role === 'admin') {
+    const allowedRoles = isInfrastructureLogin ? INFRASTRUCTURE_ROLES : ADMIN_PORTAL_ROLES;
+    if (user && role && allowedRoles.has(role)) {
       router.replace(returnTo);
     }
-  }, [user, role, router, returnTo]);
+  }, [isInfrastructureLogin, user, role, router, returnTo]);
+
+  const resolveSignedInRole = async (userId: string, metadataRole: unknown) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (!error && data?.role) {
+        return normalizeRole(data.role);
+      }
+    } catch {
+      // Metadata fallback below keeps login available if profile lookup is transiently unavailable.
+    }
+
+    return normalizeRole(metadataRole);
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -35,11 +69,34 @@ function PortalLoginForm() {
     setStatus(null);
     try {
       const loggedInUser = await signIn(email, password);
-      const resolvedRole = String(loggedInUser?.user_metadata?.role ?? role ?? '').toLowerCase();
-      if (resolvedRole !== 'admin') {
-        setStatus('This account is not authorized for the business portal.');
+      if (!loggedInUser?.id) {
+        setStatus('Login succeeded, but the session was not returned. Please try again.');
         return;
       }
+
+      const resolvedRole = await resolveSignedInRole(
+        loggedInUser.id,
+        loggedInUser.user_metadata?.role
+      );
+      const allowedRoles = isInfrastructureLogin ? INFRASTRUCTURE_ROLES : ADMIN_PORTAL_ROLES;
+      if (!allowedRoles.has(resolvedRole)) {
+        setStatus(
+          isInfrastructureLogin
+            ? 'This account is not authorized for the infrastructure dashboard.'
+            : 'This account is not authorized for the business portal.'
+        );
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setStatus('Login succeeded, but the browser session is still initializing. Try once more.');
+        return;
+      }
+
+      router.refresh();
       router.replace(returnTo);
     } catch (error: any) {
       setStatus(error?.message || 'Login failed. Check your credentials.');

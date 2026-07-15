@@ -272,7 +272,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('AuthContext: signIn successful:', data.user?.id);
       const resolvedRole = await resolveUserRole(data.user ?? null);
+      setUser(data.user ?? null);
       setRole(resolvedRole);
+      setLoading(false);
       return data.user ?? null;
     } catch (error: any) {
       if (!isRetryableAuthFetchError(error)) {
