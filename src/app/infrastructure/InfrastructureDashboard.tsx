@@ -2,23 +2,28 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
+  AlertTriangle,
   BarChart3,
   Building2,
+  CheckCircle2,
   ChevronDown,
   CreditCard,
+  Database,
   Download,
+  Filter,
   Gift,
   Github,
   Globe2,
   Handshake,
   Landmark,
   LifeBuoy,
-  Lock,
   Mail,
+  RefreshCw,
   Search,
+  Server,
   Settings,
   ShieldCheck,
   Smartphone,
@@ -33,9 +38,17 @@ import JobsTab from './components/JobsTab';
 import ArchitectureTab from './components/ArchitectureTab';
 import ShareModal from './components/ShareModal';
 
-type TabId = 'applications' | 'database' | 'jobs' | 'architecture';
+type TabId =
+  | 'system-health'
+  | 'applications'
+  | 'database'
+  | 'jobs'
+  | 'deployments'
+  | 'compliance'
+  | 'architecture';
 type ModuleId =
   | 'overview'
+  | 'operations'
   | 'applications'
   | 'consumers'
   | 'merchants'
@@ -51,14 +64,18 @@ type ModuleId =
   | 'support';
 
 const TABS: { id: TabId; label: string }[] = [
+  { id: 'system-health', label: 'System Health' },
   { id: 'applications', label: 'Applications' },
   { id: 'database', label: 'Data Assets' },
   { id: 'jobs', label: 'Operations' },
-  { id: 'architecture', label: 'Platform Overview' },
+  { id: 'deployments', label: 'Deployments' },
+  { id: 'compliance', label: 'Compliance' },
+  { id: 'architecture', label: 'Architecture' },
 ];
 
 const NAV_ITEMS = [
-  { id: 'overview', label: 'Overview' },
+  { id: 'overview', label: 'Executive' },
+  { id: 'operations', label: 'Operations' },
   { id: 'applications', label: 'Applications' },
   { id: 'consumers', label: 'Consumers' },
   { id: 'merchants', label: 'Merchants' },
@@ -77,56 +94,81 @@ const NAV_ITEMS = [
 const TAB_IDS = new Set<TabId>(TABS.map((tab) => tab.id));
 const MODULE_IDS = new Set<ModuleId>(NAV_ITEMS.map((item) => item.id));
 
-const EXECUTIVE_METRICS = [
-  { label: 'Infrastructure Health', value: '99.98%', trend: 'Enterprise grade', icon: ShieldCheck },
-  { label: 'Partner Merchants', value: '487', trend: 'National coverage', icon: Building2 },
-  { label: 'Active Users', value: '12,847', trend: 'Consumer reach', icon: Users },
-  { label: 'Payment Success', value: '99.7%', trend: 'Across 8 channels', icon: CreditCard },
+const SYSTEM_HEALTH = [
+  { name: 'Platform Availability', status: 'Operational', value: '99.98%', latency: '134ms', tone: 'success' },
+  { name: 'API Gateway', status: 'Operational', value: '99.97%', latency: '180ms', tone: 'success' },
+  { name: 'Database', status: 'Watch', value: '31ms p95', latency: '+4ms', tone: 'warn' },
+  { name: 'Payment Gateway', status: 'Operational', value: '99.70%', latency: '212ms', tone: 'success' },
+  { name: 'Messaging Queue', status: 'Operational', value: '42 queued', latency: '5m SLA', tone: 'success' },
+  { name: 'Bankserv', status: 'Operational', value: 'ACK current', latency: 'T+1', tone: 'success' },
+  { name: 'USSD', status: 'Operational', value: '4,812 sessions', latency: '1.2s', tone: 'success' },
+  { name: 'Government Gateway', status: 'Attention', value: '2 approvals', latency: '24h SLA', tone: 'danger' },
 ];
 
-const ECC_METRICS = [
-  { label: 'Platform Availability', value: '99.98%', trend: 'Healthy', icon: Activity },
-  { label: 'Vouchers Issued Today', value: '32,420', trend: 'Live campaigns', icon: Gift },
-  { label: 'Payments Processed', value: 'R2.4m', trend: 'Today', icon: CreditCard },
-  { label: 'Government Programmes', value: '18', trend: 'Active', icon: Landmark },
-  { label: 'Sponsors', value: '12', trend: 'Funded partners', icon: Handshake },
-  { label: 'Security Controls', value: 'AA', trend: 'RBAC ready', icon: Lock },
+const KPI_WIDGETS = [
+  { label: 'Consumers Online', value: '1,284', day: '+8.4%', week: '+22%', month: '+41%', tone: 'success' },
+  { label: 'Merchants Online', value: '342', day: '+3.1%', week: '+11%', month: '+18%', tone: 'success' },
+  { label: "Today's Voucher Sales", value: '32,420', day: '+12%', week: '+19%', month: '+34%', tone: 'success' },
+  { label: "Today's Redemptions", value: '27,908', day: '+9.8%', week: '+16%', month: '+28%', tone: 'success' },
+  { label: "Today's Revenue", value: 'R2.4m', day: '+7.2%', week: '+13%', month: '+31%', tone: 'success' },
+  { label: 'Settlement Queue', value: 'R684k', day: '14 batches', week: 'T+1', month: '99.2%', tone: 'warn' },
+  { label: 'Pending KYC', value: '18', day: '-4', week: '-11', month: '-39%', tone: 'warn' },
+  { label: 'Fraud Alerts', value: '3', day: '+1', week: '-6', month: '-22%', tone: 'danger' },
+];
+
+const OPERATION_QUEUES = [
+  { name: 'Settlement Queue', count: 14, owner: 'Treasury', oldest: '42m', action: 'Approve batch' },
+  { name: 'Approval Queue', count: 23, owner: 'Operations', oldest: '3h', action: 'Assign reviewer' },
+  { name: 'KYC Queue', count: 18, owner: 'Compliance', oldest: '6h', action: 'Request docs' },
+  { name: 'Voucher Queue', count: 36, owner: 'Campaigns', oldest: '21m', action: 'Release campaign' },
+  { name: 'Consumer Queue', count: 57, owner: 'Support', oldest: '2h', action: 'Merge duplicates' },
+  { name: 'Merchant Queue', count: 12, owner: 'Merchant Ops', oldest: '5h', action: 'Approve merchant' },
+  { name: 'Fraud Queue', count: 3, owner: 'Risk', oldest: '19m', action: 'Escalate case' },
+  { name: 'Notification Queue', count: 42, owner: 'Platform', oldest: '8m', action: 'Replay failed' },
+];
+
+const ACTIVITY_EVENTS = [
+  { time: '10:58 SAST', event: 'Suspicious redemption blocked', area: 'Fraud', severity: 'High' },
+  { time: '10:52 SAST', event: 'Bankserv payout ACK received', area: 'Settlement', severity: 'Normal' },
+  { time: '10:47 SAST', event: 'Government food relief campaign activated', area: 'Government', severity: 'Normal' },
+  { time: '10:40 SAST', event: 'Merchant approved: Boxer Gauteng North', area: 'Merchants', severity: 'Normal' },
+  { time: '10:32 SAST', event: 'Database backup completed successfully', area: 'Infrastructure', severity: 'Normal' },
+  { time: '10:21 SAST', event: 'Support ticket escalated to treasury', area: 'Support', severity: 'Medium' },
+  { time: '10:15 SAST', event: 'Voucher redeemed via USSD', area: 'Voucher Engine', severity: 'Normal' },
+  { time: '10:02 SAST', event: 'System deployment completed', area: 'CI/CD', severity: 'Normal' },
+];
+
+const EXECUTIVE_ALERTS = [
+  { title: 'Government campaign budget threshold reached', detail: 'Food relief programme at 92% allocation.', action: 'Review budget', tone: 'warn' },
+  { title: 'KYC verification backlog', detail: '18 merchant records need compliance review.', action: 'Open KYC queue', tone: 'warn' },
+  { title: 'Fraud pattern detected', detail: '3 redemptions blocked across duplicate device fingerprints.', action: 'Escalate risk', tone: 'danger' },
+];
+
+const DEPLOYMENTS = [
+  { service: 'Website', environment: 'Production', version: 'main@HEAD', status: 'Ready', time: '10:02 SAST' },
+  { service: 'Billing Engine', environment: 'Production', version: 'release-2026.07', status: 'Ready', time: '09:18 SAST' },
+  { service: 'USSD API', environment: 'Production', version: 'ussd-demo-evidence', status: 'Ready', time: '08:44 SAST' },
+  { service: 'Settlement Cron', environment: 'Scheduled', version: 'bankserv-acb', status: 'Running', time: '09:00 SAST' },
+];
+
+const COMPLIANCE_CONTROLS = [
+  { name: 'POPIA', status: 'Active', owner: 'Data Protection', evidence: 'Consent, retention, subject access' },
+  { name: 'FICA / KYC', status: 'Active', owner: 'Compliance', evidence: 'Merchant documents and review queues' },
+  { name: 'AML', status: 'Monitoring', owner: 'Risk', evidence: 'Fraud score and redemption rules' },
+  { name: 'PASA', status: 'Active', owner: 'Treasury', evidence: 'Bankserv files, ACK/NCK and settlement audit' },
+  { name: 'PCI DSS', status: 'Gateway scoped', owner: 'Payments', evidence: 'Tokenized payment provider boundary' },
+  { name: 'Audit Logs', status: 'Active', owner: 'Security', evidence: 'Administrative and ledger activity' },
 ];
 
 const QUICK_ACTIONS = [
-  'Register Merchant',
-  'Create Voucher Campaign',
-  'Register Government Programme',
-  'Add Sponsor',
-  'Create Consumer',
-  'View Infrastructure',
-  'Open USSD',
-  'Reports',
-];
-
-const PLATFORM_HEALTH = [
-  { name: 'Website', detail: '99.99% uptime' },
-  { name: 'API', detail: 'P95 180ms' },
-  { name: 'Database', detail: 'Backups current' },
-  { name: 'Payments', detail: 'Gateway healthy' },
-  { name: 'USSD', detail: 'Sessions active' },
-  { name: 'SMS', detail: 'Queue clear' },
-  { name: 'Email', detail: 'Deliverability stable' },
-];
-
-const NOTIFICATIONS = [
-  'Merchant approval queue updated',
-  'Government campaign completed',
-  'Database backup successful',
-  'Payment gateway healthy',
-];
-
-const AUDIT_EVENTS = [
-  { time: '10:02 SAST', action: 'Merchant Created', actor: 'Platform Administrator' },
-  { time: '10:15 SAST', action: 'Voucher Redeemed', actor: 'Voucher Engine' },
-  { time: '10:32 SAST', action: 'Government Programme Approved', actor: 'Government Admin' },
-  { time: '10:40 SAST', action: 'Payment Settled', actor: 'Finance Administrator' },
-  { time: '10:51 SAST', action: 'Sponsor Registered', actor: 'Sponsor Administrator' },
+  'Approve Settlement',
+  'Assign KYC Review',
+  'Create Campaign',
+  'Freeze Voucher',
+  'Export Treasury Pack',
+  'Replay Notifications',
+  'Open Incident',
+  'Download Audit Log',
 ];
 
 const SEARCH_RESULTS = [
@@ -135,125 +177,177 @@ const SEARCH_RESULTS = [
   'Voucher: 32,420 issued today',
   'Government Programme: Food Relief',
   'Sponsor: Corporate Partners',
-  'Settlement: R2.4m processed',
+  'Settlement: R684k queued',
   'USSD Session: Live menu traffic',
+  'Fraud Alert: 3 active investigations',
 ];
 
 const MODULE_WORKSPACES: Record<
-  Exclude<ModuleId, 'overview' | 'infrastructure'>,
+  Exclude<ModuleId, 'overview' | 'operations' | 'infrastructure'>,
   {
     title: string;
     description: string;
     icon: typeof Building2;
-    stats: string[];
-    navigation: string[];
+    metrics: { label: string; value: string; trend: string }[];
+    queues: string[];
+    actions: string[];
   }
 > = {
   applications: {
     title: 'Applications Workspace',
     description: 'Launch, monitor, and govern the operational applications in the eVoucher estate.',
     icon: Globe2,
-    stats: ['8 production apps', '4 partner portals', '99.98% availability'],
-    navigation: ['App catalogue', 'Launch links', 'Ownership', 'Environment status'],
+    metrics: [
+      { label: 'Production apps', value: '8', trend: 'All reachable' },
+      { label: 'Partner portals', value: '4', trend: 'RBAC protected' },
+      { label: 'Availability', value: '99.98%', trend: '+0.02% today' },
+    ],
+    queues: ['App catalogue', 'Environment health', 'Ownership', 'Release readiness'],
+    actions: ['Launch app', 'Open logs', 'Assign owner', 'Export inventory'],
   },
   consumers: {
-    title: 'Consumer Workspace',
-    description:
-      'Manage registrations, wallets, rewards, transactions, redemptions, and support cases.',
+    title: 'Consumer Management',
+    description: 'Operate profiles, wallets, voucher history, verification, device trust, and support.',
     icon: Users,
-    stats: ['12,847 registered', '10,201 active', 'R1.8m wallet movement'],
-    navigation: ['Registrations', 'Wallets', 'Transactions', 'Rewards', 'Support cases'],
+    metrics: [
+      { label: 'Registered', value: '12,847', trend: '+312 this week' },
+      { label: 'Online now', value: '1,284', trend: '+8.4% today' },
+      { label: 'Support tickets', value: '42', trend: '94% SLA' },
+    ],
+    queues: ['Wallet exceptions', 'Device history', 'Fraud score', 'Support tickets'],
+    actions: ['Suspend', 'Reactivate', 'Merge account', 'Open profile'],
   },
   merchants: {
-    title: 'Merchant Workspace',
-    description: 'Operate stores, branches, products, settlements, compliance, and performance.',
+    title: 'Merchant Relationship Management',
+    description: 'Manage merchant profiles, settlement history, POS health, compliance, documents, and performance.',
     icon: Building2,
-    stats: ['487 active', '18 pending', '12 suspended'],
-    navigation: ['Stores', 'Branches', 'Products', 'Transactions', 'Settlements', 'Performance'],
+    metrics: [
+      { label: 'Active merchants', value: '487', trend: '+18 this month' },
+      { label: 'Pending approval', value: '12', trend: '5h oldest' },
+      { label: 'POS health', value: '98.6%', trend: 'Stable' },
+    ],
+    queues: ['Approvals', 'KYC documents', 'Bank details', 'Terminal status'],
+    actions: ['Approve', 'Reject', 'Escalate', 'Export merchants'],
   },
   vouchers: {
     title: 'Voucher Engine',
-    description:
-      'Design templates, issue campaigns, govern expiry, and monitor redemption performance.',
+    description: 'Control generation, inventory, campaigns, templates, expiry, usage rules, and audit trails.',
     icon: Gift,
-    stats: ['32,420 issued today', '91.3% redemption health', '14 templates'],
-    navigation: [
-      'Templates',
-      'Campaigns',
-      'Government vouchers',
-      'Retail vouchers',
-      'Expiry',
-      'Redemptions',
+    metrics: [
+      { label: 'Issued today', value: '32,420', trend: '+12%' },
+      { label: 'Redeemed today', value: '27,908', trend: '+9.8%' },
+      { label: 'Templates', value: '14', trend: '4 active campaigns' },
     ],
+    queues: ['Generation batches', 'QR validation', 'Expiry rules', 'Fraud detection'],
+    actions: ['Generate', 'Freeze', 'Bulk import', 'Export audit trail'],
   },
   payments: {
-    title: 'Payments Workspace',
-    description: 'Track payment channels, settlements, invoices, reconciliation, and exceptions.',
+    title: 'Treasury Dashboard',
+    description: 'Track incoming payments, outgoing settlements, Bankserv, PayFast, Ozow, refunds, and cash flow.',
     icon: CreditCard,
-    stats: ['R2.4m processed', '99.7% success', '8 channels'],
-    navigation: ['Transactions', 'Settlements', 'Invoices', 'Reconciliation', 'Exceptions'],
+    metrics: [
+      { label: 'Processed today', value: 'R2.4m', trend: '+7.2%' },
+      { label: 'Success rate', value: '99.7%', trend: '8 channels' },
+      { label: 'Failed payments', value: '11', trend: '-18%' },
+    ],
+    queues: ['Reconciliation', 'Chargebacks', 'Refunds', 'Bankserv files'],
+    actions: ['Approve payout', 'Reconcile', 'Refund', 'Export treasury pack'],
   },
   ussd: {
-    title: 'USSD Workspace',
-    description:
-      'Monitor citizen sessions, menus, provider health, service availability, and support escalation.',
+    title: 'USSD Operations',
+    description: 'Monitor citizen sessions, menus, provider health, service availability, and support escalation.',
     icon: Smartphone,
-    stats: ['4,812 sessions', '99.4% completion', '2 live menus'],
-    navigation: ['Sessions', 'Menus', 'Service journeys', 'Provider status', 'Escalations'],
+    metrics: [
+      { label: 'Live sessions', value: '4,812', trend: '99.4% completion' },
+      { label: 'Shortcode', value: '*120*384#', trend: 'Target route' },
+      { label: 'Menu latency', value: '1.2s', trend: 'Healthy' },
+    ],
+    queues: ['Sessions', 'Menus', 'Provider status', 'Escalations'],
+    actions: ['Open simulator', 'Replay session', 'Export logs', 'Escalate'],
   },
   government: {
-    title: 'Government Workspace',
-    description:
-      'Coordinate national, provincial, municipal, beneficiary, funding, and compliance programmes.',
+    title: 'Government Programme Management',
+    description: 'Coordinate departments, campaigns, budgets, beneficiaries, reporting, audits, and fraud monitoring.',
     icon: Landmark,
-    stats: ['18 programmes', '9 provinces', '6 impact reports'],
-    navigation: ['National', 'Provincial', 'Municipal', 'Beneficiaries', 'Funding', 'Compliance'],
+    metrics: [
+      { label: 'Programmes', value: '18', trend: '9 provinces' },
+      { label: 'Beneficiaries', value: '86,400', trend: '+4.2%' },
+      { label: 'Budget usage', value: '72%', trend: 'On track' },
+    ],
+    queues: ['Budgets', 'Beneficiaries', 'Provincial reports', 'Treasury reports'],
+    actions: ['Approve campaign', 'Export report', 'Review budget', 'Open audit'],
   },
   sponsors: {
-    title: 'Sponsor Workspace',
-    description:
-      'Give CSI and corporate partners visibility into funding, campaigns, impact, and downloads.',
+    title: 'Sponsor Relationship Management',
+    description: 'Manage funding, beneficiaries, campaign performance, ROI, invoices, settlement reports, and contracts.',
     icon: Handshake,
-    stats: ['12 sponsors', 'R8.6m allocated', '24 impact packs'],
-    navigation: ['Funding', 'Beneficiaries', 'Campaigns', 'Impact', 'Reporting', 'Downloads'],
+    metrics: [
+      { label: 'Sponsors', value: '12', trend: '4 active briefs' },
+      { label: 'Allocated', value: 'R8.6m', trend: '68% used' },
+      { label: 'Impact packs', value: '24', trend: 'Ready' },
+    ],
+    queues: ['Invoices', 'Contracts', 'Campaign ROI', 'Beneficiary exports'],
+    actions: ['Create invoice', 'Export ROI', 'Renew contract', 'Assign campaign'],
   },
   analytics: {
-    title: 'Analytics Workspace',
-    description:
-      'Board-level reporting for financial, merchant, consumer, government, and sponsor insights.',
+    title: 'Business Intelligence',
+    description: 'Interactive dashboards for province heatmaps, behaviour, merchant performance, revenue, and trends.',
     icon: BarChart3,
-    stats: ['7 dashboards', '15 exports', 'Live executive view'],
-    navigation: ['Financial', 'Merchant', 'Consumer', 'Government', 'Sponsors', 'Infrastructure'],
+    metrics: [
+      { label: 'Dashboards', value: '7', trend: 'Live filters' },
+      { label: 'Exports', value: '15', trend: 'CSV, Excel, PDF' },
+      { label: 'Forecast', value: '+31%', trend: 'Monthly revenue' },
+    ],
+    queues: ['Province heatmap', 'Revenue trends', 'Sponsor reporting', 'Predictive analytics'],
+    actions: ['Export PDF', 'Open BI view', 'Schedule report', 'Filter province'],
   },
   security: {
-    title: 'Security Centre',
-    description:
-      'Control users, roles, permissions, MFA, failed logins, audit, API keys, and devices.',
+    title: 'Enterprise Security Centre',
+    description: 'Control RBAC, MFA, SSO, API security, threat detection, failed logins, encryption, and sessions.',
     icon: ShieldCheck,
-    stats: ['MFA ready', 'RBAC matrix', '5 audit filters'],
-    navigation: ['Users', 'Roles', 'Permissions', 'MFA', 'Failed logins', 'Audit', 'API keys'],
+    metrics: [
+      { label: 'RBAC roles', value: '8', trend: 'Active' },
+      { label: 'Failed logins', value: '17', trend: '-12%' },
+      { label: 'Threat alerts', value: '3', trend: 'Under review' },
+    ],
+    queues: ['Failed logins', 'Device trust', 'API keys', 'Security audit'],
+    actions: ['Force MFA', 'Revoke session', 'Rotate key', 'Open audit'],
   },
   admin: {
-    title: 'Platform Administration',
-    description:
-      'Manage organisation settings, branding, channels, integrations, APIs, and configuration.',
+    title: 'Enterprise Administration',
+    description: 'Manage users, roles, permissions, feature flags, templates, providers, integrations, and parameters.',
     icon: Settings,
-    stats: ['9 settings groups', '4 integrations', '3 environments'],
-    navigation: ['Organisation', 'Branding', 'USSD', 'SMS', 'Email', 'Payment gateways', 'API'],
+    metrics: [
+      { label: 'Users', value: '64', trend: '12 roles' },
+      { label: 'Feature flags', value: '9', trend: '3 staged' },
+      { label: 'Integrations', value: '4', trend: 'Healthy' },
+    ],
+    queues: ['User management', 'Permissions', 'Notification templates', 'System parameters'],
+    actions: ['Invite user', 'Edit roles', 'Toggle flag', 'Export settings'],
   },
   support: {
-    title: 'Support Workspace',
-    description:
-      'Coordinate customer, merchant, government, and sponsor support with operational context.',
+    title: 'Support Command Centre',
+    description: 'Coordinate customer, merchant, government, and sponsor support with operational context.',
     icon: LifeBuoy,
-    stats: ['42 open cases', '8 escalations', '94% SLA'],
-    navigation: ['Tickets', 'WhatsApp', 'Email intake', 'Knowledge base', 'Escalations'],
+    metrics: [
+      { label: 'Open cases', value: '42', trend: '8 escalations' },
+      { label: 'SLA', value: '94%', trend: '+2%' },
+      { label: 'WhatsApp intake', value: '31', trend: 'Today' },
+    ],
+    queues: ['Tickets', 'WhatsApp', 'Email intake', 'Knowledge base'],
+    actions: ['Assign', 'Escalate', 'Reply', 'Export cases'],
   },
 };
 
 interface InfrastructureDashboardProps {
   role: string;
   userEmail: string;
+}
+
+function toneClasses(tone: string) {
+  if (tone === 'danger') return 'bg-[#FEE2E2] text-[#B91C1C] border-[#FECACA]';
+  if (tone === 'warn') return 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]';
+  return 'bg-[#DCFCE7] text-[#166534] border-[#BBF7D0]';
 }
 
 function ModuleWorkspace({
@@ -271,15 +365,19 @@ function ModuleWorkspace({
             <Icon className="h-6 w-6" />
           </div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#20B8C5]">
-            Authenticated Module
+            Operational Module
           </p>
           <h2 className="mt-3 font-headline text-3xl font-bold text-[#20324A]">{module.title}</h2>
           <p className="mt-3 text-sm leading-6 text-[#64748B]">{module.description}</p>
         </div>
         <div className="grid min-w-[260px] gap-3">
-          {module.stats.map((stat) => (
-            <div key={stat} className="rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] px-4 py-3">
-              <p className="text-sm font-semibold text-[#20324A]">{stat}</p>
+          {module.metrics.map((metric) => (
+            <div key={metric.label} className="rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#94A3B8]">
+                {metric.label}
+              </p>
+              <p className="mt-1 font-headline text-2xl font-bold text-[#20324A]">{metric.value}</p>
+              <p className="text-xs font-semibold text-[#16A34A]">{metric.trend}</p>
             </div>
           ))}
         </div>
@@ -288,10 +386,10 @@ function ModuleWorkspace({
       <div className="mt-8 grid gap-4 lg:grid-cols-[280px_1fr]">
         <aside className="rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#94A3B8]">
-            Context Navigation
+            Live Queues
           </p>
           <div className="mt-4 space-y-2">
-            {module.navigation.map((item, index) => (
+            {module.queues.map((item, index) => (
               <button
                 key={item}
                 type="button"
@@ -308,19 +406,23 @@ function ModuleWorkspace({
         </aside>
 
         <div className="rounded-lg border border-[#E6EEF5] bg-white">
-          <div className="grid border-b border-[#E6EEF5] bg-[#F7F9FC] px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#64748B] md:grid-cols-3">
+          <div className="grid border-b border-[#E6EEF5] bg-[#F7F9FC] px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#64748B] md:grid-cols-4">
             <span>Workspace</span>
             <span>Status</span>
-            <span>Governance</span>
+            <span>Owner</span>
+            <span>Action</span>
           </div>
-          {module.navigation.slice(0, 5).map((item) => (
+          {module.queues.map((item, index) => (
             <div
               key={item}
-              className="grid gap-2 border-b border-[#E6EEF5] px-4 py-4 text-sm last:border-b-0 md:grid-cols-3"
+              className="grid gap-2 border-b border-[#E6EEF5] px-4 py-4 text-sm last:border-b-0 md:grid-cols-4"
             >
               <span className="font-semibold text-[#20324A]">{item}</span>
               <span className="text-[#16A34A]">Operational</span>
               <span className="text-[#64748B]">RBAC protected</span>
+              <button type="button" className="text-left font-semibold text-[#108995]">
+                {module.actions[index % module.actions.length]}
+              </button>
             </div>
           ))}
         </div>
@@ -329,15 +431,240 @@ function ModuleWorkspace({
   );
 }
 
+function ExecutiveOverview({ pulse }: { pulse: number }) {
+  return (
+    <>
+      <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {KPI_WIDGETS.map((metric, index) => (
+          <div key={metric.label} className="rounded-lg border border-[#E6EEF5] bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-medium text-[#64748B]">{metric.label}</p>
+              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${toneClasses(metric.tone)}`}>
+                Live
+              </span>
+            </div>
+            <p className="mt-3 font-headline text-3xl font-bold text-[#20324A]">
+              {index < 2 ? `${Number(metric.value.replace(/,/g, '')) + pulse}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : metric.value}
+            </p>
+            <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+              <span className="rounded-md bg-[#F7F9FC] px-2 py-1 text-[#16A34A]">D {metric.day}</span>
+              <span className="rounded-md bg-[#F7F9FC] px-2 py-1 text-[#108995]">W {metric.week}</span>
+              <span className="rounded-md bg-[#F7F9FC] px-2 py-1 text-[#64748B]">M {metric.month}</span>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="mb-8 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-lg border border-[#E6EEF5] bg-white p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-headline text-lg font-semibold text-[#20324A]">Live Activity Feed</h2>
+              <p className="text-sm text-[#64748B]">Chronological platform events refreshing automatically.</p>
+            </div>
+            <span className="inline-flex items-center gap-2 rounded-full bg-[#EAFBFD] px-3 py-1 text-xs font-bold text-[#108995]">
+              <RefreshCw className="h-3.5 w-3.5" />
+              {pulse + 1}s pulse
+            </span>
+          </div>
+          <div className="overflow-hidden rounded-lg border border-[#E6EEF5]">
+            {ACTIVITY_EVENTS.map((event) => (
+              <div key={`${event.time}-${event.event}`} className="grid gap-2 border-b border-[#E6EEF5] px-4 py-3 text-sm last:border-b-0 md:grid-cols-[110px_1fr_120px_90px]">
+                <span className="font-semibold text-[#108995]">{event.time}</span>
+                <span className="text-[#20324A]">{event.event}</span>
+                <span className="text-[#64748B]">{event.area}</span>
+                <span className={event.severity === 'High' ? 'font-semibold text-[#B91C1C]' : 'text-[#64748B]'}>
+                  {event.severity}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-[#E6EEF5] bg-white p-5">
+          <h2 className="font-headline text-lg font-semibold text-[#20324A]">Executive Alerts</h2>
+          <div className="mt-4 space-y-3">
+            {EXECUTIVE_ALERTS.map((alert) => (
+              <div key={alert.title} className={`rounded-lg border p-4 ${toneClasses(alert.tone)}`}>
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="font-semibold">{alert.title}</p>
+                    <p className="mt-1 text-xs opacity-80">{alert.detail}</p>
+                    <button type="button" className="mt-3 rounded-md bg-white/80 px-3 py-1.5 text-xs font-bold text-[#20324A]">
+                      {alert.action}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <OperationsCentre compact />
+    </>
+  );
+}
+
+function OperationsCentre({ compact = false }: { compact?: boolean }) {
+  return (
+    <section className="mb-8 grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+      <div className="rounded-lg border border-[#E6EEF5] bg-white p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-headline text-lg font-semibold text-[#20324A]">Operations Centre</h2>
+            <p className="text-sm text-[#64748B]">Queues with assign, approve, reject, escalate, and export workflows.</p>
+          </div>
+          <button type="button" className="inline-flex items-center gap-2 rounded-lg border border-[#E6EEF5] px-3 py-2 text-sm font-semibold text-[#20324A] hover:bg-[#F7F9FC]">
+            <Filter className="h-4 w-4" />
+            Filter
+          </button>
+        </div>
+        <div className="mt-4 grid gap-3">
+          {OPERATION_QUEUES.slice(0, compact ? 5 : OPERATION_QUEUES.length).map((queue) => (
+            <div key={queue.name} className="rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-semibold text-[#20324A]">{queue.name}</p>
+                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[#108995]">{queue.count}</span>
+              </div>
+              <div className="mt-2 grid gap-2 text-xs text-[#64748B] sm:grid-cols-3">
+                <span>{queue.owner}</span>
+                <span>Oldest {queue.oldest}</span>
+                <button type="button" className="text-left font-bold text-[#108995]">{queue.action}</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-[#E6EEF5] bg-white p-5">
+        <h2 className="font-headline text-lg font-semibold text-[#20324A]">Immediate Actions</h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {QUICK_ACTIONS.map((action) => (
+            <button key={action} type="button" className="inline-flex items-center gap-2 rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] px-3 py-2.5 text-left text-sm font-semibold text-[#20324A] hover:border-[#20B8C5] hover:bg-[#EAFBFD]">
+              <Zap className="h-4 w-4 text-[#20B8C5]" />
+              {action}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SystemHealthTab() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {SYSTEM_HEALTH.map((item) => (
+          <div key={item.name} className="rounded-lg border border-[#E6EEF5] bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#20B8C5]/10 text-[#20B8C5]">
+                {item.name.includes('Database') ? <Database className="h-5 w-5" /> : <Server className="h-5 w-5" />}
+              </div>
+              <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${toneClasses(item.tone)}`}>
+                {item.status}
+              </span>
+            </div>
+            <p className="mt-4 font-semibold text-[#20324A]">{item.name}</p>
+            <p className="mt-2 font-headline text-2xl font-bold text-[#20324A]">{item.value}</p>
+            <p className="mt-1 text-xs text-[#64748B]">Latency / SLA: {item.latency}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-lg border border-[#E6EEF5] bg-white p-5">
+        <h2 className="font-headline text-lg font-semibold text-[#20324A]">Monitoring Coverage</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {['API monitoring', 'Server status', 'Storage checks', 'Backups', 'Disaster recovery', 'Log retention'].map((item) => (
+            <div key={item} className="flex items-center gap-3 rounded-lg bg-[#F7F9FC] p-3 text-sm font-semibold text-[#20324A]">
+              <CheckCircle2 className="h-4 w-4 text-[#16A34A]" />
+              {item}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeploymentsTab() {
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border border-[#E6EEF5] bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="font-headline text-xl font-semibold text-[#20324A]">CI/CD and Deployments</h2>
+            <p className="mt-1 text-sm text-[#64748B]">GitHub and Vercel promotion status for production services.</p>
+          </div>
+          <a href="https://github.com/shelod-eng/eVoucher_Website2026/actions" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-[#20B8C5] bg-white px-4 py-2 text-sm font-semibold text-[#108995] hover:bg-[#EAFBFD]">
+            <Github className="h-4 w-4" />
+            GitHub Actions
+          </a>
+        </div>
+      </div>
+      <div className="overflow-hidden rounded-lg border border-[#E6EEF5] bg-white">
+        {DEPLOYMENTS.map((deployment) => (
+          <div key={`${deployment.service}-${deployment.time}`} className="grid gap-2 border-b border-[#E6EEF5] px-5 py-4 text-sm last:border-b-0 md:grid-cols-[1fr_140px_160px_120px_120px]">
+            <span className="font-semibold text-[#20324A]">{deployment.service}</span>
+            <span className="text-[#64748B]">{deployment.environment}</span>
+            <span className="font-mono text-xs text-[#64748B]">{deployment.version}</span>
+            <span className="font-semibold text-[#16A34A]">{deployment.status}</span>
+            <span className="text-[#64748B]">{deployment.time}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ComplianceTab() {
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border border-[#E6EEF5] bg-white p-5">
+        <h2 className="font-headline text-xl font-semibold text-[#20324A]">Enterprise Compliance</h2>
+        <p className="mt-1 text-sm text-[#64748B]">Operational controls for POPIA, FICA, KYC, AML, PASA, PCI DSS, audit logs, and regulatory reporting.</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {COMPLIANCE_CONTROLS.map((control) => (
+          <div key={control.name} className="rounded-lg border border-[#E6EEF5] bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-headline text-lg font-semibold text-[#20324A]">{control.name}</p>
+                <p className="mt-1 text-sm text-[#64748B]">{control.evidence}</p>
+              </div>
+              <span className="rounded-full bg-[#EAFBFD] px-3 py-1 text-xs font-bold text-[#108995]">{control.status}</span>
+            </div>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-[#94A3B8]">Owner</p>
+            <p className="mt-1 text-sm font-semibold text-[#20324A]">{control.owner}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function InfrastructureDashboard({ role, userEmail }: InfrastructureDashboardProps) {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<TabId>('applications');
+  const [activeTab, setActiveTab] = useState<TabId>('system-health');
   const [activeModule, setActiveModule] = useState<ModuleId>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
-  const searchMatches = searchQuery.trim()
-    ? SEARCH_RESULTS.filter((result) => result.toLowerCase().includes(searchQuery.toLowerCase()))
-    : [];
+  const [pulse, setPulse] = useState(0);
+
+  const searchMatches = useMemo(
+    () =>
+      searchQuery.trim()
+        ? SEARCH_RESULTS.filter((result) => result.toLowerCase().includes(searchQuery.toLowerCase()))
+        : [],
+    [searchQuery]
+  );
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setPulse((value) => (value + 1) % 9), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const requestedModule = searchParams.get('module') as ModuleId | null;
@@ -361,15 +688,12 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
               <Globe2 className="h-5 w-5" />
             </div>
             <div className="leading-tight">
-              <p className="font-headline text-lg font-bold text-[#20324A]">eVoucher ECC</p>
-              <p className="text-xs text-[#64748B]">Command Centre</p>
+              <p className="font-headline text-lg font-bold text-[#20324A]">eVoucher ECC 2.0</p>
+              <p className="text-xs text-[#64748B]">Enterprise Operations Platform</p>
             </div>
           </div>
 
-          <nav
-            className="mx-4 hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:flex"
-            aria-label="Command Centre modules"
-          >
+          <nav className="mx-4 hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:flex" aria-label="Command Centre modules">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.id}
@@ -387,14 +711,10 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
           </nav>
 
           <div className="hidden items-center gap-3 xl:flex">
-            <button
-              type="button"
-              className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] text-[#20324A] hover:bg-[#F1F5F9]"
-              aria-label="Notifications"
-            >
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#EF4444]" />
-              <Activity className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2 rounded-full border border-[#BBF7D0] bg-[#DCFCE7] px-3 py-1.5 text-xs font-bold text-[#166534]">
+              <span className="h-2 w-2 rounded-full bg-[#16A34A]" />
+              Live
+            </div>
             <div className="flex items-center gap-2 rounded-full border border-[#E6EEF5] bg-[#F7F9FC] px-3 py-1.5 text-xs text-[#64748B]">
               <UserCircle className="h-4 w-4 text-[#108995]" />
               <span className="max-w-[150px] truncate">{userEmail}</span>
@@ -410,30 +730,22 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#20B8C5]">
-                eVoucher Command Centre
+                Enterprise Operations Platform
               </p>
               <h1 className="mt-3 font-headline text-4xl font-bold tracking-tight text-[#20324A]">
-                Enterprise operations for the eVoucher ecosystem
+                Real-time operating control for the South African eVoucher ecosystem
               </h1>
               <p className="mt-3 max-w-2xl text-base text-[#64748B]">
-                Authenticated control centre for platform health, merchants, consumers, voucher
-                campaigns, payments, government programmes, sponsors, security, and support.
+                Platform health, live queues, treasury, compliance, government programmes, sponsors,
+                security, and infrastructure operations in one authenticated workspace.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => setShareOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#20B8C5] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#108995]"
-              >
+              <button type="button" onClick={() => setShareOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-[#20B8C5] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#108995]">
                 <Mail className="h-4 w-4" />
                 Share Brief
               </button>
-              <a
-                href="/docs/system-architecture-2026.pdf"
-                download
-                className="inline-flex items-center gap-2 rounded-lg border border-[#20B8C5] bg-white px-4 py-2.5 text-sm font-semibold text-[#108995] transition-colors hover:bg-[#EAFBFD]"
-              >
+              <a href="/docs/system-architecture-2026.pdf" download className="inline-flex items-center gap-2 rounded-lg border border-[#20B8C5] bg-white px-4 py-2.5 text-sm font-semibold text-[#108995] transition-colors hover:bg-[#EAFBFD]">
                 <Download className="h-4 w-4" />
                 Executive Brief
               </a>
@@ -451,17 +763,14 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
               <input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search consumers, merchants, vouchers, settlements, sponsors..."
+                placeholder="Search consumers, merchants, vouchers, settlements, fraud alerts..."
                 className="w-full bg-transparent text-sm text-[#20324A] outline-none placeholder:text-[#94A3B8]"
               />
             </div>
             {searchMatches.length > 0 && (
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {searchMatches.slice(0, 4).map((result) => (
-                  <div
-                    key={result}
-                    className="rounded-md bg-[#EAFBFD] px-3 py-2 text-xs text-[#20324A]"
-                  >
+                  <div key={result} className="rounded-md bg-[#EAFBFD] px-3 py-2 text-xs text-[#20324A]">
                     {result}
                   </div>
                 ))}
@@ -471,15 +780,15 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
           <div className="rounded-lg border border-[#E6EEF5] bg-white p-4">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-[#108995]" />
-              <p className="text-sm font-semibold text-[#20324A]">Notifications</p>
-              <span className="ml-auto rounded-full bg-[#20B8C5] px-2 py-0.5 text-xs font-bold text-white">
-                {NOTIFICATIONS.length}
+              <p className="text-sm font-semibold text-[#20324A]">Attention Required</p>
+              <span className="ml-auto rounded-full bg-[#EF4444] px-2 py-0.5 text-xs font-bold text-white">
+                {EXECUTIVE_ALERTS.length}
               </span>
             </div>
             <div className="mt-3 space-y-2">
-              {NOTIFICATIONS.slice(0, 3).map((item) => (
-                <p key={item} className="rounded-md bg-[#F7F9FC] px-3 py-2 text-xs text-[#64748B]">
-                  {item}
+              {EXECUTIVE_ALERTS.slice(0, 3).map((item) => (
+                <p key={item.title} className="rounded-md bg-[#F7F9FC] px-3 py-2 text-xs text-[#64748B]">
+                  {item.title}
                 </p>
               ))}
             </div>
@@ -492,119 +801,27 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
             <p className="mt-3 truncate text-sm font-semibold text-[#20324A]">{userEmail}</p>
             <p className="mt-1 text-xs capitalize text-[#64748B]">{role.replace(/_/g, ' ')}</p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full bg-[#EAFBFD] px-2.5 py-1 text-[#108995]">Profile</span>
-              <span className="rounded-full bg-[#EAFBFD] px-2.5 py-1 text-[#108995]">Security</span>
-              <span className="rounded-full bg-[#EAFBFD] px-2.5 py-1 text-[#108995]">Logout</span>
+              <span className="rounded-full bg-[#EAFBFD] px-2.5 py-1 text-[#108995]">RBAC</span>
+              <span className="rounded-full bg-[#EAFBFD] px-2.5 py-1 text-[#108995]">Audit</span>
+              <span className="rounded-full bg-[#EAFBFD] px-2.5 py-1 text-[#108995]">MFA Ready</span>
             </div>
           </div>
         </section>
 
-        {activeModule === 'overview' && (
-          <>
-            <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {ECC_METRICS.map(({ label, value, trend, icon: Icon }) => (
-                <div
-                  key={label}
-                  className="rounded-lg border border-[#E6EEF5] bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.06)]"
-                >
-                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-[#20B8C5]/10 text-[#20B8C5]">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <p className="text-sm font-medium text-[#64748B]">{label}</p>
-                  <p className="mt-2 font-headline text-3xl font-bold text-[#20324A]">{value}</p>
-                  <p className="mt-2 text-xs font-semibold text-[#16A34A]">{trend}</p>
-                </div>
-              ))}
-            </section>
+        {activeModule === 'overview' && <ExecutiveOverview pulse={pulse} />}
+        {activeModule === 'operations' && <OperationsCentre />}
 
-            <section className="mb-8 grid gap-4 lg:grid-cols-[1fr_1fr]">
-              <div className="rounded-lg border border-[#E6EEF5] bg-white p-5">
-                <h2 className="font-headline text-lg font-semibold text-[#20324A]">
-                  Quick Actions
-                </h2>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {QUICK_ACTIONS.map((action) => (
-                    <button
-                      key={action}
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] px-3 py-2.5 text-left text-sm font-semibold text-[#20324A] hover:border-[#20B8C5] hover:bg-[#EAFBFD]"
-                    >
-                      <Zap className="h-4 w-4 text-[#20B8C5]" />
-                      {action}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-lg border border-[#E6EEF5] bg-white p-5">
-                <h2 className="font-headline text-lg font-semibold text-[#20324A]">
-                  Platform Health
-                </h2>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {PLATFORM_HEALTH.map((item) => (
-                    <div
-                      key={item.name}
-                      className="rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] p-3"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full bg-[#16A34A]" />
-                        <p className="text-sm font-semibold text-[#20324A]">{item.name}</p>
-                      </div>
-                      <p className="mt-1 text-xs text-[#64748B]">{item.detail}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <section className="mb-8 rounded-lg border border-[#E6EEF5] bg-white p-5">
-              <h2 className="font-headline text-lg font-semibold text-[#20324A]">Audit Centre</h2>
-              <div className="mt-4 overflow-hidden rounded-lg border border-[#E6EEF5]">
-                {AUDIT_EVENTS.map((event) => (
-                  <div
-                    key={`${event.time}-${event.action}`}
-                    className="grid gap-2 border-b border-[#E6EEF5] px-4 py-3 text-sm last:border-b-0 md:grid-cols-[140px_1fr_220px]"
-                  >
-                    <span className="font-semibold text-[#108995]">{event.time}</span>
-                    <span className="text-[#20324A]">{event.action}</span>
-                    <span className="text-[#64748B]">{event.actor}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
-
-        {activeModule !== 'overview' && activeModule !== 'infrastructure' && (
+        {activeModule !== 'overview' && activeModule !== 'operations' && activeModule !== 'infrastructure' && (
           <ModuleWorkspace module={MODULE_WORKSPACES[activeModule]} />
         )}
 
         {activeModule === 'infrastructure' && (
           <>
             <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {EXECUTIVE_METRICS.map(({ label, value, trend, icon: Icon }) => (
-                <div
-                  key={label}
-                  className="rounded-lg border border-[#E6EEF5] bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.06)]"
-                >
-                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-[#20B8C5]/10 text-[#20B8C5]">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <p className="text-sm font-medium text-[#64748B]">{label}</p>
-                  <p className="mt-2 font-headline text-3xl font-bold text-[#20324A]">{value}</p>
-                  <p className="mt-2 text-xs font-semibold text-[#16A34A]">{trend}</p>
-                </div>
-              ))}
-            </section>
-
-            <section className="mb-8 grid gap-4 md:grid-cols-4">
               {STATS.map((stat) => (
-                <div key={stat.label} className="rounded-lg border border-[#E6EEF5] bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#94A3B8]">
-                    {stat.label}
-                  </p>
-                  <p className="mt-2 font-headline text-2xl font-bold text-[#20324A]">
-                    {stat.value}
-                  </p>
+                <div key={stat.label} className="rounded-lg border border-[#E6EEF5] bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#94A3B8]">{stat.label}</p>
+                  <p className="mt-2 font-headline text-3xl font-bold text-[#20324A]">{stat.value}</p>
                 </div>
               ))}
             </section>
@@ -612,29 +829,21 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
             <section className="mb-8 flex flex-wrap items-center justify-between gap-6 rounded-lg border border-[#D7F3F6] bg-[#EAFBFD] p-6">
               <div className="max-w-xl">
                 <h2 className="font-headline text-lg font-semibold text-[#20324A]">
-                  Share platform confidence with stakeholders
+                  Infrastructure Portal retained and expanded
                 </h2>
                 <p className="mt-2 text-sm text-[#64748B]">
-                  Copy a concise handover note or open the repository for technical due diligence.
+                  System health, deployments, API monitoring, database, storage, CI/CD, backups,
+                  disaster recovery, logs, architecture, documentation, and compliance.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShareOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#20B8C5] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#108995]"
-                >
+                <button type="button" onClick={() => setShareOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-[#20B8C5] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#108995]">
                   <Mail className="h-4 w-4" />
                   Copy Email Template
                 </button>
-                <a
-                  href="https://github.com/shelod-eng/eVoucher_Website2026"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg border border-[#B9E9EE] bg-white px-4 py-2.5 text-sm font-semibold text-[#20324A] hover:bg-[#F7F9FC]"
-                >
+                <a href="https://github.com/shelod-eng/eVoucher_Website2026/actions" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-[#B9E9EE] bg-white px-4 py-2.5 text-sm font-semibold text-[#20324A] hover:bg-[#F7F9FC]">
                   <Github className="h-4 w-4" />
-                  View GitHub Repo
+                  GitHub Actions
                 </a>
               </div>
             </section>
@@ -657,11 +866,12 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
             </div>
 
             <div className="animate-fade-in pb-16">
-              {activeTab === 'applications' && (
-                <ApplicationsLauncher onViewArchitecture={() => setActiveTab('architecture')} />
-              )}
+              {activeTab === 'system-health' && <SystemHealthTab />}
+              {activeTab === 'applications' && <ApplicationsLauncher onViewArchitecture={() => setActiveTab('architecture')} />}
               {activeTab === 'database' && <DatabaseTab />}
               {activeTab === 'jobs' && <JobsTab />}
+              {activeTab === 'deployments' && <DeploymentsTab />}
+              {activeTab === 'compliance' && <ComplianceTab />}
               {activeTab === 'architecture' && <ArchitectureTab />}
             </div>
           </>
@@ -669,28 +879,17 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
 
         <footer className="border-t border-[#E6EEF5] pt-8 text-center text-sm text-[#64748B]">
           <p>
-            &copy; 2026 eVoucher Platform. Developed by{' '}
-            <strong className="text-[#20324A]">Lebo Mpeta</strong>.
+            &copy; 2026 eVoucher Platform. Developed by <strong className="text-[#20324A]">Lebo Mpeta</strong>.
           </p>
           <p className="mt-2">
             Website Repo:{' '}
-            <a
-              href="https://github.com/shelod-eng/eVoucher_Website2026"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#108995] hover:underline"
-            >
+            <a href="https://github.com/shelod-eng/eVoucher_Website2026" target="_blank" rel="noopener noreferrer" className="text-[#108995] hover:underline">
               shelod-eng/eVoucher_Website2026
             </a>
             {' | '}
-            Mobile Repo:{' '}
-            <a
-              href="https://github.com/shelod-eng/eVoucherMobile"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#108995] hover:underline"
-            >
-              shelod-eng/eVoucherMobile
+            Vercel Deployments:{' '}
+            <a href="https://vercel.com/shelod-engs-projects/~/deployments" target="_blank" rel="noopener noreferrer" className="text-[#108995] hover:underline">
+              shelod-engs-projects
             </a>
             {' | '}
             Email:{' '}
