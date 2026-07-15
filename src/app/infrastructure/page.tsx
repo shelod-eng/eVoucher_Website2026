@@ -14,7 +14,7 @@ export default async function InfrastructurePage() {
   const { supabase, user } = await getAuthenticatedUser();
 
   if (!user) {
-    redirect('/portal/login');
+    redirect('/portal/login?next=/infrastructure');
   }
 
   const { role } = await resolveUserRole(supabase, user);

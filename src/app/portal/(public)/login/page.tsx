@@ -1,26 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 
-export default function PortalLoginPage() {
+function PortalLoginForm() {
   const { user, role, signIn } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const requestedNext = searchParams.get('next') ?? '';
+  const returnTo = requestedNext.startsWith('/') && !requestedNext.startsWith('//')
+    ? requestedNext
+    : '/portal/bankserv';
+  const isInfrastructureLogin = returnTo === '/infrastructure';
 
   useEffect(() => {
     if (user && role === 'admin') {
-      router.replace('/portal/bankserv');
+      router.replace(returnTo);
     }
-  }, [user, role, router]);
+  }, [user, role, router, returnTo]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -33,7 +39,7 @@ export default function PortalLoginPage() {
         setStatus('This account is not authorized for the business portal.');
         return;
       }
-      router.replace('/portal/bankserv');
+      router.replace(returnTo);
     } catch (error: any) {
       setStatus(error?.message || 'Login failed. Check your credentials.');
     } finally {
@@ -73,11 +79,11 @@ export default function PortalLoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center px-4">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/70 p-8 shadow-2xl">
         <p className="text-xs uppercase tracking-[0.3em] text-emerald-300/80 font-semibold">
-          Business Portal
+          {isInfrastructureLogin ? 'Infrastructure Dashboard' : 'Business Portal'}
         </p>
         <h1 className="mt-3 text-3xl font-semibold text-white">Sign in to manage eVoucher</h1>
         <p className="mt-2 text-sm text-slate-300">
-          Admin access only. Use your approved credentials.
+          Admin access only. Use the approved eVoucher admin credentials for this workspace.
         </p>
 
         {status && (
@@ -128,10 +134,20 @@ export default function PortalLoginPage() {
           {resetLoading ? 'Sending reset link…' : 'Forgot Password'}
         </button>
 
-        <div className="mt-6 text-xs text-slate-400">
-          Need the admin landing page?{' '}
-          <Link href="/portal" className="text-sky-300 hover:text-sky-200">
-            Open portal entry
+        <div className="mt-6 rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-xs text-sky-100">
+          <p className="font-semibold">Team sign-in</p>
+          <p className="mt-1">
+            Email: <span className="font-mono">admin@evoucher.co.za</span>
+          </p>
+          <p className="mt-1 text-sky-100/80">
+            Use the current admin password shared through your secure team channel.
+          </p>
+        </div>
+
+        <div className="mt-4 text-xs text-slate-400">
+          Need the infrastructure dashboard?{' '}
+          <Link href="/infrastructure" className="text-sky-300 hover:text-sky-200">
+            Open dashboard
           </Link>
         </div>
 
@@ -143,5 +159,13 @@ export default function PortalLoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PortalLoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <PortalLoginForm />
+    </Suspense>
   );
 }
