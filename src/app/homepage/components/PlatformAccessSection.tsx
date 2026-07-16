@@ -5,24 +5,27 @@ import { useEffect, useState } from 'react';
 const CHANNELS = [
   {
     emoji: '🌐',
+    gradient: 'from-[#0d9488] to-[#0891b2]',
     title: 'Web Platform',
-    subtitle: 'Shop instantly in your browser.',
+    subtitle: 'Full shopping experience in any browser. No download needed.',
     status: 'Live',
     statusColor: 'bg-success/15 text-success',
-    action: { label: 'Open', href: '/' },
+    action: { label: 'Shop Now', href: '/shop' },
   },
   {
     emoji: '📲',
-    title: 'Install eVoucher',
-    subtitle: 'Install the web app on your phone for faster access.',
+    gradient: 'from-[#7c3aed] to-[#0d9488]',
+    title: 'Install App',
+    subtitle: 'Add eVoucher to your home screen for instant one-tap access.',
     status: 'Available',
     statusColor: 'bg-primary/10 text-primary',
-    action: null, // handled by PWA install button
+    action: null,
   },
   {
     emoji: '🤖',
+    gradient: 'from-[#059669] to-[#0d9488]',
     title: 'Android App',
-    subtitle: 'Faster shopping, offline access, voucher scanning.',
+    subtitle: 'Offline access, voucher scanning, push notifications.',
     status: 'Available',
     statusColor: 'bg-primary/10 text-primary',
     action: {
@@ -33,16 +36,18 @@ const CHANNELS = [
   },
   {
     emoji: '☎',
-    title: 'USSD',
-    subtitle: 'No smartphone needed.',
+    gradient: 'from-[#d97706] to-[#dc2626]',
+    title: 'USSD *120*384#',
+    subtitle: 'Works on any phone. No data or smartphone required.',
     status: 'Available',
     statusColor: 'bg-primary/10 text-primary',
-    action: { label: 'Dial *120*384#', href: 'tel:*120*384#' },
+    action: { label: 'Dial Now', href: 'tel:*120*384#' },
   },
   {
     emoji: '🍎',
-    title: 'iOS',
-    subtitle: 'iPhone app coming soon.',
+    gradient: 'from-[#6b7280] to-[#374151]',
+    title: 'iOS App',
+    subtitle: 'iPhone app launching soon. Register to be notified.',
     status: 'Coming Soon',
     statusColor: 'bg-muted text-muted-foreground',
     action: { label: 'Notify Me', href: '#notify-ios' },
@@ -59,12 +64,7 @@ export default function PlatformAccessSection() {
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handler);
-
-    // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setPwaInstalled(true);
-    }
-
+    if (window.matchMedia('(display-mode: standalone)').matches) setPwaInstalled(true);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
@@ -78,69 +78,72 @@ export default function PlatformAccessSection() {
 
   return (
     <section aria-label="Access eVoucher Anywhere">
-      <div className="mb-6">
-        <p className="text-xs uppercase tracking-widest text-primary font-headline font-semibold mb-1">
+      <div className="mb-8 text-center">
+        <p className="mb-1 font-headline text-xs font-semibold uppercase tracking-widest text-primary">
           Multi-Channel Platform
         </p>
-        <h2 className="font-headline font-bold text-2xl text-foreground">
+        <h2 className="font-headline text-2xl font-bold text-foreground">
           Access eVoucher Anywhere
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Use eVoucher on the channel that suits you.
+        <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
+          Shop, save, and redeem on the channel that suits you — web, app, or basic phone.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {CHANNELS.map((channel) => {
-          const isPwa = channel.title === 'Install eVoucher';
-
+          const isPwa = channel.title === 'Install App';
           return (
             <div
               key={channel.title}
-              className="bg-card rounded-xl border border-border p-5 flex flex-col gap-3 hover:border-primary hover:shadow-sm transition-all"
+              className="group flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/30 hover:shadow-md"
             >
-              <div className="flex items-start justify-between gap-2">
-                <span className="text-2xl">{channel.emoji}</span>
-                <span
-                  className={`text-xs font-headline font-semibold px-2 py-0.5 rounded-full ${channel.statusColor}`}
-                >
-                  {channel.status}
-                </span>
+              <div
+                className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${channel.gradient} text-2xl shadow-sm`}
+              >
+                {channel.emoji}
               </div>
-
+              <span
+                className={`mb-3 inline-block self-start rounded-full px-2 py-0.5 font-headline text-[10px] font-semibold ${channel.statusColor}`}
+              >
+                {channel.status}
+              </span>
               <div className="flex-1">
-                <p className="font-headline font-bold text-sm text-foreground mb-1">
+                <p className="mb-1 font-headline text-sm font-bold text-foreground">
                   {channel.title}
                 </p>
-                <p className="text-xs text-muted-foreground leading-relaxed">{channel.subtitle}</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">{channel.subtitle}</p>
               </div>
-
-              {isPwa ? (
-                pwaInstalled ? (
-                  <span className="text-xs font-headline font-semibold text-success">
-                    ✓ Installed
-                  </span>
-                ) : deferredPrompt ? (
-                  <button
-                    onClick={handlePwaInstall}
-                    className="text-xs font-headline font-semibold text-primary hover:underline text-left"
+              <div className="mt-4 border-t border-border pt-3">
+                {isPwa ? (
+                  pwaInstalled ? (
+                    <span className="font-headline text-xs font-semibold text-success">
+                      ✓ Installed
+                    </span>
+                  ) : deferredPrompt ? (
+                    <button
+                      onClick={handlePwaInstall}
+                      className="font-headline text-xs font-semibold text-primary transition-colors hover:text-primary/80"
+                    >
+                      Install App →
+                    </button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Open in browser to install
+                    </span>
+                  )
+                ) : channel.action ? (
+                  <a
+                    href={channel.action.href}
+                    className="font-headline text-xs font-semibold text-primary transition-colors hover:text-primary/80"
+                    {...('download' in channel.action && channel.action.download
+                      ? { download: true }
+                      : {})}
                   >
-                    Install →
-                  </button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Open in browser to install</span>
-                )
-              ) : channel.action ? (
-                <a
-                  href={channel.action.href}
-                  className="text-xs font-headline font-semibold text-primary hover:underline"
-                  {...('download' in channel.action && channel.action.download
-                    ? { download: true }
-                    : {})}
-                >
-                  {channel.action.label} →
-                </a>
-              ) : null}
+                    {channel.action.label} →
+                  </a>
+                ) : null}
+              </div>
             </div>
           );
         })}

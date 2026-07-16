@@ -91,6 +91,10 @@ module.exports = {
         'slide-in': 'slideIn 0.4s ease-out',
         'scale-in': 'scaleIn 0.3s ease-out',
         'pulse-subtle': 'pulseSubtle 2s infinite',
+        'ticker': 'ticker 40s linear infinite',
+        'ticker-slow': 'ticker 80s linear infinite',
+        'float': 'float 3s ease-in-out infinite',
+        'count-up': 'countUp 0.6s ease-out forwards',
       },
       keyframes: {
         fadeIn: {
@@ -108,6 +112,18 @@ module.exports = {
         pulseSubtle: {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.8' },
+        },
+        ticker: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-8px)' },
+        },
+        countUp: {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
       transitionTimingFunction: {

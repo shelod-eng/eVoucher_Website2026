@@ -1,132 +1,146 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Icon from '@/components/ui/AppIcon';
 
-const Footer = () => {
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [currentYear, setCurrentYear] = useState('2026');
+const LINKS = {
+  platform: [
+    { label: 'Shop', href: '/shop' },
+    { label: 'Merchants', href: '/merchants' },
+    { label: 'My Wallet', href: '/wallet' },
+    { label: 'Redeem', href: '/redeem' },
+    { label: 'Buy Vouchers', href: '/buy-vouchers' },
+  ],
+  company: [
+    { label: 'About eVoucher', href: '/homepage' },
+    { label: 'Merchant Partnership', href: '/merchant-partnership' },
+    { label: 'Government Alignment', href: '/government-alignment' },
+    { label: 'Financial Model', href: '/financial-model' },
+    { label: 'Careers', href: '#' },
+  ],
+  support: [
+    { label: 'Help Centre', href: '/support' },
+    { label: 'Contact Us', href: '/support' },
+    { label: 'USSD *120*384#', href: 'tel:*120*384#' },
+    { label: 'Downloads', href: '/downloads/eVoucher_APK_14-July-2026_BuildVersion1.apk' },
+    { label: 'Consumer App', href: '/consumer-experience' },
+  ],
+  legal: [
+    { label: 'Privacy Policy', href: '/security-compliance' },
+    { label: 'Terms of Use', href: '/security-compliance' },
+    { label: 'POPIA Notice', href: '/security-compliance' },
+    { label: 'Cookie Policy', href: '/security-compliance' },
+  ],
+};
 
+export default function Footer() {
+  const [year, setYear] = useState('2026');
   useEffect(() => {
-    setIsHydrated(true);
-    setCurrentYear(new Date().getFullYear().toString());
+    setYear(new Date().getFullYear().toString());
   }, []);
 
-  const footerLinks = {
-    platform: [
-      { label: 'Shop Products', href: '/shop' },
-      { label: 'My Wallet', href: '/wallet' },
-      { label: 'Find Merchants', href: '/merchants' },
-      { label: 'Redeem Voucher', href: '/redeem' },
-    ],
-    company: [
-      { label: 'Merchant Partnership', href: '/merchant-partnership' },
-      { label: 'Government Alignment', href: '/government-alignment' },
-      { label: 'Security & Compliance', href: '/security-compliance' },
-    ],
-    support: [
-      { label: 'Help & Support', href: '/support' },
-      { label: 'Contact Us', href: '/support' },
-      { label: 'FAQs', href: '/support' },
-    ],
-  };
-
-  const socialLinks = [
-    { icon: 'EnvelopeIcon', href: 'mailto:info@evoucher.co.za', label: 'Email' },
-    { icon: 'PhoneIcon', href: 'tel:+27123456789', label: 'Phone' },
-  ];
-
   return (
-    <footer className="bg-card border-t border-border">
-      <div className="max-w-7xl mx-auto px-4 lg:px-6 py-12">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
-          {/* Brand Section */}
+    <footer className="border-t border-border bg-[#0f172a] text-white">
+      <div className="mx-auto max-w-7xl px-4 py-14 lg:px-6">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-6">
+          {/* Brand */}
           <div className="lg:col-span-2">
-            <Link href="/homepage" className="flex items-center space-x-2 mb-4">
-              <div className="relative">
-                <svg
-                  width="40"
-                  height="40"
-                  viewBox="0 0 40 40"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <rect width="40" height="40" rx="8" fill="#20B2AA" />
-                  <path d="M20 10L28 16V24L20 30L12 24V16L20 10Z" fill="white" opacity="0.9" />
-                  <path d="M20 15L24 18V22L20 25L16 22V18L20 15Z" fill="#FF7A00" />
+            <Link href="/" className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-lg">
+                <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
+                  <path d="M20 6L32 13V27L20 34L8 27V13L20 6Z" fill="white" opacity="0.9" />
+                  <path d="M20 13L26 17V23L20 27L14 23V17L20 13Z" fill="#FF7A00" />
                   <circle cx="20" cy="20" r="3" fill="white" />
                 </svg>
               </div>
-              <div className="flex flex-col">
-                <span className="font-headline font-bold text-lg text-foreground leading-tight">
-                  eVoucher
-                </span>
-                <span className="font-body text-xs text-muted-foreground leading-tight">
-                  Dignified Impact
-                </span>
+              <div>
+                <p className="font-headline text-lg font-bold leading-tight text-white">eVoucher</p>
+                <p className="text-xs text-white/50">Dignified Impact</p>
               </div>
             </Link>
-            <p className="font-body text-sm text-muted-foreground mb-4 max-w-sm">
-              Digital commerce that serves the poorest of the poor with dignity and transparency.
-              Real savings, real impact, real accountability.
+            <p className="mb-5 max-w-xs text-sm leading-relaxed text-white/60">
+              South Africa's smart savings platform. Real products, real merchants, real savings —
+              powered by digital vouchers.
             </p>
-            <div className="flex items-center space-x-2 bg-primary/10 px-4 py-2 rounded-lg inline-flex">
-              <Icon
-                name="DevicePhoneMobileIcon"
-                size={20}
-                variant="solid"
-                className="text-primary"
-              />
-              <span className="font-accent text-lg font-bold text-foreground">*120*384#</span>
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5">
+              <span className="text-lg">☎️</span>
+              <div>
+                <p className="text-[10px] text-white/50">USSD Access</p>
+                <p className="font-accent text-base font-bold text-white">*120*384#</p>
+              </div>
             </div>
           </div>
 
-          {/* Platform Links */}
+          {/* Platform */}
           <div>
-            <h4 className="font-headline font-bold text-sm text-foreground mb-4">Platform</h4>
-            <ul className="space-y-2">
-              {footerLinks.platform.map((link, index) => (
-                <li key={index}>
+            <p className="mb-4 font-headline text-xs font-bold uppercase tracking-widest text-white/40">
+              Platform
+            </p>
+            <ul className="space-y-2.5">
+              {LINKS.platform.map((l) => (
+                <li key={l.label}>
                   <Link
-                    href={link.href}
-                    className="font-body text-sm text-muted-foreground hover:text-primary transition-colors duration-300"
+                    href={l.href}
+                    className="text-sm text-white/60 transition-colors hover:text-white"
                   >
-                    {link.label}
+                    {l.label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Company Links */}
+          {/* Company */}
           <div>
-            <h4 className="font-headline font-bold text-sm text-foreground mb-4">Company</h4>
-            <ul className="space-y-2">
-              {footerLinks.company.map((link, index) => (
-                <li key={index}>
+            <p className="mb-4 font-headline text-xs font-bold uppercase tracking-widest text-white/40">
+              Company
+            </p>
+            <ul className="space-y-2.5">
+              {LINKS.company.map((l) => (
+                <li key={l.label}>
                   <Link
-                    href={link.href}
-                    className="font-body text-sm text-muted-foreground hover:text-primary transition-colors duration-300"
+                    href={l.href}
+                    className="text-sm text-white/60 transition-colors hover:text-white"
                   >
-                    {link.label}
+                    {l.label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Support Links */}
+          {/* Support */}
           <div>
-            <h4 className="font-headline font-bold text-sm text-foreground mb-4">Support</h4>
-            <ul className="space-y-2">
-              {footerLinks.support.map((link, index) => (
-                <li key={index}>
+            <p className="mb-4 font-headline text-xs font-bold uppercase tracking-widest text-white/40">
+              Support
+            </p>
+            <ul className="space-y-2.5">
+              {LINKS.support.map((l) => (
+                <li key={l.label}>
                   <Link
-                    href={link.href}
-                    className="font-body text-sm text-muted-foreground hover:text-primary transition-colors duration-300"
+                    href={l.href}
+                    className="text-sm text-white/60 transition-colors hover:text-white"
                   >
-                    {link.label}
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <p className="mb-4 font-headline text-xs font-bold uppercase tracking-widest text-white/40">
+              Legal
+            </p>
+            <ul className="space-y-2.5">
+              {LINKS.legal.map((l) => (
+                <li key={l.label}>
+                  <Link
+                    href={l.href}
+                    className="text-sm text-white/60 transition-colors hover:text-white"
+                  >
+                    {l.label}
                   </Link>
                 </li>
               ))}
@@ -134,44 +148,21 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Bottom Section */}
-        <div className="border-t border-border pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            {/* Copyright */}
-            <p className="font-body text-sm text-muted-foreground">
-              {isHydrated ? `© ${currentYear}` : '© 2026'} eVoucher Platform. All rights reserved.
-            </p>
-
-            {/* Compliance Badges */}
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Icon name="ShieldCheckIcon" size={16} variant="solid" className="text-success" />
-                <span className="font-body text-xs text-muted-foreground">POPIA Compliant</span>
+        {/* Bottom bar */}
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
+          <p className="text-xs text-white/40">
+            © {year} eVoucher Platform (Pty) Ltd. All rights reserved. South Africa.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            {['POPIA Compliant', 'Bank-Grade Security', 'PCI Ready', 'SA Platform'].map((b) => (
+              <div key={b} className="flex items-center gap-1.5">
+                <span className="text-emerald-400 text-xs">✓</span>
+                <span className="text-xs text-white/40">{b}</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <Icon name="LockClosedIcon" size={16} variant="solid" className="text-success" />
-                <span className="font-body text-xs text-muted-foreground">Bank-Grade Security</span>
-              </div>
-            </div>
-
-            {/* Social Links */}
-            <div className="flex items-center space-x-4">
-              {socialLinks.map((social, index) => (
-                <a
-                  key={index}
-                  href={social.href}
-                  className="w-8 h-8 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center"
-                  aria-label={social.label}
-                >
-                  <Icon name={social.icon as any} size={16} variant="outline" />
-                </a>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}
