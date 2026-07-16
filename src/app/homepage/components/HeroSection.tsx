@@ -76,7 +76,8 @@ const HeroSection = ({
           Save Money Every Time <span className="text-primary">You Shop.</span>
         </h1>
         <p className="font-body text-lg lg:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-          Shop products from trusted South African merchants and enjoy instant savings — powered by eVoucher.
+          Shop products from trusted South African merchants and enjoy instant savings — powered by
+          eVoucher.
         </p>
 
         {/* Search Bar */}

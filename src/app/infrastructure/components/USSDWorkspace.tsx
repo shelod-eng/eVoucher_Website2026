@@ -12,27 +12,132 @@ import {
 } from 'lucide-react';
 
 const LIVE_SESSIONS = [
-  { id: 'SES-8841', msisdn: '+27 82 ***6789', menu: 'Main Menu', step: 'Voucher Balance', duration: '42s', status: 'Active' },
-  { id: 'SES-8842', msisdn: '+27 73 ***2345', menu: 'Registration', step: 'Enter ID Number', duration: '1m 12s', status: 'Active' },
-  { id: 'SES-8843', msisdn: '+27 61 ***5678', menu: 'Buy Voucher', step: 'Select Merchant', duration: '28s', status: 'Active' },
-  { id: 'SES-8844', msisdn: '+27 79 ***8901', menu: 'Redeem', step: 'Enter PIN', duration: '55s', status: 'Active' },
-  { id: 'SES-8845', msisdn: '+27 83 ***9012', menu: 'Main Menu', step: 'Timeout', duration: '2m 01s', status: 'Timed out' },
+  {
+    id: 'SES-8841',
+    msisdn: '+27 82 ***6789',
+    menu: 'Main Menu',
+    step: 'Voucher Balance',
+    duration: '42s',
+    status: 'Active',
+  },
+  {
+    id: 'SES-8842',
+    msisdn: '+27 73 ***2345',
+    menu: 'Registration',
+    step: 'Enter ID Number',
+    duration: '1m 12s',
+    status: 'Active',
+  },
+  {
+    id: 'SES-8843',
+    msisdn: '+27 61 ***5678',
+    menu: 'Buy Voucher',
+    step: 'Select Merchant',
+    duration: '28s',
+    status: 'Active',
+  },
+  {
+    id: 'SES-8844',
+    msisdn: '+27 79 ***8901',
+    menu: 'Redeem',
+    step: 'Enter PIN',
+    duration: '55s',
+    status: 'Active',
+  },
+  {
+    id: 'SES-8845',
+    msisdn: '+27 83 ***9012',
+    menu: 'Main Menu',
+    step: 'Timeout',
+    duration: '2m 01s',
+    status: 'Timed out',
+  },
 ];
 
 const MENU_STRUCTURE = [
-  { id: 'MENU-01', name: 'Main Menu', options: 5, sessions: 1842, completionRate: '94%', status: 'Active' },
-  { id: 'MENU-02', name: 'Registration', options: 4, sessions: 412, completionRate: '88%', status: 'Active' },
-  { id: 'MENU-03', name: 'Buy Voucher', options: 6, sessions: 1204, completionRate: '91%', status: 'Active' },
-  { id: 'MENU-04', name: 'Redeem Voucher', options: 3, sessions: 984, completionRate: '97%', status: 'Active' },
-  { id: 'MENU-05', name: 'Wallet Balance', options: 2, sessions: 2108, completionRate: '99%', status: 'Active' },
-  { id: 'MENU-06', name: 'Government Benefits', options: 4, sessions: 262, completionRate: '85%', status: 'Active' },
+  {
+    id: 'MENU-01',
+    name: 'Main Menu',
+    options: 5,
+    sessions: 1842,
+    completionRate: '94%',
+    status: 'Active',
+  },
+  {
+    id: 'MENU-02',
+    name: 'Registration',
+    options: 4,
+    sessions: 412,
+    completionRate: '88%',
+    status: 'Active',
+  },
+  {
+    id: 'MENU-03',
+    name: 'Buy Voucher',
+    options: 6,
+    sessions: 1204,
+    completionRate: '91%',
+    status: 'Active',
+  },
+  {
+    id: 'MENU-04',
+    name: 'Redeem Voucher',
+    options: 3,
+    sessions: 984,
+    completionRate: '97%',
+    status: 'Active',
+  },
+  {
+    id: 'MENU-05',
+    name: 'Wallet Balance',
+    options: 2,
+    sessions: 2108,
+    completionRate: '99%',
+    status: 'Active',
+  },
+  {
+    id: 'MENU-06',
+    name: 'Government Benefits',
+    options: 4,
+    sessions: 262,
+    completionRate: '85%',
+    status: 'Active',
+  },
 ];
 
 const PROVIDER_STATUS = [
-  { provider: 'MTN', shortcode: '*120*384#', sessions: '1,842', latency: '1.1s', uptime: '99.8%', status: 'Operational' },
-  { provider: 'Vodacom', shortcode: '*120*384#', sessions: '1,604', latency: '1.3s', uptime: '99.6%', status: 'Operational' },
-  { provider: 'Cell C', shortcode: '*120*384#', sessions: '842', latency: '1.4s', uptime: '99.1%', status: 'Operational' },
-  { provider: 'Telkom', shortcode: '*120*384#', sessions: '524', latency: '1.8s', uptime: '98.4%', status: 'Degraded' },
+  {
+    provider: 'MTN',
+    shortcode: '*120*384#',
+    sessions: '1,842',
+    latency: '1.1s',
+    uptime: '99.8%',
+    status: 'Operational',
+  },
+  {
+    provider: 'Vodacom',
+    shortcode: '*120*384#',
+    sessions: '1,604',
+    latency: '1.3s',
+    uptime: '99.6%',
+    status: 'Operational',
+  },
+  {
+    provider: 'Cell C',
+    shortcode: '*120*384#',
+    sessions: '842',
+    latency: '1.4s',
+    uptime: '99.1%',
+    status: 'Operational',
+  },
+  {
+    provider: 'Telkom',
+    shortcode: '*120*384#',
+    sessions: '524',
+    latency: '1.8s',
+    uptime: '98.4%',
+    status: 'Degraded',
+  },
 ];
 
 type Panel = 'sessions' | 'menus' | 'providers' | 'analytics';
@@ -52,17 +157,26 @@ export default function USSDWorkspace() {
       <div className="rounded-lg border border-[#E6EEF5] bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#20B8C5]">USSD Operations</p>
-            <h2 className="mt-1 font-headline text-2xl font-bold text-[#20324A]">USSD Platform Management</h2>
-            <p className="mt-1 text-sm text-[#64748B]">Live sessions, menu builder, provider health, and session analytics. Shortcode: *120*384#</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#20B8C5]">
+              USSD Operations
+            </p>
+            <h2 className="mt-1 font-headline text-2xl font-bold text-[#20324A]">
+              USSD Platform Management
+            </h2>
+            <p className="mt-1 text-sm text-[#64748B]">
+              Live sessions, menu builder, provider health, and session analytics. Shortcode:
+              *120*384#
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {([
-              { id: 'sessions', label: 'Live Sessions', icon: Activity },
-              { id: 'menus', label: 'Menu Structure', icon: MessageSquare },
-              { id: 'providers', label: 'Providers', icon: Smartphone },
-              { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-            ] as { id: Panel; label: string; icon: typeof Activity }[]).map(({ id, label, icon: Icon }) => (
+            {(
+              [
+                { id: 'sessions', label: 'Live Sessions', icon: Activity },
+                { id: 'menus', label: 'Menu Structure', icon: MessageSquare },
+                { id: 'providers', label: 'Providers', icon: Smartphone },
+                { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+              ] as { id: Panel; label: string; icon: typeof Activity }[]
+            ).map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
@@ -111,10 +225,19 @@ export default function USSDWorkspace() {
                     <td className="px-4 py-3 font-semibold text-[#20324A]">{s.step}</td>
                     <td className="px-4 py-3 text-[#64748B]">{s.duration}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusBadge(s.status)}`}>{s.status}</span>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusBadge(s.status)}`}
+                      >
+                        {s.status}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button type="button" className="rounded px-2 py-1 text-xs font-semibold text-[#108995] hover:bg-[#EAFBFD]">Replay</button>
+                      <button
+                        type="button"
+                        className="rounded px-2 py-1 text-xs font-semibold text-[#108995] hover:bg-[#EAFBFD]"
+                      >
+                        Replay
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -128,8 +251,12 @@ export default function USSDWorkspace() {
         <div className="rounded-lg border border-[#E6EEF5] bg-white">
           <div className="flex items-center justify-between border-b border-[#E6EEF5] p-5">
             <div>
-              <h3 className="font-headline text-lg font-semibold text-[#20324A]">USSD Menu Structure</h3>
-              <p className="mt-1 text-sm text-[#64748B]">Menu definitions with session volume and completion rates.</p>
+              <h3 className="font-headline text-lg font-semibold text-[#20324A]">
+                USSD Menu Structure
+              </h3>
+              <p className="mt-1 text-sm text-[#64748B]">
+                Menu definitions with session volume and completion rates.
+              </p>
             </div>
             <a
               href="https://www.evoucher.co.za/ussd-console"
@@ -159,13 +286,24 @@ export default function USSDWorkspace() {
                     <td className="px-4 py-3 font-mono text-xs text-[#108995]">{m.id}</td>
                     <td className="px-4 py-3 font-semibold text-[#20324A]">{m.name}</td>
                     <td className="px-4 py-3 text-[#64748B]">{m.options}</td>
-                    <td className="px-4 py-3 font-semibold text-[#20324A]">{m.sessions.toLocaleString()}</td>
+                    <td className="px-4 py-3 font-semibold text-[#20324A]">
+                      {m.sessions.toLocaleString()}
+                    </td>
                     <td className="px-4 py-3 font-semibold text-[#166534]">{m.completionRate}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusBadge(m.status)}`}>{m.status}</span>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusBadge(m.status)}`}
+                      >
+                        {m.status}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button type="button" className="rounded px-2 py-1 text-xs font-semibold text-[#108995] hover:bg-[#EAFBFD]">Edit</button>
+                      <button
+                        type="button"
+                        className="rounded px-2 py-1 text-xs font-semibold text-[#108995] hover:bg-[#EAFBFD]"
+                      >
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -181,10 +319,16 @@ export default function USSDWorkspace() {
             <div key={p.provider} className="rounded-lg border border-[#E6EEF5] bg-white p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-headline text-base font-semibold text-[#20324A]">{p.provider}</p>
+                  <p className="font-headline text-base font-semibold text-[#20324A]">
+                    {p.provider}
+                  </p>
                   <p className="font-mono text-xs text-[#64748B]">{p.shortcode}</p>
                 </div>
-                <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusBadge(p.status)}`}>{p.status}</span>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusBadge(p.status)}`}
+                >
+                  {p.status}
+                </span>
               </div>
               <div className="mt-4 grid grid-cols-3 gap-3">
                 <div className="rounded-lg bg-[#F7F9FC] px-3 py-2">
@@ -208,10 +352,26 @@ export default function USSDWorkspace() {
       {panel === 'analytics' && (
         <div className="grid gap-4 sm:grid-cols-2">
           {[
-            { title: 'Session Volume Report', desc: 'Daily, weekly, and monthly USSD session counts by provider and menu.', action: 'Export CSV' },
-            { title: 'Menu Completion Analysis', desc: 'Drop-off points per menu step with funnel visualisation.', action: 'Export PDF' },
-            { title: 'Provider Performance', desc: 'Latency, uptime, and error rates per mobile network operator.', action: 'Export Excel' },
-            { title: 'Redemption via USSD', desc: 'Voucher redemptions completed through USSD channel.', action: 'Export CSV' },
+            {
+              title: 'Session Volume Report',
+              desc: 'Daily, weekly, and monthly USSD session counts by provider and menu.',
+              action: 'Export CSV',
+            },
+            {
+              title: 'Menu Completion Analysis',
+              desc: 'Drop-off points per menu step with funnel visualisation.',
+              action: 'Export PDF',
+            },
+            {
+              title: 'Provider Performance',
+              desc: 'Latency, uptime, and error rates per mobile network operator.',
+              action: 'Export Excel',
+            },
+            {
+              title: 'Redemption via USSD',
+              desc: 'Voucher redemptions completed through USSD channel.',
+              action: 'Export CSV',
+            },
           ].map((report) => (
             <div key={report.title} className="rounded-lg border border-[#E6EEF5] bg-white p-5">
               <div className="flex items-start gap-3">
@@ -219,7 +379,10 @@ export default function USSDWorkspace() {
                 <div className="flex-1">
                   <p className="font-semibold text-[#20324A]">{report.title}</p>
                   <p className="mt-1 text-sm text-[#64748B]">{report.desc}</p>
-                  <button type="button" className="mt-3 rounded-lg bg-[#20B8C5] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#108995]">
+                  <button
+                    type="button"
+                    className="mt-3 rounded-lg bg-[#20B8C5] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#108995]"
+                  >
                     {report.action}
                   </button>
                 </div>

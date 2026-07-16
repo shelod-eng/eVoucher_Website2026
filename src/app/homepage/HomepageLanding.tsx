@@ -69,10 +69,18 @@ const MERCHANT_LOGOS = [
 ];
 
 const HOW_IT_WORKS = [
-  { step: '1', title: 'Browse & Choose', desc: 'Search products from trusted South African merchants.' },
+  {
+    step: '1',
+    title: 'Browse & Choose',
+    desc: 'Search products from trusted South African merchants.',
+  },
   { step: '2', title: 'Add to Cart', desc: 'Select your products and see your instant savings.' },
   { step: '3', title: 'Pay Securely', desc: 'Pay with card, EFT, USSD, or cash at retail stores.' },
-  { step: '4', title: 'Redeem In-Store', desc: 'Your voucher is created instantly. Scan or show at checkout.' },
+  {
+    step: '4',
+    title: 'Redeem In-Store',
+    desc: 'Your voucher is created instantly. Scan or show at checkout.',
+  },
 ];
 
 function SavingsCalculator() {
@@ -84,15 +92,26 @@ function SavingsCalculator() {
   const total = savings + cashback;
 
   return (
-    <section aria-label="Savings Calculator" className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-white p-8">
+    <section
+      aria-label="Savings Calculator"
+      className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-white p-8"
+    >
       <div className="max-w-2xl mx-auto text-center">
-        <p className="text-xs uppercase tracking-widest text-primary font-headline font-semibold mb-2">Savings Calculator</p>
-        <h2 className="font-headline font-bold text-2xl text-foreground mb-2">How much could you save this month?</h2>
-        <p className="text-sm text-muted-foreground mb-8">Move the slider to match your monthly shopping spend.</p>
+        <p className="text-xs uppercase tracking-widest text-primary font-headline font-semibold mb-2">
+          Savings Calculator
+        </p>
+        <h2 className="font-headline font-bold text-2xl text-foreground mb-2">
+          How much could you save this month?
+        </h2>
+        <p className="text-sm text-muted-foreground mb-8">
+          Move the slider to match your monthly shopping spend.
+        </p>
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-muted-foreground">Monthly shopping spend</span>
-            <span className="font-headline font-bold text-2xl text-foreground">R{monthly.toLocaleString()}</span>
+            <span className="font-headline font-bold text-2xl text-foreground">
+              R{monthly.toLocaleString()}
+            </span>
           </div>
           <input
             type="range"
@@ -105,24 +124,32 @@ function SavingsCalculator() {
             aria-label="Monthly shopping spend"
           />
           <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>R500</span><span>R20,000</span>
+            <span>R500</span>
+            <span>R20,000</span>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="rounded-xl bg-white border border-border p-4 shadow-sm">
             <p className="text-xs text-muted-foreground mb-1">Instant Savings</p>
-            <p className="font-headline font-bold text-2xl text-success">R{savings.toLocaleString()}</p>
+            <p className="font-headline font-bold text-2xl text-success">
+              R{savings.toLocaleString()}
+            </p>
           </div>
           <div className="rounded-xl bg-white border border-border p-4 shadow-sm">
             <p className="text-xs text-muted-foreground mb-1">Cashback Earned</p>
-            <p className="font-headline font-bold text-2xl text-primary">R{cashback.toLocaleString()}</p>
+            <p className="font-headline font-bold text-2xl text-primary">
+              R{cashback.toLocaleString()}
+            </p>
           </div>
           <div className="rounded-xl bg-primary text-primary-foreground p-4 shadow-sm">
             <p className="text-xs opacity-80 mb-1">Total Monthly Value</p>
             <p className="font-headline font-bold text-2xl">R{total.toLocaleString()}</p>
           </div>
         </div>
-        <p className="mt-4 text-xs text-muted-foreground">Based on eVoucher&apos;s standard savings model. Actual savings may vary by merchant and product.</p>
+        <p className="mt-4 text-xs text-muted-foreground">
+          Based on eVoucher&apos;s standard savings model. Actual savings may vary by merchant and
+          product.
+        </p>
       </div>
     </section>
   );
@@ -132,12 +159,17 @@ function HowItWorks() {
   return (
     <section aria-label="How eVoucher Works">
       <div className="mb-6 text-center">
-        <p className="text-xs uppercase tracking-widest text-primary font-headline font-semibold mb-1">Simple Process</p>
+        <p className="text-xs uppercase tracking-widest text-primary font-headline font-semibold mb-1">
+          Simple Process
+        </p>
         <h2 className="font-headline font-bold text-2xl text-foreground">How eVoucher Works</h2>
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {HOW_IT_WORKS.map((item) => (
-          <div key={item.step} className="rounded-xl border border-border bg-card p-6 text-center hover:border-primary hover:shadow-sm transition-all">
+          <div
+            key={item.step}
+            className="rounded-xl border border-border bg-card p-6 text-center hover:border-primary hover:shadow-sm transition-all"
+          >
             <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground font-headline font-bold text-lg flex items-center justify-center mx-auto mb-4">
               {item.step}
             </div>
@@ -382,7 +414,9 @@ export default function HomepageLanding() {
                     >
                       {m.initials}
                     </div>
-                    <p className="font-headline font-semibold text-xs text-foreground line-clamp-1">{m.name}</p>
+                    <p className="font-headline font-semibold text-xs text-foreground line-clamp-1">
+                      {m.name}
+                    </p>
                     <p className="text-xs text-muted-foreground">{m.category}</p>
                   </button>
                 ))}

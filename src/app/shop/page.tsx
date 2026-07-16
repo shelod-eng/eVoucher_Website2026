@@ -426,7 +426,9 @@ export default function ShopPage() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
               <div>
                 <h1 className="font-headline font-bold text-5xl text-foreground">Shop</h1>
-                <p className="text-muted-foreground">Save money on every purchase from trusted South African merchants</p>
+                <p className="text-muted-foreground">
+                  Save money on every purchase from trusted South African merchants
+                </p>
               </div>
               <button
                 onClick={() => router.push('/cart')}
@@ -705,9 +707,7 @@ export default function ShopPage() {
                       </h3>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground line-through">
-                            Normal Price
-                          </span>
+                          <span className="text-muted-foreground line-through">Normal Price</span>
                           <span className="font-headline font-semibold text-muted-foreground line-through">
                             R{Number(product.face_value).toFixed(2)}
                           </span>
@@ -737,7 +737,9 @@ export default function ShopPage() {
                       </div>
 
                       <div className="border-t border-success/20 mt-3 pt-3 flex items-center justify-between">
-                        <span className="text-muted-foreground text-xs">Instant saving applied at checkout</span>
+                        <span className="text-muted-foreground text-xs">
+                          Instant saving applied at checkout
+                        </span>
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-2">
