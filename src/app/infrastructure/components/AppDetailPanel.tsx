@@ -95,15 +95,29 @@ export default function AppDetailPanel({ app, onClose, onViewArchitecture }: App
               Platform Context
             </p>
             <div className="grid grid-cols-2 gap-3">
-              {app.footerMeta.map((meta) => (
-                <div
-                  key={meta.label}
-                  className="rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] px-3 py-2"
-                >
-                  <p className="text-xs text-[#64748B]">{meta.label}</p>
-                  <p className="text-sm font-semibold text-[#20324A]">{meta.value}</p>
-                </div>
-              ))}
+              {app.footerMeta.map((meta) =>
+                meta.href ? (
+                  <a
+                    key={meta.label}
+                    href={meta.href}
+                    download={meta.download}
+                    target={meta.download ? undefined : '_blank'}
+                    rel={meta.download ? undefined : 'noopener noreferrer'}
+                    className="rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] px-3 py-2 transition-colors hover:border-[#20B8C5] hover:bg-[#EAFBFD]"
+                  >
+                    <p className="text-xs text-[#64748B]">{meta.label}</p>
+                    <p className="text-sm font-semibold text-[#20324A]">{meta.value}</p>
+                  </a>
+                ) : (
+                  <div
+                    key={meta.label}
+                    className="rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] px-3 py-2"
+                  >
+                    <p className="text-xs text-[#64748B]">{meta.label}</p>
+                    <p className="text-sm font-semibold text-[#20324A]">{meta.value}</p>
+                  </div>
+                )
+              )}
             </div>
           </div>
         </div>
@@ -124,8 +138,9 @@ export default function AppDetailPanel({ app, onClose, onViewArchitecture }: App
           ) : app.launchUrl ? (
             <a
               href={app.launchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              download={app.launchUrl.endsWith('.apk')}
+              target={app.launchUrl.endsWith('.apk') ? undefined : '_blank'}
+              rel={app.launchUrl.endsWith('.apk') ? undefined : 'noopener noreferrer'}
               className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
               style={{ backgroundColor: app.color }}
             >

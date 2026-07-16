@@ -25,7 +25,6 @@ export async function middleware(request: NextRequest) {
   };
 
   const path = request.nextUrl.pathname;
-  const pathWithSearch = `${path}${request.nextUrl.search}`;
 
   const customerArea =
     path.startsWith('/customer/dashboard') ||
@@ -48,12 +47,7 @@ export async function middleware(request: NextRequest) {
   const portalLogin = path.startsWith('/portal/login');
   const portalResetPassword = path.startsWith('/portal/reset-password');
   const portalPublicArea = portalLogin || portalResetPassword;
-  const infrastructureArea = path === '/infrastructure' || path.startsWith('/infrastructure/');
-  const protectedArea =
-    customerArea ||
-    merchantProtectedArea ||
-    infrastructureArea ||
-    (portalArea && !portalPublicArea);
+  const protectedArea = customerArea || merchantProtectedArea || (portalArea && !portalPublicArea);
 
   const hasSupabaseSessionCookie = request.cookies.getAll().some(({ name }) => {
     const normalizedName = name.toLowerCase();
@@ -65,12 +59,8 @@ export async function middleware(request: NextRequest) {
 
   if (protectedArea && !hasSupabaseSessionCookie) {
     const url = request.nextUrl.clone();
-    if (portalArea || infrastructureArea) {
+    if (portalArea) {
       url.pathname = '/portal/login';
-      if (infrastructureArea) {
-        url.search = '';
-        url.searchParams.set('next', pathWithSearch);
-      }
     } else if (merchantProtectedArea) {
       url.pathname = '/merchant/login';
     } else {
@@ -118,12 +108,8 @@ export async function middleware(request: NextRequest) {
   // Redirect to login if accessing protected routes without auth
   if (!user && protectedArea) {
     const url = request.nextUrl.clone();
-    if (portalArea || infrastructureArea) {
+    if (portalArea) {
       url.pathname = '/portal/login';
-      if (infrastructureArea) {
-        url.search = '';
-        url.searchParams.set('next', pathWithSearch);
-      }
     } else if (merchantProtectedArea) {
       url.pathname = '/merchant/login';
     } else {

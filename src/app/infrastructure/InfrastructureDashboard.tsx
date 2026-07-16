@@ -19,7 +19,6 @@ import {
   Globe2,
   Handshake,
   Landmark,
-  LifeBuoy,
   Mail,
   RefreshCw,
   Search,
@@ -49,19 +48,19 @@ type TabId =
 type ModuleId =
   | 'overview'
   | 'operations'
-  | 'applications'
   | 'consumers'
   | 'merchants'
   | 'vouchers'
   | 'payments'
   | 'ussd'
+  | 'mobile'
   | 'government'
   | 'sponsors'
   | 'analytics'
   | 'infrastructure'
+  | 'compliance'
   | 'security'
-  | 'admin'
-  | 'support';
+  | 'admin';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'system-health', label: 'System Health' },
@@ -74,21 +73,21 @@ const TABS: { id: TabId; label: string }[] = [
 ];
 
 const NAV_ITEMS = [
-  { id: 'overview', label: 'Executive' },
+  { id: 'overview', label: 'Dashboard' },
   { id: 'operations', label: 'Operations' },
-  { id: 'applications', label: 'Applications' },
   { id: 'consumers', label: 'Consumers' },
   { id: 'merchants', label: 'Merchants' },
   { id: 'vouchers', label: 'Voucher Engine' },
   { id: 'payments', label: 'Payments' },
   { id: 'ussd', label: 'USSD' },
+  { id: 'mobile', label: 'Mobile' },
   { id: 'government', label: 'Government' },
   { id: 'sponsors', label: 'Sponsors' },
   { id: 'analytics', label: 'Analytics' },
   { id: 'infrastructure', label: 'Infrastructure' },
+  { id: 'compliance', label: 'Compliance' },
   { id: 'security', label: 'Security' },
   { id: 'admin', label: 'Administration' },
-  { id: 'support', label: 'Support' },
 ] satisfies { id: ModuleId; label: string }[];
 
 const TAB_IDS = new Set<TabId>(TABS.map((tab) => tab.id));
@@ -395,6 +394,8 @@ const SEARCH_RESULTS = [
   'Fraud Alert: 3 active investigations',
 ];
 
+const ENTERPRISE_ROLES = ['Admin', 'Finance', 'Auditor', 'Sponsor', 'Merchant'];
+
 const MODULE_WORKSPACES: Record<
   Exclude<ModuleId, 'overview' | 'operations' | 'infrastructure'>,
   {
@@ -406,18 +407,6 @@ const MODULE_WORKSPACES: Record<
     actions: string[];
   }
 > = {
-  applications: {
-    title: 'Applications Workspace',
-    description: 'Launch, monitor, and govern the operational applications in the eVoucher estate.',
-    icon: Globe2,
-    metrics: [
-      { label: 'Production apps', value: '8', trend: 'All reachable' },
-      { label: 'Partner portals', value: '4', trend: 'RBAC protected' },
-      { label: 'Availability', value: '99.98%', trend: '+0.02% today' },
-    ],
-    queues: ['App catalogue', 'Environment health', 'Ownership', 'Release readiness'],
-    actions: ['Launch app', 'Open logs', 'Assign owner', 'Export inventory'],
-  },
   consumers: {
     title: 'Consumer Management',
     description:
@@ -483,6 +472,19 @@ const MODULE_WORKSPACES: Record<
     queues: ['Sessions', 'Menus', 'Provider status', 'Escalations'],
     actions: ['Open simulator', 'Replay session', 'Export logs', 'Escalate'],
   },
+  mobile: {
+    title: 'Mobile Operations',
+    description:
+      'Manage the Android APK release, Expo EAS build status, QR redemption readiness, offline voucher caching, and field-team distribution.',
+    icon: Smartphone,
+    metrics: [
+      { label: 'Latest APK', value: '14 Jul 2026', trend: 'BuildVersion1 ready' },
+      { label: 'Distribution', value: 'Public link', trend: 'Download enabled' },
+      { label: 'Build system', value: 'Expo EAS', trend: 'Android APK tracked' },
+    ],
+    queues: ['APK release', 'Expo build history', 'Android distribution', 'QR scanner checks'],
+    actions: ['Download APK', 'Open Expo builds', 'Publish release note', 'Share mobile link'],
+  },
   government: {
     title: 'Government Programme Management',
     description:
@@ -522,6 +524,19 @@ const MODULE_WORKSPACES: Record<
     queues: ['Province heatmap', 'Revenue trends', 'Sponsor reporting', 'Predictive analytics'],
     actions: ['Export PDF', 'Open BI view', 'Schedule report', 'Filter province'],
   },
+  compliance: {
+    title: 'Enterprise Compliance',
+    description:
+      'Operate POPIA, FICA, KYC, AML, PASA, PCI DSS, audit logs, risk registers, and regulatory reporting.',
+    icon: ShieldCheck,
+    metrics: [
+      { label: 'Controls', value: '6', trend: 'Active evidence' },
+      { label: 'KYC backlog', value: '18', trend: '6h oldest' },
+      { label: 'Audit posture', value: 'Live', trend: 'Regulatory ready' },
+    ],
+    queues: ['POPIA evidence', 'KYC reviews', 'AML monitoring', 'PASA reporting'],
+    actions: ['Open control', 'Assign reviewer', 'Export evidence', 'Escalate risk'],
+  },
   security: {
     title: 'Enterprise Security Centre',
     description:
@@ -547,19 +562,6 @@ const MODULE_WORKSPACES: Record<
     ],
     queues: ['User management', 'Permissions', 'Notification templates', 'System parameters'],
     actions: ['Invite user', 'Edit roles', 'Toggle flag', 'Export settings'],
-  },
-  support: {
-    title: 'Support Command Centre',
-    description:
-      'Coordinate customer, merchant, government, and sponsor support with operational context.',
-    icon: LifeBuoy,
-    metrics: [
-      { label: 'Open cases', value: '42', trend: '8 escalations' },
-      { label: 'SLA', value: '94%', trend: '+2%' },
-      { label: 'WhatsApp intake', value: '31', trend: 'Today' },
-    ],
-    queues: ['Tickets', 'WhatsApp', 'Email intake', 'Knowledge base'],
-    actions: ['Assign', 'Escalate', 'Reply', 'Export cases'],
   },
 };
 
@@ -1057,7 +1059,7 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
               </h1>
               <p className="mt-3 max-w-2xl text-base text-[#64748B]">
                 Platform health, live queues, treasury, compliance, government programmes, sponsors,
-                security, and infrastructure operations in one authenticated workspace.
+                security, and infrastructure operations in one shared team workspace.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -1130,16 +1132,25 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
           <div className="rounded-lg border border-[#E6EEF5] bg-white p-4">
             <div className="flex items-center gap-2">
               <UserCircle className="h-4 w-4 text-[#108995]" />
-              <p className="text-sm font-semibold text-[#20324A]">Enterprise Session</p>
+              <p className="text-sm font-semibold text-[#20324A]">Team Access</p>
             </div>
             <p className="mt-3 truncate text-sm font-semibold text-[#20324A]">{userEmail}</p>
             <p className="mt-1 text-xs capitalize text-[#64748B]">{role.replace(/_/g, ' ')}</p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full bg-[#EAFBFD] px-2.5 py-1 text-[#108995]">RBAC</span>
+              <span className="rounded-full bg-[#EAFBFD] px-2.5 py-1 text-[#108995]">
+                Public URL
+              </span>
               <span className="rounded-full bg-[#EAFBFD] px-2.5 py-1 text-[#108995]">Audit</span>
               <span className="rounded-full bg-[#EAFBFD] px-2.5 py-1 text-[#108995]">
                 MFA Ready
               </span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
+              {ENTERPRISE_ROLES.map((item) => (
+                <span key={item} className="rounded-full bg-[#F7F9FC] px-2 py-1 text-[#64748B]">
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
         </section>

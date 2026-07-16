@@ -1,27 +1,24 @@
-import { redirect } from 'next/navigation';
-import { getAuthenticatedUser } from '@/server/utils/auth';
-import { resolveUserRole } from '@/server/utils/role';
+import { Suspense } from 'react';
 import InfrastructureDashboard from './InfrastructureDashboard';
-
-const ALLOWED_ROLES = ['admin', 'finance_approver', 'auditor', 'sponsor', 'merchant'];
 
 export const metadata = {
   title: 'Infrastructure Dashboard | eVoucher Platform',
   description: 'eVoucher Platform Infrastructure and Operations Dashboard',
 };
 
-export default async function InfrastructurePage() {
-  const { supabase, user } = await getAuthenticatedUser();
-
-  if (!user) {
-    redirect('/portal/login?next=/infrastructure');
-  }
-
-  const { role } = await resolveUserRole(supabase, user);
-
-  if (!ALLOWED_ROLES.includes(role)) {
-    redirect('/portal/login?next=/infrastructure');
-  }
-
-  return <InfrastructureDashboard role={role} userEmail={user.email ?? ''} />;
+export default function InfrastructurePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F7F9FC] px-6 py-10 text-sm font-semibold text-[#20324A]">
+          Loading eVoucher Enterprise Operations Platform...
+        </div>
+      }
+    >
+      <InfrastructureDashboard
+        role="team access"
+        userEmail="public.infrastructure@evoucher.co.za"
+      />
+    </Suspense>
+  );
 }

@@ -35,7 +35,7 @@ export interface PortalApp {
   launchUrl?: string;
   launchLabel?: string;
   credentials?: CredentialInfo[];
-  footerMeta: { label: string; value: string }[];
+  footerMeta: { label: string; value: string; href?: string; download?: boolean }[];
   keywords: string[];
 }
 
@@ -180,9 +180,26 @@ export const PORTAL_APPS: PortalApp[] = [
     icon: Smartphone,
     color: '#f59e0b',
     colorBg: 'rgba(245, 158, 11, 0.12)',
+    launchUrl: '/downloads/eVoucher_APK_14-July-2026_BuildVersion1.apk',
+    launchLabel: 'Download Latest APK',
+    credentials: [
+      { label: 'APK', value: 'eVoucher_APK_14-July-2026_BuildVersion1.apk' },
+      { label: 'Build', value: 'Expo EAS - 14 July 2026' },
+    ],
     footerMeta: [
-      { label: 'Platforms', value: 'iOS & Android' },
-      { label: 'Build', value: 'Expo SDK' },
+      {
+        label: 'Platforms',
+        value: 'Android APK',
+        href: '/downloads/eVoucher_APK_14-July-2026_BuildVersion1.apk',
+        download: true,
+      },
+      {
+        label: 'Build',
+        value: 'Expo EAS BuildVersion1',
+        href: 'https://expo.dev/accounts/evoucher_prod/projects/evoucheroffline/builds',
+      },
+      { label: 'Release', value: '14 July 2026' },
+      { label: 'File Size', value: '61 MB' },
     ],
     keywords: ['mobile', 'expo', 'react native', 'qr', 'scanner'],
   },
