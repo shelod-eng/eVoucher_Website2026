@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
+// Only merchants whose logo files are confirmed in public/assets/images/merchants/
 const LOGOS = [
   { name: 'Pick n Pay', src: '/assets/images/merchants/picknpay.png' },
   { name: 'Checkers', src: '/assets/images/merchants/checkers.png' },
@@ -23,17 +24,17 @@ const LOGOS = [
 function LogoItem({ name, src }: { name: string; src: string }) {
   const [failed, setFailed] = useState(false);
   return (
-    <div className="group mx-6 flex h-16 w-28 shrink-0 items-center justify-center rounded-xl border border-border bg-white px-3 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+    <div className="group mx-5 flex h-20 w-36 shrink-0 items-center justify-center rounded-2xl border border-slate-100 bg-white px-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-md">
       {!failed ? (
         <img
           src={src}
           alt={name}
-          className="h-10 w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0"
+          className="h-14 w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0"
           loading="lazy"
           onError={() => setFailed(true)}
         />
       ) : (
-        <span className="font-headline text-xs font-bold text-muted-foreground group-hover:text-primary">
+        <span className="text-center font-headline text-xs font-bold text-muted-foreground group-hover:text-primary">
           {name}
         </span>
       )}
@@ -42,27 +43,38 @@ function LogoItem({ name, src }: { name: string; src: string }) {
 }
 
 export default function TrustedMerchantsCarousel() {
+  const trackRef = useRef<HTMLDivElement>(null);
   const doubled = [...LOGOS, ...LOGOS];
 
   return (
-    <section aria-label="Trusted Merchants" className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-12 lg:px-6">
-        <div className="mb-8 text-center">
+    <section aria-label="Trusted Merchants" className="bg-slate-50">
+      <div className="mx-auto max-w-7xl px-4 py-14 lg:px-6">
+        <div className="mb-10 text-center">
           <p className="mb-1 font-headline text-xs font-semibold uppercase tracking-widest text-primary">
             Our Partners
           </p>
-          <h2 className="font-headline text-2xl font-bold text-foreground">
-            Trusted by South Africa's Best
+          <h2 className="font-headline text-3xl font-bold text-foreground">
+            Trusted by South Africa&apos;s Best
           </h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Shop from recognised brands you already know and trust.
+          </p>
         </div>
 
-        {/* Carousel */}
-        <div className="relative overflow-hidden">
-          {/* Fade edges */}
-          <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-16 bg-gradient-to-r from-white to-transparent" />
-          <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-16 bg-gradient-to-l from-white to-transparent" />
+        {/* Carousel — pauses on hover via CSS group */}
+        <div
+          className="group relative overflow-hidden"
+          role="region"
+          aria-label="Merchant logo carousel"
+        >
+          {/* Wide fade edges for premium look */}
+          <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-24 bg-gradient-to-r from-slate-50 to-transparent" />
+          <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 bg-gradient-to-l from-slate-50 to-transparent" />
 
-          <div className="flex animate-ticker-slow">
+          <div
+            ref={trackRef}
+            className="flex animate-ticker-slow group-hover:[animation-play-state:paused]"
+          >
             {doubled.map((logo, i) => (
               <LogoItem key={`${logo.name}-${i}`} name={logo.name} src={logo.src} />
             ))}

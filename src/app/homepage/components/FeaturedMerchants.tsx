@@ -118,9 +118,20 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+// BRAND INTEGRITY: logo comes exclusively from merchant.logoPath (their own brand record).
+// If missing or broken, show the neutral eVoucher placeholder — never another brand's logo.
+const PLACEHOLDER = '/assets/images/merchants/placeholder-merchant.svg';
+
+function MerchantLogo({ logoPath, name }: { logoPath: string | null; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = logoPath && !failed ? logoPath : PLACEHOLDER;
+  return (
+    <img src={src} alt={name} className="h-8 w-8 object-contain" onError={() => setFailed(true)} />
+  );
+}
+
 function MerchantCard({ merchant }: { merchant: PublicMerchant }) {
   const router = useRouter();
-  const [logoFailed, setLogoFailed] = useState(false);
   const [bannerFailed, setBannerFailed] = useState(false);
   const meta = getMeta(merchant.brandKey, merchant.name);
 
@@ -152,19 +163,8 @@ function MerchantCard({ merchant }: { merchant: PublicMerchant }) {
       {/* Logo + info */}
       <div className="flex flex-1 flex-col p-4">
         <div className="mb-3 flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-white p-1.5 shadow-sm -mt-8 relative z-10">
-            {merchant.logoPath && !logoFailed ? (
-              <img
-                src={merchant.logoPath}
-                alt={merchant.name}
-                className="h-8 w-8 object-contain"
-                onError={() => setLogoFailed(true)}
-              />
-            ) : (
-              <span className="font-headline text-sm font-bold text-primary">
-                {merchant.name[0]}
-              </span>
-            )}
+          <div className="relative z-10 -mt-8 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-white p-1.5 shadow-sm">
+            <MerchantLogo logoPath={merchant.logoPath} name={merchant.name} />
           </div>
           <div className="min-w-0 flex-1 pt-1">
             <p className="font-headline text-sm font-bold text-foreground line-clamp-1">

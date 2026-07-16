@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" fill="none">
+  <rect width="120" height="60" rx="8" fill="#F1F5F9"/>
+  <rect x="1" y="1" width="118" height="58" rx="7" stroke="#E2E8F0" stroke-width="1"/>
+  <circle cx="60" cy="26" r="10" fill="#CBD5E1"/>
+  <path d="M46 46c0-7.732 6.268-14 14-14s14 6.268 14 14" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="60" y="57" text-anchor="middle" font-family="sans-serif" font-size="7" fill="#94A3B8">Merchant</text>
+</svg>

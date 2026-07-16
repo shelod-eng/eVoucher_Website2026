@@ -92,7 +92,7 @@ module.exports = {
         'scale-in': 'scaleIn 0.3s ease-out',
         'pulse-subtle': 'pulseSubtle 2s infinite',
         'ticker': 'ticker 40s linear infinite',
-        'ticker-slow': 'ticker 80s linear infinite',
+        'ticker-slow': 'ticker 100s linear infinite',
         'float': 'float 3s ease-in-out infinite',
         'count-up': 'countUp 0.6s ease-out forwards',
       },

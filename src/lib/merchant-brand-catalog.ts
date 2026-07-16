@@ -1,3 +1,9 @@
+// BRAND INTEGRITY RULE (platform-wide):
+// A merchant's logo must ONLY come from their own brand record (assetPath).
+// Never substitute one merchant's logo for another.
+// If assetPath is missing or the file does not exist, display MERCHANT_PLACEHOLDER_LOGO.
+export const MERCHANT_PLACEHOLDER_LOGO = '/assets/images/merchants/placeholder-merchant.svg';
+
 export type BrandKey =
   | 'kalapeng'
   | 'picknpay'
@@ -28,10 +34,11 @@ export interface MerchantBrandDefinition {
 
 const BRAND_CATALOG: MerchantBrandDefinition[] = [
   {
+    // Kalapeng Pharmacy Group — uses its OWN logo. Never use dischem.png here.
     brandKey: 'kalapeng',
     displayName: 'Kalapeng Pharmacy Group',
     category: 'Healthcare',
-    assetPath: '/assets/images/merchants/dischem.png',
+    assetPath: '/assets/images/merchants/kalapeng.png',
     aliases: ['kalapeng', 'kalapeng pharmacy', 'kalapeng pharmacy group'],
     estimatedLocationCount: 35,
     estimatedProvinceCount: 9,
@@ -131,7 +138,7 @@ const BRAND_CATALOG: MerchantBrandDefinition[] = [
   },
   {
     brandKey: 'dischem',
-    displayName: 'Dischem',
+    displayName: 'Dis-Chem',
     category: 'Healthcare',
     assetPath: '/assets/images/merchants/dischem.png',
     aliases: ['dischem', 'dis-chem'],
