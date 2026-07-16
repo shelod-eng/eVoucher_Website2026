@@ -16,25 +16,25 @@ const PRIMARY_ACTIONS = [
     label: 'Shop Products',
     href: '/shop',
     icon: 'ShoppingBagIcon',
-    color: 'bg-primary text-primary-foreground hover:bg-primary/90',
+    color: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-md',
   },
   {
     label: 'My Wallet',
     href: '/wallet',
     icon: 'WalletIcon',
-    color: 'bg-secondary text-secondary-foreground hover:bg-secondary/90',
+    color: 'bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-md',
   },
   {
     label: 'Find Merchants',
     href: '/merchants',
     icon: 'BuildingStorefrontIcon',
-    color: 'bg-card text-foreground border border-border hover:bg-muted',
+    color: 'bg-white text-foreground border border-border hover:bg-muted shadow-sm',
   },
   {
     label: 'Redeem Voucher',
     href: '/redeem',
     icon: 'QrCodeIcon',
-    color: 'bg-card text-foreground border border-border hover:bg-muted',
+    color: 'bg-white text-foreground border border-border hover:bg-muted shadow-sm',
   },
 ];
 
@@ -57,24 +57,28 @@ const HeroSection = ({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/shop?q=${encodeURIComponent(searchQuery.trim())}`);
-    } else {
-      router.push('/shop');
-    }
+    router.push(searchQuery.trim() ? `/shop?q=${encodeURIComponent(searchQuery.trim())}` : '/shop');
   };
 
   return (
     <section
-      className={`bg-gradient-to-br from-primary/10 via-background to-secondary/5 py-16 lg:py-24 ${className}`}
+      className={`bg-gradient-to-br from-[#0d9488]/12 via-white to-[#f0fdf9] py-16 lg:py-24 ${className}`}
     >
       <div className="max-w-4xl mx-auto px-4 lg:px-6 text-center">
-        {/* Heading */}
-        <h1 className="font-headline font-bold text-4xl lg:text-5xl text-foreground leading-tight mb-3">
-          Welcome to <span className="text-primary">eVoucher</span>
+        {/* SA Identity Badge */}
+        <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full text-xs font-headline font-semibold mb-6 border border-primary/20">
+          <span>🇿🇦</span>
+          <span>Supporting South African Consumers &amp; Merchants</span>
+        </div>
+
+        {/* Main Headline */}
+        <h1 className="font-headline font-bold text-4xl lg:text-6xl text-foreground leading-tight mb-4">
+          Shop Smarter.{' '}
+          <span className="text-primary">Save More.</span>
         </h1>
-        <p className="font-body text-lg text-muted-foreground mb-8">
-          What would you like to shop for today?
+        <p className="font-body text-lg lg:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
+          Discover products from trusted South African merchants and pay securely using eVoucher.
+          Real savings, instant checkout, dignified impact.
         </p>
 
         {/* Search Bar */}
@@ -90,7 +94,7 @@ const HeroSection = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search products, merchants, or categories..."
-            className="w-full pl-12 pr-32 py-4 rounded-xl border border-border bg-card text-foreground font-body text-base shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="w-full pl-12 pr-32 py-4 rounded-xl border border-border bg-white text-foreground font-body text-base shadow-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             aria-label="Search products"
           />
           <button
@@ -102,12 +106,12 @@ const HeroSection = ({
         </form>
 
         {/* Primary Actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto mb-10">
           {PRIMARY_ACTIONS.map((action) => (
             <button
               key={action.label}
               onClick={() => router.push(action.href)}
-              className={`flex flex-col items-center gap-2 px-4 py-4 rounded-xl font-headline font-semibold text-sm transition-all duration-200 shadow-sm ${action.color}`}
+              className={`flex flex-col items-center gap-2 px-4 py-4 rounded-xl font-headline font-semibold text-sm transition-all duration-200 hover:scale-105 ${action.color}`}
               aria-label={action.label}
             >
               <Icon name={action.icon as any} size={24} variant="outline" />
@@ -116,24 +120,19 @@ const HeroSection = ({
           ))}
         </div>
 
-        {/* Featured Categories */}
-        <div className="mb-10">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-headline font-semibold mb-4">
-            Browse Categories
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {FEATURED_CATEGORIES.map((cat) => (
-              <button
-                key={cat.label}
-                onClick={() => router.push(`/shop?q=${encodeURIComponent(cat.label)}`)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card text-foreground text-sm font-body hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors"
-                aria-label={`Browse ${cat.label}`}
-              >
-                <Icon name={cat.icon as any} size={16} variant="outline" />
-                {cat.label}
-              </button>
-            ))}
-          </div>
+        {/* Category Pills */}
+        <div className="flex flex-wrap justify-center gap-2 mb-8">
+          {FEATURED_CATEGORIES.map((cat) => (
+            <button
+              key={cat.label}
+              onClick={() => router.push(`/shop?q=${encodeURIComponent(cat.label)}`)}
+              className="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-white text-foreground text-sm font-body hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors shadow-sm"
+              aria-label={`Browse ${cat.label}`}
+            >
+              <Icon name={cat.icon as any} size={15} variant="outline" />
+              {cat.label}
+            </button>
+          ))}
         </div>
 
         {/* Register CTAs */}
@@ -145,7 +144,7 @@ const HeroSection = ({
           >
             Register as Consumer
           </button>
-          <span className="hidden sm:inline">·</span>
+          <span className="hidden sm:inline text-border">·</span>
           <button
             onClick={onOpenMerchantModal}
             className="font-headline font-semibold text-secondary hover:underline"

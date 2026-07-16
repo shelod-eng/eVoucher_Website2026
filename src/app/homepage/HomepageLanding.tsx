@@ -8,6 +8,7 @@ import MerchantOnboardingModal from '@/app/components/MerchantOnboardingModal';
 import ForgotPasswordModal from '@/app/components/ForgotPasswordModal';
 import HeroSection from './components/HeroSection';
 import Footer from './components/Footer';
+import PlatformAccessSection from './components/PlatformAccessSection';
 import Icon from '@/components/ui/AppIcon';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -288,6 +289,9 @@ export default function HomepageLanding() {
               </div>
             )}
           </section>
+
+          {/* Platform Access */}
+          <PlatformAccessSection />
 
           {/* Current Promotions */}
           <section aria-label="Current Promotions">
