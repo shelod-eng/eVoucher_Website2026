@@ -25,7 +25,7 @@ const CHANNELS = [
     subtitle: 'Faster shopping, offline access, voucher scanning.',
     status: 'Available',
     statusColor: 'bg-primary/10 text-primary',
-    action: { label: 'Download APK', href: '/api/v1/android/apk' },
+    action: { label: 'Download APK', href: '/downloads/eVoucher_APK_14-July-2026_BuildVersion1.apk', download: true },
   },
   {
     emoji: '☎',
@@ -130,9 +130,7 @@ export default function PlatformAccessSection() {
                 <a
                   href={channel.action.href}
                   className="text-xs font-headline font-semibold text-primary hover:underline"
-                  {...(channel.action.href.startsWith('http') || channel.action.href.startsWith('tel')
-                    ? {}
-                    : {})}
+                  {...('download' in channel.action && channel.action.download ? { download: true } : {})}
                 >
                   {channel.action.label} →
                 </a>
