@@ -28,7 +28,10 @@ async function parsePayload(request: Request): Promise<WebhookPayload> {
     return await request.json().catch(() => ({}));
   }
 
-  if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+  if (
+    contentType.includes('application/x-www-form-urlencoded') ||
+    contentType.includes('multipart/form-data')
+  ) {
     const formData = await request.formData();
     return Object.fromEntries(formData.entries());
   }
@@ -84,7 +87,10 @@ function parseMetaWhatsAppPayload(payload: WebhookPayload): WhatsAppWebhookInfo 
 
   const media: MediaItem[] = [];
   if (Array.isArray(message?.image ? [message.image] : []) && message.image?.mime_type) {
-    media.push({ url: String(message.image?.url ?? ''), contentType: String(message.image?.mime_type ?? '') });
+    media.push({
+      url: String(message.image?.url ?? ''),
+      contentType: String(message.image?.mime_type ?? ''),
+    });
   }
 
   return {
@@ -101,10 +107,13 @@ function parseMetaWhatsAppPayload(payload: WebhookPayload): WhatsAppWebhookInfo 
 }
 
 function normalizeWhatsAppWebhook(payload: WebhookPayload): WhatsAppWebhookInfo {
-  return parseTwilioPayload(payload) ?? parseMetaWhatsAppPayload(payload) ?? {
-    provider: 'unknown',
-    raw: payload,
-  };
+  return (
+    parseTwilioPayload(payload) ??
+    parseMetaWhatsAppPayload(payload) ?? {
+      provider: 'unknown',
+      raw: payload,
+    }
+  );
 }
 
 export async function POST(request: Request) {
@@ -112,7 +121,8 @@ export async function POST(request: Request) {
     const payload = await parsePayload(request);
     const whatsapp = normalizeWhatsAppWebhook(payload);
 
-    console.log('[Webhook] provider=%s from=%s to=%s messageId=%s numMedia=%s',
+    console.log(
+      '[Webhook] provider=%s from=%s to=%s messageId=%s numMedia=%s',
       whatsapp.provider,
       whatsapp.from ?? 'unknown',
       whatsapp.to ?? 'unknown',
@@ -144,7 +154,11 @@ export async function POST(request: Request) {
         try {
           const textToSend = String(ussdResult?.message ?? '').trim();
           if (textToSend) {
-            const sendRes = await sendOutboundMessage({ to: msisdn, message: textToSend, via: 'whatsapp' });
+            const sendRes = await sendOutboundMessage({
+              to: msisdn,
+              message: textToSend,
+              via: 'whatsapp',
+            });
             console.log('[Webhook] outbound send result:', JSON.stringify(sendRes));
           }
         } catch (err) {

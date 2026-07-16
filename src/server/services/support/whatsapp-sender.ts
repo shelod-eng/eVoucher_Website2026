@@ -5,14 +5,17 @@ type OutboundParams = {
 };
 
 function cleanNumber(n: string) {
-  return String(n ?? '').replace(/[^0-9]/g, '').trim();
+  return String(n ?? '')
+    .replace(/[^0-9]/g, '')
+    .trim();
 }
-
 
 async function tryTwilio(to: string, message: string, attempts = 3) {
   const twilioSid = String(process.env.TWILIO_ACCOUNT_SID ?? '').trim();
   const twilioToken = String(process.env.TWILIO_AUTH_TOKEN ?? '').trim();
-  const twilioFrom = String(process.env.TWILIO_FROM_PHONE ?? '').replace(/\D/g, '').trim();
+  const twilioFrom = String(process.env.TWILIO_FROM_PHONE ?? '')
+    .replace(/\D/g, '')
+    .trim();
   if (!twilioSid || !twilioToken || !twilioFrom) return null;
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
@@ -76,7 +79,9 @@ async function tryMeta(to: string, message: string, attempts = 3) {
 export async function sendOutboundMessage(params: OutboundParams) {
   const to = cleanNumber(params.to);
   const message = String(params.message ?? '').trim();
-  const supportNumber = String(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP_NUMBER ?? '0695831160').replace(/\D/g, '').trim();
+  const supportNumber = String(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP_NUMBER ?? '0695831160')
+    .replace(/\D/g, '')
+    .trim();
 
   if (!to || !message) {
     console.warn('[WhatsAppSender] missing to or message', { to, message });
@@ -89,7 +94,11 @@ export async function sendOutboundMessage(params: OutboundParams) {
   const me = await tryMeta(to, message);
   if (me) return me;
 
-  console.log('[WhatsAppSender] No provider configured, would send', { from: supportNumber, to, message });
+  console.log('[WhatsAppSender] No provider configured, would send', {
+    from: supportNumber,
+    to,
+    message,
+  });
   return { ok: false, reason: 'no-provider-configured' };
 }
 

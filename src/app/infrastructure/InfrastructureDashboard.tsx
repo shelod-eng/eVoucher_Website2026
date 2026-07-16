@@ -713,8 +713,8 @@ function ExecutiveOverview({ pulse }: { pulse: number }) {
               shelod-eng/eVoucher_Website2026
             </h2>
             <p className="mt-2 text-sm leading-6 text-[#64748B]">
-              Continuous integration and deployment pipeline. Team members can inspect commits, build
-              status, and deployment readiness from GitHub Actions — no login required while
+              Continuous integration and deployment pipeline. Team members can inspect commits,
+              build status, and deployment readiness from GitHub Actions — no login required while
               enterprise RBAC is being finalised.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">

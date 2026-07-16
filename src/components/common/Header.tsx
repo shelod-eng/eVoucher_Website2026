@@ -53,7 +53,9 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
     { label: 'Wallet', href: '/wallet', icon: 'WalletIcon' },
     { label: 'Orders', href: '/cart', icon: 'ClipboardDocumentListIcon' },
     { label: 'Profile', href: '/profile', icon: 'UserCircleIcon' },
-    ...(cartCount > 0 ? [{ label: 'Cart', href: '/cart', icon: 'ShoppingCartIcon' } as NavItem] : []),
+    ...(cartCount > 0
+      ? [{ label: 'Cart', href: '/cart', icon: 'ShoppingCartIcon' } as NavItem]
+      : []),
   ];
 
   const merchantNavItems: NavItem[] = [

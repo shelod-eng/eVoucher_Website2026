@@ -12,10 +12,30 @@ interface HeroSectionProps {
 }
 
 const PRIMARY_ACTIONS = [
-  { label: 'Shop Products', href: '/shop', icon: 'ShoppingBagIcon', color: 'bg-primary text-primary-foreground hover:bg-primary/90' },
-  { label: 'My Wallet', href: '/wallet', icon: 'WalletIcon', color: 'bg-secondary text-secondary-foreground hover:bg-secondary/90' },
-  { label: 'Find Merchants', href: '/merchants', icon: 'BuildingStorefrontIcon', color: 'bg-card text-foreground border border-border hover:bg-muted' },
-  { label: 'Redeem Voucher', href: '/redeem', icon: 'QrCodeIcon', color: 'bg-card text-foreground border border-border hover:bg-muted' },
+  {
+    label: 'Shop Products',
+    href: '/shop',
+    icon: 'ShoppingBagIcon',
+    color: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  },
+  {
+    label: 'My Wallet',
+    href: '/wallet',
+    icon: 'WalletIcon',
+    color: 'bg-secondary text-secondary-foreground hover:bg-secondary/90',
+  },
+  {
+    label: 'Find Merchants',
+    href: '/merchants',
+    icon: 'BuildingStorefrontIcon',
+    color: 'bg-card text-foreground border border-border hover:bg-muted',
+  },
+  {
+    label: 'Redeem Voucher',
+    href: '/redeem',
+    icon: 'QrCodeIcon',
+    color: 'bg-card text-foreground border border-border hover:bg-muted',
+  },
 ];
 
 const FEATURED_CATEGORIES = [
@@ -45,7 +65,9 @@ const HeroSection = ({
   };
 
   return (
-    <section className={`bg-gradient-to-br from-primary/10 via-background to-secondary/5 py-16 lg:py-24 ${className}`}>
+    <section
+      className={`bg-gradient-to-br from-primary/10 via-background to-secondary/5 py-16 lg:py-24 ${className}`}
+    >
       <div className="max-w-4xl mx-auto px-4 lg:px-6 text-center">
         {/* Heading */}
         <h1 className="font-headline font-bold text-4xl lg:text-5xl text-foreground leading-tight mb-3">

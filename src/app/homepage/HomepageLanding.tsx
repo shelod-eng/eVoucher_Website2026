@@ -57,7 +57,9 @@ export default function HomepageLanding() {
   const [forgotUserType] = useState<'consumer' | 'merchant'>('consumer');
   const [walletSummary, setWalletSummary] = useState<WalletSummary | null>(null);
   const [merchants, setMerchants] = useState<FeaturedMerchant[]>([]);
-  const [recentActivity, setRecentActivity] = useState<{ id: string; label: string; amount: number; date: string }[]>([]);
+  const [recentActivity, setRecentActivity] = useState<
+    { id: string; label: string; amount: number; date: string }[]
+  >([]);
 
   // Load wallet summary and merchants for signed-in users
   useEffect(() => {
@@ -74,7 +76,10 @@ export default function HomepageLanding() {
           const dash = await dashRes.json();
           const vouchers: any[] = dash.vouchers ?? [];
           const active = vouchers.filter(
-            (v: any) => v.is_active && Number(v.current_balance) > 0 && new Date(v.expires_at).getTime() > Date.now()
+            (v: any) =>
+              v.is_active &&
+              Number(v.current_balance) > 0 &&
+              new Date(v.expires_at).getTime() > Date.now()
           );
           const totalSaved = vouchers.reduce((sum: number, v: any) => {
             const face = Number(v.face_value ?? 0);
@@ -132,7 +137,6 @@ export default function HomepageLanding() {
         />
 
         <div className="max-w-7xl mx-auto px-4 lg:px-6 py-12 space-y-14">
-
           {/* Compact Wallet Summary — signed-in only */}
           {isSignedIn && walletSummary && (
             <section aria-label="Wallet Summary">
@@ -246,7 +250,12 @@ export default function HomepageLanding() {
                           loading="lazy"
                         />
                       ) : (
-                        <Icon name="BuildingStorefrontIcon" size={22} variant="outline" className="text-muted-foreground" />
+                        <Icon
+                          name="BuildingStorefrontIcon"
+                          size={22}
+                          variant="outline"
+                          className="text-muted-foreground"
+                        />
                       )}
                     </div>
                     <p className="font-headline font-semibold text-xs text-foreground line-clamp-1">
@@ -266,7 +275,12 @@ export default function HomepageLanding() {
                     aria-label={`Browse ${cat}`}
                   >
                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                      <Icon name="BuildingStorefrontIcon" size={22} variant="outline" className="text-primary" />
+                      <Icon
+                        name="BuildingStorefrontIcon"
+                        size={22}
+                        variant="outline"
+                        className="text-primary"
+                      />
                     </div>
                     <p className="font-headline font-semibold text-sm text-foreground">{cat}</p>
                   </button>
@@ -281,17 +295,14 @@ export default function HomepageLanding() {
               <p className="text-xs uppercase tracking-widest text-primary font-headline font-semibold mb-1">
                 Promotions
               </p>
-              <h2 className="font-headline font-bold text-2xl text-foreground">
-                Current Offers
-              </h2>
+              <h2 className="font-headline font-bold text-2xl text-foreground">Current Offers</h2>
             </div>
             <div className="grid md:grid-cols-3 gap-4">
               {PROMOTIONS.map((promo) => (
-                <div
-                  key={promo.title}
-                  className={`rounded-xl border p-5 ${promo.color}`}
-                >
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-headline font-semibold mb-3 ${promo.badgeColor}`}>
+                <div key={promo.title} className={`rounded-xl border p-5 ${promo.color}`}>
+                  <span
+                    className={`inline-block px-2 py-1 rounded-full text-xs font-headline font-semibold mb-3 ${promo.badgeColor}`}
+                  >
                     {promo.badge}
                   </span>
                   <h3 className="font-headline font-bold text-lg text-foreground mb-1">
@@ -316,7 +327,8 @@ export default function HomepageLanding() {
                 Are you a merchant?
               </h2>
               <p className="text-muted-foreground mb-6">
-                Join eVoucher to reach more customers, manage products, and receive fast settlements.
+                Join eVoucher to reach more customers, manage products, and receive fast
+                settlements.
               </p>
               <button
                 onClick={() => setShowMerchantModal(true)}
@@ -327,7 +339,6 @@ export default function HomepageLanding() {
               </button>
             </section>
           )}
-
         </div>
       </main>
       <Footer />
