@@ -73,11 +73,10 @@ const HeroSection = ({
 
         {/* Main Headline */}
         <h1 className="font-headline font-bold text-4xl lg:text-6xl text-foreground leading-tight mb-4">
-          Shop Smarter. <span className="text-primary">Save More.</span>
+          Save Money Every Time <span className="text-primary">You Shop.</span>
         </h1>
         <p className="font-body text-lg lg:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-          Discover products from trusted South African merchants and pay securely using eVoucher.
-          Real savings, instant checkout, dignified impact.
+          Shop products from trusted South African merchants and enjoy instant savings — powered by eVoucher.
         </p>
 
         {/* Search Bar */}

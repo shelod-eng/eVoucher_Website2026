@@ -49,6 +49,107 @@ const PROMOTIONS = [
   },
 ];
 
+const MERCHANT_LOGOS = [
+  { name: 'Pick n Pay', category: 'Grocery', color: '#E31837', initials: 'PnP' },
+  { name: 'Shoprite', category: 'Grocery', color: '#E31837', initials: 'SR' },
+  { name: 'Checkers', category: 'Grocery', color: '#E31837', initials: 'CH' },
+  { name: 'Boxer', category: 'Grocery', color: '#FF6B00', initials: 'BX' },
+  { name: 'Clicks', category: 'Pharmacy', color: '#0066CC', initials: 'CL' },
+  { name: 'Dis-Chem', category: 'Pharmacy', color: '#00A651', initials: 'DC' },
+  { name: 'Woolworths', category: 'Fashion', color: '#1A1A1A', initials: 'WW' },
+  { name: 'Pep', category: 'Fashion', color: '#E31837', initials: 'PP' },
+  { name: 'Ackermans', category: 'Fashion', color: '#003087', initials: 'AK' },
+  { name: 'MTN', category: 'Airtime', color: '#FFCC00', initials: 'MTN' },
+  { name: 'Vodacom', category: 'Airtime', color: '#E60000', initials: 'VC' },
+  { name: 'Cell C', category: 'Airtime', color: '#00A651', initials: 'CC' },
+  { name: 'Engen', category: 'Fuel', color: '#E31837', initials: 'EN' },
+  { name: 'Makro', category: 'Wholesale', color: '#003087', initials: 'MK' },
+  { name: 'Game', category: 'Electronics', color: '#E31837', initials: 'GM' },
+  { name: 'Builders', category: 'Hardware', color: '#FF6B00', initials: 'BW' },
+];
+
+const HOW_IT_WORKS = [
+  { step: '1', title: 'Browse & Choose', desc: 'Search products from trusted South African merchants.' },
+  { step: '2', title: 'Add to Cart', desc: 'Select your products and see your instant savings.' },
+  { step: '3', title: 'Pay Securely', desc: 'Pay with card, EFT, USSD, or cash at retail stores.' },
+  { step: '4', title: 'Redeem In-Store', desc: 'Your voucher is created instantly. Scan or show at checkout.' },
+];
+
+function SavingsCalculator() {
+  const [monthly, setMonthly] = useState(3000);
+  const savingsPct = 0.025;
+  const cashbackPct = 0.01;
+  const savings = Math.round(monthly * savingsPct);
+  const cashback = Math.round(monthly * cashbackPct);
+  const total = savings + cashback;
+
+  return (
+    <section aria-label="Savings Calculator" className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-white p-8">
+      <div className="max-w-2xl mx-auto text-center">
+        <p className="text-xs uppercase tracking-widest text-primary font-headline font-semibold mb-2">Savings Calculator</p>
+        <h2 className="font-headline font-bold text-2xl text-foreground mb-2">How much could you save this month?</h2>
+        <p className="text-sm text-muted-foreground mb-8">Move the slider to match your monthly shopping spend.</p>
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-muted-foreground">Monthly shopping spend</span>
+            <span className="font-headline font-bold text-2xl text-foreground">R{monthly.toLocaleString()}</span>
+          </div>
+          <input
+            type="range"
+            min={500}
+            max={20000}
+            step={500}
+            value={monthly}
+            onChange={(e) => setMonthly(Number(e.target.value))}
+            className="w-full accent-primary h-2 rounded-full"
+            aria-label="Monthly shopping spend"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+            <span>R500</span><span>R20,000</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="rounded-xl bg-white border border-border p-4 shadow-sm">
+            <p className="text-xs text-muted-foreground mb-1">Instant Savings</p>
+            <p className="font-headline font-bold text-2xl text-success">R{savings.toLocaleString()}</p>
+          </div>
+          <div className="rounded-xl bg-white border border-border p-4 shadow-sm">
+            <p className="text-xs text-muted-foreground mb-1">Cashback Earned</p>
+            <p className="font-headline font-bold text-2xl text-primary">R{cashback.toLocaleString()}</p>
+          </div>
+          <div className="rounded-xl bg-primary text-primary-foreground p-4 shadow-sm">
+            <p className="text-xs opacity-80 mb-1">Total Monthly Value</p>
+            <p className="font-headline font-bold text-2xl">R{total.toLocaleString()}</p>
+          </div>
+        </div>
+        <p className="mt-4 text-xs text-muted-foreground">Based on eVoucher&apos;s standard savings model. Actual savings may vary by merchant and product.</p>
+      </div>
+    </section>
+  );
+}
+
+function HowItWorks() {
+  return (
+    <section aria-label="How eVoucher Works">
+      <div className="mb-6 text-center">
+        <p className="text-xs uppercase tracking-widest text-primary font-headline font-semibold mb-1">Simple Process</p>
+        <h2 className="font-headline font-bold text-2xl text-foreground">How eVoucher Works</h2>
+      </div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {HOW_IT_WORKS.map((item) => (
+          <div key={item.step} className="rounded-xl border border-border bg-card p-6 text-center hover:border-primary hover:shadow-sm transition-all">
+            <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground font-headline font-bold text-lg flex items-center justify-center mx-auto mb-4">
+              {item.step}
+            </div>
+            <h3 className="font-headline font-bold text-base text-foreground mb-2">{item.title}</h3>
+            <p className="text-sm text-muted-foreground">{item.desc}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function HomepageLanding() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -267,23 +368,22 @@ export default function HomepageLanding() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {['Groceries', 'Pharmacy', 'Fashion', 'Electronics'].map((cat) => (
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                {MERCHANT_LOGOS.map((m) => (
                   <button
-                    key={cat}
-                    onClick={() => router.push(`/shop?q=${encodeURIComponent(cat)}`)}
-                    className="bg-card rounded-xl border border-border p-4 text-center hover:border-primary hover:shadow-sm transition-all"
-                    aria-label={`Browse ${cat}`}
+                    key={m.name}
+                    onClick={() => router.push(`/shop?q=${encodeURIComponent(m.name)}`)}
+                    className="bg-card rounded-xl border border-border p-3 text-center hover:border-primary hover:shadow-sm transition-all group"
+                    aria-label={`Shop at ${m.name}`}
                   >
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                      <Icon
-                        name="BuildingStorefrontIcon"
-                        size={22}
-                        variant="outline"
-                        className="text-primary"
-                      />
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2 text-white text-xs font-headline font-bold transition-transform group-hover:scale-105"
+                      style={{ backgroundColor: m.color }}
+                    >
+                      {m.initials}
                     </div>
-                    <p className="font-headline font-semibold text-sm text-foreground">{cat}</p>
+                    <p className="font-headline font-semibold text-xs text-foreground line-clamp-1">{m.name}</p>
+                    <p className="text-xs text-muted-foreground">{m.category}</p>
                   </button>
                 ))}
               </div>
@@ -292,6 +392,12 @@ export default function HomepageLanding() {
 
           {/* Platform Access */}
           <PlatformAccessSection />
+
+          {/* Savings Calculator */}
+          <SavingsCalculator />
+
+          {/* How eVoucher Works */}
+          <HowItWorks />
 
           {/* Current Promotions */}
           <section aria-label="Current Promotions">

@@ -426,7 +426,7 @@ export default function ShopPage() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
               <div>
                 <h1 className="font-headline font-bold text-5xl text-foreground">Shop</h1>
-                <p className="text-muted-foreground">Browse brand vouchers and buy instantly</p>
+                <p className="text-muted-foreground">Save money on every purchase from trusted South African merchants</p>
               </div>
               <button
                 onClick={() => router.push('/cart')}
@@ -652,7 +652,7 @@ export default function ShopPage() {
 
           <section className="bg-card rounded-2xl border border-border p-6">
             <h2 className="font-headline font-bold text-3xl text-foreground mb-4">
-              Vouchers ({products.length} available)
+              Products ({products.length} available)
             </h2>
 
             {productsLoading ? (
@@ -705,48 +705,23 @@ export default function ShopPage() {
                       </h3>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Face Value</span>
-                          <span className="font-headline font-semibold">
+                          <span className="text-muted-foreground line-through">
+                            Normal Price
+                          </span>
+                          <span className="font-headline font-semibold text-muted-foreground line-through">
                             R{Number(product.face_value).toFixed(2)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">
-                            Total Discount ({Number(product.total_discount_pct).toFixed(1)}%)
-                          </span>
-                          <span className="font-headline font-semibold text-success">
-                            -R
-                            {(
-                              Number(product.face_value) *
-                              (Number(product.total_discount_pct) / 100)
-                            ).toFixed(2)}
+                          <span className="font-semibold text-foreground">Today&apos;s Price</span>
+                          <span className="font-headline font-bold text-2xl text-foreground">
+                            R{Number(product.consumer_price).toFixed(2)}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between pl-3">
-                          <span className="text-xs text-muted-foreground">
-                            ↳ Your Savings ({Number(product.consumer_benefit_pct).toFixed(1)}%)
-                          </span>
-                          <span className="text-xs font-headline font-semibold text-success">
-                            -R{Number(product.consumer_benefit_amount).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between pl-3">
-                          <span className="text-xs text-muted-foreground">
-                            ↳ Platform Fee (
-                            {(
-                              Number(product.total_discount_pct) -
-                              Number(product.consumer_benefit_pct)
-                            ).toFixed(1)}
-                            %)
-                          </span>
-                          <span className="text-xs font-headline font-semibold text-primary">
-                            R
-                            {(
-                              Number(product.face_value) *
-                              ((Number(product.total_discount_pct) -
-                                Number(product.consumer_benefit_pct)) /
-                                100)
-                            ).toFixed(2)}
+                        <div className="flex items-center justify-between rounded-lg bg-success/10 px-3 py-2">
+                          <span className="font-semibold text-success">You Save</span>
+                          <span className="font-headline font-bold text-success">
+                            R{Number(product.consumer_benefit_amount).toFixed(2)}
                           </span>
                         </div>
                         <div className="rounded-lg bg-background border border-border px-2 py-1">
@@ -762,10 +737,7 @@ export default function ShopPage() {
                       </div>
 
                       <div className="border-t border-success/20 mt-3 pt-3 flex items-center justify-between">
-                        <span className="text-muted-foreground">You pay</span>
-                        <span className="font-headline font-bold text-4xl text-foreground">
-                          R{Number(product.consumer_price).toFixed(2)}
-                        </span>
+                        <span className="text-muted-foreground text-xs">Instant saving applied at checkout</span>
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-2">
