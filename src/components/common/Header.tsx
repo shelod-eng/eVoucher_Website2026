@@ -42,27 +42,22 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
 
   const publicNavItems: NavItem[] = [
     { label: 'Home', href: '/', icon: 'HomeIcon' },
-    { label: 'USSD', href: '/ussd-console', icon: 'DevicePhoneMobileIcon' },
-    { label: 'Consumer', href: '/consumer-experience', icon: 'UserIcon' },
-    { label: 'Merchants', href: '/merchants', icon: 'BuildingStorefrontIcon' },
+    { label: 'Shop', href: '/merchants', icon: 'BuildingStorefrontIcon' },
+    { label: 'Merchants', href: '/merchant-partnership', icon: 'BuildingOffice2Icon' },
     { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
   ];
 
   const consumerNavItems: NavItem[] = [
     { label: 'Home', href: '/customer/dashboard', icon: 'HomeIcon' },
-    { label: 'USSD', href: '/ussd-console', icon: 'DevicePhoneMobileIcon' },
     { label: 'Shop', href: '/shop', icon: 'BuildingStorefrontIcon' },
     { label: 'Wallet', href: '/wallet', icon: 'WalletIcon' },
-    { label: 'Redeem', href: '/redeem', icon: 'QrCodeIcon' },
-    { label: 'Cart', href: '/cart', icon: 'ShoppingCartIcon' },
-    { label: 'Benefits', href: '/benefits', icon: 'SparklesIcon' },
-    { label: 'Analytics', href: '/analytics', icon: 'ChartBarIcon' },
+    { label: 'Orders', href: '/cart', icon: 'ClipboardDocumentListIcon' },
     { label: 'Profile', href: '/profile', icon: 'UserCircleIcon' },
+    ...(cartCount > 0 ? [{ label: 'Cart', href: '/cart', icon: 'ShoppingCartIcon' } as NavItem] : []),
   ];
 
   const merchantNavItems: NavItem[] = [
     { label: 'Home', href: '/merchant/dashboard', icon: 'HomeIcon' },
-    { label: 'USSD', href: '/ussd-console', icon: 'DevicePhoneMobileIcon' },
     {
       label: 'Dashboard',
       href: '/merchant/dashboard?tab=studio',
@@ -87,7 +82,6 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
       icon: 'ShieldCheckIcon',
       dashboardTab: 'compliance',
     },
-    { label: 'Analytics', href: '/analytics', icon: 'ChartBarIcon' },
     { label: 'Support', href: '/support', icon: 'QuestionMarkCircleIcon' },
   ];
 
@@ -106,20 +100,9 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
           '/merchant/dashboard?tab=studio',
           '/merchant/dashboard?tab=products',
           '/merchant/dashboard?tab=payouts',
-          '/analytics',
           '/support',
         ]
-      : [
-          '/customer/dashboard',
-          '/shop',
-          '/wallet',
-          '/redeem',
-          '/cart',
-          '/benefits',
-          '/analytics',
-          '/profile',
-          '/buy-vouchers',
-        ];
+      : ['/customer/dashboard', '/shop', '/wallet', '/cart', '/profile', '/buy-vouchers'];
 
     prefetchTargets.forEach((target) => {
       router.prefetch(target);
@@ -153,13 +136,8 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
     );
   };
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   const handleSignOut = async () => {
     try {
@@ -215,6 +193,7 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
                 href={item.href}
                 onClick={() => handleMerchantTabIntent(item)}
                 className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-all duration-300 ease-smooth"
+                aria-label={item.label}
               >
                 <Icon name={item.icon as any} size={18} variant="outline" />
                 <span>{item.label}</span>
@@ -251,7 +230,7 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
             ) : (
               <Link
                 href={publicSignInHref}
-                className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-all duration-300 ease-smooth"
+                className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-body font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-300"
               >
                 <Icon name="ArrowRightOnRectangleIcon" size={18} variant="outline" />
                 <span>Sign In</span>
@@ -282,6 +261,7 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
                     closeMobileMenu();
                   }}
                   className="flex items-center space-x-3 px-4 py-3 rounded-md text-base font-body font-medium text-foreground hover:bg-muted hover:text-primary transition-colors duration-200"
+                  aria-label={item.label}
                 >
                   <Icon name={item.icon as any} size={20} variant="outline" />
                   <span>{item.label}</span>

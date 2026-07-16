@@ -700,6 +700,83 @@ function ExecutiveOverview({ pulse }: { pulse: number }) {
         ))}
       </section>
 
+      <section className="mb-8 rounded-lg border border-[#D7F3F6] bg-gradient-to-r from-[#EAFBFD] to-white p-6 shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="max-w-2xl">
+            <div className="mb-3 flex items-center gap-3">
+              <Github className="h-5 w-5 text-[#20324A]" />
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#108995]">
+                CI/CD Pipeline
+              </p>
+            </div>
+            <h2 className="font-headline text-xl font-bold text-[#20324A]">
+              shelod-eng/eVoucher_Website2026
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[#64748B]">
+              Continuous integration and deployment pipeline. Team members can inspect commits, build
+              status, and deployment readiness from GitHub Actions — no login required while
+              enterprise RBAC is being finalised.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-[#D7F3F6] bg-white px-3 py-1 text-xs font-semibold text-[#108995]">
+                Node.js CI
+              </span>
+              <span className="rounded-full border border-[#D7F3F6] bg-white px-3 py-1 text-xs font-semibold text-[#108995]">
+                Vercel Deploy
+              </span>
+              <span className="rounded-full border border-[#BBF7D0] bg-[#DCFCE7] px-3 py-1 text-xs font-semibold text-[#166534]">
+                Team Accessible
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3">
+            <a
+              href="https://github.com/shelod-eng/eVoucher_Website2026/actions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2.5 rounded-lg bg-[#20324A] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#2D4A6A]"
+            >
+              <Github className="h-4 w-4" />
+              View GitHub Actions
+            </a>
+            <a
+              href="https://github.com/shelod-eng/eVoucher_Website2026"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2.5 rounded-lg border border-[#D7F3F6] bg-white px-6 py-3 text-sm font-semibold text-[#20324A] transition-colors hover:bg-[#F7F9FC]"
+            >
+              View Repository
+            </a>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 border-t border-[#D7F3F6] pt-5 sm:grid-cols-3">
+          <div className="rounded-md bg-white/70 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#94A3B8]">
+              CI Status
+            </p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#16A34A]" />
+              <span className="text-sm font-semibold text-[#20324A]">Node.js 20.x — passing</span>
+            </div>
+          </div>
+          <div className="rounded-md bg-white/70 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#94A3B8]">
+              Branch
+            </p>
+            <p className="mt-1 text-sm font-semibold text-[#20324A]">main — latest build</p>
+          </div>
+          <div className="rounded-md bg-white/70 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#94A3B8]">
+              Deployment
+            </p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#16A34A]" />
+              <span className="text-sm font-semibold text-[#20324A]">Vercel — production</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="mb-8 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-lg border border-[#E6EEF5] bg-white p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -906,6 +983,79 @@ function DeploymentsTab() {
           </a>
         </div>
       </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-[#D7F3F6] bg-[#EAFBFD] p-5">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white text-[#108995]">
+              <Github className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#108995]">
+                Source Continuity
+              </p>
+              <h3 className="mt-2 font-headline text-lg font-semibold text-[#20324A]">
+                GitHub repository access
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-[#64748B]">
+                The current platform source and deployment pipeline are available for team review
+                while enterprise RBAC is being defined.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full bg-white px-2.5 py-1 font-semibold text-[#108995]">
+                  Public repository
+                </span>
+                <span className="rounded-full bg-white px-2.5 py-1 font-semibold text-[#108995]">
+                  GitHub Actions
+                </span>
+                <span className="rounded-full bg-white px-2.5 py-1 font-semibold text-[#108995]">
+                  Vercel production
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-[#E6EEF5] bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#94A3B8]">
+                Build Pipeline
+              </p>
+              <h3 className="mt-2 font-headline text-lg font-semibold text-[#20324A]">
+                shelod-eng/eVoucher_Website2026
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-[#64748B]">
+                Team members can inspect commits, CI history, and deployment readiness from the
+                Actions page before formal role-based access controls are introduced.
+              </p>
+            </div>
+            <span className="rounded-full border border-[#BBF7D0] bg-[#DCFCE7] px-3 py-1 text-xs font-bold text-[#166534]">
+              Accessible
+            </span>
+          </div>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <a
+              href="https://github.com/shelod-eng/eVoucher_Website2026/actions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#20B8C5] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#108995]"
+            >
+              <Github className="h-4 w-4" />
+              Open GitHub Actions
+            </a>
+            <a
+              href="https://github.com/shelod-eng/eVoucher_Website2026"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-[#D7F3F6] bg-white px-4 py-2.5 text-sm font-semibold text-[#20324A] transition-colors hover:bg-[#F7F9FC]"
+            >
+              View Repository
+            </a>
+          </div>
+        </div>
+      </div>
+
       <div className="overflow-hidden rounded-lg border border-[#E6EEF5] bg-white">
         {DEPLOYMENTS.map((deployment) => (
           <div

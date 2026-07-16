@@ -98,7 +98,7 @@ export default function WebsiteChatbotWidget() {
         }
       } catch {
         if (typeof window !== 'undefined') {
-          window.location.href = 'https://wa.me/27712345678';
+          window.location.href = 'https://wa.me/0695831160';
         }
       }
     }

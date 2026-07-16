@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { resolveUserRole } from '@/server/utils/role';
+import { resolveRequestIp } from '@/server/utils/request-ip';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,7 +11,7 @@ export const revalidate = 0;
  * BankServ Adaptor - Merchant Product Report
  * Provides a consolidated view of Onboarding Status, Catalog, and Payout Readiness.
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -79,6 +80,9 @@ export async function GET() {
     return NextResponse.json({
       timestamp: new Date().toISOString(),
       refreshIntervalSeconds: 60,
+      kycAudit: {
+        requesterIpAddress: resolveRequestIp(request.headers),
+      },
       report,
     });
   } catch (error: any) {

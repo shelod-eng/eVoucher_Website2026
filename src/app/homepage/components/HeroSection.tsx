@@ -1,6 +1,8 @@
-import Link from 'next/link';
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
-import PwaInstallButton from '@/components/common/PwaInstallButton';
 
 interface HeroSectionProps {
   className?: string;
@@ -9,161 +11,125 @@ interface HeroSectionProps {
   onOpenForgotModal?: () => void;
 }
 
+const PRIMARY_ACTIONS = [
+  { label: 'Shop Products', href: '/shop', icon: 'ShoppingBagIcon', color: 'bg-primary text-primary-foreground hover:bg-primary/90' },
+  { label: 'My Wallet', href: '/wallet', icon: 'WalletIcon', color: 'bg-secondary text-secondary-foreground hover:bg-secondary/90' },
+  { label: 'Find Merchants', href: '/merchants', icon: 'BuildingStorefrontIcon', color: 'bg-card text-foreground border border-border hover:bg-muted' },
+  { label: 'Redeem Voucher', href: '/redeem', icon: 'QrCodeIcon', color: 'bg-card text-foreground border border-border hover:bg-muted' },
+];
+
+const FEATURED_CATEGORIES = [
+  { label: 'Groceries', icon: 'ShoppingCartIcon' },
+  { label: 'Pharmacy', icon: 'BeakerIcon' },
+  { label: 'Fashion', icon: 'ShoppingBagIcon' },
+  { label: 'Education', icon: 'AcademicCapIcon' },
+  { label: 'Airtime & Data', icon: 'DevicePhoneMobileIcon' },
+  { label: 'Home & Living', icon: 'HomeIcon' },
+];
+
 const HeroSection = ({
   className = '',
-  onOpenMerchantModal,
   onOpenCustomerModal,
-  onOpenForgotModal,
+  onOpenMerchantModal,
 }: HeroSectionProps) => {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/shop?q=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      router.push('/shop');
+    }
+  };
+
   return (
-    <section
-      className={`relative bg-gradient-to-br from-primary/10 via-background to-secondary/10 py-20 lg:py-32 ${className}`}
-    >
-      <div className="max-w-7xl mx-auto px-4 lg:px-6">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <div className="space-y-8">
-            {/* Trust Badge */}
-            <div className="inline-flex items-center space-x-2 bg-success/10 text-success px-4 py-2 rounded-full">
-              <Icon name="ShieldCheckIcon" size={20} variant="solid" />
-              <span className="text-sm font-body font-medium">
-                Sponsor-ready, PWA-enabled, POPIA-aligned
-              </span>
-            </div>
+    <section className={`bg-gradient-to-br from-primary/10 via-background to-secondary/5 py-16 lg:py-24 ${className}`}>
+      <div className="max-w-4xl mx-auto px-4 lg:px-6 text-center">
+        {/* Heading */}
+        <h1 className="font-headline font-bold text-4xl lg:text-5xl text-foreground leading-tight mb-3">
+          Welcome to <span className="text-primary">eVoucher</span>
+        </h1>
+        <p className="font-body text-lg text-muted-foreground mb-8">
+          What would you like to shop for today?
+        </p>
 
-            {/* Main Heading */}
-            <h1 className="font-headline font-bold text-4xl lg:text-6xl text-foreground leading-tight">
-              South Africa's Digital Voucher Infrastructure -{' '}
-              <span className="text-primary">Dignified Impact</span>.
-            </h1>
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="relative max-w-2xl mx-auto mb-10">
+          <Icon
+            name="MagnifyingGlassIcon"
+            size={20}
+            variant="outline"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search products, merchants, or categories..."
+            className="w-full pl-12 pr-32 py-4 rounded-xl border border-border bg-card text-foreground font-body text-base shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            aria-label="Search products"
+          />
+          <button
+            type="submit"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2 bg-primary text-primary-foreground rounded-lg font-headline font-semibold hover:bg-primary/90 transition-colors"
+          >
+            Search
+          </button>
+        </form>
 
-            {/* Subheading */}
-            <p className="font-body text-lg lg:text-xl text-muted-foreground leading-relaxed">
-              Bridging government, CSI sponsors, merchants, and communities through installable
-              mobile-first onboarding, private compliance evidence, transparent settlement flows,
-              and measurable consumer savings.
-            </p>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              {['FNB', 'DTI', 'CSI Partners'].map((partner) => (
-                <div
-                  key={partner}
-                  className="rounded-lg border border-border bg-card px-4 py-3 text-center shadow-sm"
-                >
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                    Sponsor signal
-                  </p>
-                  <p className="mt-1 font-headline text-lg font-bold text-foreground">{partner}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* USSD Code Highlight */}
-            <div className="bg-card border-2 border-primary rounded-lg p-6 shadow-md">
-              <div className="flex items-center space-x-4">
-                <div className="bg-primary/10 p-3 rounded-full">
-                  <Icon
-                    name="DevicePhoneMobileIcon"
-                    size={32}
-                    variant="solid"
-                    className="text-primary"
-                  />
-                </div>
-                <div>
-                  <p className="font-body text-sm text-muted-foreground">
-                    Access without app store friction
-                  </p>
-                  <p className="font-accent text-2xl font-bold text-foreground">PWA + *120*384#</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Stakeholder CTAs */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={onOpenCustomerModal}
-                className="inline-flex items-center justify-center space-x-2 px-8 py-4 bg-action text-action-foreground rounded-lg font-headline font-semibold text-base hover:bg-action/90 transition-all duration-300 transform hover:scale-105 shadow-lg"
-              >
-                <Icon name="UserIcon" size={20} variant="solid" />
-                <span>Join as Consumer</span>
-              </button>
-              <button
-                onClick={onOpenMerchantModal}
-                className="inline-flex items-center justify-center space-x-2 px-8 py-4 bg-secondary text-secondary-foreground rounded-lg font-headline font-semibold text-base hover:bg-secondary/90 transition-all duration-300 transform hover:scale-105 shadow-lg"
-              >
-                <Icon name="BuildingStorefrontIcon" size={20} variant="solid" />
-                <span>Onboard as Merchant</span>
-              </button>
-              <PwaInstallButton className="px-8 py-4 text-base" />
-            </div>
-
-            {/* Government CTA */}
-            <Link
-              href="/government-alignment"
-              className="inline-flex items-center space-x-2 text-trust-builder hover:text-primary transition-colors duration-300"
+        {/* Primary Actions */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto mb-12">
+          {PRIMARY_ACTIONS.map((action) => (
+            <button
+              key={action.label}
+              onClick={() => router.push(action.href)}
+              className={`flex flex-col items-center gap-2 px-4 py-4 rounded-xl font-headline font-semibold text-sm transition-all duration-200 shadow-sm ${action.color}`}
+              aria-label={action.label}
             >
-              <Icon name="BuildingLibraryIcon" size={20} variant="outline" />
-              <span className="font-body font-medium">Partner with Government</span>
-              <Icon name="ArrowRightIcon" size={16} variant="outline" />
-            </Link>
+              <Icon name={action.icon as any} size={24} variant="outline" />
+              <span>{action.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Featured Categories */}
+        <div className="mb-10">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-headline font-semibold mb-4">
+            Browse Categories
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {FEATURED_CATEGORIES.map((cat) => (
+              <button
+                key={cat.label}
+                onClick={() => router.push(`/shop?q=${encodeURIComponent(cat.label)}`)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card text-foreground text-sm font-body hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors"
+                aria-label={`Browse ${cat.label}`}
+              >
+                <Icon name={cat.icon as any} size={16} variant="outline" />
+                {cat.label}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* Right Content - Impact Stats */}
-          <div className="grid grid-cols-2 gap-6">
-            <div className="bg-card rounded-xl p-6 shadow-lg border border-border hover:shadow-xl transition-shadow duration-300">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="bg-success/10 p-2 rounded-lg">
-                  <Icon
-                    name="CurrencyDollarIcon"
-                    size={24}
-                    variant="solid"
-                    className="text-success"
-                  />
-                </div>
-                <p className="font-body text-sm text-muted-foreground">Total Savings</p>
-              </div>
-              <p className="font-headline text-3xl font-bold text-foreground">R 2.4M</p>
-              <p className="font-body text-xs text-success mt-2">+18% this month</p>
-            </div>
-
-            <div className="bg-card rounded-xl p-6 shadow-lg border border-border hover:shadow-xl transition-shadow duration-300">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="bg-primary/10 p-2 rounded-lg">
-                  <Icon name="UserGroupIcon" size={24} variant="solid" className="text-primary" />
-                </div>
-                <p className="font-body text-sm text-muted-foreground">Active Users</p>
-              </div>
-              <p className="font-headline text-3xl font-bold text-foreground">12,847</p>
-              <p className="font-body text-xs text-success mt-2">+24% this month</p>
-            </div>
-
-            <div className="bg-card rounded-xl p-6 shadow-lg border border-border hover:shadow-xl transition-shadow duration-300">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="bg-secondary/10 p-2 rounded-lg">
-                  <Icon
-                    name="BuildingStorefrontIcon"
-                    size={24}
-                    variant="solid"
-                    className="text-secondary"
-                  />
-                </div>
-                <p className="font-body text-sm text-muted-foreground">Partner Merchants</p>
-              </div>
-              <p className="font-headline text-3xl font-bold text-foreground">487</p>
-              <p className="font-body text-xs text-success mt-2">+31% this month</p>
-            </div>
-
-            <div className="bg-card rounded-xl p-6 shadow-lg border border-border hover:shadow-xl transition-shadow duration-300">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="bg-accent/10 p-2 rounded-lg">
-                  <Icon name="ChartBarIcon" size={24} variant="solid" className="text-accent" />
-                </div>
-                <p className="font-body text-sm text-muted-foreground">Transactions</p>
-              </div>
-              <p className="font-headline text-3xl font-bold text-foreground">34.2K</p>
-              <p className="font-body text-xs text-success mt-2">+42% this month</p>
-            </div>
-          </div>
+        {/* Register CTAs */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-sm text-muted-foreground">
+          <span>New here?</span>
+          <button
+            onClick={onOpenCustomerModal}
+            className="font-headline font-semibold text-primary hover:underline"
+          >
+            Register as Consumer
+          </button>
+          <span className="hidden sm:inline">·</span>
+          <button
+            onClick={onOpenMerchantModal}
+            className="font-headline font-semibold text-secondary hover:underline"
+          >
+            Onboard as Merchant
+          </button>
         </div>
       </div>
     </section>

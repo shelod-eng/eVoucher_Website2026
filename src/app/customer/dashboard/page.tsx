@@ -171,7 +171,7 @@ export default function CustomerDashboard() {
 
   const quickActions = [
     {
-      label: 'Buy Voucher',
+      label: 'Shop',
       href: '/shop',
       icon: 'ShoppingBagIcon',
       color: 'bg-primary/15 text-primary',
@@ -183,15 +183,15 @@ export default function CustomerDashboard() {
       color: 'bg-secondary/15 text-secondary',
     },
     {
-      label: 'Find Stores',
-      href: '/shop',
-      icon: 'MapPinIcon',
+      label: 'Orders',
+      href: '/cart',
+      icon: 'ClipboardDocumentListIcon',
       color: 'bg-blue-500/15 text-blue-600',
     },
     {
-      label: 'Benefits',
-      href: '/benefits',
-      icon: 'StarIcon',
+      label: 'Profile',
+      href: '/profile',
+      icon: 'UserCircleIcon',
       color: 'bg-warning/15 text-warning',
     },
   ];
@@ -338,7 +338,7 @@ export default function CustomerDashboard() {
                   Recent Activity
                 </h3>
                 <button
-                  onClick={() => router.push('/analytics')}
+                  onClick={() => router.push('/wallet')}
                   className="text-primary text-sm font-headline font-semibold"
                 >
                   View All

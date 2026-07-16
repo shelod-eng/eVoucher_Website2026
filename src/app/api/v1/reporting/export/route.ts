@@ -1,6 +1,7 @@
 import { jsonNoStore } from '@/server/services/billing/no-store';
 import { requirePortalUser } from '@/server/services/billing/portal-guard';
 import { getReportingOverview } from '@/server/reporting/reporting-suite';
+import { resolveRequestIp } from '@/server/utils/request-ip';
 
 function escapeCsv(value: string | number | null | undefined) {
   const stringValue = String(value ?? '');
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
     const overview = await getReportingOverview();
     const report = new URL(request.url).searchParams.get('report') ?? 'executive';
     const stamp = new Date().toISOString().slice(0, 10);
+    const requesterIpAddress = resolveRequestIp(request.headers);
 
     if (report === 'r1') {
       return csvResponse(`evoucher_r1_daily_transaction_summary_${stamp}.csv`, [
@@ -114,6 +116,7 @@ export async function GET(request: Request) {
         `audit_event_count,${overview.reports.complianceAudit.auditEventCount}`,
         `open_fraud_alert_count,${overview.reports.complianceAudit.openFraudAlertCount}`,
         `verified_popia_merchant_count,${overview.reports.complianceAudit.verifiedPopiaMerchantCount}`,
+        `requester_ip_address,${escapeCsv(requesterIpAddress)}`,
         '',
         'audit_action,count,percentage',
         ...overview.reports.complianceAudit.auditActionSplit.map((row) =>
@@ -134,6 +137,7 @@ export async function GET(request: Request) {
       `platform_revenue,${overview.executiveSummary.platformRevenue}`,
       `pending_payouts,${overview.executiveSummary.pendingPayouts}`,
       `settled_to_merchants,${overview.executiveSummary.settledToMerchants}`,
+      `requester_ip_address,${escapeCsv(requesterIpAddress)}`,
       `summary_line,${escapeCsv(overview.reports.executiveSponsorSummary.summaryLine)}`,
     ]);
   } catch (error: any) {

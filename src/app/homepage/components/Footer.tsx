@@ -15,19 +15,20 @@ const Footer = () => {
 
   const footerLinks = {
     platform: [
-      { label: 'Consumer Experience', href: '/consumer-experience' },
-      { label: 'Merchant Partnership', href: '/merchant-partnership' },
-      { label: 'Government Alignment', href: '/government-alignment' },
+      { label: 'Shop Products', href: '/shop' },
+      { label: 'My Wallet', href: '/wallet' },
+      { label: 'Find Merchants', href: '/merchants' },
+      { label: 'Redeem Voucher', href: '/redeem' },
     ],
     company: [
+      { label: 'Merchant Partnership', href: '/merchant-partnership' },
+      { label: 'Government Alignment', href: '/government-alignment' },
       { label: 'Security & Compliance', href: '/security-compliance' },
-      { label: 'Financial Model', href: '/financial-model' },
-      { label: 'About Us', href: '/homepage' },
     ],
     support: [
-      { label: 'Help Center', href: '/homepage' },
-      { label: 'Contact Us', href: '/homepage' },
-      { label: 'FAQs', href: '/homepage' },
+      { label: 'Help & Support', href: '/support' },
+      { label: 'Contact Us', href: '/support' },
+      { label: 'FAQs', href: '/support' },
     ],
   };
 

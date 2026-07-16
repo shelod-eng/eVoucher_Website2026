@@ -310,7 +310,7 @@ export function buildSupportTicketDecision(input: SupportTicketInput): SupportTi
 
 export function buildWhatsappLaunch(message?: string) {
   const reply = buildChatbotReply(message || 'whatsapp support');
-  const phoneNumber = String(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP_NUMBER ?? '27712345678')
+  const phoneNumber = String(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP_NUMBER ?? '0695831160')
     .replace(/\D/g, '')
     .trim();
   const fallbackMessage =

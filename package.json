@@ -52,7 +52,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:merchant": "vitest run tests/merchant-*.test.ts tests/verifyEmail.test.ts"
+    ,"integration:webhook-test": "node ./scripts/send-webhook-test.js --url"
   },
+  "bin": {},
   "dependencies": {
     "@dhiwise/component-tagger": "^1.0.14",
     "@heroicons/react": "^2.2.0",
