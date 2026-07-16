@@ -7,25 +7,17 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
-  Building2,
   CheckCircle2,
   ChevronDown,
-  CreditCard,
   Database,
   Download,
   Filter,
-  Gift,
   Github,
   Globe2,
-  Handshake,
-  Landmark,
   Mail,
   RefreshCw,
   Search,
   Server,
-  Settings,
-  ShieldCheck,
-  Smartphone,
   UserCircle,
   Users,
   Zap,
@@ -36,6 +28,18 @@ import DatabaseTab from './components/DatabaseTab';
 import JobsTab from './components/JobsTab';
 import ArchitectureTab from './components/ArchitectureTab';
 import ShareModal from './components/ShareModal';
+import ConsumersWorkspace from './components/ConsumersWorkspace';
+import MerchantsWorkspace from './components/MerchantsWorkspace';
+import VoucherEngineWorkspace from './components/VoucherEngineWorkspace';
+import PaymentsWorkspace from './components/PaymentsWorkspace';
+import GovernmentWorkspace from './components/GovernmentWorkspace';
+import USSDWorkspace from './components/USSDWorkspace';
+import MobileWorkspace from './components/MobileWorkspace';
+import SponsorsWorkspace from './components/SponsorsWorkspace';
+import AnalyticsWorkspace from './components/AnalyticsWorkspace';
+import ComplianceWorkspace from './components/ComplianceWorkspace';
+import SecurityWorkspace from './components/SecurityWorkspace';
+import AdminWorkspace from './components/AdminWorkspace';
 
 type TabId =
   | 'system-health'
@@ -396,175 +400,6 @@ const SEARCH_RESULTS = [
 
 const ENTERPRISE_ROLES = ['Admin', 'Finance', 'Auditor', 'Sponsor', 'Merchant'];
 
-const MODULE_WORKSPACES: Record<
-  Exclude<ModuleId, 'overview' | 'operations' | 'infrastructure'>,
-  {
-    title: string;
-    description: string;
-    icon: typeof Building2;
-    metrics: { label: string; value: string; trend: string }[];
-    queues: string[];
-    actions: string[];
-  }
-> = {
-  consumers: {
-    title: 'Consumer Management',
-    description:
-      'Operate profiles, wallets, voucher history, verification, device trust, and support.',
-    icon: Users,
-    metrics: [
-      { label: 'Registered', value: '12,847', trend: '+312 this week' },
-      { label: 'Online now', value: '1,284', trend: '+8.4% today' },
-      { label: 'Support tickets', value: '42', trend: '94% SLA' },
-    ],
-    queues: ['Wallet exceptions', 'Device history', 'Fraud score', 'Support tickets'],
-    actions: ['Suspend', 'Reactivate', 'Merge account', 'Open profile'],
-  },
-  merchants: {
-    title: 'Merchant Relationship Management',
-    description:
-      'Manage merchant profiles, settlement history, POS health, compliance, documents, and performance.',
-    icon: Building2,
-    metrics: [
-      { label: 'Active merchants', value: '487', trend: '+18 this month' },
-      { label: 'Pending approval', value: '12', trend: '5h oldest' },
-      { label: 'POS health', value: '98.6%', trend: 'Stable' },
-    ],
-    queues: ['Approvals', 'KYC documents', 'Bank details', 'Terminal status'],
-    actions: ['Approve', 'Reject', 'Escalate', 'Export merchants'],
-  },
-  vouchers: {
-    title: 'Voucher Engine',
-    description:
-      'Control generation, inventory, campaigns, templates, expiry, usage rules, and audit trails.',
-    icon: Gift,
-    metrics: [
-      { label: 'Issued today', value: '32,420', trend: '+12%' },
-      { label: 'Redeemed today', value: '27,908', trend: '+9.8%' },
-      { label: 'Templates', value: '14', trend: '4 active campaigns' },
-    ],
-    queues: ['Generation batches', 'QR validation', 'Expiry rules', 'Fraud detection'],
-    actions: ['Generate', 'Freeze', 'Bulk import', 'Export audit trail'],
-  },
-  payments: {
-    title: 'Treasury Dashboard',
-    description:
-      'Track incoming payments, outgoing settlements, Bankserv, PayFast, Ozow, refunds, and cash flow.',
-    icon: CreditCard,
-    metrics: [
-      { label: 'Processed today', value: 'R2.4m', trend: '+7.2%' },
-      { label: 'Success rate', value: '99.7%', trend: '8 channels' },
-      { label: 'Failed payments', value: '11', trend: '-18%' },
-    ],
-    queues: ['Reconciliation', 'Chargebacks', 'Refunds', 'Bankserv files'],
-    actions: ['Approve payout', 'Reconcile', 'Refund', 'Export treasury pack'],
-  },
-  ussd: {
-    title: 'USSD Operations',
-    description:
-      'Monitor citizen sessions, menus, provider health, service availability, and support escalation.',
-    icon: Smartphone,
-    metrics: [
-      { label: 'Live sessions', value: '4,812', trend: '99.4% completion' },
-      { label: 'Shortcode', value: '*120*384#', trend: 'Target route' },
-      { label: 'Menu latency', value: '1.2s', trend: 'Healthy' },
-    ],
-    queues: ['Sessions', 'Menus', 'Provider status', 'Escalations'],
-    actions: ['Open simulator', 'Replay session', 'Export logs', 'Escalate'],
-  },
-  mobile: {
-    title: 'Mobile Operations',
-    description:
-      'Manage the Android APK release, Expo EAS build status, QR redemption readiness, offline voucher caching, and field-team distribution.',
-    icon: Smartphone,
-    metrics: [
-      { label: 'Latest APK', value: '14 Jul 2026', trend: 'BuildVersion1 ready' },
-      { label: 'Distribution', value: 'Public link', trend: 'Download enabled' },
-      { label: 'Build system', value: 'Expo EAS', trend: 'Android APK tracked' },
-    ],
-    queues: ['APK release', 'Expo build history', 'Android distribution', 'QR scanner checks'],
-    actions: ['Download APK', 'Open Expo builds', 'Publish release note', 'Share mobile link'],
-  },
-  government: {
-    title: 'Government Programme Management',
-    description:
-      'Coordinate departments, campaigns, budgets, beneficiaries, reporting, audits, and fraud monitoring.',
-    icon: Landmark,
-    metrics: [
-      { label: 'Programmes', value: '18', trend: '9 provinces' },
-      { label: 'Beneficiaries', value: '86,400', trend: '+4.2%' },
-      { label: 'Budget usage', value: '72%', trend: 'On track' },
-    ],
-    queues: ['Budgets', 'Beneficiaries', 'Provincial reports', 'Treasury reports'],
-    actions: ['Approve campaign', 'Export report', 'Review budget', 'Open audit'],
-  },
-  sponsors: {
-    title: 'Sponsor Relationship Management',
-    description:
-      'Manage funding, beneficiaries, campaign performance, ROI, invoices, settlement reports, and contracts.',
-    icon: Handshake,
-    metrics: [
-      { label: 'Sponsors', value: '12', trend: '4 active briefs' },
-      { label: 'Allocated', value: 'R8.6m', trend: '68% used' },
-      { label: 'Impact packs', value: '24', trend: 'Ready' },
-    ],
-    queues: ['Invoices', 'Contracts', 'Campaign ROI', 'Beneficiary exports'],
-    actions: ['Create invoice', 'Export ROI', 'Renew contract', 'Assign campaign'],
-  },
-  analytics: {
-    title: 'Business Intelligence',
-    description:
-      'Interactive dashboards for province heatmaps, behaviour, merchant performance, revenue, and trends.',
-    icon: BarChart3,
-    metrics: [
-      { label: 'Dashboards', value: '7', trend: 'Live filters' },
-      { label: 'Exports', value: '15', trend: 'CSV, Excel, PDF' },
-      { label: 'Forecast', value: '+31%', trend: 'Monthly revenue' },
-    ],
-    queues: ['Province heatmap', 'Revenue trends', 'Sponsor reporting', 'Predictive analytics'],
-    actions: ['Export PDF', 'Open BI view', 'Schedule report', 'Filter province'],
-  },
-  compliance: {
-    title: 'Enterprise Compliance',
-    description:
-      'Operate POPIA, FICA, KYC, AML, PASA, PCI DSS, audit logs, risk registers, and regulatory reporting.',
-    icon: ShieldCheck,
-    metrics: [
-      { label: 'Controls', value: '6', trend: 'Active evidence' },
-      { label: 'KYC backlog', value: '18', trend: '6h oldest' },
-      { label: 'Audit posture', value: 'Live', trend: 'Regulatory ready' },
-    ],
-    queues: ['POPIA evidence', 'KYC reviews', 'AML monitoring', 'PASA reporting'],
-    actions: ['Open control', 'Assign reviewer', 'Export evidence', 'Escalate risk'],
-  },
-  security: {
-    title: 'Enterprise Security Centre',
-    description:
-      'Control RBAC, MFA, SSO, API security, threat detection, failed logins, encryption, and sessions.',
-    icon: ShieldCheck,
-    metrics: [
-      { label: 'RBAC roles', value: '8', trend: 'Active' },
-      { label: 'Failed logins', value: '17', trend: '-12%' },
-      { label: 'Threat alerts', value: '3', trend: 'Under review' },
-    ],
-    queues: ['Failed logins', 'Device trust', 'API keys', 'Security audit'],
-    actions: ['Force MFA', 'Revoke session', 'Rotate key', 'Open audit'],
-  },
-  admin: {
-    title: 'Enterprise Administration',
-    description:
-      'Manage users, roles, permissions, feature flags, templates, providers, integrations, and parameters.',
-    icon: Settings,
-    metrics: [
-      { label: 'Users', value: '64', trend: '12 roles' },
-      { label: 'Feature flags', value: '9', trend: '3 staged' },
-      { label: 'Integrations', value: '4', trend: 'Healthy' },
-    ],
-    queues: ['User management', 'Permissions', 'Notification templates', 'System parameters'],
-    actions: ['Invite user', 'Edit roles', 'Toggle flag', 'Export settings'],
-  },
-};
-
 interface InfrastructureDashboardProps {
   role: string;
   userEmail: string;
@@ -574,90 +409,6 @@ function toneClasses(tone: string) {
   if (tone === 'danger') return 'bg-[#FEE2E2] text-[#B91C1C] border-[#FECACA]';
   if (tone === 'warn') return 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]';
   return 'bg-[#DCFCE7] text-[#166534] border-[#BBF7D0]';
-}
-
-function ModuleWorkspace({
-  module,
-}: {
-  module: (typeof MODULE_WORKSPACES)[keyof typeof MODULE_WORKSPACES];
-}) {
-  const Icon = module.icon;
-
-  return (
-    <section className="mb-10 rounded-lg border border-[#E6EEF5] bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
-      <div className="flex flex-wrap items-start justify-between gap-6">
-        <div className="max-w-2xl">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[#20B8C5]/10 text-[#20B8C5]">
-            <Icon className="h-6 w-6" />
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#20B8C5]">
-            Operational Module
-          </p>
-          <h2 className="mt-3 font-headline text-3xl font-bold text-[#20324A]">{module.title}</h2>
-          <p className="mt-3 text-sm leading-6 text-[#64748B]">{module.description}</p>
-        </div>
-        <div className="grid min-w-[260px] gap-3">
-          {module.metrics.map((metric) => (
-            <div
-              key={metric.label}
-              className="rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] px-4 py-3"
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#94A3B8]">
-                {metric.label}
-              </p>
-              <p className="mt-1 font-headline text-2xl font-bold text-[#20324A]">{metric.value}</p>
-              <p className="text-xs font-semibold text-[#16A34A]">{metric.trend}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-8 grid gap-4 lg:grid-cols-[280px_1fr]">
-        <aside className="rounded-lg border border-[#E6EEF5] bg-[#F7F9FC] p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#94A3B8]">
-            Live Queues
-          </p>
-          <div className="mt-4 space-y-2">
-            {module.queues.map((item, index) => (
-              <button
-                key={item}
-                type="button"
-                className={`w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition ${
-                  index === 0
-                    ? 'bg-[#20B8C5] text-white'
-                    : 'bg-white text-[#20324A] hover:bg-[#EAFBFD] hover:text-[#108995]'
-                }`}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        <div className="rounded-lg border border-[#E6EEF5] bg-white">
-          <div className="grid border-b border-[#E6EEF5] bg-[#F7F9FC] px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#64748B] md:grid-cols-4">
-            <span>Workspace</span>
-            <span>Status</span>
-            <span>Owner</span>
-            <span>Action</span>
-          </div>
-          {module.queues.map((item, index) => (
-            <div
-              key={item}
-              className="grid gap-2 border-b border-[#E6EEF5] px-4 py-4 text-sm last:border-b-0 md:grid-cols-4"
-            >
-              <span className="font-semibold text-[#20324A]">{item}</span>
-              <span className="text-[#16A34A]">Operational</span>
-              <span className="text-[#64748B]">RBAC protected</span>
-              <button type="button" className="text-left font-semibold text-[#108995]">
-                {module.actions[index % module.actions.length]}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
 }
 
 function ExecutiveOverview({ pulse }: { pulse: number }) {
@@ -1307,12 +1058,18 @@ export default function InfrastructureDashboard({ role, userEmail }: Infrastruct
 
         {activeModule === 'overview' && <ExecutiveOverview pulse={pulse} />}
         {activeModule === 'operations' && <OperationsCentre />}
-
-        {activeModule !== 'overview' &&
-          activeModule !== 'operations' &&
-          activeModule !== 'infrastructure' && (
-            <ModuleWorkspace module={MODULE_WORKSPACES[activeModule]} />
-          )}
+        {activeModule === 'consumers' && <ConsumersWorkspace />}
+        {activeModule === 'merchants' && <MerchantsWorkspace />}
+        {activeModule === 'vouchers' && <VoucherEngineWorkspace />}
+        {activeModule === 'payments' && <PaymentsWorkspace />}
+        {activeModule === 'government' && <GovernmentWorkspace />}
+        {activeModule === 'ussd' && <USSDWorkspace />}
+        {activeModule === 'mobile' && <MobileWorkspace />}
+        {activeModule === 'sponsors' && <SponsorsWorkspace />}
+        {activeModule === 'analytics' && <AnalyticsWorkspace />}
+        {activeModule === 'compliance' && <ComplianceWorkspace />}
+        {activeModule === 'security' && <SecurityWorkspace />}
+        {activeModule === 'admin' && <AdminWorkspace />}
 
         {activeModule === 'infrastructure' && (
           <>
