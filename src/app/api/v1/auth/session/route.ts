@@ -4,6 +4,12 @@ import { createServerClient } from '@supabase/ssr';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: Record<string, unknown>;
+};
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -29,7 +35,7 @@ export async function POST(request: Request) {
           getAll() {
             return [];
           },
-          setAll(cookiesToSet) {
+          setAll(cookiesToSet: CookieToSet[]) {
             cookiesToSet.forEach(({ name, value, options }) => {
               response.cookies.set(name, value, {
                 ...options,
