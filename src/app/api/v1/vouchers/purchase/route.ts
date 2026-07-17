@@ -494,22 +494,39 @@ export async function POST(request: Request) {
     }
 
     if (body.paymentMethod === 'wallet') {
+      // Resolve wallet balance: primary ledger, then payment_transactions fallback.
       let walletBalance = await getWalletBalance(admin, user.id);
-      if (walletBalance === null) {
-        // Backward-compatible fallback when wallet ledger table is not deployed yet.
-        const { data: walletVoucherRows, error: walletBalanceError } = await admin
-          .from('customer_vouchers')
-          .select('current_balance,is_active')
-          .eq('customer_id', user.id);
-        if (walletBalanceError) throw walletBalanceError;
-        walletBalance = (walletVoucherRows ?? []).reduce((sum: number, voucher: any) => {
-          const balance = Number(voucher.current_balance ?? 0);
-          return voucher.is_active && Number.isFinite(balance) ? sum + balance : sum;
-        }, 0);
-      }
-      if (pricing.consumerPrice > walletBalance) {
+
+      // Always also derive from payment_transactions and take the higher of the two.
+      // This handles environments where wallet_transactions table is not yet deployed.
+      const { data: ptRows } = await admin
+        .from('payment_transactions')
+        .select('amount,merchant_id,voucher_code,card_brand,payment_status')
+        .eq('customer_id', user.id);
+      const rows = Array.isArray(ptRows) ? ptRows : [];
+      const ptCredits = rows.reduce((sum: number, row: any) => {
+        const status = String(row?.payment_status ?? '').toLowerCase();
+        if (status && status !== 'completed') return sum;
+        if (row?.voucher_code || row?.merchant_id) return sum;
+        const amount = Number(row?.amount ?? 0);
+        return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+      }, 0);
+      const ptDebits = rows.reduce((sum: number, row: any) => {
+        const status = String(row?.payment_status ?? '').toLowerCase();
+        if (status && status !== 'completed') return sum;
+        if (String(row?.card_brand ?? '').toUpperCase() !== 'WALLET') return sum;
+        const amount = Number(row?.amount ?? 0);
+        return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+      }, 0);
+      const ptDerived = Number(Math.max(ptCredits - ptDebits, 0).toFixed(2));
+      const resolvedBalance = Number(Math.max(walletBalance ?? 0, ptDerived).toFixed(2));
+
+      if (pricing.consumerPrice > resolvedBalance) {
         return NextResponse.json(
-          { error: 'Insufficient wallet balance.', code: 'insufficient_wallet_balance' },
+          {
+            error: `Insufficient wallet balance. Available: R${resolvedBalance.toFixed(2)}, Required: R${pricing.consumerPrice.toFixed(2)}.`,
+            code: 'insufficient_wallet_balance',
+          },
           { status: 400 }
         );
       }
@@ -593,12 +610,18 @@ export async function POST(request: Request) {
     });
 
     if (paymentStatus === 'completed' && body.paymentMethod === 'wallet') {
-      await recordWalletDebit(admin, {
-        customerId: user.id,
-        userEmail: user.email ?? null,
-        amount: pricing.consumerPrice,
-        description: `Wallet debit for voucher purchase ${transactionReference}`,
-      });
+      try {
+        await recordWalletDebit(admin, {
+          customerId: user.id,
+          userEmail: user.email ?? null,
+          amount: pricing.consumerPrice,
+          description: `Wallet debit for voucher purchase ${transactionReference}`,
+        });
+      } catch (walletDebitError: any) {
+        // Non-fatal: wallet_transactions table may not be deployed yet.
+        // The payment_transactions record with card_brand='WALLET' serves as the debit record.
+        console.warn('[wallet-debit][non-fatal]', walletDebitError?.message);
+      }
     }
 
     let issuedVouchers: Array<{ code: string; faceValue: number; expiresAt?: string | null }> = [];

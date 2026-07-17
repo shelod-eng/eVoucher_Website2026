@@ -180,15 +180,15 @@ export default function CartPage() {
               </div>
               <div className="p-5 space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Total Face Value</span>
+                  <span className="text-muted-foreground">Face Value</span>
                   <span className="font-headline font-semibold text-foreground">R{summary.totalFaceValue.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Your Savings</span>
+                  <span className="text-muted-foreground">Discount</span>
                   <span className="font-headline font-semibold text-success">−R{summary.totalSavings.toFixed(2)}</span>
                 </div>
                 <div className="rounded-xl bg-success/10 px-4 py-2 flex items-center justify-between">
-                  <span className="font-headline text-sm font-bold text-success">Instant Saving</span>
+                  <span className="font-headline text-sm font-bold text-success">You Save</span>
                   <span className="font-headline text-sm font-bold text-success">R{summary.totalSavings.toFixed(2)}</span>
                 </div>
                 <div className="border-t border-border pt-3 flex items-center justify-between">

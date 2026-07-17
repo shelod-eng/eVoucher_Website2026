@@ -74,6 +74,8 @@ function BuyVouchersContent() {
   >([]);
   const [transactionReference, setTransactionReference] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [selectedMerchantName, setSelectedMerchantName] = useState<string | null>(null);
+  const [selectedMerchantLogo, setSelectedMerchantLogo] = useState<string | null>(null);
   const [pricingResult, setPricingResult] = useState<DiscountPricingBreakdown | null>(null);
   const [blockingReason, setBlockingReason] = useState<string | null>(null);
   const [blockingCode, setBlockingCode] = useState<string | null>(null);
@@ -305,6 +307,23 @@ function BuyVouchersContent() {
       setWalletBalanceMock(0);
     }
   };
+
+  const BRAND_LOGOS: Record<string, string> = {
+    shoprite: '/assets/images/merchants/shoprite.png',
+    'pick n pay': '/assets/images/merchants/picknpay.png', picknpay: '/assets/images/merchants/picknpay.png',
+    checkers: '/assets/images/merchants/checkers.png', clicks: '/assets/images/merchants/clicks.png',
+    'dis-chem': '/assets/images/merchants/dischem.png', dischem: '/assets/images/merchants/dischem.png',
+    pep: '/assets/images/merchants/pep.png', game: '/assets/images/merchants/game.png',
+    boxer: '/assets/images/merchants/boxer.png', woolworths: '/assets/images/merchants/woolworths.png',
+    engen: '/assets/images/merchants/engen.png', 'mr price': '/assets/images/merchants/mr-price.png',
+    mrprice: '/assets/images/merchants/mr-price.png', usave: '/assets/images/merchants/usave.png',
+    kalapeng: '/assets/images/merchants/kalapeng.png',
+  };
+
+  function getMerchantLogo(name: string) {
+    const key = name.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+    return BRAND_LOGOS[key] ?? null;
+  }
 
   const paymentMethods = [
     {
@@ -585,6 +604,9 @@ function BuyVouchersContent() {
         setTransactionReference(data.transactionReference || null);
         setCheckoutUrl(data.checkoutUrl || null);
         setPricingResult(data.pricing ?? previewPricing);
+        const mName = selectedMerchantDetails?.businessName ?? null;
+        setSelectedMerchantName(mName);
+        setSelectedMerchantLogo(mName ? getMerchantLogo(mName) : null);
         if (data.status === 'completed') {
           clearCart(user?.id);
         }
@@ -685,6 +707,22 @@ function BuyVouchersContent() {
               <h2 className="font-headline font-bold text-3xl text-foreground mb-3">
                 {statusTitle}
               </h2>
+
+              {/* Merchant identity on success */}
+              {purchaseStatus === 'completed' && !walletTopupMode && selectedMerchantName && (
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  {selectedMerchantLogo && (
+                    <img
+                      src={selectedMerchantLogo}
+                      alt={selectedMerchantName}
+                      className="h-10 w-10 rounded-xl border border-border object-contain bg-white p-1"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
+                  <p className="font-headline font-bold text-lg text-foreground">{selectedMerchantName}</p>
+                </div>
+              )}
+
               <p className="text-muted-foreground font-body mb-6">
                 {purchaseStatus === 'completed' &&
                   (walletTopupMode
@@ -699,69 +737,52 @@ function BuyVouchersContent() {
 
               <div className="bg-muted/50 rounded-xl p-4 mb-6 text-left space-y-2">
                 <p className="text-sm font-body text-muted-foreground">
-                  <span className="font-semibold text-foreground">Payment status:</span>{' '}
-                  {purchaseStatus}
+                  <span className="font-semibold text-foreground">Status:</span>{' '}
+                  <span className={statusClasses.text + ' font-semibold capitalize'}>{purchaseStatus}</span>
                 </p>
                 <p className="text-sm font-body text-muted-foreground">
                   <span className="font-semibold text-foreground">Payment method:</span>{' '}
                   {paymentMethodLabel}
                 </p>
-                {pricingResult && (
-                  <>
-                    <p className="text-sm font-body text-muted-foreground">
-                      <span className="font-semibold text-foreground">Face value:</span> R
-                      {pricingResult.faceValue.toFixed(2)}
-                    </p>
-                    <p className="text-sm font-body text-muted-foreground">
-                      <span className="font-semibold text-foreground">You paid:</span> R
-                      {pricingResult.consumerPrice.toFixed(2)}
-                    </p>
-                    <p className="text-sm font-body text-muted-foreground">
-                      <span className="font-semibold text-foreground">Your savings:</span>{' '}
-                      {pricingResult.consumerBenefitPct.toFixed(2)}%
-                    </p>
-                  </>
+                {pricingResult && pricingResult.faceValue > 0 && (
+                  <div className="border-t border-border pt-2 mt-2 space-y-1.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Face Value</span>
+                      <span className="font-semibold text-foreground">R{pricingResult.faceValue.toFixed(2)}</span>
+                    </div>
+                    {pricingResult.consumerBenefitAmount > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Discount</span>
+                        <span className="font-semibold text-success">−R{pricingResult.consumerBenefitAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm border-t border-border pt-1.5">
+                      <span className="font-bold text-foreground">You Paid</span>
+                      <span className="font-bold text-primary">R{pricingResult.consumerPrice.toFixed(2)}</span>
+                    </div>
+                  </div>
                 )}
                 {transactionReference && (
-                  <p className="text-sm font-body text-muted-foreground">
-                    <span className="font-semibold text-foreground">Transaction ref:</span>{' '}
+                  <p className="text-xs font-body text-muted-foreground pt-1">
+                    <span className="font-semibold text-foreground">Ref:</span>{' '}
                     {transactionReference}
-                  </p>
-                )}
-                {voucherCode && (
-                  <p className="text-sm font-body text-muted-foreground">
-                    <span className="font-semibold text-foreground">Voucher issued:</span>{' '}
-                    {voucherCode}
                   </p>
                 )}
                 {issuedVouchers.length > 0 && (
                   <div className="pt-2 border-t border-border">
-                    <p className="text-sm font-semibold text-foreground mb-2">Issued voucher(s)</p>
+                    <p className="text-sm font-semibold text-foreground mb-2">Voucher Issued</p>
                     <div className="space-y-2">
                       {issuedVouchers.map((voucher) => (
-                        <div key={voucher.code} className="rounded-lg border border-border p-2">
-                          <p className="text-xs text-muted-foreground font-body">
-                            Code:{' '}
-                            <span className="font-semibold text-foreground">{voucher.code}</span>
-                          </p>
-                          <p className="text-xs text-muted-foreground font-body">
-                            Face value: R{Number(voucher.faceValue ?? 0).toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground font-body">
-                            Expiry:{' '}
-                            {voucher.expiresAt
-                              ? new Date(voucher.expiresAt).toLocaleDateString()
-                              : 'N/A'}
+                        <div key={voucher.code} className="rounded-lg border border-success/20 bg-success/5 p-3">
+                          <p className="font-mono text-sm font-bold text-foreground">{voucher.code}</p>
+                          <p className="text-xs text-muted-foreground">
+                            R{Number(voucher.faceValue ?? 0).toFixed(2)} Voucher
+                            {voucher.expiresAt ? ` · Expires ${new Date(voucher.expiresAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: '2-digit' })}` : ''}
                           </p>
                         </div>
                       ))}
                     </div>
                   </div>
-                )}
-                {checkoutUrl && (
-                  <p className="text-sm font-body text-muted-foreground">
-                    <span className="font-semibold text-foreground">Checkout URL:</span> Available
-                  </p>
                 )}
               </div>
 
@@ -783,15 +804,24 @@ function BuyVouchersContent() {
                     disabled={refreshingStatus}
                     className="w-full py-3 bg-card border border-border rounded-lg font-headline font-semibold hover:bg-muted transition-all duration-300 disabled:opacity-60"
                   >
-                    {refreshingStatus ? 'Refreshing...' : 'I Have Paid - Refresh Status'}
+                    {refreshingStatus ? 'Refreshing...' : 'I Have Paid — Refresh Status'}
+                  </button>
+                )}
+
+                {purchaseStatus === 'completed' && !walletTopupMode && (
+                  <button
+                    onClick={() => router.push('/wallet')}
+                    className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-headline font-semibold hover:bg-primary/90 transition-all duration-300"
+                  >
+                    View in Wallet
                   </button>
                 )}
 
                 <button
-                  onClick={() => router.push(walletTopupMode ? '/wallet' : '/customer/dashboard')}
-                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-headline font-semibold hover:bg-primary/90 transition-all duration-300"
+                  onClick={() => router.push(walletTopupMode ? '/wallet' : '/shop')}
+                  className="w-full py-3 bg-card border border-border rounded-lg font-headline font-semibold hover:bg-muted transition-all duration-300"
                 >
-                  {walletTopupMode ? 'Go to Wallet' : 'Go to Customer Dashboard'}
+                  {walletTopupMode ? 'Go to Wallet' : 'Continue Shopping'}
                 </button>
               </div>
             </div>

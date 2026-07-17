@@ -20,6 +20,26 @@ interface ProfilePayload {
     transaction_type: string;
     created_at: string;
   }>;
+  purchaseTransactions: Array<{
+    id: string;
+    merchant_id?: string | null;
+    voucher_code?: string | null;
+    amount: number;
+    consumer_benefit_amount?: number | null;
+    card_brand?: string | null;
+    payment_status: string;
+    created_at: string;
+  }>;
+  stats: {
+    totalTransactions: number;
+    totalSaved: number;
+    totalSpent: number;
+    savingsRate: number;
+    walletBalance: number;
+    voucherCount: number;
+    activeVoucherCount: number;
+  } | null;
+  walletBalance: number;
 }
 
 interface RewardPayload {
@@ -61,7 +81,13 @@ export default function ProfilePage() {
         const rew = await rewRes.json();
         if (!dashRes.ok) throw new Error(dash.error || 'Failed to load profile.');
         if (!rewRes.ok) throw new Error(rew.error || 'Failed to load rewards.');
-        setPayload({ profile: dash.profile ?? null, transactions: dash.transactions ?? [] });
+        setPayload({
+          profile: dash.profile ?? null,
+          transactions: dash.transactions ?? [],
+          purchaseTransactions: dash.purchaseTransactions ?? [],
+          stats: dash.stats ?? null,
+          walletBalance: Number(dash.walletBalance ?? 0),
+        });
         setRewardData({
           totalCashSaved: Number(rew.totalCashSaved ?? 0),
           thisMonthSavings: Number(rew.thisMonthSavings ?? 0),
@@ -84,7 +110,11 @@ export default function ProfilePage() {
   const displayPhone = payload?.profile?.phone || '';
   const profileInitial = displayName.charAt(0).toUpperCase() || 'E';
   const joinedDate = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' }) : '';
-  const totalSaved = rewardData?.totalCashSaved ?? 0;
+  // Use live stats from dashboard API, fall back to rewards API
+  const totalSaved = payload?.stats?.totalSaved ?? rewardData?.totalCashSaved ?? 0;
+  const totalTransactions = payload?.stats?.totalTransactions ?? payload?.purchaseTransactions?.length ?? 0;
+  const savingsRate = payload?.stats?.savingsRate ?? rewardData?.savingsRatePct ?? 0;
+  const walletBalance = payload?.walletBalance ?? 0;
   const badge = deriveBadge(totalSaved);
 
   const QUICK_ACTIONS = [
@@ -144,8 +174,8 @@ export default function ProfilePage() {
           <div className="grid grid-cols-3 gap-0 divide-x divide-white/10 p-5 pt-4">
             {[
               { label: 'Total Saved', value: `R${totalSaved.toFixed(0)}`, color: 'text-[#6ee7b7]' },
-              { label: 'Transactions', value: String(payload?.transactions.length ?? 0), color: 'text-white' },
-              { label: 'Savings Rate', value: `${(rewardData?.savingsRatePct ?? 0).toFixed(1)}%`, color: 'text-white' },
+              { label: 'Transactions', value: String(totalTransactions), color: 'text-white' },
+              { label: 'Savings Rate', value: `${savingsRate.toFixed(1)}%`, color: 'text-white' },
             ].map(s => (
               <div key={s.label} className="px-4 text-center">
                 <p className={`font-headline text-2xl font-bold ${s.color}`}>{s.value}</p>
@@ -184,13 +214,13 @@ export default function ProfilePage() {
           </div>
 
           <div className="p-5">
-            {/* Transactions tab */}
+            {/* Transactions tab — uses purchase_transactions (payment_transactions) for live data */}
             {activeTab === 'transactions' && (
-              (payload?.transactions ?? []).length === 0 ? (
+              totalTransactions === 0 ? (
                 <div className="flex flex-col items-center py-12 text-center">
                   <span className="mb-3 text-4xl">📋</span>
                   <p className="font-headline font-semibold text-foreground">No transactions yet</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Your redemption history will appear here</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Your purchase history will appear here</p>
                   <button onClick={() => router.push('/shop')}
                     className="mt-4 rounded-xl bg-primary px-6 py-2.5 font-headline text-sm font-bold text-white hover:bg-primary/90">
                     Start Shopping
@@ -199,19 +229,24 @@ export default function ProfilePage() {
               ) : (
                 <div className="relative space-y-0">
                   <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-border" />
-                  {(payload?.transactions ?? []).map((tx, i) => {
+                  {(payload?.purchaseTransactions ?? []).map((tx, i) => {
                     const date = new Date(tx.created_at);
                     const diff = Math.floor((Date.now() - date.getTime()) / 86400000);
                     const label = diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : date.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' });
+                    const saved = Number(tx.consumer_benefit_amount ?? 0);
+                    const typeLabel = tx.voucher_code ? 'Voucher Purchase' : 'Wallet Top-Up';
                     return (
-                      <div key={tx.id} className={`relative flex gap-4 pb-4 ${i === (payload?.transactions.length ?? 0) - 1 ? 'pb-0' : ''}`}>
+                      <div key={tx.id} className={`relative flex gap-4 pb-4 ${i === (payload?.purchaseTransactions.length ?? 0) - 1 ? 'pb-0' : ''}`}>
                         <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-white text-xs font-bold text-primary">✓</div>
                         <div className="flex flex-1 items-start justify-between rounded-xl border border-border bg-white px-4 py-3 shadow-sm">
                           <div>
-                            <p className="font-headline text-sm font-bold text-foreground">{tx.merchant_name}</p>
-                            <p className="text-[11px] text-muted-foreground capitalize">{tx.transaction_type.replace('_', ' ')} · {label}</p>
+                            <p className="font-headline text-sm font-bold text-foreground">{typeLabel}</p>
+                            <p className="text-[11px] text-muted-foreground capitalize">{String(tx.card_brand ?? '').toUpperCase() || 'Payment'} · {label}</p>
                           </div>
-                          <p className="font-headline text-sm font-semibold text-foreground">R{Number(tx.amount).toFixed(2)}</p>
+                          <div className="text-right">
+                            <p className="font-headline text-sm font-semibold text-foreground">R{Number(tx.amount).toFixed(2)}</p>
+                            {saved > 0 && <p className="text-[10px] font-semibold text-success">Saved R{saved.toFixed(2)}</p>}
+                          </div>
                         </div>
                       </div>
                     );
@@ -235,7 +270,9 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'All-time Savings', value: `R${totalSaved.toFixed(2)}`, icon: '💰' },
-                    { label: 'Savings Rate', value: `${(rewardData?.savingsRatePct ?? 0).toFixed(1)}%`, icon: '📈' },
+                    { label: 'Savings Rate', value: `${savingsRate.toFixed(1)}%`, icon: '📈' },
+                    { label: 'Wallet Balance', value: `R${walletBalance.toFixed(2)}`, icon: '👛' },
+                    { label: 'Vouchers', value: String(payload?.stats?.activeVoucherCount ?? 0), icon: '🎁' },
                   ].map(s => (
                     <div key={s.label} className="rounded-2xl border border-border bg-white p-4 shadow-sm">
                       <span className="text-2xl">{s.icon}</span>

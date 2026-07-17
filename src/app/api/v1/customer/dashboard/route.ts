@@ -96,7 +96,7 @@ export async function GET() {
       admin
         .from('payment_transactions')
         .select(
-          'id,merchant_id,voucher_code,amount,card_brand,card_last_four,payment_status,created_at'
+          'id,merchant_id,voucher_code,amount,consumer_benefit_amount,card_brand,card_last_four,payment_status,created_at'
         )
         .eq('customer_id', user.id)
         .order('created_at', { ascending: false })
@@ -262,19 +262,46 @@ export async function GET() {
       Math.max(walletBalanceFromLedger, walletBalanceFromPayments).toFixed(2)
     );
 
+    const completedPurchases = (paymentsRes.data ?? []).filter(
+      (tx: any) => String(tx?.payment_status ?? '').toLowerCase() === 'completed'
+    );
+
+    // Live stats calculated from actual transaction data
+    const totalTransactions = completedPurchases.length;
+    const totalSaved = completedPurchases.reduce(
+      (sum: number, tx: any) => sum + Number(tx?.consumer_benefit_amount ?? 0),
+      0
+    );
+    const totalSpent = completedPurchases.reduce(
+      (sum: number, tx: any) => sum + Number(tx?.amount ?? 0),
+      0
+    );
+    const savingsRate = totalSpent > 0 ? Number(((totalSaved / totalSpent) * 100).toFixed(2)) : 0;
+
     return jsonNoStore({
       profile,
       vouchers: vouchersPayload,
       transactions: transactionsRes.data ?? [],
+      purchaseTransactions: completedPurchases,
       paymentMethods: Array.from(paymentMethodsMap.values()),
       customerPaymentMethods,
       paymentTransactions: paymentTransactionsPayload,
       walletBalance,
+      // Live calculated stats
+      stats: {
+        totalTransactions,
+        totalSaved: Number(totalSaved.toFixed(2)),
+        totalSpent: Number(totalSpent.toFixed(2)),
+        savingsRate,
+        walletBalance,
+        voucherCount: vouchersPayload.length,
+        activeVoucherCount: vouchersPayload.filter((v: any) => v.is_active && Number(v.current_balance ?? 0) > 0).length,
+      },
       diagnostics: {
         role,
         hasAdminEnv: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
         voucherCount: vouchersPayload.length,
-        transactionCount: transactionsRes.data?.length ?? 0,
+        transactionCount: totalTransactions,
         demoSeededVouchers: false,
       },
     });
