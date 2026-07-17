@@ -491,7 +491,9 @@ function BuyVouchersContent() {
               'Server configuration is incomplete. Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL.'
             );
           }
-          throw new Error(data.error || 'Failed to process purchase');
+          throw new Error(
+            `[${response.status}] ${data.error || 'Failed to process purchase'} (code: ${data.code ?? 'unknown'})`
+          );
         }
         return data;
       };
@@ -632,8 +634,10 @@ function BuyVouchersContent() {
         }
       }
     } catch (purchaseError: any) {
+      const errMsg = purchaseError?.message || 'Failed to process payment. Please try again.';
+      console.error('[buy-vouchers] purchase error:', errMsg, purchaseError);
       setPurchaseStatus('failed');
-      setError(purchaseError?.message || 'Failed to process payment. Please try again.');
+      setError(errMsg);
       setPricingResult(checkoutPricing);
     } finally {
       setProcessing(false);
@@ -756,7 +760,7 @@ function BuyVouchersContent() {
                   (walletTopupMode
                     ? 'Your top-up payment is pending confirmation.'
                     : 'Your payment is pending confirmation. Your voucher will be issued once confirmed.')}
-                {purchaseStatus === 'failed' && 'Your payment could not be processed.'}
+                {purchaseStatus === 'failed' && (error || 'Your payment could not be processed.')}
               </p>
 
               <div className="bg-muted/50 rounded-xl p-4 mb-6 text-left space-y-2">
