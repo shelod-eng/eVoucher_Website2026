@@ -474,17 +474,22 @@ export async function POST(request: Request) {
         productRedemptionScope = 'specific_branch';
         productValidBranchIds = [selectedBranchContext.id];
       } else if (
-        String(body.selectedBranchId).startsWith('fallback-') &&
-        String(body.selectedBranchName ?? '').trim()
+        String(body.selectedBranchId).startsWith('fallback-') ||
+        String(body.selectedBranchId).startsWith('demo-')
       ) {
+        // Synthetic branch IDs (fallback-* or demo-*) represent national/regional coverage
+        // nodes that don't exist as real merchant rows — treat as all-branches redemption.
         selectedBranchContext = {
           id: String(body.selectedBranchId),
           business_name: String(merchant.business_name ?? ''),
           parent_brand: resolvedParentBrand,
-          branch_name: String(body.selectedBranchName ?? '').trim(),
+          branch_name: String(body.selectedBranchName ?? 'National Coverage').trim(),
           city: String(body.selectedBranchCity ?? '').trim() || null,
           province: String(body.selectedBranchProvince ?? '').trim() || null,
         };
+        // National/demo branches are valid at all locations — don't pin to specific branch.
+        productRedemptionScope = 'all_branches';
+        productValidBranchIds = [];
       } else {
         return NextResponse.json(
           { error: 'Selected branch is not available.', code: 'branch_not_available' },
