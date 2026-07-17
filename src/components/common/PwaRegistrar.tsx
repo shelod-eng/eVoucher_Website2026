@@ -9,16 +9,37 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
-/**
- * PWA Registrar — handles:
- * 1. Service worker registration with update detection
- * 2. Install prompt for browsers supporting A2HS
- * 3. Offline status detection
- */
+const PWA_PROMPT_KEY = 'evoucher.pwa.prompt.shown.v1';
+
+function isPwaInstalled() {
+  if (typeof window === 'undefined') return true;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true
+  );
+}
+
+function hasShownPrompt() {
+  try {
+    return Boolean(window.localStorage.getItem(PWA_PROMPT_KEY));
+  } catch {
+    return true;
+  }
+}
+
+function markPromptShown() {
+  try {
+    window.localStorage.setItem(PWA_PROMPT_KEY, '1');
+  } catch {
+    // ignore
+  }
+}
+
 export default function PwaRegistrar() {
   const [swState, setSwState] = useState<SwState>('idle');
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [isOnline, setIsOnline] = useState(true);
+  const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
 
   /* ---- Online/offline tracking ---- */
   useEffect(() => {
@@ -33,7 +54,7 @@ export default function PwaRegistrar() {
     };
   }, []);
 
-  /* ---- Install prompt: capture beforeinstallprompt event ---- */
+  /* ---- Capture beforeinstallprompt ---- */
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault();
@@ -43,13 +64,23 @@ export default function PwaRegistrar() {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
+  /* ---- First-login PWA modal: show once after auth, if not already installed ---- */
+  useEffect(() => {
+    if (isPwaInstalled() || hasShownPrompt()) return;
+    // Delay slightly so the page settles after login redirect
+    const timer = window.setTimeout(() => {
+      setShowFirstLoginModal(true);
+      markPromptShown();
+    }, 2200);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   /* ---- Service worker registration ---- */
   useEffect(() => {
     if (!('serviceWorker' in navigator)) {
       setSwState('error');
       return;
     }
-    // Skip in dev unless explicitly enabled
     if (
       process.env.NODE_ENV !== 'production' &&
       process.env.NEXT_PUBLIC_ENABLE_PWA_DEV !== 'true'
@@ -61,23 +92,17 @@ export default function PwaRegistrar() {
     setSwState('registering');
 
     navigator.serviceWorker
-      .register('/service-worker.js', { updateViaCache: 'none' }) // Force bypass cache
+      .register('/service-worker.js', { updateViaCache: 'none' })
       .then((registration) => {
         setSwState('ready');
-
-        // AGGRESSIVE: Check for updates immediately
         registration.update();
 
-        // Check for updates on every page load
         registration.addEventListener('updatefound', () => {
           const installingWorker = registration.installing;
           if (!installingWorker) return;
-
           installingWorker.addEventListener('statechange', () => {
             if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // A new version is available - auto-reload for Edge
               setSwState('update-available');
-              console.log('[PWA] Update detected, auto-reloading...');
               setTimeout(() => {
                 navigator.serviceWorker.ready.then((reg) => {
                   reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
@@ -87,14 +112,11 @@ export default function PwaRegistrar() {
           });
         });
 
-        // Check for updates every 5 minutes (aggressive for Edge)
         setInterval(
           () => {
-            registration.update().catch(() => {
-              // Silently ignore update check failures
-            });
+            registration.update().catch(() => {});
           },
-          5 * 60 * 1000 // 5 minutes instead of 1 hour
+          5 * 60 * 1000
         );
       })
       .catch((error) => {
@@ -103,7 +125,6 @@ export default function PwaRegistrar() {
       });
   }, []);
 
-  /* ---- Apply update: tell SW to skip waiting, then reload ---- */
   const applyUpdate = useCallback(() => {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -114,7 +135,6 @@ export default function PwaRegistrar() {
     });
   }, []);
 
-  /* ---- Install app (A2HS) ---- */
   const installApp = useCallback(async () => {
     if (!installEvent) return;
     await installEvent.prompt();
@@ -122,10 +142,10 @@ export default function PwaRegistrar() {
     if (result.outcome === 'accepted') {
       setInstallEvent(null);
     }
+    setShowFirstLoginModal(false);
   }, [installEvent]);
 
-  /* ---- Show install banner if available ---- */
-  const showInstallBanner = installEvent !== null && swState === 'ready';
+  const dismissModal = () => setShowFirstLoginModal(false);
 
   return (
     <>
@@ -156,27 +176,97 @@ export default function PwaRegistrar() {
         </div>
       )}
 
-      {/* Install prompt banner */}
-      {showInstallBanner && (
+      {/* ── First-login PWA install modal ── */}
+      {showFirstLoginModal && (
+        <div className="fixed inset-0 z-[9998] flex items-end justify-center bg-black/40 p-4 sm:items-center">
+          <div className="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl">
+            {/* Gradient header */}
+            <div className="bg-gradient-to-br from-[#064e3b] via-[#0d9488] to-[#0891b2] px-6 py-8 text-center text-white">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-lg">
+                <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+                  <rect width="40" height="40" rx="8" fill="#20B2AA" />
+                  <path d="M20 10L28 16V24L20 30L12 24V16L20 10Z" fill="white" opacity="0.9" />
+                  <path d="M20 15L24 18V22L20 25L16 22V18L20 15Z" fill="#FF7A00" />
+                  <circle cx="20" cy="20" r="3" fill="white" />
+                </svg>
+              </div>
+              <h2 className="font-headline text-2xl font-bold">Install eVoucher</h2>
+              <p className="mt-1 text-sm text-white/80">Get the full app experience</p>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5">
+              <ul className="mb-5 space-y-3">
+                {[
+                  { icon: '⚡', text: 'Instant access from your home screen' },
+                  { icon: '📴', text: 'Works offline — no data needed' },
+                  { icon: '🔔', text: 'Push notifications for deals & vouchers' },
+                  { icon: '🔒', text: 'Secure, fast & no app store required' },
+                ].map((item) => (
+                  <li key={item.text} className="flex items-start gap-3">
+                    <span className="text-xl leading-none">{item.icon}</span>
+                    <p className="text-sm text-slate-600">{item.text}</p>
+                  </li>
+                ))}
+              </ul>
+
+              {installEvent ? (
+                <button
+                  onClick={() => void installApp()}
+                  className="w-full rounded-2xl bg-gradient-to-r from-[#0d9488] to-[#0891b2] py-3.5 font-headline text-sm font-bold text-white shadow-md hover:opacity-90"
+                >
+                  Install eVoucher App
+                </button>
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
+                  <p className="text-xs font-semibold text-slate-600">
+                    To install on this browser:
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Tap the browser menu → <strong>Add to Home Screen</strong> or{' '}
+                    <strong>Install App</strong>
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={dismissModal}
+                className="mt-3 w-full rounded-2xl border border-slate-200 py-3 font-headline text-sm font-semibold text-slate-500 hover:bg-slate-50"
+              >
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fallback install banner (when modal is dismissed but prompt still available) */}
+      {!showFirstLoginModal && installEvent && swState === 'ready' && (
         <div
           role="alert"
-          className="fixed bottom-4 left-4 right-4 z-[9999] mx-auto max-w-md rounded-lg bg-blue-600 px-4 py-3 text-center text-sm text-white shadow-lg"
+          className="fixed bottom-4 left-4 right-4 z-[9999] mx-auto max-w-md rounded-2xl bg-gradient-to-r from-[#0d9488] to-[#0891b2] px-4 py-3 shadow-lg"
         >
-          <span>Install eVoucher for the best experience.</span>
-          <button
-            onClick={installApp}
-            className="ml-3 inline-block rounded bg-white px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"
-            type="button"
-          >
-            Install
-          </button>
-          <button
-            onClick={() => setInstallEvent(null)}
-            className="ml-2 inline-block px-2 py-1 text-xs text-white/70 hover:text-white"
-            type="button"
-          >
-            Not now
-          </button>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-white">
+              Install eVoucher for the best experience
+            </p>
+            <div className="flex shrink-0 gap-2">
+              <button
+                onClick={() => void installApp()}
+                className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-teal-700 hover:bg-teal-50"
+                type="button"
+              >
+                Install
+              </button>
+              <button
+                onClick={() => setInstallEvent(null)}
+                className="px-2 py-1 text-xs text-white/70 hover:text-white"
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>

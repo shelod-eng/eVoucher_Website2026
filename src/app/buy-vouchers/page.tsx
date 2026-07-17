@@ -229,9 +229,10 @@ function BuyVouchersContent() {
     if (!merchants.length) return;
 
     if (merchantLocked) {
-      // Pin to the exact merchant the user selected in Shop — never fall back to merchants[0]
+      // Pin strictly to the merchant the user selected in Shop.
+      // If the locked merchant isn't in the list, set null (will show blocking reason).
       const lockedMerchant = merchants.find((m) => m.id === merchantIdFromQuery);
-      setSelectedMerchant(lockedMerchant?.id ?? merchants[0]?.id ?? null);
+      setSelectedMerchant(lockedMerchant?.id ?? null);
     } else if (
       merchantIdFromQuery &&
       merchants.some((merchant) => merchant.id === merchantIdFromQuery)
@@ -312,18 +313,28 @@ function BuyVouchersContent() {
 
   const BRAND_LOGOS: Record<string, string> = {
     shoprite: '/assets/images/merchants/shoprite.png',
-    'pick n pay': '/assets/images/merchants/picknpay.png', picknpay: '/assets/images/merchants/picknpay.png',
-    checkers: '/assets/images/merchants/checkers.png', clicks: '/assets/images/merchants/clicks.png',
-    'dis-chem': '/assets/images/merchants/dischem.png', dischem: '/assets/images/merchants/dischem.png',
-    pep: '/assets/images/merchants/pep.png', game: '/assets/images/merchants/game.png',
-    boxer: '/assets/images/merchants/boxer.png', woolworths: '/assets/images/merchants/woolworths.png',
-    engen: '/assets/images/merchants/engen.png', 'mr price': '/assets/images/merchants/mr-price.png',
-    mrprice: '/assets/images/merchants/mr-price.png', usave: '/assets/images/merchants/usave.png',
+    'pick n pay': '/assets/images/merchants/picknpay.png',
+    picknpay: '/assets/images/merchants/picknpay.png',
+    checkers: '/assets/images/merchants/checkers.png',
+    clicks: '/assets/images/merchants/clicks.png',
+    'dis-chem': '/assets/images/merchants/dischem.png',
+    dischem: '/assets/images/merchants/dischem.png',
+    pep: '/assets/images/merchants/pep.png',
+    game: '/assets/images/merchants/game.png',
+    boxer: '/assets/images/merchants/boxer.png',
+    woolworths: '/assets/images/merchants/woolworths.png',
+    engen: '/assets/images/merchants/engen.png',
+    'mr price': '/assets/images/merchants/mr-price.png',
+    mrprice: '/assets/images/merchants/mr-price.png',
+    usave: '/assets/images/merchants/usave.png',
     kalapeng: '/assets/images/merchants/kalapeng.png',
   };
 
   function getMerchantLogo(name: string) {
-    const key = name.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+    const key = name
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]/g, '')
+      .trim();
     return BRAND_LOGOS[key] ?? null;
   }
 
@@ -606,9 +617,16 @@ function BuyVouchersContent() {
         setTransactionReference(data.transactionReference || null);
         setCheckoutUrl(data.checkoutUrl || null);
         setPricingResult(data.pricing ?? previewPricing);
-        const mName = selectedMerchantDetails?.businessName ?? null;
-        setSelectedMerchantName(mName);
-        setSelectedMerchantLogo(mName ? getMerchantLogo(mName) : null);
+        // Always derive merchant name from the locked merchant (from query params) first,
+        // then fall back to the selected merchant details. This prevents the Boxer→PnP bug
+        // where selectedMerchantDetails could resolve to the wrong merchant.
+        const resolvedMerchantName =
+          selectedMerchantDetails?.businessName ??
+          (merchantLocked ? (brandKeyFromQuery ?? null) : null);
+        setSelectedMerchantName(resolvedMerchantName);
+        setSelectedMerchantLogo(
+          resolvedMerchantName ? getMerchantLogo(resolvedMerchantName) : null
+        );
         if (data.status === 'completed') {
           clearCart(user?.id);
         }
@@ -718,10 +736,14 @@ function BuyVouchersContent() {
                       src={selectedMerchantLogo}
                       alt={selectedMerchantName}
                       className="h-10 w-10 rounded-xl border border-border object-contain bg-white p-1"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
                     />
                   )}
-                  <p className="font-headline font-bold text-lg text-foreground">{selectedMerchantName}</p>
+                  <p className="font-headline font-bold text-lg text-foreground">
+                    {selectedMerchantName}
+                  </p>
                 </div>
               )}
 
@@ -740,7 +762,9 @@ function BuyVouchersContent() {
               <div className="bg-muted/50 rounded-xl p-4 mb-6 text-left space-y-2">
                 <p className="text-sm font-body text-muted-foreground">
                   <span className="font-semibold text-foreground">Status:</span>{' '}
-                  <span className={statusClasses.text + ' font-semibold capitalize'}>{purchaseStatus}</span>
+                  <span className={statusClasses.text + ' font-semibold capitalize'}>
+                    {purchaseStatus}
+                  </span>
                 </p>
                 <p className="text-sm font-body text-muted-foreground">
                   <span className="font-semibold text-foreground">Payment method:</span>{' '}
@@ -750,17 +774,23 @@ function BuyVouchersContent() {
                   <div className="border-t border-border pt-2 mt-2 space-y-1.5">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Face Value</span>
-                      <span className="font-semibold text-foreground">R{pricingResult.faceValue.toFixed(2)}</span>
+                      <span className="font-semibold text-foreground">
+                        R{pricingResult.faceValue.toFixed(2)}
+                      </span>
                     </div>
                     {pricingResult.consumerBenefitAmount > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Discount</span>
-                        <span className="font-semibold text-success">−R{pricingResult.consumerBenefitAmount.toFixed(2)}</span>
+                        <span className="font-semibold text-success">
+                          −R{pricingResult.consumerBenefitAmount.toFixed(2)}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm border-t border-border pt-1.5">
                       <span className="font-bold text-foreground">You Paid</span>
-                      <span className="font-bold text-primary">R{pricingResult.consumerPrice.toFixed(2)}</span>
+                      <span className="font-bold text-primary">
+                        R{pricingResult.consumerPrice.toFixed(2)}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -775,11 +805,18 @@ function BuyVouchersContent() {
                     <p className="text-sm font-semibold text-foreground mb-2">Voucher Issued</p>
                     <div className="space-y-2">
                       {issuedVouchers.map((voucher) => (
-                        <div key={voucher.code} className="rounded-lg border border-success/20 bg-success/5 p-3">
-                          <p className="font-mono text-sm font-bold text-foreground">{voucher.code}</p>
+                        <div
+                          key={voucher.code}
+                          className="rounded-lg border border-success/20 bg-success/5 p-3"
+                        >
+                          <p className="font-mono text-sm font-bold text-foreground">
+                            {voucher.code}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             R{Number(voucher.faceValue ?? 0).toFixed(2)} Voucher
-                            {voucher.expiresAt ? ` · Expires ${new Date(voucher.expiresAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: '2-digit' })}` : ''}
+                            {voucher.expiresAt
+                              ? ` · Expires ${new Date(voucher.expiresAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: '2-digit' })}`
+                              : ''}
                           </p>
                         </div>
                       ))}
