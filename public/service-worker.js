@@ -37,14 +37,31 @@ self.addEventListener('activate', (event) => {
 });
 
 // Fetch strategy: Network first, fallback to cache
+// Only cache GET requests — POST and other methods are not supported by the Cache API
 self.addEventListener('fetch', (event) => {
+  // Never intercept non-GET requests (POST, PUT, DELETE, etc.)
+  // This prevents "POST not supported in Cache API" errors and ensures
+  // payment requests always reach the server on Chrome, Firefox, and Edge.
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Skip caching API routes — always fetch fresh from network
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const responseClone = response.clone();
-        caches.open(CACHE_VERSION).then((cache) => {
-          cache.put(event.request, responseClone);
-        });
+        // Only cache successful same-origin GET responses
+        if (response.ok && response.type !== 'opaque') {
+          const responseClone = response.clone();
+          caches.open(CACHE_VERSION).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
         return response;
       })
       .catch(() => {

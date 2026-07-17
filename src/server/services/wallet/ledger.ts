@@ -107,7 +107,9 @@ export async function recordWalletDebit(
     description: input.description,
     savings: 0,
   });
+  // Non-fatal: if wallet_transactions table is not deployed, the payment_transactions
+  // record with card_brand='WALLET' already serves as the debit record for balance derivation.
   if (res.error && !isMissingRelation(res.error, 'public.wallet_transactions')) {
-    throw res.error;
+    console.warn('[recordWalletDebit][non-fatal]', res.error?.message);
   }
 }

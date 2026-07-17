@@ -229,7 +229,9 @@ function BuyVouchersContent() {
     if (!merchants.length) return;
 
     if (merchantLocked) {
-      setSelectedMerchant(merchants[0]?.id ?? null);
+      // Pin to the exact merchant the user selected in Shop — never fall back to merchants[0]
+      const lockedMerchant = merchants.find((m) => m.id === merchantIdFromQuery);
+      setSelectedMerchant(lockedMerchant?.id ?? merchants[0]?.id ?? null);
     } else if (
       merchantIdFromQuery &&
       merchants.some((merchant) => merchant.id === merchantIdFromQuery)

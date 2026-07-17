@@ -375,29 +375,29 @@ export default function HomepageLanding() {
           />
         )}
 
-        {/* 3. Savings Calculator — immediately below hero */}
-        <SavingsCalculator />
+        {/* 3. Access eVoucher Anywhere — omnichannel credibility immediately after hero */}
+        <MobileAppSection />
 
         {/* 4. Today's Deals */}
         <TodaysDeals />
 
-        {/* 5. Featured Merchants — from DB */}
-        <FeaturedMerchants />
-
-        {/* 6. Popular Categories */}
+        {/* 5. Popular Categories */}
         <PopularCategories />
 
-        {/* 7. Big Savings Banner */}
+        {/* 6. Featured Merchants — from DB */}
+        <FeaturedMerchants />
+
+        {/* 7. Savings Calculator */}
+        <SavingsCalculator />
+
+        {/* 8. Big Savings Banner */}
         <BigSavingsBanner />
 
-        {/* 8. How eVoucher Works */}
+        {/* 9. How eVoucher Works */}
         <HowItWorks />
 
-        {/* 9. Trusted Merchants Carousel */}
+        {/* 10. Trusted Merchants Carousel */}
         <TrustedMerchantsCarousel />
-
-        {/* 10. Mobile App Section */}
-        <MobileAppSection />
 
         {/* 11. Security & Trust */}
         <SecurityTrustSection />

@@ -23,6 +23,9 @@ const SUPPORTED_PAYMENT_METHODS = new Set([
   'payfast',
   'eft',
   'wallet',
+  'cash_voucher',
+  'ussd',
+  'airtime',
 ]);
 
 function isMissingRelation(error: any, relationName: string) {
@@ -69,6 +72,7 @@ function validate(body: PurchaseVoucherRequest): string | null {
     const lastFour = String(body.cardLastFour ?? '').trim();
     if (lastFour && !/^\d{4}$/.test(lastFour)) return 'Card last four must be 4 digits.';
   }
+  // cash_voucher, ussd, airtime: no additional field validation required
   return null;
 }
 
@@ -537,7 +541,19 @@ export async function POST(request: Request) {
         ? 'VISA'
         : body.paymentMethod === 'debit_credit'
           ? String(body.cardBrand ?? 'CARD').slice(0, 20)
-          : body.paymentMethod.toUpperCase();
+          : body.paymentMethod === 'wallet'
+            ? 'WALLET'
+            : body.paymentMethod === 'eft'
+              ? 'EFT'
+              : body.paymentMethod === 'payfast'
+                ? 'PAYFAST'
+                : body.paymentMethod === 'cash_voucher'
+                  ? 'CASH'
+                  : body.paymentMethod === 'ussd'
+                    ? 'USSD'
+                    : body.paymentMethod === 'airtime'
+                      ? 'AIRTIME'
+                      : body.paymentMethod.toUpperCase().slice(0, 20);
     const cardLastFour =
       body.paymentMethod === 'visa_secure' || body.paymentMethod === 'debit_credit'
         ? String(body.cardLastFour ?? '0000')
