@@ -28,8 +28,14 @@ export async function createClient() {
         },
         setAll(cookiesToSet: CookieToSet[]) {
           try {
+            const isProduction = process.env.NODE_ENV === 'production';
             cookiesToSet?.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
+              cookieStore.set(name, value, {
+                ...options,
+                sameSite: options?.sameSite ?? 'lax',
+                secure: isProduction ? true : (options?.secure ?? false),
+                httpOnly: options?.httpOnly ?? true,
+              });
             });
           } catch {
             // Handle server component context

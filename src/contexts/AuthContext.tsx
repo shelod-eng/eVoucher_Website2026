@@ -60,6 +60,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const syncServerSession = async (accessToken: string, refreshToken: string) => {
+    try {
+      await fetch('/api/v1/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ accessToken, refreshToken }),
+      });
+    } catch {
+      // Non-fatal: Supabase SSR middleware will attempt cookie refresh on next request.
+    }
+  };
+
   const clearServerSession = async () => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
@@ -271,6 +284,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('AuthContext: signIn successful:', data.user?.id);
+      // Sync tokens to server-side HttpOnly cookies so API routes work
+      // for all users regardless of network (mobile, external, incognito).
+      if (data.session?.access_token && data.session?.refresh_token) {
+        await syncServerSession(data.session.access_token, data.session.refresh_token);
+      }
       const resolvedRole = await resolveUserRole(data.user ?? null);
       setUser(data.user ?? null);
       setRole(resolvedRole);
@@ -313,6 +331,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const signedInUser = sessionData?.user ?? null;
+      if (sessionData?.session?.access_token && sessionData?.session?.refresh_token) {
+        await syncServerSession(
+          sessionData.session.access_token,
+          sessionData.session.refresh_token
+        );
+      }
       const resolvedRole =
         String(payload?.user?.role ?? '')
           .toLowerCase()
