@@ -68,6 +68,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         credentials: 'include',
         body: JSON.stringify({ accessToken, refreshToken }),
       });
+      // Poll until the server confirms the cookie is present (max 3s).
+      for (let i = 0; i < 6; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        try {
+          const check = await fetch('/api/v1/auth/session', {
+            method: 'GET',
+            credentials: 'include',
+            cache: 'no-store',
+          });
+          const json = await check.json().catch(() => ({}));
+          if (json?.sessionCookiePresent) break;
+        } catch {
+          // continue polling
+        }
+      }
     } catch {
       // Non-fatal: Supabase SSR middleware will attempt cookie refresh on next request.
     }
