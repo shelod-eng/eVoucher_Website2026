@@ -553,7 +553,7 @@ export async function POST(request: Request) {
                     ? 'USSD'
                     : body.paymentMethod === 'airtime'
                       ? 'AIRTIME'
-                      : body.paymentMethod.toUpperCase().slice(0, 20);
+                      : String(body.paymentMethod).toUpperCase().slice(0, 20);
     const cardLastFour =
       body.paymentMethod === 'visa_secure' || body.paymentMethod === 'debit_credit'
         ? String(body.cardLastFour ?? '0000')
