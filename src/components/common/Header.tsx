@@ -151,8 +151,37 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
     }
   };
 
+  const isConsumer = effectiveSignedIn && !effectiveMerchantUser;
+
+  const BOTTOM_TABS = [
+    { href: '/customer/dashboard', icon: 'HomeIcon', label: 'Home' },
+    { href: '/shop', icon: 'BuildingStorefrontIcon', label: 'Shop' },
+    { href: '/wallet', icon: 'WalletIcon', label: 'Wallet' },
+    { href: '/benefits', icon: 'StarIcon', label: 'Benefits' },
+    { href: '/profile', icon: 'UserCircleIcon', label: 'Account' },
+  ] as const;
+
   return (
-    <header className={`bg-card shadow-md fixed top-0 left-0 right-0 z-50 ${className}`}>
+    <>
+      {isConsumer && (
+        <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card px-1 pb-2 pt-2 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] lg:hidden">
+          {BOTTOM_TABS.map((tab) => {
+            const isActive = pathname === tab.href;
+            return (
+              <Link key={tab.href} href={tab.href}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-colors ${
+                  isActive ? 'text-primary' : 'text-muted-foreground'
+                }`}>
+                <Icon name={tab.icon as any} size={22} variant={isActive ? 'solid' : 'outline'} />
+                <span className={`font-headline text-[10px] font-bold leading-none ${
+                  isActive ? 'text-primary' : 'text-muted-foreground'
+                }`}>{tab.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+      <header className={`bg-card shadow-md fixed top-0 left-0 right-0 z-50 ${className}`}>
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between h-16 px-4 lg:px-6">
           {/* Logo */}
@@ -304,6 +333,7 @@ const Header = ({ className = '', forcePublic = false }: HeaderProps) => {
         )}
       </div>
     </header>
+    </>
   );
 };
 

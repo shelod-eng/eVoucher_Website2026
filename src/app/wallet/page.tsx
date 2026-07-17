@@ -465,7 +465,7 @@ export default function WalletPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
       <Header />
-      <div className="pt-24 pb-16 px-4">
+      <div className="pt-24 pb-24 px-4">
         <div className="max-w-6xl mx-auto space-y-6">
           {error && (
             <div className="p-4 rounded-lg border border-error/20 bg-error/10">
@@ -568,103 +568,92 @@ export default function WalletPage() {
             ))}
           </section>
 
-          <section className="space-y-3">
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {displayedVouchers.length === 0 ? (
-              <div className="rounded-2xl border border-border p-10 text-center text-muted-foreground bg-card">
-                No {tab} vouchers found.
+              <div className="col-span-full rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground bg-card">
+                <span className="mb-3 block text-4xl">🎁</span>
+                <p className="font-headline font-semibold text-foreground">No {tab} vouchers</p>
+                {tab === 'active' && (
+                  <button onClick={() => router.push('/shop')} className="mt-4 rounded-xl bg-primary px-6 py-2.5 font-headline text-sm font-bold text-white hover:bg-primary/90">Shop Now</button>
+                )}
               </div>
             ) : (
               displayedVouchers.map((voucher) => {
                 const face = Number(voucher.face_value ?? 0);
                 const paid = Number(voucher.consumer_price ?? face);
                 const saved = Number(voucher.consumer_benefit_amount ?? Math.max(0, face - paid));
-                const paymentMethod = formatPaymentMethod(
-                  voucherPaymentMap.get(voucher.voucher_code)
-                );
+                const balance = Number(voucher.current_balance ?? 0);
                 const status = classifyVoucher(voucher);
+                const pct = face > 0 ? Math.round((balance / face) * 100) : 0;
+                const expiry = new Date(voucher.expires_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: '2-digit' });
+                const merchantKey = (voucher.parent_brand || voucher.merchant_name || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+                const LOGOS: Record<string, string> = {
+                  shoprite: '/assets/images/merchants/shoprite.png',
+                  'pick n pay': '/assets/images/merchants/picknpay.png', picknpay: '/assets/images/merchants/picknpay.png',
+                  checkers: '/assets/images/merchants/checkers.png', clicks: '/assets/images/merchants/clicks.png',
+                  'dis-chem': '/assets/images/merchants/dischem.png', dischem: '/assets/images/merchants/dischem.png',
+                  pep: '/assets/images/merchants/pep.png', game: '/assets/images/merchants/game.png',
+                  boxer: '/assets/images/merchants/boxer.png', woolworths: '/assets/images/merchants/woolworths.png',
+                  engen: '/assets/images/merchants/engen.png', 'mr price': '/assets/images/merchants/mr-price.png',
+                  mrprice: '/assets/images/merchants/mr-price.png', usave: '/assets/images/merchants/usave.png',
+                  kalapeng: '/assets/images/merchants/kalapeng.png',
+                };
+                const logoSrc = LOGOS[merchantKey] ?? '/assets/images/merchants/placeholder-merchant.svg';
 
                 return (
-                  <article
-                    key={voucher.id}
-                    className="rounded-2xl border border-border bg-card p-5 shadow-sm"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-headline font-bold text-3xl text-foreground">
-                          {voucher.voucher_code}
-                        </h3>
-                        <p className="text-primary font-headline font-semibold">
-                          {voucher.parent_brand || voucher.merchant_name}
-                        </p>
+                  <article key={voucher.id} className="group relative overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                    {/* Colour strip */}
+                    <div className={`h-1.5 w-full ${status === 'active' ? 'bg-gradient-to-r from-primary to-teal-400' : status === 'partial' ? 'bg-gradient-to-r from-amber-400 to-orange-400' : 'bg-muted'}`} />
+                    <div className="p-4">
+                      {/* Header row */}
+                      <div className="mb-3 flex items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-white p-1 shadow-sm">
+                          <img src={logoSrc} alt={voucher.parent_brand || voucher.merchant_name} className="h-8 w-8 object-contain"
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/assets/images/merchants/placeholder-merchant.svg'; }} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-headline text-sm font-bold text-foreground line-clamp-1">{voucher.parent_brand || voucher.merchant_name}</p>
+                          <p className="text-[11px] text-muted-foreground">{toCurrency(face)} Voucher</p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 font-headline text-[10px] font-bold capitalize ${
+                          status === 'active' ? 'bg-success/10 text-success' :
+                          status === 'partial' ? 'bg-amber-50 text-amber-600' :
+                          'bg-muted text-muted-foreground'
+                        }`}>{status}</span>
                       </div>
-                      <span className="px-3 py-1 rounded-full text-xs bg-success/15 text-success font-headline font-semibold capitalize">
-                        {status}
-                      </span>
-                    </div>
 
-                    <div className="grid md:grid-cols-3 gap-3 mt-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Face Value</p>
-                        <p className="font-headline font-bold text-3xl">{toCurrency(face)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Amount Paid</p>
-                        <p className="font-headline font-bold text-3xl">{toCurrency(paid)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Balance</p>
-                        <p className="font-headline font-bold text-3xl text-success">
-                          {toCurrency(Number(voucher.current_balance ?? 0))}
-                        </p>
-                      </div>
-                    </div>
+                      {/* Balance */}
+                      <p className="font-headline text-3xl font-bold text-foreground">{toCurrency(balance)}</p>
+                      <p className="mb-2 text-[11px] text-muted-foreground">Balance remaining</p>
 
-                    <div className="mt-4 pt-3 border-t border-border grid md:grid-cols-2 gap-3">
-                      <p className="text-sm text-muted-foreground">
-                        Savings:{' '}
-                        <span className="font-headline text-success">- {toCurrency(saved)}</span>
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Expires: {new Date(voucher.expires_at).toLocaleDateString()}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Status: {status}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Payment Method: {paymentMethod}
-                      </p>
-                      <p className="text-sm text-muted-foreground md:col-span-2">
-                        Redemption: {getScopeLabel(voucher)}
-                      </p>
-                      {voucher.redeemed_at_branch && (
-                        <p className="text-sm text-muted-foreground md:col-span-2">
-                          Last redeemed at: {voucher.redeemed_at_branch}
-                        </p>
+                      {/* Progress bar */}
+                      <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+
+                      {/* Meta row */}
+                      <div className="mb-3 flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span>Expires {expiry}</span>
+                        {saved > 0 && <span className="font-semibold text-success">Saved {toCurrency(saved)}</span>}
+                      </div>
+
+                      {/* Code */}
+                      <p className="mb-3 rounded-lg bg-muted px-3 py-1.5 font-mono text-xs text-muted-foreground">{voucher.voucher_code}</p>
+
+                      {/* Actions */}
+                      {(status === 'active' || status === 'partial') ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          <button onClick={() => setSelectedVoucher(voucher)}
+                            className="rounded-xl border border-primary py-2 font-headline text-xs font-bold text-primary hover:bg-primary/10">QR</button>
+                          <button onClick={() => void handleCopyVoucherCode(voucher.voucher_code)}
+                            className="rounded-xl border border-border py-2 font-headline text-xs font-bold text-foreground hover:bg-muted">Copy</button>
+                          <button onClick={() => router.push(`/redeem?code=${encodeURIComponent(voucher.voucher_code)}`)}
+                            className="rounded-xl bg-primary py-2 font-headline text-xs font-bold text-white hover:bg-primary/90">Redeem</button>
+                        </div>
+                      ) : (
+                        <p className="text-center text-[11px] text-muted-foreground">{getScopeLabel(voucher)}</p>
                       )}
                     </div>
-
-                    {(status === 'active' || status === 'partial') && (
-                      <div className="mt-3 grid sm:grid-cols-3 gap-2">
-                        <button
-                          onClick={() => setSelectedVoucher(voucher)}
-                          className="py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
-                        >
-                          Show QR
-                        </button>
-                        <button
-                          onClick={() => void handleCopyVoucherCode(voucher.voucher_code)}
-                          className="py-2 rounded-lg border border-border text-foreground font-headline font-semibold hover:bg-muted"
-                        >
-                          Copy Code
-                        </button>
-                        <button
-                          onClick={() =>
-                            router.push(`/redeem?code=${encodeURIComponent(voucher.voucher_code)}`)
-                          }
-                          className="py-2 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
-                        >
-                          Redeem in Store
-                        </button>
-                      </div>
-                    )}
                   </article>
                 );
               })
@@ -673,35 +662,33 @@ export default function WalletPage() {
 
           <section className="grid lg:grid-cols-2 gap-6">
             <div className="bg-card border border-border rounded-2xl p-5">
-              <h2 className="font-headline font-bold text-2xl text-foreground mb-4">
-                Recent Activity
-              </h2>
+              <h2 className="font-headline font-bold text-2xl text-foreground mb-4">Recent Activity</h2>
               {recentActivity.length === 0 ? (
-                <p className="text-muted-foreground">No transactions yet.</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">No transactions yet.</p>
               ) : (
-                <div className="space-y-3">
-                  {recentActivity.map((activity) => (
-                    <div key={activity.id} className="rounded-xl border border-border p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="font-headline font-semibold text-foreground">
-                            {activity.merchant}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {activity.type} - {new Date(activity.createdAt).toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-headline font-semibold text-foreground">
-                            {toCurrency(activity.amount)}
-                          </p>
-                          <p className="text-xs text-success">
-                            Saved {toCurrency(Number(activity.savings ?? 0))}
-                          </p>
+                <div className="relative space-y-0">
+                  <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-border" />
+                  {recentActivity.map((activity, i) => {
+                    const date = new Date(activity.createdAt);
+                    const diff = Math.floor((Date.now() - date.getTime()) / 86400000);
+                    const label = diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : date.toLocaleDateString('en-ZA', { weekday: 'long' });
+                    const typeLabel = activity.type === 'wallet_topup' ? 'Wallet Top-Up' : activity.type === 'purchase' ? 'Voucher Purchase' : 'Redemption';
+                    return (
+                      <div key={activity.id} className={`relative flex gap-4 pb-4 ${i === recentActivity.length - 1 ? 'pb-0' : ''}`}>
+                        <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-white text-xs font-bold text-primary">✓</div>
+                        <div className="flex flex-1 items-start justify-between rounded-xl border border-border bg-white px-3 py-2.5 shadow-sm">
+                          <div>
+                            <p className="font-headline text-sm font-bold text-foreground">{activity.merchant}</p>
+                            <p className="text-[11px] text-muted-foreground">{typeLabel} · {label}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-headline text-sm font-semibold text-foreground">{toCurrency(activity.amount)}</p>
+                            {Number(activity.savings) > 0 && <p className="text-[11px] font-semibold text-success">Saved {toCurrency(Number(activity.savings))}</p>}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

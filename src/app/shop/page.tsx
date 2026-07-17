@@ -417,147 +417,143 @@ export default function ShopPage() {
     );
   }
 
+  const SHOP_CATEGORIES = [
+    { label: 'Groceries', emoji: '🛒', q: 'Groceries' },
+    { label: 'Pharmacy', emoji: '💊', q: 'Pharmacy' },
+    { label: 'Fashion', emoji: '👗', q: 'Fashion' },
+    { label: 'Fuel', emoji: '⛽', q: 'Fuel' },
+    { label: 'Airtime', emoji: '📱', q: 'Airtime' },
+    { label: 'Home', emoji: '🏠', q: 'Home' },
+    { label: 'Education', emoji: '📚', q: 'Education' },
+    { label: 'Hardware', emoji: '🔧', q: 'Hardware' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+    <div className="min-h-screen bg-slate-50">
       <Header />
-      <div className="pt-24 pb-16 px-4">
+      <div className="pt-20 pb-24 px-4">
         <div className="max-w-7xl mx-auto space-y-6">
-          <section className="bg-card rounded-2xl border border-border p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+
+          {/* ── 1. Search bar ── */}
+          <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#0d9488] to-[#0891b2] p-6 text-white shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
               <div>
-                <h1 className="font-headline font-bold text-5xl text-foreground">Shop</h1>
-                <p className="text-muted-foreground">
-                  Save money on every purchase from trusted South African merchants
-                </p>
+                <p className="font-headline text-xs font-semibold uppercase tracking-widest text-white/60">eVoucher Shop</p>
+                <h1 className="font-headline text-3xl font-bold">What are you shopping for?</h1>
+                <p className="mt-1 text-sm text-white/70">Save on every purchase from trusted SA merchants</p>
               </div>
-              <button
-                onClick={() => router.push('/cart')}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10"
-              >
-                <Icon name="ShoppingCartIcon" size={18} variant="outline" />
-                <span>Cart</span>
+              <button onClick={() => router.push('/cart')}
+                className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 border border-white/30 hover:bg-white/30">
+                <Icon name="ShoppingCartIcon" size={22} variant="outline" className="text-white" />
                 {cartCount > 0 && (
-                  <span className="inline-flex min-w-5 h-5 px-1 items-center justify-center text-xs rounded-full bg-primary text-primary-foreground">
-                    {cartCount}
-                  </span>
+                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-white">{cartCount}</span>
                 )}
               </button>
             </div>
-
-            <div className="grid lg:grid-cols-[1fr_auto] gap-3">
-              <div className="relative">
-                <Icon
-                  name="MagnifyingGlassIcon"
-                  size={18}
-                  variant="outline"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search products, brands, or locations..."
-                  className="w-full pl-10 pr-4 py-3 border border-border rounded-lg bg-background font-body"
-                />
-              </div>
-              <div className="inline-flex items-center px-3 py-2 rounded-lg border border-border text-sm text-foreground bg-background">
-                Offline access (USSD):{' '}
-                <span className="ml-1 font-headline font-semibold">{ussdAccessCode}</span>
-              </div>
+            <div className="relative">
+              <Icon name="MagnifyingGlassIcon" size={18} variant="outline" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search products, brands, or locations..."
+                className="w-full rounded-2xl border-0 bg-white py-4 pl-11 pr-4 font-body text-foreground shadow-sm outline-none focus:ring-2 focus:ring-white/50" />
             </div>
           </section>
 
-          {error && (
-            <div className="p-4 rounded-lg border border-error/20 bg-error/10">
-              <p className="text-sm text-error font-body">{error}</p>
-            </div>
-          )}
+          {error && <div className="rounded-xl border border-error/20 bg-error/10 p-4"><p className="text-sm text-error">{error}</p></div>}
+          {statusMessage && <div className="rounded-xl border border-success/20 bg-success/10 p-4"><p className="text-sm text-success">{statusMessage}</p></div>}
 
-          {statusMessage && (
-            <div className="p-4 rounded-lg border border-success/20 bg-success/10">
-              <p className="text-sm text-success font-body">{statusMessage}</p>
-            </div>
-          )}
-
-          <section className="bg-card rounded-2xl border border-border p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          {/* ── 2. Featured Offer banner ── */}
+          <section className="overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 via-white to-teal-50 p-6 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-wide text-primary font-headline font-semibold">
-                  Featured Partner Networks
-                </p>
-                <h2 className="font-headline font-bold text-3xl text-foreground mt-1">
-                  Enterprise Merchant Groups
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Strategic partner networks with branch-level loyalty and cross-branch redemption.
-                </p>
+                <p className="font-headline text-xs font-semibold uppercase tracking-widest text-primary">Featured Partner</p>
+                <h2 className="font-headline text-2xl font-bold text-foreground mt-1">{KALAPENG_PARTNER_LABEL}</h2>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="rounded-full bg-success/10 px-3 py-1 font-headline text-xs font-bold text-success">{KALAPENG_BRANCH_TARGET} Branches</span>
+                  <span className="rounded-full bg-amber-50 px-3 py-1 font-headline text-xs font-bold text-amber-600">Loyalty Enabled</span>
+                  <span className="rounded-full bg-primary/10 px-3 py-1 font-headline text-xs font-bold text-primary">Save up to 8%</span>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">Earn loyalty points on every eVoucher purchase. Refill reminders &amp; cross-branch support.</p>
               </div>
-              <button
-                onClick={() => handleSelectBrand('kalapeng')}
-                className="px-5 py-3 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90"
-              >
-                Shop Kalapeng
+              <button onClick={() => handleSelectBrand('kalapeng')}
+                className="shrink-0 rounded-2xl bg-primary px-6 py-3 font-headline font-bold text-white shadow-md hover:bg-primary/90 hover:shadow-lg transition-all">
+                Shop Kalapeng →
               </button>
             </div>
-            <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="font-headline font-bold text-foreground">{KALAPENG_PARTNER_LABEL}</p>
-                <span className="px-2 py-1 rounded-full text-xs bg-success/15 text-success font-headline font-semibold">
-                  {KALAPENG_BRANCH_TARGET} Branches
-                </span>
-                <span className="px-2 py-1 rounded-full text-xs bg-warning/15 text-warning font-headline font-semibold">
-                  Loyalty Enabled
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Earn Kalapeng loyalty points on every eVoucher purchase. Refill reminders, branch
-                offers, and cross-branch support included.
-              </p>
+          </section>
+
+          {/* ── 3. Today's Savings strip ── */}
+          <section>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-headline text-xl font-bold text-foreground">Today&apos;s Savings</h2>
+              <span className="rounded-full bg-secondary/10 px-3 py-1 font-headline text-xs font-bold text-secondary">🔥 Live deals</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[{ label: 'Groceries', save: '2.5%', emoji: '🛒' }, { label: 'Pharmacy', save: '5%', emoji: '💊' }, { label: 'Fashion', save: '3%', emoji: '👗' }, { label: 'Fuel', save: '2%', emoji: '⛽' }].map(s => (
+                <div key={s.label} className="flex items-center gap-3 rounded-2xl border border-border bg-white p-4 shadow-sm">
+                  <span className="text-2xl">{s.emoji}</span>
+                  <div>
+                    <p className="font-headline text-sm font-bold text-foreground">{s.label}</p>
+                    <p className="font-headline text-xs font-semibold text-success">Save {s.save}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 
-          <section className="bg-card rounded-2xl border border-border p-6">
-            <h2 className="font-headline font-bold text-3xl text-foreground mb-1">Shopping at</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Select one brand, then browse products valid across multiple branches.
-            </p>
+          {/* ── 4. Popular Categories ── */}
+          <section>
+            <h2 className="mb-3 font-headline text-xl font-bold text-foreground">Popular Categories</h2>
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+              {SHOP_CATEGORIES.map(cat => (
+                <button key={cat.label} onClick={() => setSearchTerm(cat.q)}
+                  className={`flex flex-col items-center gap-1.5 rounded-2xl border p-3 transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                    debouncedSearch.toLowerCase() === cat.q.toLowerCase() ? 'border-primary bg-primary/10' : 'border-border bg-white'
+                  }`}>
+                  <span className="text-2xl">{cat.emoji}</span>
+                  <p className="font-headline text-[11px] font-bold text-foreground text-center leading-tight">{cat.label}</p>
+                </button>
+              ))}
+            </div>
+          </section>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-3">
+          {/* ── 5. Featured Merchants ── */}
+          <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-headline text-xl font-bold text-foreground">Featured Merchants</h2>
+              {selectedBrandKey && (
+                <button onClick={() => { setSelectedBrandKey(''); setSelectedBranchId(''); }}
+                  className="font-headline text-sm font-semibold text-primary hover:underline">View All</button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {orderedBrands.map((brand) => (
-                <button
-                  key={brand.brandKey}
-                  onClick={() => handleSelectBrand(brand.brandKey)}
-                  className={`rounded-xl border p-3 text-left transition-all ${
+                <button key={brand.brandKey} onClick={() => handleSelectBrand(brand.brandKey)}
+                  className={`group relative overflow-hidden rounded-2xl border p-4 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
                     selectedBrandKey === brand.brandKey
-                      ? 'border-primary bg-primary/10 shadow-sm'
+                      ? 'border-primary bg-primary/10 shadow-md'
                       : brand.matchesSearch || !debouncedSearch
-                        ? 'border-border hover:bg-muted'
-                        : 'border-border opacity-50'
-                  }`}
-                >
-                  <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center mb-2 overflow-hidden">
+                        ? 'border-border bg-white hover:border-primary/50'
+                        : 'border-border bg-white opacity-50'
+                  }`}>
+                  <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
                     {failedLogos.has(brand.brandKey) || !brand.assetPath ? (
-                      <Icon
-                        name={getCategoryIcon(brand.category) as any}
-                        size={24}
-                        variant="outline"
-                      />
+                      <span className="text-2xl">{brand.category.includes('Health') ? '💊' : brand.category.includes('Fuel') ? '⛽' : brand.category.includes('Cloth') ? '👗' : '🛒'}</span>
                     ) : (
-                      <img
-                        src={brand.assetPath}
-                        alt={brand.displayName}
-                        className="w-10 h-10 object-contain"
-                        onError={() => markLogoFailed(brand.brandKey)}
-                      />
+                      <img src={brand.assetPath} alt={brand.displayName} className="h-12 w-12 object-contain"
+                        onError={() => markLogoFailed(brand.brandKey)} />
                     )}
                   </div>
-                  <p className="font-headline font-semibold text-sm text-foreground line-clamp-1">
-                    {brand.displayName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{brand.category}</p>
-                  <p className="text-xs text-primary font-headline">
-                    {brand.merchantCount} location{brand.merchantCount === 1 ? '' : 's'}
-                  </p>
+                  <p className="font-headline font-bold text-sm text-foreground line-clamp-1">{brand.displayName}</p>
+                  <p className="text-[11px] text-muted-foreground">{brand.category}</p>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="font-headline text-[11px] font-semibold text-primary">{brand.merchantCount} location{brand.merchantCount === 1 ? '' : 's'}</span>
+                    {brand.defaultTotalDiscountPct > 0 && (
+                      <span className="rounded-full bg-success/10 px-2 py-0.5 font-headline text-[10px] font-bold text-success">Save {brand.defaultTotalDiscountPct.toFixed(0)}%</span>
+                    )}
+                  </div>
+                  {selectedBrandKey === brand.brandKey && (
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-primary to-teal-400" />
+                  )}
                 </button>
               ))}
             </div>
@@ -652,120 +648,98 @@ export default function ShopPage() {
             )}
           </section>
 
-          <section className="bg-card rounded-2xl border border-border p-6">
-            <h2 className="font-headline font-bold text-3xl text-foreground mb-4">
-              Products ({products.length} available)
-            </h2>
+          {/* ── 6. Products ── */}
+          <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-headline text-xl font-bold text-foreground">
+                Products{products.length > 0 && <span className="ml-2 font-normal text-base text-muted-foreground">({products.length} available)</span>}
+              </h2>
+              {ussdAccessCode && (
+                <span className="hidden rounded-xl border border-border bg-muted px-3 py-1.5 font-headline text-xs font-semibold text-muted-foreground sm:inline">USSD: {ussdAccessCode}</span>
+              )}
+            </div>
 
             {productsLoading ? (
-              <div className="grid lg:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div className="h-56 rounded-2xl bg-muted animate-pulse" />
-                <div className="h-56 rounded-2xl bg-muted animate-pulse" />
-                <div className="h-56 rounded-2xl bg-muted animate-pulse" />
-                <div className="h-56 rounded-2xl bg-muted animate-pulse" />
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-64 rounded-2xl bg-muted animate-pulse" />)}
               </div>
             ) : products.length === 0 ? (
-              <div className="p-10 text-center bg-card rounded-2xl border border-border">
-                <Icon
-                  name="ShoppingBagIcon"
-                  size={48}
-                  variant="outline"
-                  className="text-muted-foreground mx-auto mb-4"
-                />
-                <p className="text-muted-foreground font-body">
-                  {selectedBrand
-                    ? 'No vouchers available for this brand yet. Try another brand or clear search.'
-                    : 'Select a brand to view products.'}
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center">
+                <span className="mb-3 text-5xl">🛒</span>
+                <p className="font-headline font-semibold text-foreground">
+                  {selectedBrand ? 'No vouchers available for this brand yet.' : 'Select a merchant above to view products.'}
                 </p>
+                <p className="mt-1 text-sm text-muted-foreground">Try another brand or clear your search.</p>
               </div>
             ) : (
-              <div className="grid lg:grid-cols-2 xl:grid-cols-4 gap-4">
-                {products.map((product) => (
-                  <article
-                    key={product.id}
-                    className="rounded-2xl border border-success/20 bg-success/5 overflow-hidden"
-                  >
-                    <div className="p-4 border-b border-success/20 flex items-center justify-between">
-                      <p className="text-xs uppercase tracking-wide text-primary font-headline font-semibold">
-                        {product.parent_brand}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        {product.is_special && (
-                          <span className="px-2 py-1 rounded-full text-xs bg-warning/20 text-warning font-headline font-semibold">
-                            {product.special_title || 'Special'}
-                          </span>
-                        )}
-                        <span className="px-2 py-1 rounded-full text-xs bg-success/20 text-success font-headline font-semibold">
-                          Save {Number(product.consumer_benefit_pct).toFixed(1)}%
-                        </span>
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
+                {products.map((product) => {
+                  const brandKey = (product.parent_brand || product.merchant_name || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+                  const LOGOS: Record<string, string> = {
+                    shoprite: '/assets/images/merchants/shoprite.png',
+                    'pick n pay': '/assets/images/merchants/picknpay.png', picknpay: '/assets/images/merchants/picknpay.png',
+                    checkers: '/assets/images/merchants/checkers.png', clicks: '/assets/images/merchants/clicks.png',
+                    'dis-chem': '/assets/images/merchants/dischem.png', dischem: '/assets/images/merchants/dischem.png',
+                    pep: '/assets/images/merchants/pep.png', game: '/assets/images/merchants/game.png',
+                    boxer: '/assets/images/merchants/boxer.png', woolworths: '/assets/images/merchants/woolworths.png',
+                    engen: '/assets/images/merchants/engen.png', 'mr price': '/assets/images/merchants/mr-price.png',
+                    mrprice: '/assets/images/merchants/mr-price.png', usave: '/assets/images/merchants/usave.png',
+                    kalapeng: '/assets/images/merchants/kalapeng.png',
+                  };
+                  const logoSrc = LOGOS[brandKey] ?? (selectedBrand?.assetPath || '/assets/images/merchants/placeholder-merchant.svg');
+                  return (
+                    <article key={product.id}
+                      className="group relative overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                      {/* Savings badge */}
+                      <div className="absolute left-3 top-3 z-10 rounded-full bg-secondary px-2.5 py-1 font-headline text-[11px] font-bold text-white shadow">
+                        Save {Number(product.consumer_benefit_pct).toFixed(1)}%
                       </div>
-                    </div>
-
-                    <div className="p-4">
-                      <h3 className="font-headline font-bold text-2xl text-foreground line-clamp-2 mb-3">
-                        {product.product_name}
-                      </h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground line-through">Normal Price</span>
-                          <span className="font-headline font-semibold text-muted-foreground line-through">
-                            R{Number(product.face_value).toFixed(2)}
-                          </span>
+                      {product.is_special && (
+                        <div className="absolute right-3 top-3 z-10 rounded-full bg-amber-500 px-2.5 py-1 font-headline text-[11px] font-bold text-white shadow">
+                          {product.special_title || 'Special'}
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-foreground">Today&apos;s Price</span>
-                          <span className="font-headline font-bold text-2xl text-foreground">
-                            R{Number(product.consumer_price).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between rounded-lg bg-success/10 px-3 py-2">
-                          <span className="font-semibold text-success">You Save</span>
-                          <span className="font-headline font-bold text-success">
-                            R{Number(product.consumer_benefit_amount).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="rounded-lg bg-background border border-border px-2 py-1">
-                          <p className="text-xs text-muted-foreground">
-                            {getRedemptionScopeLabel(product, selectedBrand)}
-                          </p>
-                          {product.is_special && product.special_end_at && (
-                            <p className="text-xs text-warning mt-1">
-                              Ends: {new Date(product.special_end_at).toLocaleString()}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="border-t border-success/20 mt-3 pt-3 flex items-center justify-between">
-                        <span className="text-muted-foreground text-xs">
-                          Instant saving applied at checkout
-                        </span>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => handleAddToCart(product)}
-                          disabled={!product.merchant_id}
-                          className="px-3 py-2 rounded-lg border border-primary text-primary font-headline font-semibold hover:bg-primary/10 disabled:opacity-50"
-                        >
-                          Add
-                        </button>
-                        <button
-                          onClick={() => handleBuyNow(product)}
-                          disabled={!product.merchant_id}
-                          className="px-3 py-2 rounded-lg bg-primary text-primary-foreground font-headline font-semibold hover:bg-primary/90 disabled:opacity-50"
-                        >
-                          Buy Now
-                        </button>
-                      </div>
-                      {branchSelectionRequired && (
-                        <p className="mt-2 text-xs text-warning">
-                          Branch selection required for this merchant.
-                        </p>
                       )}
-                    </div>
-                  </article>
-                ))}
+                      {/* Merchant header */}
+                      <div className="h-1.5 w-full bg-gradient-to-r from-primary to-teal-400" />
+                      <div className="p-4">
+                        <div className="mb-3 flex items-center gap-2">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-white p-1 shadow-sm">
+                            <img src={logoSrc} alt={product.parent_brand}
+                              className="h-7 w-7 object-contain"
+                              onError={(e) => { (e.target as HTMLImageElement).src = '/assets/images/merchants/placeholder-merchant.svg'; }} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-headline text-xs font-bold text-foreground line-clamp-1">{product.parent_brand}</p>
+                            <p className="text-[10px] text-muted-foreground">{product.merchant_name}</p>
+                          </div>
+                        </div>
+                        <h3 className="mb-3 font-headline text-sm font-bold leading-snug text-foreground line-clamp-2">{product.product_name}</h3>
+                        {/* Pricing */}
+                        <div className="mb-2 flex items-end gap-2">
+                          <span className="font-headline text-xl font-bold text-foreground">R{Number(product.consumer_price).toFixed(2)}</span>
+                          <span className="mb-0.5 text-xs text-muted-foreground line-through">R{Number(product.face_value).toFixed(2)}</span>
+                        </div>
+                        <div className="mb-3 flex items-center justify-between rounded-lg bg-success/10 px-3 py-1.5">
+                          <span className="font-headline text-xs font-semibold text-success">You Save</span>
+                          <span className="font-headline text-sm font-bold text-success">R{Number(product.consumer_benefit_amount).toFixed(2)}</span>
+                        </div>
+                        <p className="mb-3 text-[11px] text-muted-foreground">{getRedemptionScopeLabel(product, selectedBrand)}</p>
+                        {product.is_special && product.special_end_at && (
+                          <p className="mb-2 text-[11px] text-amber-600">Ends: {new Date(product.special_end_at).toLocaleDateString()}</p>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button onClick={() => handleAddToCart(product)} disabled={!product.merchant_id}
+                            className="rounded-xl border border-primary py-2 font-headline text-xs font-bold text-primary transition-all hover:bg-primary/10 disabled:opacity-50">Add</button>
+                          <button onClick={() => handleBuyNow(product)} disabled={!product.merchant_id}
+                            className="rounded-xl bg-primary py-2 font-headline text-xs font-bold text-white transition-all hover:bg-primary/90 disabled:opacity-50">Buy Now</button>
+                        </div>
+                        {branchSelectionRequired && (
+                          <p className="mt-2 text-center text-[11px] text-amber-600">Branch selection required.</p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </section>
