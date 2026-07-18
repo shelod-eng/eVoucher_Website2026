@@ -89,12 +89,17 @@ function StatItem({ stat, animate }: { stat: (typeof STATS)[0]; animate: boolean
 }
 
 const LIVE_DEALS = [
-  { merchant: 'Pick n Pay', logo: '/assets/images/merchants/picknpay.png', saved: 50, color: '#e31837' },
-  { merchant: 'Shoprite', logo: '/assets/images/merchants/shoprite.png', saved: 25, color: '#e31837' },
-  { merchant: 'Checkers', logo: '/assets/images/merchants/checkers.png', saved: 31, color: '#e31837' },
-  { merchant: 'Woolworths', logo: '/assets/images/merchants/woolworths.png', saved: 74, color: '#00a651' },
-  { merchant: 'Clicks', logo: '/assets/images/merchants/clicks.png', saved: 18, color: '#0066cc' },
-  { merchant: 'Dis-Chem', logo: '/assets/images/merchants/dischem.png', saved: 22, color: '#e31837' },
+  { merchant: 'Pick n Pay', logo: '/assets/images/merchants/picknpay.png', saved: 50 },
+  { merchant: 'Checkers',   logo: '/assets/images/merchants/checkers.png',  saved: 31 },
+  { merchant: 'Clicks',     logo: '/assets/images/merchants/clicks.png',    saved: 18 },
+  { merchant: 'Woolworths', logo: '/assets/images/merchants/woolworths.png', saved: 74 },
+];
+
+const TRUST_BADGES = [
+  { icon: '🔒', label: 'POPIA Compliant' },
+  { icon: '🏦', label: 'Bank-grade Security' },
+  { icon: '🔐', label: 'SSL/TLS Encrypted' },
+  { icon: '✅', label: '16+ SA Merchants' },
 ];
 
 function useLiveCounter(base: number) {
@@ -106,121 +111,122 @@ function useLiveCounter(base: number) {
   return val;
 }
 
-function LiveDealsPanel({ visible }: { visible: boolean }) {
+/* ── Right panel: lifestyle image + overlaid live deals + trust badges ── */
+function HeroRightPanel({ visible }: { visible: boolean }) {
   const totalSaved = useLiveCounter(2500000);
   const [activeIdx, setActiveIdx] = useState(0);
-  const [dealSavings, setDealSavings] = useState(LIVE_DEALS.map((d) => d.saved));
+  const [savings, setSavings] = useState(LIVE_DEALS.map((d) => d.saved));
 
   useEffect(() => {
     const t = setInterval(() => {
       setActiveIdx((i) => (i + 1) % LIVE_DEALS.length);
-      setDealSavings((prev) =>
-        prev.map((v, i) => (i === activeIdx ? v + Math.floor(Math.random() * 5) : v))
+      setSavings((prev) =>
+        prev.map((v, i) => (i === activeIdx ? v + Math.floor(Math.random() * 4 + 1) : v))
       );
-    }, 1800);
+    }, 2000);
     return () => clearInterval(t);
   }, [activeIdx]);
 
   return (
     <div
-      className={`hidden lg:block transition-all duration-1000 delay-200 ${
+      className={`hidden lg:flex lg:flex-col lg:gap-4 transition-all duration-1000 delay-200 ${
         visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
       }`}
     >
-      <div className="relative w-[360px]">
-        {/* Glow */}
-        <div className="pointer-events-none absolute inset-0 scale-110 rounded-3xl bg-white/5 blur-3xl" />
+      {/* ── Image + overlaid live deals card ── */}
+      <div className="relative">
+        {/* Glow behind image */}
+        <div className="pointer-events-none absolute inset-0 scale-105 rounded-3xl bg-white/8 blur-3xl" />
 
-        {/* Main card */}
-        <div className="relative rounded-3xl border border-white/15 bg-white/10 p-5 shadow-2xl backdrop-blur-md">
-          {/* Header */}
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="font-headline text-[10px] font-bold uppercase tracking-widest text-white/50">
-                Live Merchant Deals
-              </p>
-              <p className="font-headline text-sm font-bold text-white">Savings happening now</p>
-            </div>
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-1 text-[10px] font-bold text-emerald-300">
+        {/* Lifestyle hero image */}
+        <div className="relative animate-float overflow-hidden rounded-3xl shadow-2xl">
+          <img
+            src="/assets/images/branding/evoucher-3d-hero.png"
+            alt="South African family saving with eVoucher"
+            className="h-auto w-full max-w-[440px] object-cover"
+            loading="eager"
+          />
+          {/* Subtle dark gradient at bottom so overlay cards read clearly */}
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/50 to-transparent rounded-b-3xl" />
+        </div>
+
+        {/* ── Floating: Instant Saving badge (top-right) ── */}
+        <div
+          className="absolute -right-4 top-6 z-20 animate-float rounded-2xl border border-white/20 bg-white px-4 py-3 shadow-2xl"
+          style={{ animationDelay: '0.4s' }}
+        >
+          <p className="font-headline text-[10px] font-semibold text-muted-foreground">Instant Saving</p>
+          <p className="font-headline text-2xl font-bold text-[#059669]">2.5%</p>
+          <p className="text-[9px] text-muted-foreground">on every purchase</p>
+        </div>
+
+        {/* ── Floating: Community savings (top-left) ── */}
+        <div
+          className="absolute -left-5 top-10 z-20 animate-float rounded-2xl border border-white/20 bg-white px-3 py-2.5 shadow-xl"
+          style={{ animationDelay: '1.2s' }}
+        >
+          <p className="font-headline text-[9px] font-semibold text-muted-foreground">Community Saved</p>
+          <p className="font-headline text-lg font-bold text-primary">
+            R{(totalSaved / 1000000).toFixed(2)}M
+          </p>
+        </div>
+
+        {/* ── Overlaid Live Savings card (bottom of image) ── */}
+        <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/20 bg-black/40 p-3 backdrop-blur-md">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="font-headline text-[10px] font-bold uppercase tracking-widest text-white/70">
+              Today&apos;s Savings
+            </p>
+            <span className="flex items-center gap-1 rounded-full bg-emerald-500/25 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
               LIVE
             </span>
           </div>
-
-          {/* Deal rows */}
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {LIVE_DEALS.map((deal, i) => {
-              const [logoFailed, setLogoFailed] = useState(false);
+              const [failed, setFailed] = useState(false);
               const isActive = i === activeIdx;
               return (
                 <div
                   key={deal.merchant}
-                  className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-500 ${
-                    isActive
-                      ? 'border border-emerald-400/30 bg-emerald-500/10'
-                      : 'border border-white/5 bg-white/5'
+                  className={`flex items-center gap-2 rounded-xl px-2.5 py-1.5 transition-all duration-500 ${
+                    isActive ? 'bg-emerald-500/20 ring-1 ring-emerald-400/40' : 'bg-white/10'
                   }`}
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white">
-                    {!logoFailed ? (
-                      <img
-                        src={deal.logo}
-                        alt={deal.merchant}
-                        className="h-6 w-full object-contain"
-                        onError={() => setLogoFailed(true)}
-                      />
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white">
+                    {!failed ? (
+                      <img src={deal.logo} alt={deal.merchant} className="h-5 w-full object-contain" onError={() => setFailed(true)} />
                     ) : (
-                      <span className="font-headline text-xs font-bold" style={{ color: deal.color }}>
-                        {deal.merchant[0]}
-                      </span>
+                      <span className="font-headline text-[10px] font-bold text-primary">{deal.merchant[0]}</span>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-headline text-sm font-bold text-white">{deal.merchant}</p>
-                    <p className="text-[10px] text-white/50">Instant voucher saving</p>
-                  </div>
-                  <div className="text-right">
-                    <p
-                      className={`font-headline text-sm font-bold transition-all ${
-                        isActive ? 'scale-110 text-emerald-300' : 'text-white/80'
-                      }`}
-                    >
-                      R{dealSavings[i]} saved
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-headline text-[10px] font-bold text-white">{deal.merchant}</p>
+                    <p className={`font-headline text-[10px] font-bold transition-all ${
+                      isActive ? 'text-emerald-300' : 'text-white/60'
+                    }`}>
+                      R{savings[i]} saved
                     </p>
-                    {isActive && (
-                      <p className="text-[9px] text-emerald-400 animate-pulse">✓ Just now</p>
-                    )}
                   </div>
+                  {isActive && <span className="text-[9px] text-emerald-400">✓</span>}
                 </div>
               );
             })}
           </div>
-
-          {/* Community savings counter */}
-          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
-            <p className="font-headline text-[10px] font-semibold uppercase tracking-widest text-white/40">
-              Community Total Saved
-            </p>
-            <p className="font-headline text-3xl font-bold text-white">
-              R{(totalSaved / 1000000).toFixed(3)}M
-            </p>
-            <p className="text-[10px] text-white/50">and counting...</p>
-          </div>
         </div>
+      </div>
 
-        {/* Floating POPIA badge */}
-        <div
-          className="absolute -right-4 -top-4 animate-float rounded-2xl border border-white/20 bg-white px-3 py-2 shadow-xl"
-          style={{ animationDelay: '1s' }}
-        >
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm">🔒</span>
-            <div>
-              <p className="font-headline text-[9px] font-bold text-foreground">POPIA</p>
-              <p className="text-[8px] text-muted-foreground">Compliant</p>
-            </div>
+      {/* ── Trust badges strip below image ── */}
+      <div className="grid grid-cols-4 gap-2">
+        {TRUST_BADGES.map((b) => (
+          <div
+            key={b.label}
+            className="flex flex-col items-center gap-1 rounded-2xl border border-white/15 bg-white/8 px-2 py-2.5 text-center backdrop-blur-sm"
+          >
+            <span className="text-base">{b.icon}</span>
+            <p className="font-headline text-[9px] font-bold leading-tight text-white/70">{b.label}</p>
           </div>
-        </div>
+        ))}
       </div>
     </div>
   );
@@ -370,8 +376,8 @@ const HeroSection = ({
             </div>
           </div>
 
-          {/* ── Right: Live Merchant Deals Panel ── */}
-          <LiveDealsPanel visible={heroVisible} />
+          {/* ── Right: Lifestyle image + live overlay + trust badges ── */}
+          <HeroRightPanel visible={heroVisible} />
         </div>
 
         {/* ── Stats strip ── */}
