@@ -24,17 +24,17 @@ const LOGOS = [
 function LogoItem({ name, src }: { name: string; src: string }) {
   const [failed, setFailed] = useState(false);
   return (
-    <div className="group mx-5 flex h-20 w-36 shrink-0 items-center justify-center rounded-2xl border border-slate-100 bg-white px-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-md">
+    <div className="group mx-4 flex h-24 w-44 shrink-0 items-center justify-center rounded-2xl border border-slate-100 bg-white px-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/20 hover:shadow-lg">
       {!failed ? (
         <img
           src={src}
           alt={name}
-          className="h-14 w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0"
+          className="h-16 w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0 group-hover:scale-105"
           loading="lazy"
           onError={() => setFailed(true)}
         />
       ) : (
-        <span className="text-center font-headline text-xs font-bold text-muted-foreground group-hover:text-primary">
+        <span className="text-center font-headline text-sm font-bold text-muted-foreground group-hover:text-primary">
           {name}
         </span>
       )}

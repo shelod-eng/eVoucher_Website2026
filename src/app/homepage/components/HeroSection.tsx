@@ -88,6 +88,144 @@ function StatItem({ stat, animate }: { stat: (typeof STATS)[0]; animate: boolean
   );
 }
 
+const LIVE_DEALS = [
+  { merchant: 'Pick n Pay', logo: '/assets/images/merchants/picknpay.png', saved: 50, color: '#e31837' },
+  { merchant: 'Shoprite', logo: '/assets/images/merchants/shoprite.png', saved: 25, color: '#e31837' },
+  { merchant: 'Checkers', logo: '/assets/images/merchants/checkers.png', saved: 31, color: '#e31837' },
+  { merchant: 'Woolworths', logo: '/assets/images/merchants/woolworths.png', saved: 74, color: '#00a651' },
+  { merchant: 'Clicks', logo: '/assets/images/merchants/clicks.png', saved: 18, color: '#0066cc' },
+  { merchant: 'Dis-Chem', logo: '/assets/images/merchants/dischem.png', saved: 22, color: '#e31837' },
+];
+
+function useLiveCounter(base: number) {
+  const [val, setVal] = useState(base);
+  useEffect(() => {
+    const t = setInterval(() => setVal((v) => v + Math.floor(Math.random() * 3)), 2800);
+    return () => clearInterval(t);
+  }, []);
+  return val;
+}
+
+function LiveDealsPanel({ visible }: { visible: boolean }) {
+  const totalSaved = useLiveCounter(2500000);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [dealSavings, setDealSavings] = useState(LIVE_DEALS.map((d) => d.saved));
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setActiveIdx((i) => (i + 1) % LIVE_DEALS.length);
+      setDealSavings((prev) =>
+        prev.map((v, i) => (i === activeIdx ? v + Math.floor(Math.random() * 5) : v))
+      );
+    }, 1800);
+    return () => clearInterval(t);
+  }, [activeIdx]);
+
+  return (
+    <div
+      className={`hidden lg:block transition-all duration-1000 delay-200 ${
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+      }`}
+    >
+      <div className="relative w-[360px]">
+        {/* Glow */}
+        <div className="pointer-events-none absolute inset-0 scale-110 rounded-3xl bg-white/5 blur-3xl" />
+
+        {/* Main card */}
+        <div className="relative rounded-3xl border border-white/15 bg-white/10 p-5 shadow-2xl backdrop-blur-md">
+          {/* Header */}
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="font-headline text-[10px] font-bold uppercase tracking-widest text-white/50">
+                Live Merchant Deals
+              </p>
+              <p className="font-headline text-sm font-bold text-white">Savings happening now</p>
+            </div>
+            <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-1 text-[10px] font-bold text-emerald-300">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+              LIVE
+            </span>
+          </div>
+
+          {/* Deal rows */}
+          <div className="space-y-2">
+            {LIVE_DEALS.map((deal, i) => {
+              const [logoFailed, setLogoFailed] = useState(false);
+              const isActive = i === activeIdx;
+              return (
+                <div
+                  key={deal.merchant}
+                  className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-500 ${
+                    isActive
+                      ? 'border border-emerald-400/30 bg-emerald-500/10'
+                      : 'border border-white/5 bg-white/5'
+                  }`}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white">
+                    {!logoFailed ? (
+                      <img
+                        src={deal.logo}
+                        alt={deal.merchant}
+                        className="h-6 w-full object-contain"
+                        onError={() => setLogoFailed(true)}
+                      />
+                    ) : (
+                      <span className="font-headline text-xs font-bold" style={{ color: deal.color }}>
+                        {deal.merchant[0]}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-headline text-sm font-bold text-white">{deal.merchant}</p>
+                    <p className="text-[10px] text-white/50">Instant voucher saving</p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`font-headline text-sm font-bold transition-all ${
+                        isActive ? 'scale-110 text-emerald-300' : 'text-white/80'
+                      }`}
+                    >
+                      R{dealSavings[i]} saved
+                    </p>
+                    {isActive && (
+                      <p className="text-[9px] text-emerald-400 animate-pulse">✓ Just now</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Community savings counter */}
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+            <p className="font-headline text-[10px] font-semibold uppercase tracking-widest text-white/40">
+              Community Total Saved
+            </p>
+            <p className="font-headline text-3xl font-bold text-white">
+              R{(totalSaved / 1000000).toFixed(3)}M
+            </p>
+            <p className="text-[10px] text-white/50">and counting...</p>
+          </div>
+        </div>
+
+        {/* Floating POPIA badge */}
+        <div
+          className="absolute -right-4 -top-4 animate-float rounded-2xl border border-white/20 bg-white px-3 py-2 shadow-xl"
+          style={{ animationDelay: '1s' }}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">🔒</span>
+            <div>
+              <p className="font-headline text-[9px] font-bold text-foreground">POPIA</p>
+              <p className="text-[8px] text-muted-foreground">Compliant</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const HeroSection = ({
   className = '',
   onOpenCustomerModal,
@@ -232,63 +370,8 @@ const HeroSection = ({
             </div>
           </div>
 
-          {/* ── Right: 3D Product Image + floating badges ── */}
-          <div
-            className={`hidden lg:flex lg:justify-center lg:items-center transition-all duration-1000 delay-200 ${heroVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}
-          >
-            <div className="relative">
-              {/* Glow behind image */}
-              <div className="absolute inset-0 scale-110 rounded-full bg-white/10 blur-3xl" />
-
-              {/* 3D Design image */}
-              <div className="animate-float relative">
-                <img
-                  src="/assets/images/branding/evoucher-3d-hero.png"
-                  alt="eVoucher Digital Wallet"
-                  className="relative z-10 h-auto w-[420px] max-w-full drop-shadow-2xl"
-                  loading="eager"
-                />
-              </div>
-
-              {/* Floating badge — savings */}
-              <div
-                className="absolute -right-4 top-8 z-20 animate-float rounded-2xl border border-white/20 bg-white px-4 py-3 shadow-2xl"
-                style={{ animationDelay: '0.5s' }}
-              >
-                <p className="font-headline text-[10px] font-semibold text-muted-foreground">
-                  Instant Saving
-                </p>
-                <p className="font-headline text-2xl font-bold text-success">2.5%</p>
-                <p className="text-[9px] text-muted-foreground">on every purchase</p>
-              </div>
-
-              {/* Floating badge — merchants */}
-              <div
-                className="absolute -left-6 bottom-20 z-20 animate-float rounded-2xl border border-white/20 bg-white px-4 py-3 shadow-2xl"
-                style={{ animationDelay: '1s' }}
-              >
-                <p className="font-headline text-[10px] font-semibold text-muted-foreground">
-                  Merchants
-                </p>
-                <p className="font-headline text-2xl font-bold text-primary">16+</p>
-                <p className="text-[9px] text-muted-foreground">trusted brands</p>
-              </div>
-
-              {/* Floating badge — POPIA */}
-              <div
-                className="absolute -right-2 bottom-12 z-20 animate-float rounded-2xl border border-white/20 bg-white px-3 py-2 shadow-xl"
-                style={{ animationDelay: '1.5s' }}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="text-success text-sm">🔒</span>
-                  <div>
-                    <p className="font-headline text-[9px] font-bold text-foreground">POPIA</p>
-                    <p className="text-[8px] text-muted-foreground">Compliant</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* ── Right: Live Merchant Deals Panel ── */}
+          <LiveDealsPanel visible={heroVisible} />
         </div>
 
         {/* ── Stats strip ── */}
