@@ -8,7 +8,7 @@ import MerchantOnboardingModal from '@/app/components/MerchantOnboardingModal';
 import ForgotPasswordModal from '@/app/components/ForgotPasswordModal';
 import HeroSection from './components/HeroSection';
 import Footer from './components/Footer';
-import TodaysDeals from './components/TodaysDeals';
+import TodaysFeaturedDeals from './components/TodaysFeaturedDeals';
 import FeaturedMerchants from './components/FeaturedMerchants';
 import PopularCategories from './components/PopularCategories';
 import BigSavingsBanner from './components/BigSavingsBanner';
@@ -366,7 +366,10 @@ export default function HomepageLanding() {
           onOpenForgotModal={() => setShowForgotModal(true)}
         />
 
-        {/* 2. Wallet Summary — signed-in users only */}
+        {/* 2. Today's Featured Deals — live merchant deals immediately below hero */}
+        <TodaysFeaturedDeals />
+
+        {/* 3. Wallet Summary — signed-in users only */}
         {isSignedIn && walletSummary && (
           <WalletSummarySection
             summary={walletSummary}
@@ -374,12 +377,6 @@ export default function HomepageLanding() {
             onRedeem={() => router.push('/redeem')}
           />
         )}
-
-        {/* 3. Access eVoucher Anywhere — omnichannel credibility immediately after hero */}
-        <MobileAppSection />
-
-        {/* 4. Today's Deals */}
-        <TodaysDeals />
 
         {/* 5. Popular Categories */}
         <PopularCategories />

@@ -24,12 +24,12 @@ const LOGOS = [
 function LogoItem({ name, src }: { name: string; src: string }) {
   const [failed, setFailed] = useState(false);
   return (
-    <div className="group mx-4 flex h-24 w-44 shrink-0 items-center justify-center rounded-2xl border border-slate-100 bg-white px-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/20 hover:shadow-lg">
+    <div className="group mx-4 flex h-24 w-44 shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-primary/30 hover:shadow-xl hover:ring-2 hover:ring-primary/10">
       {!failed ? (
         <img
           src={src}
           alt={name}
-          className="h-16 w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0 group-hover:scale-105"
+          className="h-14 w-full object-contain transition-all duration-300 group-hover:scale-110"
           loading="lazy"
           onError={() => setFailed(true)}
         />
@@ -38,6 +38,9 @@ function LogoItem({ name, src }: { name: string; src: string }) {
           {name}
         </span>
       )}
+      <span className="hidden font-headline text-[10px] font-semibold text-primary opacity-0 transition-all duration-300 group-hover:opacity-100 lg:block">
+        Trusted Partner
+      </span>
     </div>
   );
 }
@@ -54,10 +57,10 @@ export default function TrustedMerchantsCarousel() {
             Our Partners
           </p>
           <h2 className="font-headline text-3xl font-bold text-foreground">
-            Trusted by South Africa&apos;s Best
+            Trusted by South Africa&apos;s Leading Retailers
           </h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Shop from recognised brands you already know and trust.
+            Over 16 national merchants already on the eVoucher platform.
           </p>
         </div>
 

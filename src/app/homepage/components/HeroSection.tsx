@@ -88,20 +88,6 @@ function StatItem({ stat, animate }: { stat: (typeof STATS)[0]; animate: boolean
   );
 }
 
-const LIVE_DEALS = [
-  { merchant: 'Pick n Pay', logo: '/assets/images/merchants/picknpay.png', saved: 50 },
-  { merchant: 'Checkers',   logo: '/assets/images/merchants/checkers.png',  saved: 31 },
-  { merchant: 'Clicks',     logo: '/assets/images/merchants/clicks.png',    saved: 18 },
-  { merchant: 'Woolworths', logo: '/assets/images/merchants/woolworths.png', saved: 74 },
-];
-
-const TRUST_BADGES = [
-  { icon: '🔒', label: 'POPIA Compliant' },
-  { icon: '🏦', label: 'Bank-grade Security' },
-  { icon: '🔐', label: 'SSL/TLS Encrypted' },
-  { icon: '✅', label: '16+ SA Merchants' },
-];
-
 function useLiveCounter(base: number) {
   const [val, setVal] = useState(base);
   useEffect(() => {
@@ -111,122 +97,79 @@ function useLiveCounter(base: number) {
   return val;
 }
 
-/* ── Right panel: lifestyle image + overlaid live deals + trust badges ── */
+/* ── Right panel: clean lifestyle image + subtle floating KPI badges only ── */
 function HeroRightPanel({ visible }: { visible: boolean }) {
   const totalSaved = useLiveCounter(2500000);
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [savings, setSavings] = useState(LIVE_DEALS.map((d) => d.saved));
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setActiveIdx((i) => (i + 1) % LIVE_DEALS.length);
-      setSavings((prev) =>
-        prev.map((v, i) => (i === activeIdx ? v + Math.floor(Math.random() * 4 + 1) : v))
-      );
-    }, 2000);
-    return () => clearInterval(t);
-  }, [activeIdx]);
 
   return (
     <div
-      className={`hidden lg:flex lg:flex-col lg:gap-4 transition-all duration-1000 delay-200 ${
+      className={`hidden lg:block transition-all duration-1000 delay-200 ${
         visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
       }`}
     >
-      {/* ── Image + overlaid live deals card ── */}
       <div className="relative">
         {/* Glow behind image */}
-        <div className="pointer-events-none absolute inset-0 scale-105 rounded-3xl bg-white/8 blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 scale-110 rounded-full bg-white/10 blur-3xl" />
 
-        {/* Lifestyle hero image */}
-        <div className="relative animate-float overflow-hidden rounded-3xl shadow-2xl">
+        {/* Hero image — full, unobscured */}
+        <div className="animate-float relative">
           <img
             src="/assets/images/branding/evoucher-3d-hero.png"
             alt="South African family saving with eVoucher"
-            className="h-auto w-full max-w-[440px] object-cover"
+            className="relative z-10 h-auto w-[420px] max-w-full drop-shadow-2xl"
             loading="eager"
           />
-          {/* Subtle dark gradient at bottom so overlay cards read clearly */}
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/50 to-transparent rounded-b-3xl" />
         </div>
 
-        {/* ── Floating: Instant Saving badge (top-right) ── */}
+        {/* Floating badge — Instant Saving */}
         <div
-          className="absolute -right-4 top-6 z-20 animate-float rounded-2xl border border-white/20 bg-white px-4 py-3 shadow-2xl"
-          style={{ animationDelay: '0.4s' }}
+          className="absolute -right-4 top-8 z-20 animate-float rounded-2xl border border-white/20 bg-white px-4 py-3 shadow-2xl"
+          style={{ animationDelay: '0.5s' }}
         >
           <p className="font-headline text-[10px] font-semibold text-muted-foreground">Instant Saving</p>
-          <p className="font-headline text-2xl font-bold text-[#059669]">2.5%</p>
+          <p className="font-headline text-2xl font-bold text-success">2.5%</p>
           <p className="text-[9px] text-muted-foreground">on every purchase</p>
         </div>
 
-        {/* ── Floating: Community savings (top-left) ── */}
+        {/* Floating badge — Community Saved */}
         <div
-          className="absolute -left-5 top-10 z-20 animate-float rounded-2xl border border-white/20 bg-white px-3 py-2.5 shadow-xl"
-          style={{ animationDelay: '1.2s' }}
+          className="absolute -left-6 bottom-24 z-20 animate-float rounded-2xl border border-white/20 bg-white px-4 py-3 shadow-2xl"
+          style={{ animationDelay: '1s' }}
         >
-          <p className="font-headline text-[9px] font-semibold text-muted-foreground">Community Saved</p>
-          <p className="font-headline text-lg font-bold text-primary">
+          <p className="font-headline text-[10px] font-semibold text-muted-foreground">Community Saved</p>
+          <p className="font-headline text-2xl font-bold text-primary">
             R{(totalSaved / 1000000).toFixed(2)}M
           </p>
+          <p className="text-[9px] text-muted-foreground">and counting</p>
         </div>
 
-        {/* ── Overlaid Live Savings card (bottom of image) ── */}
-        <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/20 bg-black/40 p-3 backdrop-blur-md">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="font-headline text-[10px] font-bold uppercase tracking-widest text-white/70">
-              Today&apos;s Savings
-            </p>
-            <span className="flex items-center gap-1 rounded-full bg-emerald-500/25 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-              LIVE
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {LIVE_DEALS.map((deal, i) => {
-              const [failed, setFailed] = useState(false);
-              const isActive = i === activeIdx;
-              return (
-                <div
-                  key={deal.merchant}
-                  className={`flex items-center gap-2 rounded-xl px-2.5 py-1.5 transition-all duration-500 ${
-                    isActive ? 'bg-emerald-500/20 ring-1 ring-emerald-400/40' : 'bg-white/10'
-                  }`}
-                >
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white">
-                    {!failed ? (
-                      <img src={deal.logo} alt={deal.merchant} className="h-5 w-full object-contain" onError={() => setFailed(true)} />
-                    ) : (
-                      <span className="font-headline text-[10px] font-bold text-primary">{deal.merchant[0]}</span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-headline text-[10px] font-bold text-white">{deal.merchant}</p>
-                    <p className={`font-headline text-[10px] font-bold transition-all ${
-                      isActive ? 'text-emerald-300' : 'text-white/60'
-                    }`}>
-                      R{savings[i]} saved
-                    </p>
-                  </div>
-                  {isActive && <span className="text-[9px] text-emerald-400">✓</span>}
-                </div>
-              );
-            })}
+        {/* Floating badge — Trusted Merchants */}
+        <div
+          className="absolute -right-2 bottom-14 z-20 animate-float rounded-2xl border border-white/20 bg-white px-3 py-2 shadow-xl"
+          style={{ animationDelay: '1.5s' }}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">🏪</span>
+            <div>
+              <p className="font-headline text-[9px] font-bold text-foreground">16+ Merchants</p>
+              <p className="text-[8px] text-muted-foreground">Trusted SA brands</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Trust badges strip below image ── */}
-      <div className="grid grid-cols-4 gap-2">
-        {TRUST_BADGES.map((b) => (
-          <div
-            key={b.label}
-            className="flex flex-col items-center gap-1 rounded-2xl border border-white/15 bg-white/8 px-2 py-2.5 text-center backdrop-blur-sm"
-          >
-            <span className="text-base">{b.icon}</span>
-            <p className="font-headline text-[9px] font-bold leading-tight text-white/70">{b.label}</p>
+        {/* Floating badge — POPIA */}
+        <div
+          className="absolute left-4 top-6 z-20 animate-float rounded-2xl border border-white/20 bg-white px-3 py-2 shadow-xl"
+          style={{ animationDelay: '2s' }}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">🔒</span>
+            <div>
+              <p className="font-headline text-[9px] font-bold text-foreground">POPIA</p>
+              <p className="text-[8px] text-muted-foreground">Compliant</p>
+            </div>
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
@@ -376,7 +319,7 @@ const HeroSection = ({
             </div>
           </div>
 
-          {/* ── Right: Lifestyle image + live overlay + trust badges ── */}
+          {/* ── Right: Clean lifestyle image + floating KPI badges ── */}
           <HeroRightPanel visible={heroVisible} />
         </div>
 
