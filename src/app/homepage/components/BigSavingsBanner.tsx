@@ -4,12 +4,54 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const SAVINGS_CARDS = [
-  { merchant: 'Pick n Pay', logo: '/assets/images/merchants/picknpay.png', pct: '2.5%', category: 'Groceries', color: 'from-red-50 to-red-100/50', accent: '#e31837' },
-  { merchant: 'Shoprite', logo: '/assets/images/merchants/shoprite.png', pct: '2.5%', category: 'Groceries', color: 'from-red-50 to-orange-50', accent: '#e31837' },
-  { merchant: 'Checkers', logo: '/assets/images/merchants/checkers.png', pct: '2.5%', category: 'Fresh Produce', color: 'from-red-50 to-red-100/50', accent: '#e31837' },
-  { merchant: 'Clicks', logo: '/assets/images/merchants/clicks.png', pct: '2.5%', category: 'Pharmacy', color: 'from-blue-50 to-blue-100/50', accent: '#0066cc' },
-  { merchant: 'Woolworths', logo: '/assets/images/merchants/woolworths.png', pct: '2.5%', category: 'Premium', color: 'from-green-50 to-emerald-100/50', accent: '#00a651' },
-  { merchant: 'Dis-Chem', logo: '/assets/images/merchants/dischem.png', pct: '2.5%', category: 'Health', color: 'from-red-50 to-pink-50', accent: '#e31837' },
+  {
+    merchant: 'Pick n Pay',
+    logo: '/assets/images/merchants/picknpay.png',
+    pct: '2.5%',
+    category: 'Groceries',
+    color: 'from-red-50 to-red-100/50',
+    accent: '#e31837',
+  },
+  {
+    merchant: 'Shoprite',
+    logo: '/assets/images/merchants/shoprite.png',
+    pct: '2.5%',
+    category: 'Groceries',
+    color: 'from-red-50 to-orange-50',
+    accent: '#e31837',
+  },
+  {
+    merchant: 'Checkers',
+    logo: '/assets/images/merchants/checkers.png',
+    pct: '2.5%',
+    category: 'Fresh Produce',
+    color: 'from-red-50 to-red-100/50',
+    accent: '#e31837',
+  },
+  {
+    merchant: 'Clicks',
+    logo: '/assets/images/merchants/clicks.png',
+    pct: '2.5%',
+    category: 'Pharmacy',
+    color: 'from-blue-50 to-blue-100/50',
+    accent: '#0066cc',
+  },
+  {
+    merchant: 'Woolworths',
+    logo: '/assets/images/merchants/woolworths.png',
+    pct: '2.5%',
+    category: 'Premium',
+    color: 'from-green-50 to-emerald-100/50',
+    accent: '#00a651',
+  },
+  {
+    merchant: 'Dis-Chem',
+    logo: '/assets/images/merchants/dischem.png',
+    pct: '2.5%',
+    category: 'Health',
+    color: 'from-red-50 to-pink-50',
+    accent: '#e31837',
+  },
 ];
 
 function useCountUp(target: number, duration = 1400, start = false) {
@@ -22,8 +64,10 @@ function useCountUp(target: number, duration = 1400, start = false) {
     let cur = 0;
     const t = setInterval(() => {
       cur += inc;
-      if (cur >= target) { setCount(target); clearInterval(t); }
-      else setCount(Math.floor(cur));
+      if (cur >= target) {
+        setCount(target);
+        clearInterval(t);
+      } else setCount(Math.floor(cur));
     }, interval);
     return () => clearInterval(t);
   }, [target, duration, start]);
@@ -33,12 +77,21 @@ function useCountUp(target: number, duration = 1400, start = false) {
 function SavingsCard({ merchant, logo, pct, category, color, accent }: (typeof SAVINGS_CARDS)[0]) {
   const [failed, setFailed] = useState(false);
   return (
-    <div className={`group flex flex-col items-center gap-3 rounded-2xl bg-gradient-to-br ${color} border border-slate-100 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md`}>
+    <div
+      className={`group flex flex-col items-center gap-3 rounded-2xl bg-gradient-to-br ${color} border border-slate-100 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md`}
+    >
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm">
         {!failed ? (
-          <img src={logo} alt={merchant} className="h-10 w-full object-contain" onError={() => setFailed(true)} />
+          <img
+            src={logo}
+            alt={merchant}
+            className="h-10 w-full object-contain"
+            onError={() => setFailed(true)}
+          />
         ) : (
-          <span className="font-headline text-lg font-bold" style={{ color: accent }}>{merchant[0]}</span>
+          <span className="font-headline text-lg font-bold" style={{ color: accent }}>
+            {merchant[0]}
+          </span>
         )}
       </div>
       <div className="text-center">
@@ -46,7 +99,9 @@ function SavingsCard({ merchant, logo, pct, category, color, accent }: (typeof S
         <p className="text-[11px] text-slate-500">{category}</p>
       </div>
       <div className="rounded-xl px-3 py-1" style={{ backgroundColor: `${accent}15` }}>
-        <p className="font-headline text-lg font-bold" style={{ color: accent }}>Save {pct}</p>
+        <p className="font-headline text-lg font-bold" style={{ color: accent }}>
+          Save {pct}
+        </p>
       </div>
     </div>
   );
@@ -58,7 +113,12 @@ export default function BigSavingsBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true); }, { threshold: 0.2 });
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) setVisible(true);
+      },
+      { threshold: 0.2 }
+    );
     if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
   }, []);
@@ -84,15 +144,19 @@ export default function BigSavingsBanner() {
             </span>
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-            Shop at South Africa&apos;s biggest retailers and save instantly with your eVoucher wallet.
-            No loyalty card. No hassle.
+            Shop at South Africa&apos;s biggest retailers and save instantly with your eVoucher
+            wallet. No loyalty card. No hassle.
           </p>
         </div>
 
         {/* ── Animated KPI strip ── */}
         <div className="mb-12 flex flex-wrap justify-center gap-8">
           {[
-            { label: 'Community Savings', value: `R${(savedCount / 1000000).toFixed(2)}M`, icon: '💰' },
+            {
+              label: 'Community Savings',
+              value: `R${(savedCount / 1000000).toFixed(2)}M`,
+              icon: '💰',
+            },
             { label: 'Trusted Merchants', value: `${merchantCount}+`, icon: '🏪' },
             { label: 'Happy Shoppers', value: `${(shopperCount / 1000).toFixed(0)}K+`, icon: '😊' },
           ].map((s) => (

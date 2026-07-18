@@ -126,7 +126,9 @@ function HeroRightPanel({ visible }: { visible: boolean }) {
           className="absolute -right-4 top-8 z-20 animate-float rounded-2xl border border-white/20 bg-white px-4 py-3 shadow-2xl"
           style={{ animationDelay: '0.5s' }}
         >
-          <p className="font-headline text-[10px] font-semibold text-muted-foreground">Instant Saving</p>
+          <p className="font-headline text-[10px] font-semibold text-muted-foreground">
+            Instant Saving
+          </p>
           <p className="font-headline text-2xl font-bold text-success">2.5%</p>
           <p className="text-[9px] text-muted-foreground">on every purchase</p>
         </div>
@@ -136,7 +138,9 @@ function HeroRightPanel({ visible }: { visible: boolean }) {
           className="absolute -left-6 bottom-24 z-20 animate-float rounded-2xl border border-white/20 bg-white px-4 py-3 shadow-2xl"
           style={{ animationDelay: '1s' }}
         >
-          <p className="font-headline text-[10px] font-semibold text-muted-foreground">Community Saved</p>
+          <p className="font-headline text-[10px] font-semibold text-muted-foreground">
+            Community Saved
+          </p>
           <p className="font-headline text-2xl font-bold text-primary">
             R{(totalSaved / 1000000).toFixed(2)}M
           </p>

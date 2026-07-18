@@ -42,8 +42,14 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Pro
   return new Promise<T>((resolve, reject) => {
     const t = setTimeout(() => reject(new Error(msg)), ms);
     promise.then(
-      (v) => { clearTimeout(t); resolve(v); },
-      (e) => { clearTimeout(t); reject(e); }
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      }
     );
   });
 }
@@ -70,39 +76,36 @@ function LiveDealTicker() {
       style={{ transition: 'opacity 0.3s', opacity: visible ? 1 : 0 }}
     >
       <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-      <span className="font-headline text-xs font-semibold text-white">
-        {deal.merchant}
-      </span>
-      <span className="font-headline text-xs font-bold text-emerald-300">
-        {deal.saved} saved
-      </span>
+      <span className="font-headline text-xs font-semibold text-white">{deal.merchant}</span>
+      <span className="font-headline text-xs font-bold text-emerald-300">{deal.saved} saved</span>
+    </div>
+  );
+}
+
+function MerchantLogo({ name, src }: { name: string; src: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className="flex h-9 w-16 items-center justify-center rounded-xl border border-white/15 bg-white/10 backdrop-blur-sm">
+      {!failed ? (
+        <img
+          src={src}
+          alt={name}
+          className="h-6 w-full object-contain brightness-0 invert opacity-70"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span className="font-headline text-[9px] font-bold text-white/60">{name[0]}</span>
+      )}
     </div>
   );
 }
 
 function MerchantLogoStrip() {
   return (
-    <div className="flex items-center justify-center gap-3 flex-wrap">
-      {MERCHANT_LOGOS.map((m) => {
-        const [failed, setFailed] = useState(false);
-        return (
-          <div
-            key={m.name}
-            className="flex h-9 w-16 items-center justify-center rounded-xl border border-white/15 bg-white/10 backdrop-blur-sm"
-          >
-            {!failed ? (
-              <img
-                src={m.src}
-                alt={m.name}
-                className="h-6 w-full object-contain brightness-0 invert opacity-70"
-                onError={() => setFailed(true)}
-              />
-            ) : (
-              <span className="font-headline text-[9px] font-bold text-white/60">{m.name[0]}</span>
-            )}
-          </div>
-        );
-      })}
+    <div className="flex flex-wrap items-center justify-center gap-3">
+      {MERCHANT_LOGOS.map((m) => (
+        <MerchantLogo key={m.name} name={m.name} src={m.src} />
+      ))}
     </div>
   );
 }
@@ -124,12 +127,22 @@ export default function CustomerLoginPage() {
     try {
       const em = email.trim().toLowerCase();
       const pw = password.trim();
-      if (!em || !pw) { setError('Email and password are required.'); setLoading(false); return; }
+      if (!em || !pw) {
+        setError('Email and password are required.');
+        setLoading(false);
+        return;
+      }
       await withTimeout(signIn(em, pw), 60000, 'Sign in timed out. Please try again.');
       router.push('/customer/dashboard');
     } catch (err: any) {
       const msg = String(err?.message || 'Invalid email or password.');
-      if (msg.toLowerCase().includes('timed out')) { try { await signOut(); } catch {} }
+      if (msg.toLowerCase().includes('timed out')) {
+        try {
+          await signOut();
+        } catch (_) {
+          // ignore sign-out error after timeout
+        }
+      }
       setError(msg);
     } finally {
       setLoading(false);
@@ -177,12 +190,8 @@ export default function CustomerLoginPage() {
             <span>🇿🇦</span>
             <span>South Africa&apos;s Smart Savings Platform</span>
           </div>
-          <h1 className="font-headline text-4xl font-bold text-white lg:text-5xl">
-            Smart Savings
-          </h1>
-          <p className="mt-1 font-headline text-lg font-medium text-white/70">
-            for South Africa
-          </p>
+          <h1 className="font-headline text-4xl font-bold text-white lg:text-5xl">Smart Savings</h1>
+          <p className="mt-1 font-headline text-lg font-medium text-white/70">for South Africa</p>
           <div className="mt-4 flex justify-center">
             <LiveDealTicker />
           </div>
@@ -290,11 +299,17 @@ export default function CustomerLoginPage() {
 
             <p className="mt-6 text-center text-sm text-white/50">
               No account?{' '}
-              <Link href="/consumer-experience" className="font-headline font-semibold text-teal-300 hover:text-teal-200">
+              <Link
+                href="/consumer-experience"
+                className="font-headline font-semibold text-teal-300 hover:text-teal-200"
+              >
                 Register Free
               </Link>
               {' · '}
-              <Link href="/merchant/login" className="font-headline font-semibold text-orange-300 hover:text-orange-200">
+              <Link
+                href="/merchant/login"
+                className="font-headline font-semibold text-orange-300 hover:text-orange-200"
+              >
                 Merchant Login
               </Link>
             </p>

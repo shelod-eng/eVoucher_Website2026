@@ -74,7 +74,86 @@ export async function GET() {
 
     const admin = createAdminClient();
 
-    const [profileRes, vouchersRes, transactionsRes, paymentsRes] = await Promise.all([
+    // Fetch payment_transactions with merchant join; fall back to plain query if join fails.
+    let rawPayments: any[] = [];
+    const paymentsWithJoin = await admin
+      .from('payment_transactions')
+      .select(
+        'id,merchant_id,voucher_code,amount,consumer_benefit_amount,card_brand,card_last_four,payment_method,payment_status,face_value,created_at,merchants(business_name,parent_brand)'
+      )
+      .eq('customer_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (!paymentsWithJoin.error) {
+      rawPayments = paymentsWithJoin.data ?? [];
+    } else {
+      // Join failed (RLS or schema) — fall back without the relation
+      const paymentsFallback = await admin
+        .from('payment_transactions')
+        .select(
+          'id,merchant_id,voucher_code,amount,consumer_benefit_amount,card_brand,card_last_four,payment_method,payment_status,face_value,created_at'
+        )
+        .eq('customer_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (!paymentsFallback.error) {
+        rawPayments = paymentsFallback.data ?? [];
+      }
+    }
+
+    // Build merchant name lookup from the joined data or a separate query
+    const merchantNameById = new Map<string, string>();
+    const merchantBrandById = new Map<string, string>();
+    rawPayments.forEach((tx: any) => {
+      if (tx.merchant_id && tx.merchants) {
+        merchantNameById.set(String(tx.merchant_id), String(tx.merchants.business_name ?? ''));
+        merchantBrandById.set(
+          String(tx.merchant_id),
+          String(tx.merchants.parent_brand ?? tx.merchants.business_name ?? '')
+        );
+      }
+    });
+
+    // If join didn't populate names, do a single bulk merchant lookup
+    const missingIds = [
+      ...new Set(
+        rawPayments
+          .filter((tx: any) => tx.merchant_id && !merchantNameById.has(String(tx.merchant_id)))
+          .map((tx: any) => String(tx.merchant_id))
+      ),
+    ];
+    if (missingIds.length > 0) {
+      const merchantsRes = await admin
+        .from('merchants')
+        .select('id,business_name,parent_brand')
+        .in('id', missingIds);
+      if (!merchantsRes.error) {
+        (merchantsRes.data ?? []).forEach((m: any) => {
+          merchantNameById.set(String(m.id), String(m.business_name ?? ''));
+          merchantBrandById.set(String(m.id), String(m.parent_brand ?? m.business_name ?? ''));
+        });
+      }
+    }
+
+    // Normalise each transaction — attach merchant_name + merchant_brand
+    const paymentTransactionsPayload = rawPayments.map((tx: any) => ({
+      id: tx.id,
+      merchant_id: tx.merchant_id ?? null,
+      merchant_name: tx.merchant_id ? merchantNameById.get(String(tx.merchant_id)) || null : null,
+      merchant_brand: tx.merchant_id ? merchantBrandById.get(String(tx.merchant_id)) || null : null,
+      voucher_code: tx.voucher_code ?? null,
+      amount: Number(tx.amount ?? 0),
+      face_value: Number(tx.face_value ?? 0),
+      consumer_benefit_amount: Number(tx.consumer_benefit_amount ?? 0),
+      card_brand: tx.card_brand ?? null,
+      card_last_four: tx.card_last_four ?? null,
+      payment_method: tx.payment_method ?? null,
+      payment_status: tx.payment_status ?? null,
+      created_at: tx.created_at,
+    }));
+
+    const [profileRes, vouchersRes, transactionsRes] = await Promise.all([
       supabase
         .from('user_profiles')
         .select('full_name,email,phone,role')
@@ -93,17 +172,10 @@ export async function GET() {
         .eq('customer_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10),
-      admin
-        .from('payment_transactions')
-        .select(
-          'id,merchant_id,voucher_code,amount,consumer_benefit_amount,card_brand,card_last_four,payment_status,created_at'
-        )
-        .eq('customer_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(200),
     ]);
 
     if (profileRes.error) throw profileRes.error;
+
     let vouchersPayload = vouchersRes.data ?? [];
     let vouchersError =
       vouchersRes.error && !isMissingRelation(vouchersRes.error, 'public.customer_vouchers')
@@ -171,28 +243,21 @@ export async function GET() {
         }));
       }
     }
+
     const transactionsError =
       transactionsRes.error &&
       !isMissingRelation(transactionsRes.error, 'public.redemption_history')
         ? transactionsRes.error
         : null;
-    const paymentsError =
-      paymentsRes.error && !isMissingRelation(paymentsRes.error, 'public.payment_transactions')
-        ? paymentsRes.error
-        : null;
     if (vouchersError) throw vouchersError;
     if (transactionsError) throw transactionsError;
-    if (paymentsError) throw paymentsError;
 
     const paymentMethodsMap = new Map<string, { brand: string; lastFour: string }>();
-    (paymentsRes.data ?? []).forEach((payment: any) => {
-      if (!payment.card_brand || !payment.card_last_four) return;
-      const key = `${payment.card_brand}-${payment.card_last_four}`;
+    paymentTransactionsPayload.forEach((tx) => {
+      if (!tx.card_brand || !tx.card_last_four) return;
+      const key = `${tx.card_brand}-${tx.card_last_four}`;
       if (!paymentMethodsMap.has(key)) {
-        paymentMethodsMap.set(key, {
-          brand: payment.card_brand,
-          lastFour: payment.card_last_four,
-        });
+        paymentMethodsMap.set(key, { brand: tx.card_brand, lastFour: tx.card_last_four });
       }
     });
 
@@ -205,7 +270,6 @@ export async function GET() {
       is_active: boolean;
       created_at: string;
     }> = [];
-
     const methodsRes = await supabase
       .from('customer_payment_methods')
       .select('id,method_type,provider,masked_reference,is_default,is_active,created_at')
@@ -213,7 +277,6 @@ export async function GET() {
       .eq('is_active', true)
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
-
     if (!methodsRes.error) {
       customerPaymentMethods = methodsRes.data ?? [];
     } else if (!isMissingRelation(methodsRes.error, 'public.customer_payment_methods')) {
@@ -227,55 +290,45 @@ export async function GET() {
       role,
     };
 
-    const paymentTransactionsPayload = paymentsRes.data ?? [];
     const walletBalanceFromLedger = (await getWalletBalance(admin, user.id)) ?? 0;
-    const walletTopupCredits = paymentTransactionsPayload.reduce((sum: number, tx: any) => {
-      const status = String(tx?.payment_status ?? '')
+    const walletTopupCredits = paymentTransactionsPayload.reduce((sum, tx) => {
+      const status = String(tx.payment_status ?? '')
         .toLowerCase()
         .trim();
       const isCompleted =
         !status || status === 'completed' || status === 'paid' || status === 'success';
       if (!isCompleted) return sum;
-      const isWalletTopup = !tx?.voucher_code && !tx?.merchant_id;
-      if (!isWalletTopup) return sum;
-      const amount = Number(tx?.amount ?? 0);
-      return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+      if (tx.voucher_code || tx.merchant_id) return sum;
+      return Number.isFinite(tx.amount) && tx.amount > 0 ? sum + tx.amount : sum;
     }, 0);
-    const walletDebitsFromPurchases = paymentTransactionsPayload.reduce((sum: number, tx: any) => {
-      const status = String(tx?.payment_status ?? '')
+    const walletDebitsFromPurchases = paymentTransactionsPayload.reduce((sum, tx) => {
+      const status = String(tx.payment_status ?? '')
         .toLowerCase()
         .trim();
       const isCompleted =
         !status || status === 'completed' || status === 'paid' || status === 'success';
       if (!isCompleted) return sum;
-      const brand = String(tx?.card_brand ?? '')
-        .toUpperCase()
-        .trim();
-      if (brand !== 'WALLET') return sum;
-      const amount = Number(tx?.amount ?? 0);
-      return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+      if (
+        String(tx.card_brand ?? '')
+          .toUpperCase()
+          .trim() !== 'WALLET'
+      )
+        return sum;
+      return Number.isFinite(tx.amount) && tx.amount > 0 ? sum + tx.amount : sum;
     }, 0);
-    const walletBalanceFromPayments = Number(
-      Math.max(walletTopupCredits - walletDebitsFromPurchases, 0).toFixed(2)
-    );
     const walletBalance = Number(
-      Math.max(walletBalanceFromLedger, walletBalanceFromPayments).toFixed(2)
+      Math.max(
+        walletBalanceFromLedger,
+        Math.max(walletTopupCredits - walletDebitsFromPurchases, 0)
+      ).toFixed(2)
     );
 
-    const completedPurchases = (paymentsRes.data ?? []).filter(
-      (tx: any) => String(tx?.payment_status ?? '').toLowerCase() === 'completed'
+    const completedPurchases = paymentTransactionsPayload.filter(
+      (tx) => String(tx.payment_status ?? '').toLowerCase() === 'completed'
     );
-
-    // Live stats calculated from actual transaction data
     const totalTransactions = completedPurchases.length;
-    const totalSaved = completedPurchases.reduce(
-      (sum: number, tx: any) => sum + Number(tx?.consumer_benefit_amount ?? 0),
-      0
-    );
-    const totalSpent = completedPurchases.reduce(
-      (sum: number, tx: any) => sum + Number(tx?.amount ?? 0),
-      0
-    );
+    const totalSaved = completedPurchases.reduce((s, tx) => s + tx.consumer_benefit_amount, 0);
+    const totalSpent = completedPurchases.reduce((s, tx) => s + tx.amount, 0);
     const savingsRate = totalSpent > 0 ? Number(((totalSaved / totalSpent) * 100).toFixed(2)) : 0;
 
     return jsonNoStore({
@@ -287,7 +340,6 @@ export async function GET() {
       customerPaymentMethods,
       paymentTransactions: paymentTransactionsPayload,
       walletBalance,
-      // Live calculated stats
       stats: {
         totalTransactions,
         totalSaved: Number(totalSaved.toFixed(2)),
@@ -295,7 +347,9 @@ export async function GET() {
         savingsRate,
         walletBalance,
         voucherCount: vouchersPayload.length,
-        activeVoucherCount: vouchersPayload.filter((v: any) => v.is_active && Number(v.current_balance ?? 0) > 0).length,
+        activeVoucherCount: vouchersPayload.filter(
+          (v: any) => v.is_active && Number(v.current_balance ?? 0) > 0
+        ).length,
       },
       diagnostics: {
         role,

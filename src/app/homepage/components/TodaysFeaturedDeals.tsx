@@ -113,7 +113,9 @@ function DealCard({ deal, index }: { deal: (typeof DEALS)[0]; index: number }) {
       <div className="flex flex-1 flex-col p-5">
         {/* Badge + logo row */}
         <div className="mb-4 flex items-start justify-between">
-          <span className={`rounded-full px-2.5 py-1 font-headline text-[10px] font-bold text-white ${deal.badgeColor}`}>
+          <span
+            className={`rounded-full px-2.5 py-1 font-headline text-[10px] font-bold text-white ${deal.badgeColor}`}
+          >
             {deal.badge}
           </span>
           <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-100 bg-white p-1 shadow-sm">
@@ -125,7 +127,9 @@ function DealCard({ deal, index }: { deal: (typeof DEALS)[0]; index: number }) {
                 onError={() => setFailed(true)}
               />
             ) : (
-              <span className="font-headline text-sm font-bold text-primary">{deal.merchant[0]}</span>
+              <span className="font-headline text-sm font-bold text-primary">
+                {deal.merchant[0]}
+              </span>
             )}
           </div>
         </div>
@@ -149,7 +153,9 @@ function DealCard({ deal, index }: { deal: (typeof DEALS)[0]; index: number }) {
         {/* Live indicator */}
         <div className="mb-4 flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-          <span className="font-headline text-[10px] font-semibold text-emerald-600">Live deal · Updates in real-time</span>
+          <span className="font-headline text-[10px] font-semibold text-emerald-600">
+            Live deal · Updates in real-time
+          </span>
         </div>
 
         {/* CTA */}
@@ -211,7 +217,9 @@ export default function TodaysFeaturedDeals() {
           ].map((t) => (
             <div key={t.text} className="flex items-center gap-1.5">
               <span className="text-base">{t.icon}</span>
-              <span className="font-headline text-xs font-semibold text-muted-foreground">{t.text}</span>
+              <span className="font-headline text-xs font-semibold text-muted-foreground">
+                {t.text}
+              </span>
             </div>
           ))}
         </div>
