@@ -3,18 +3,22 @@ import Icon from '@/components/ui/AppIcon';
 
 const PartnerLogosSection = () => {
   const partners = [
-    { name: 'Shoprite', category: 'Retail' },
-    { name: 'Pick n Pay', category: 'Retail' },
-    { name: 'Checkers', category: 'Retail' },
-    { name: 'Woolworths', category: 'Retail' },
-    { name: 'Clicks', category: 'Pharmacy' },
-    { name: 'Dis-Chem', category: 'Pharmacy' },
-    { name: 'Makro', category: 'Wholesale' },
-    { name: 'Game', category: 'Electronics' },
-    { name: 'Mr Price', category: 'Fashion' },
-    { name: 'Edgars', category: 'Fashion' },
-    { name: 'Spar', category: 'Retail' },
-    { name: 'Boxer', category: 'Retail' },
+    { name: 'Shoprite', category: 'Retail', logo: '/assets/images/merchants/shoprite.png' },
+    { name: 'Pick n Pay', category: 'Retail', logo: '/assets/images/merchants/picknpay.png' },
+    { name: 'Checkers', category: 'Retail', logo: '/assets/images/merchants/checkers.png' },
+    { name: 'Woolworths', category: 'Retail', logo: '/assets/images/merchants/woolworths.png' },
+    { name: 'Clicks', category: 'Pharmacy', logo: '/assets/images/merchants/clicks.png' },
+    { name: 'Dis-Chem', category: 'Pharmacy', logo: '/assets/images/merchants/dischem.png' },
+    {
+      name: 'Makro',
+      category: 'Wholesale',
+      logo: '/assets/images/merchants/placeholder-merchant.svg',
+    },
+    { name: 'Game', category: 'Electronics', logo: '/assets/images/merchants/game.png' },
+    { name: 'Mr Price', category: 'Fashion', logo: '/assets/images/merchants/mr-price.png' },
+    { name: 'Edgars', category: 'Fashion', logo: '/assets/images/merchants/edgars.png' },
+    { name: 'Spar', category: 'Retail', logo: '/assets/images/merchants/placeholder-merchant.svg' },
+    { name: 'Boxer', category: 'Retail', logo: '/assets/images/merchants/boxer.png' },
   ];
 
   return (
@@ -39,21 +43,23 @@ const PartnerLogosSection = () => {
           {partners?.map((partner, index) => (
             <div
               key={index}
-              className="bg-card rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border border-border group hover:border-primary flex flex-col items-center justify-center text-center"
+              className="group flex flex-col items-center justify-center rounded-3xl border border-border bg-white/90 p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-xl"
             >
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors duration-300">
-                <Icon
-                  name="BuildingStorefrontIcon"
-                  size={32}
-                  variant="outline"
-                  className="text-primary"
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-50 p-3 shadow-sm">
+                <img
+                  src={partner.logo}
+                  alt={partner.name}
+                  className="h-full w-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src = '/assets/images/merchants/placeholder-merchant.svg';
+                  }}
                 />
               </div>
-              <h3 className="font-headline font-bold text-lg text-foreground mb-1">
-                {partner?.name}
+              <h3 className="font-headline text-lg font-bold text-foreground mb-1">
+                {partner.name}
               </h3>
               <span className="text-xs font-body text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                {partner?.category}
+                {partner.category}
               </span>
             </div>
           ))}

@@ -38,6 +38,11 @@ const MERCHANT_LOGOS = [
   { name: 'Dis-Chem', src: '/assets/images/merchants/dischem.png' },
 ];
 
+const BRAND_LOGO = '/assets/images/branding/evoucher-logo-app.png';
+const LOGIN_BG = 'bg-slate-50';
+const LOGIN_PANEL =
+  'rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]';
+
 async function withTimeout<T>(promise: Promise<T>, ms: number, msg: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const t = setTimeout(() => reject(new Error(msg)), ms);
@@ -85,16 +90,19 @@ function LiveDealTicker() {
 function MerchantLogo({ name, src }: { name: string; src: string }) {
   const [failed, setFailed] = useState(false);
   return (
-    <div className="flex h-9 w-16 items-center justify-center rounded-xl border border-white/15 bg-white/10 backdrop-blur-sm">
+    <div className="flex h-10 min-w-[72px] items-center justify-center rounded-2xl border border-white/20 bg-white/90 p-2 shadow-sm">
       {!failed ? (
         <img
           src={src}
           alt={name}
-          className="h-6 w-full object-contain brightness-0 invert opacity-70"
-          onError={() => setFailed(true)}
+          className="h-8 w-full object-contain"
+          onError={(e) => {
+            setFailed(true);
+            e.currentTarget.src = '/assets/images/merchants/placeholder-merchant.svg';
+          }}
         />
       ) : (
-        <span className="font-headline text-[9px] font-bold text-white/60">{name[0]}</span>
+        <span className="font-headline text-[10px] font-bold text-slate-500">{name}</span>
       )}
     </div>
   );
@@ -102,7 +110,7 @@ function MerchantLogo({ name, src }: { name: string; src: string }) {
 
 function MerchantLogoStrip() {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-3">
+    <div className="flex flex-wrap items-center justify-center gap-4">
       {MERCHANT_LOGOS.map((m) => (
         <MerchantLogo key={m.name} name={m.name} src={m.src} />
       ))}
@@ -150,74 +158,35 @@ export default function CustomerLoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#042f2e] via-[#064e3b] to-[#0c4a6e]">
-      {/* ── Blurred glow orbs ── */}
-      <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-teal-500/20 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/2 -right-40 h-80 w-80 rounded-full bg-cyan-400/15 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-20 left-1/3 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
-
-      {/* ── Dot grid ── */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.06]"
-        style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-        }}
-      />
-
-      {/* ── Floating emoji particles ── */}
-      {PARTICLES.map((p, i) => (
-        <div
-          key={i}
-          className="pointer-events-none absolute select-none"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            fontSize: p.size,
-            opacity: 0.18,
-            animation: `float ${3 + (i % 3)}s ease-in-out ${p.delay}s infinite`,
-          }}
-        >
-          {p.emoji}
-        </div>
-      ))}
-
-      {/* ── Main layout ── */}
-      <div className="relative flex min-h-screen flex-col items-center justify-center px-4 py-12">
-        {/* Top brand */}
-        <div className="mb-8 text-center">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
-            <span>🇿🇦</span>
-            <span>South Africa&apos;s Smart Savings Platform</span>
-          </div>
-          <h1 className="font-headline text-4xl font-bold text-white lg:text-5xl">Smart Savings</h1>
-          <p className="mt-1 font-headline text-lg font-medium text-white/70">for South Africa</p>
-          <div className="mt-4 flex justify-center">
-            <LiveDealTicker />
-          </div>
-        </div>
-
-        {/* ── Login card ── */}
-        <div className="w-full max-w-md">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.07] p-8 shadow-2xl backdrop-blur-xl">
-            {/* Card header */}
-            <div className="mb-6 text-center">
-              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
-                <span className="font-headline text-2xl font-bold text-white">eV</span>
-              </div>
-              <h2 className="font-headline text-2xl font-bold text-white">Welcome back</h2>
-              <p className="mt-1 text-sm text-white/60">Sign in to your eVoucher account</p>
+    <div className={`${LOGIN_BG} min-h-screen py-12`}>
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-[1300px] flex-col gap-10 px-4 lg:flex-row lg:items-stretch lg:gap-8 lg:px-6">
+        <section className="order-1 flex w-full flex-1 flex-col justify-center lg:order-2 lg:max-w-[560px]">
+          <div className={`${LOGIN_PANEL} p-8 lg:p-10`}>
+            <div className="mb-6 flex items-center gap-3">
+              <img src={BRAND_LOGO} alt="eVoucher" className="h-10 w-auto" />
+              <span className="text-sm font-semibold text-slate-500">eVoucher</span>
+            </div>
+            <div className="mb-8">
+              <p className="font-headline text-sm uppercase tracking-[0.3em] text-teal-600">
+                Smart Savings for South Africa
+              </p>
+              <h1 className="mt-4 font-headline text-3xl font-bold text-slate-900 sm:text-4xl">
+                Welcome back
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
+                Sign in to your eVoucher account to access your vouchers, wallet and savings.
+              </p>
             </div>
 
             {error && (
-              <div className="mb-5 rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-300">
+              <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
               <div>
-                <label className="mb-1.5 block font-headline text-sm font-semibold text-white/80">
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Email or Phone
                 </label>
                 <input
@@ -227,14 +196,12 @@ export default function CustomerLoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="you@example.com"
-                  className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3.5 font-body text-sm text-white placeholder-white/30 backdrop-blur-sm focus:border-teal-400/50 focus:outline-none focus:ring-2 focus:ring-teal-400/30"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-200"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block font-headline text-sm font-semibold text-white/80">
-                  Password
-                </label>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">Password</label>
                 <div className="relative">
                   <input
                     type={showPw ? 'text' : 'password'}
@@ -242,13 +209,13 @@ export default function CustomerLoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder="••••••••"
-                    className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3.5 pr-12 font-body text-sm text-white placeholder-white/30 backdrop-blur-sm focus:border-teal-400/50 focus:outline-none focus:ring-2 focus:ring-teal-400/30"
+                    placeholder="Enter your password"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm text-slate-900 shadow-sm outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-200"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw((v) => !v)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     tabIndex={-1}
                   >
                     {showPw ? '🙈' : '👁️'}
@@ -260,7 +227,7 @@ export default function CustomerLoginPage() {
                 <button
                   type="button"
                   onClick={() => setIsForgotOpen(true)}
-                  className="font-headline text-sm font-semibold text-teal-300 hover:text-teal-200"
+                  className="text-sm font-semibold text-teal-600 hover:text-teal-500"
                 >
                   Forgot Password?
                 </button>
@@ -269,65 +236,88 @@ export default function CustomerLoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-500 py-4 font-headline text-base font-bold text-white shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50"
+                className="w-full rounded-2xl bg-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Signing In...
-                  </span>
-                ) : (
-                  'Sign In →'
-                )}
+                {loading ? 'Signing In...' : 'Sign In'}
               </button>
             </form>
 
-            <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-white/10" />
-              <span className="text-xs text-white/40">or continue with</span>
-              <div className="h-px flex-1 bg-white/10" />
+            <div className="my-5 flex items-center gap-3 text-xs text-slate-500">
+              <span className="h-px flex-1 bg-slate-200" />
+              <span>or continue with</span>
+              <span className="h-px flex-1 bg-slate-200" />
             </div>
 
-            <div className="flex justify-center gap-3">
-              <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-lg backdrop-blur-sm transition-all hover:bg-white/20">
-                📱
+            <div className="grid grid-cols-2 gap-3">
+              <button className="flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50">
+                Google
               </button>
-              <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-lg backdrop-blur-sm transition-all hover:bg-white/20">
-                🔑
+              <button className="flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50">
+                Apple
               </button>
             </div>
 
-            <p className="mt-6 text-center text-sm text-white/50">
-              No account?{' '}
+            <p className="mt-6 text-center text-sm text-slate-500">
+              New to eVoucher?{' '}
               <Link
                 href="/consumer-experience"
-                className="font-headline font-semibold text-teal-300 hover:text-teal-200"
+                className="font-semibold text-teal-600 hover:text-teal-500"
               >
-                Register Free
-              </Link>
-              {' · '}
-              <Link
-                href="/merchant/login"
-                className="font-headline font-semibold text-orange-300 hover:text-orange-200"
-              >
-                Merchant Login
+                Register
               </Link>
             </p>
           </div>
-        </div>
 
-        {/* ── Merchant logos strip ── */}
-        <div className="mt-8 w-full max-w-md">
-          <p className="mb-3 text-center font-headline text-xs font-semibold uppercase tracking-widest text-white/30">
-            Accepted at
+          <p className="mt-6 text-center text-xs text-slate-500">
+            🔒 SSL/TLS enforced · POPIA compliant · Powered by eVoucher Platform
           </p>
-          <MerchantLogoStrip />
-        </div>
+        </section>
 
-        {/* ── Trust footer ── */}
-        <p className="mt-6 text-center text-xs text-white/25">
-          🔒 SSL/TLS enforced · POPIA compliant · Powered by eVoucher Platform
-        </p>
+        <section className="order-2 flex w-full flex-1 flex-col justify-between rounded-[2rem] bg-gradient-to-br from-teal-800 via-teal-700 to-cyan-800 p-8 text-white shadow-[0_24px_80px_rgba(15,23,42,0.18)] lg:order-1 lg:max-w-[560px] lg:p-10">
+          <div>
+            <div className="mb-6 flex items-center gap-3">
+              <img
+                src={BRAND_LOGO}
+                alt="eVoucher"
+                className="h-10 w-auto rounded-xl bg-white/10 p-2"
+              />
+              <span className="text-sm font-semibold uppercase tracking-[0.2em] text-white/75">
+                eVoucher
+              </span>
+            </div>
+            <h2 className="font-headline text-3xl font-bold leading-tight text-white">
+              Smart Savings for South African Consumers
+            </h2>
+            <p className="mt-4 max-w-xl text-sm leading-7 text-white/80">
+              Sign in to access your vouchers, wallet and savings with trusted national merchants.
+            </p>
+          </div>
+
+          <div className="mt-8 space-y-6">
+            <div className="rounded-[1.75rem] border border-white/10 bg-white/10 p-5 backdrop-blur-xl">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/70">Trusted by</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {MERCHANT_LOGOS.map((m) => (
+                  <img
+                    key={m.name}
+                    src={m.src}
+                    alt={m.name}
+                    className="h-10 w-full rounded-2xl bg-white/10 object-contain p-2"
+                    onError={(e) => {
+                      e.currentTarget.src = '/assets/images/merchants/placeholder-merchant.svg';
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="rounded-[1.75rem] border border-white/10 bg-white/10 p-5 text-sm text-white/80">
+              <p className="font-semibold text-white">Secure merchant access</p>
+              <p className="mt-2 leading-6 text-white/75">
+                Your login is protected and ready for the FNB & DTI demo.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
 
       <ForgotPasswordModal
