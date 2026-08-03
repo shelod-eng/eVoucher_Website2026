@@ -9,6 +9,7 @@ import { writeAuditEvent, writeFraudAlert } from '@/server/utils/audit';
 import { recordVoucherRedemptionBillingEvent } from '@/server/services/billing/billing-events';
 import { sha256 } from '@/server/utils/security';
 import { resolveMerchantForUser } from '@/server/utils/merchant-profile';
+import { publishPlatformEvent } from '@/lib/platform-events';
 
 type VoucherRow = {
   id: string;
@@ -627,6 +628,26 @@ export async function POST(request: Request) {
         throw idempotencyInsert.error;
       }
     }
+
+    // Publish real-time event to Billing Engine (fire-and-forget)
+    publishPlatformEvent({
+      eventType: 'VOUCHER_REDEEMED',
+      correlationId: idempotencyKey,
+      merchantId: merchant?.id ?? undefined,
+      customerId: voucher.customer_id,
+      voucherId: voucher.id,
+      transactionRef: idempotencyKey,
+      amount,
+      faceValue: Number(voucher.face_value ?? amount),
+      occurredAt: redeemedAt,
+      payload: {
+        voucherCode,
+        merchantName: merchant?.parent_brand ?? merchant?.business_name ?? voucher.merchant_name,
+        newBalance,
+        status: newStatus,
+        merchantPayoutAmount,
+      },
+    });
 
     await writeAuditEvent(admin, {
       actorId: user.id,

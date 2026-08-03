@@ -23,6 +23,7 @@ import {
   ArrowLeft,
   DollarSign,
   Banknote,
+  Zap,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -37,6 +38,7 @@ import {
   listPortalMerchants,
   runBillingEngine,
 } from '@/api/portal-api';
+import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 
 export default function BillingEngine() {
   const queryClient = useQueryClient();
@@ -86,6 +88,8 @@ export default function BillingEngine() {
     qty: 1,
     eta: moment().add(1, 'day').format('YYYY-MM-DD'),
   });
+
+  const { events: liveEvents, connected: realtimeConnected } = usePlatformEvents({ limit: 25 });
 
   const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
   const useMock = dataMode === 'mock';
@@ -508,6 +512,13 @@ export default function BillingEngine() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4 bg-white/5 border border-white/10">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="live-events" className="flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5" />
+              Live Events
+              {realtimeConnected && (
+                <span className="ml-1 h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              )}
+            </TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
             <TabsTrigger value="banks">Bank Sponsors</TabsTrigger>
             <TabsTrigger value="logistics">Logistics</TabsTrigger>
@@ -997,6 +1008,90 @@ export default function BillingEngine() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="live-events">
+            <Card className="bg-white/5 border-white/10 text-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-emerald-400" />
+                  Real-Time Event Feed
+                  <Badge className={realtimeConnected
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+                  }>
+                    {realtimeConnected ? 'Connected' : 'Connecting…'}
+                  </Badge>
+                </CardTitle>
+                <p className="text-sm text-white/50">
+                  Every WS1 action (purchase, redemption, settlement) appears here instantly via Supabase Realtime.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {liveEvents.length === 0 ? (
+                  <div className="py-12 text-center text-white/40">
+                    <Zap className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">Waiting for events from www.evoucher.co.za…</p>
+                    <p className="text-xs mt-1">Trigger a voucher purchase or redemption to see it appear here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {liveEvents.map((ev) => {
+                      const isPurchase = ev.event_type === 'VOUCHER_PURCHASED';
+                      const isRedemption = ev.event_type === 'VOUCHER_REDEEMED';
+                      const isFinancial = isPurchase || isRedemption;
+                      return (
+                        <div
+                          key={ev.id}
+                          className={`rounded-xl border px-4 py-3 ${
+                            isFinancial ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/10 bg-white/5'
+                          }`}
+                        >
+                          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="text-xl">{isPurchase ? '🛒' : isRedemption ? '✅' : '📡'}</span>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <Badge className={`text-[10px] ${
+                                    isPurchase ? 'bg-blue-500/20 text-blue-300'
+                                    : isRedemption ? 'bg-emerald-500/20 text-emerald-300'
+                                    : 'bg-white/10 text-white/60'
+                                  }`}>{ev.event_type}</Badge>
+                                  <Badge className={`text-[10px] ${
+                                    ev.status === 'processed' ? 'bg-emerald-500/20 text-emerald-300'
+                                    : ev.status === 'failed' ? 'bg-red-500/20 text-red-300'
+                                    : 'bg-yellow-500/20 text-yellow-300'
+                                  }`}>{ev.status}</Badge>
+                                </div>
+                                <p className="mt-1 text-xs text-white/50">
+                                  {ev.correlation_id ? `ref: ${ev.correlation_id.slice(0, 16)}…` : ev.event_id?.slice(0, 16)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              {ev.amount ? (
+                                <p className="font-headline text-lg font-bold text-[#00A89D]">{formatCurrency(ev.amount)}</p>
+                              ) : null}
+                              <p className="text-xs text-white/40">
+                                {ev.occurred_at ? moment(ev.occurred_at).format('YYYY-MM-DD HH:mm:ss') : '—'}
+                              </p>
+                            </div>
+                          </div>
+                          {isFinancial && (
+                            <div className="mt-2 grid grid-cols-2 gap-2 border-t border-white/5 pt-2 text-xs text-white/50 sm:grid-cols-4">
+                              <span>Merchant: <span className="text-white/70">{ev.merchant_id?.slice(0, 8) ?? '—'}</span></span>
+                              <span>Customer: <span className="text-white/70">{ev.customer_id?.slice(0, 8) ?? '—'}</span></span>
+                              <span>Voucher: <span className="text-white/70">{ev.voucher_id?.slice(0, 8) ?? '—'}</span></span>
+                              <span>Face value: <span className="text-white/70">{ev.face_value ? formatCurrency(ev.face_value) : '—'}</span></span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="invoices">

@@ -8,6 +8,7 @@ import {
 import { recordVoucherPurchaseBillingEvent } from '@/server/services/billing/billing-events';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { generateSecureVoucherCode } from '@/server/utils/security';
+import { publishPlatformEvent } from '@/lib/platform-events';
 
 type MerchantSnapshot = {
   id: string;
@@ -211,6 +212,26 @@ export async function ensureCompletedPurchaseArtifacts(
       throw error;
     }
   }
+
+  // Publish real-time event to Billing Engine (fire-and-forget)
+  publishPlatformEvent({
+    eventType: 'VOUCHER_PURCHASED',
+    correlationId: input.transaction.transaction_reference,
+    merchantId: input.merchant.id,
+    customerId: input.transaction.customer_id,
+    voucherId: voucherId ?? undefined,
+    transactionRef: input.transaction.transaction_reference,
+    amount: consumerPrice || pricing.consumerPrice,
+    faceValue: faceValue || pricing.faceValue,
+    discountPct: totalDiscountPct || pricing.totalDiscountPct,
+    occurredAt: input.occurredAt,
+    payload: {
+      voucherCode,
+      merchantName: input.merchant.business_name,
+      parentBrand: input.merchant.parent_brand ?? input.merchant.business_name,
+      source: input.metadata?.source ?? 'purchase_completion',
+    },
+  });
 
   return {
     voucherCode,
