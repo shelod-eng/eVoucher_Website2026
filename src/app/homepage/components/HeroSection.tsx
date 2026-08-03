@@ -321,6 +321,33 @@ const HeroSection = ({
                 Become a Merchant
               </button>
             </div>
+
+            {/* ── App options — secondary entry point ── */}
+            <div className="app-options mt-8 border-t border-white/10 pt-6">
+              <p className="mb-3 font-headline text-xs font-semibold uppercase tracking-widest text-white/50">
+                Prefer the App?
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <a
+                  href="/downloads/eVoucher_APK_14-July-2026_BuildVersion1.apk"
+                  download
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 font-headline text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20 hover:scale-105"
+                >
+                  🤖 Download Android APK
+                </a>
+                <button
+                  onClick={() => router.push('/#install-app')}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 font-headline text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20 hover:scale-105"
+                >
+                  🌐 Install as PWA
+                </button>
+                <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5">
+                  <span className="text-base">☎️</span>
+                  <span className="font-accent text-sm font-bold text-white">*120*384#</span>
+                  <span className="text-xs text-white/50">No data needed</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* ── Right: Clean lifestyle image + floating KPI badges ── */}

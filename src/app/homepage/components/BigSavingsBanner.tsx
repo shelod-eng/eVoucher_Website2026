@@ -150,7 +150,7 @@ export default function BigSavingsBanner() {
         </div>
 
         {/* ── Animated KPI strip ── */}
-        <div className="mb-12 flex flex-wrap justify-center gap-8">
+        <div className="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
           {[
             {
               label: 'Community Savings',
@@ -160,7 +160,10 @@ export default function BigSavingsBanner() {
             { label: 'Trusted Merchants', value: `${merchantCount}+`, icon: '🏪' },
             { label: 'Happy Shoppers', value: `${(shopperCount / 1000).toFixed(0)}K+`, icon: '😊' },
           ].map((s) => (
-            <div key={s.label} className="flex items-center gap-3">
+            <div
+              key={s.label}
+              className="flex items-center justify-center gap-3 rounded-2xl border border-border bg-white px-6 py-5 shadow-sm"
+            >
               <span className="text-3xl">{s.icon}</span>
               <div>
                 <p className="font-headline text-2xl font-bold text-foreground">{s.value}</p>
