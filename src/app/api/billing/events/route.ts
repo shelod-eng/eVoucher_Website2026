@@ -54,14 +54,26 @@ export async function GET(request: Request) {
 
 /**
  * POST /api/billing/events
- * Inbound event gateway — receives platform events from WS1 or external systems.
- * Validates, deduplicates on event_id, routes to correct billing handler,
- * posts double-entry ledger, queues BankServ settlement.
+ * Inbound event gateway — receives platform events from external callers
+ * (Billing Engine portal, third-party integrations).
+ * Internal WS1 events go directly through publishPlatformEvent() which
+ * writes to Supabase server-side — no HTTP round-trip needed.
+ *
+ * Auth: X-Portal-Passcode header (shared secret) OR portal session.
  * Returns 202 Accepted (new) or 200 Duplicate.
  */
 export async function POST(request: Request) {
-  const { allowed } = await requirePortalUser(request, ['admin', 'finance_approver']);
-  if (!allowed) return jsonNoStore({ error: 'Forbidden' }, { status: 403, headers: CORS_HEADERS });
+  // Accept portal session OR passcode header — no hard block for internal callers
+  const passcode = request.headers.get('X-Portal-Passcode') ?? '';
+  const envPasscode = process.env.PORTAL_ADMIN_PASSCODE ?? process.env.VITE_ADMIN_PASSCODE ?? '';
+  const passcodeValid = envPasscode && passcode === envPasscode;
+
+  if (!passcodeValid) {
+    const { allowed } = await requirePortalUser(request, ['admin', 'finance_approver']);
+    if (!allowed) {
+      return jsonNoStore({ error: 'Forbidden' }, { status: 403, headers: CORS_HEADERS });
+    }
+  }
 
   let body: any;
   try {
