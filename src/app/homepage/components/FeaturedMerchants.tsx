@@ -136,7 +136,7 @@ function MerchantCard({ merchant }: { merchant: PublicMerchant }) {
   const meta = getMeta(merchant.brandKey, merchant.name);
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl">
+    <div className="group flex flex-col overflow-hidden rounded-[1.75rem] border border-teal-100 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-[0_28px_60px_rgba(15,23,42,0.12)]">
       {/* Banner */}
       <div className="relative h-32 overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
         {!bannerFailed ? (
@@ -155,7 +155,7 @@ function MerchantCard({ merchant }: { merchant: PublicMerchant }) {
           </div>
         )}
         {/* Promo badge */}
-        <div className="absolute bottom-2 left-2 rounded-full bg-secondary/90 px-2.5 py-0.5 font-headline text-[10px] font-bold text-white backdrop-blur-sm">
+        <div className="absolute bottom-2 left-2 rounded-full bg-teal-700/95 px-2.5 py-0.5 font-headline text-[10px] font-bold text-white shadow-md backdrop-blur-sm">
           {meta.promo}
         </div>
       </div>
@@ -163,7 +163,7 @@ function MerchantCard({ merchant }: { merchant: PublicMerchant }) {
       {/* Logo + info */}
       <div className="flex flex-1 flex-col p-4">
         <div className="mb-3 flex items-start gap-3">
-          <div className="relative z-10 -mt-8 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-white p-1.5 shadow-sm">
+          <div className="relative z-10 -mt-8 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-teal-100 bg-white p-1.5 shadow-sm">
             <MerchantLogo logoPath={merchant.logoPath} name={merchant.name} />
           </div>
           <div className="min-w-0 flex-1 pt-1">
@@ -183,7 +183,7 @@ function MerchantCard({ merchant }: { merchant: PublicMerchant }) {
           onClick={() =>
             router.push(`/shop?q=${encodeURIComponent(merchant.brandKey ?? merchant.name)}`)
           }
-          className="mt-auto w-full rounded-xl bg-primary py-2.5 font-headline text-sm font-bold text-white transition-all hover:bg-primary/90 hover:shadow-md active:scale-95"
+          className="mt-auto w-full rounded-2xl bg-gradient-to-r from-primary to-secondary py-2.5 font-headline text-sm font-bold text-white transition-all hover:shadow-md active:scale-95"
         >
           Shop Now
         </button>
@@ -219,21 +219,21 @@ export default function FeaturedMerchants() {
   }, []);
 
   return (
-    <section aria-label="Featured Merchants" className="bg-[#F2FBFA]">
+    <section aria-label="Featured Merchants" className="bg-gradient-to-b from-teal-50/70 via-white to-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-14 lg:px-6">
         <div className="mb-8 flex items-end justify-between">
           <div>
             <p className="mb-1 font-headline text-xs font-semibold uppercase tracking-widest text-primary">
-              Trusted Partners
+              Curated by eVoucher
             </p>
             <h2 className="font-headline text-3xl font-bold text-foreground">Featured Merchants</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Shop from South Africa's most trusted brands and save instantly.
+              Discover iconic South African stores with instant savings and trusted everyday offers.
             </p>
           </div>
           <button
             onClick={() => router.push('/merchants')}
-            className="hidden rounded-xl border border-primary px-5 py-2.5 font-headline text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-white sm:block"
+            className="hidden rounded-full border border-primary/20 bg-white px-5 py-2.5 font-headline text-sm font-semibold text-primary shadow-sm transition-all hover:bg-primary hover:text-white sm:block"
           >
             All Merchants →
           </button>

@@ -24,7 +24,7 @@ const LOGOS = [
 function LogoItem({ name, src }: { name: string; src: string }) {
   const [failed, setFailed] = useState(false);
   return (
-    <div className="group mx-4 flex h-24 w-44 shrink-0 flex-col items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-primary/30 hover:shadow-xl hover:ring-2 hover:ring-primary/10">
+    <div className="group mx-4 flex h-24 w-44 shrink-0 flex-col items-center justify-center gap-2 rounded-[1.3rem] border border-slate-200 bg-gradient-to-br from-white to-slate-50 px-5 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-primary/30 hover:shadow-xl hover:ring-2 hover:ring-primary/10">
       {!failed ? (
         <img
           src={src}
@@ -54,13 +54,13 @@ export default function TrustedMerchantsCarousel() {
       <div className="mx-auto max-w-7xl px-4 py-14 lg:px-6">
         <div className="mb-10 text-center">
           <p className="mb-1 font-headline text-xs font-semibold uppercase tracking-widest text-primary">
-            Our Partners
+            Verified Partner Network
           </p>
           <h2 className="font-headline text-3xl font-bold text-foreground">
-            Trusted by South Africa&apos;s Leading Retailers
+            Trusted by national retailers and local favourites
           </h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Over 16 national merchants already on the eVoucher platform.
+            Over 16 first-choice merchants already use eVoucher to connect with more shoppers.
           </p>
         </div>
 

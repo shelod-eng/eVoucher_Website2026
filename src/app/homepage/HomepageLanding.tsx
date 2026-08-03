@@ -401,28 +401,32 @@ export default function HomepageLanding() {
 
         {/* 12. Merchant CTA — unauthenticated only */}
         {!isSignedIn && (
-          <section className="bg-gradient-to-r from-primary/10 to-secondary/10">
+          <section className="bg-gradient-to-r from-primary/10 via-white to-secondary/10">
             <div className="mx-auto max-w-7xl px-4 py-14 text-center lg:px-6">
-              <h2 className="mb-2 font-headline text-3xl font-bold text-foreground">
-                Are you a merchant?
-              </h2>
-              <p className="mb-6 text-muted-foreground">
-                Join eVoucher to reach more customers, manage products, and receive fast
-                settlements.
-              </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                <button
-                  onClick={() => setShowMerchantModal(true)}
-                  className="rounded-xl bg-primary px-8 py-3.5 font-headline font-bold text-white shadow-lg transition-all hover:scale-105 hover:bg-primary/90"
-                >
-                  Onboard as Merchant →
-                </button>
-                <button
-                  onClick={() => router.push('/merchant-partnership')}
-                  className="rounded-xl border border-primary px-8 py-3.5 font-headline font-bold text-primary transition-all hover:bg-primary hover:text-white"
-                >
-                  Learn More
-                </button>
+              <div className="mx-auto max-w-3xl rounded-[2rem] border border-primary/15 bg-white/80 p-8 shadow-[0_20px_55px_rgba(15,23,42,0.08)] backdrop-blur-sm">
+                <p className="mb-2 font-headline text-xs font-semibold uppercase tracking-[0.25em] text-primary">
+                  Merchant opportunity
+                </p>
+                <h2 className="mb-2 font-headline text-3xl font-bold text-foreground">
+                  Grow revenue with faster cashflow and better customer reach
+                </h2>
+                <p className="mb-6 text-muted-foreground">
+                  Join eVoucher to launch offers, manage your voucher catalogue, and get paid faster.
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <button
+                    onClick={() => setShowMerchantModal(true)}
+                    className="rounded-full bg-primary px-8 py-3.5 font-headline font-bold text-white shadow-lg transition-all hover:scale-105 hover:bg-primary/90"
+                  >
+                    Onboard as Merchant →
+                  </button>
+                  <button
+                    onClick={() => router.push('/merchant-partnership')}
+                    className="rounded-full border border-primary/20 px-8 py-3.5 font-headline font-bold text-primary transition-all hover:bg-primary hover:text-white"
+                  >
+                    Learn More
+                  </button>
+                </div>
               </div>
             </div>
           </section>

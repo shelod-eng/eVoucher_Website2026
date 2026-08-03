@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import Header from '@/components/common/Header';
+import DashboardHeader from './components/DashboardHeader';
 
 interface Merchant {
   id: string;
@@ -882,32 +883,48 @@ export default function MerchantDashboard() {
 
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-6 rounded-2xl border border-teal-300/40 bg-gradient-to-r from-teal-700 to-teal-600 px-6 py-5 text-white shadow-xl">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-teal-100 font-headline">
-              eVoucher Platform
-            </p>
-            <h2 className="mt-2 font-headline font-bold text-2xl">Merchant Business Portal</h2>
-            <p className="mt-1 text-sm text-teal-100">
-              Products, approvals, payouts, and analytics in one operating workspace.
-            </p>
-          </div>
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="font-headline font-bold text-3xl lg:text-4xl text-foreground mb-2">
-                {merchant?.business_name || 'Merchant Dashboard'}
-              </h1>
-              <p className="text-muted-foreground font-body">
-                Merchant-only operations: onboarding status, product catalogue, discounts, payouts,
-                and performance.
+          <DashboardHeader
+            businessName={merchant?.business_name}
+            email={merchant?.email}
+            merchantType={merchant?.merchant_type ?? 'private'}
+            status={merchant?.status}
+            onSignOut={handleSignOut}
+          />
+
+          <div className="mb-8 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-teal-200/70 bg-white/90 p-5 shadow-sm">
+              <p className="text-[11px] font-headline font-semibold uppercase tracking-[0.24em] text-teal-700">
+                Settlement window
+              </p>
+              <p className="mt-2 font-headline text-xl font-bold text-foreground">
+                {nextPayoutDateLabel}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Pending payouts: R{pendingPayouts.toFixed(2)}
               </p>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center space-x-2 px-6 py-3 bg-card border border-border rounded-lg font-headline font-semibold hover:bg-muted transition-all duration-300"
-            >
-              <Icon name="ArrowRightOnRectangleIcon" size={20} variant="outline" />
-              <span>Sign Out</span>
-            </button>
+            <div className="rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50 to-orange-50 p-5 shadow-sm">
+              <p className="text-[11px] font-headline font-semibold uppercase tracking-[0.24em] text-amber-700">
+                Estimated value in play
+              </p>
+              <p className="mt-2 font-headline text-xl font-bold text-foreground">
+                R{estimatedTotalRevenue.toFixed(2)}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                A forward-looking view of your catalogue value.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50 to-cyan-50 p-5 shadow-sm">
+              <p className="text-[11px] font-headline font-semibold uppercase tracking-[0.24em] text-sky-700">
+                Live offers ready
+              </p>
+              <p className="mt-2 font-headline text-xl font-bold text-foreground">
+                {activeProducts} active products
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Keep offers fresh to increase customer conversion.
+              </p>
+            </div>
           </div>
 
           {error && (

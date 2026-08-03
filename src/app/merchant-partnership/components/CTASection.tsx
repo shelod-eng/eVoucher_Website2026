@@ -78,13 +78,13 @@ const CTASection = () => {
   return (
     <section className="py-16 lg:py-24 bg-gradient-to-br from-primary/10 to-secondary/10">
       <div className="max-w-7xl mx-auto px-4 lg:px-6">
-        <div className="bg-card rounded-2xl shadow-2xl overflow-hidden border border-border">
+        <div className="overflow-hidden rounded-[2rem] border border-primary/10 bg-card shadow-[0_30px_80px_rgba(15,23,42,0.08)]">
           <div className="grid lg:grid-cols-2">
-            <div className="bg-gradient-to-br from-primary to-secondary p-8 lg:p-12 text-white">
-              <h2 className="font-headline font-bold text-3xl lg:text-4xl mb-6">
+            <div className="bg-gradient-to-br from-primary to-secondary p-8 text-white lg:p-12">
+              <h2 className="mb-6 font-headline text-3xl font-bold lg:text-4xl">
                 Ready to Grow Your Business?
               </h2>
-              <p className="text-lg opacity-90 mb-8 leading-relaxed">
+              <p className="mb-8 text-lg leading-relaxed opacity-90">
                 Join thousands of merchants who are increasing revenue, acquiring new customers, and
                 supporting their communities through eVoucher.
               </p>
@@ -297,7 +297,7 @@ const CTASection = () => {
 
                     <button
                       type="submit"
-                      className="w-full inline-flex items-center justify-center space-x-2 px-8 py-4 bg-action text-action-foreground rounded-lg font-headline font-semibold text-lg hover:bg-action/90 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                      className="inline-flex w-full items-center justify-center space-x-2 rounded-full bg-action px-8 py-4 font-headline text-lg font-semibold text-action-foreground shadow-lg transition-all duration-300 hover:scale-[1.01] hover:bg-action/90"
                     >
                       <span>Submit Application</span>
                       <Icon name="ArrowRightIcon" size={20} variant="outline" />

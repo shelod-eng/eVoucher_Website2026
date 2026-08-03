@@ -116,13 +116,13 @@ export async function GET() {
     });
 
     // If join didn't populate names, do a single bulk merchant lookup
-    const missingIds = [
-      ...new Set(
+    const missingIds = Array.from(
+      new Set(
         rawPayments
           .filter((tx: any) => tx.merchant_id && !merchantNameById.has(String(tx.merchant_id)))
           .map((tx: any) => String(tx.merchant_id))
-      ),
-    ];
+      )
+    );
     if (missingIds.length > 0) {
       const merchantsRes = await admin
         .from('merchants')

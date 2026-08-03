@@ -18,10 +18,10 @@ const PartnerLogosSection = () => {
   ];
 
   return (
-    <section className="py-16 lg:py-24 bg-muted/30">
+    <section className="bg-gradient-to-b from-slate-50 via-white to-slate-50 py-16 lg:py-24">
       <div className="max-w-7xl mx-auto px-4 lg:px-6">
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="inline-flex items-center space-x-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-6">
+          <div className="mb-6 inline-flex items-center space-x-2 rounded-full bg-primary/10 px-4 py-2 text-primary">
             <Icon name="BuildingStorefrontIcon" size={20} variant="solid" />
             <span className="text-sm font-headline font-semibold">Trusted Partners</span>
           </div>
@@ -60,7 +60,7 @@ const PartnerLogosSection = () => {
         </div>
 
         <div className="mt-12 text-center">
-          <div className="inline-flex flex-col items-center space-y-4 bg-card border border-border rounded-xl px-8 py-6">
+          <div className="inline-flex flex-col items-center space-y-4 rounded-[1.5rem] border border-primary/10 bg-gradient-to-br from-primary/10 to-secondary/10 px-8 py-6 shadow-sm">
             <div className="flex items-center space-x-8">
               <div className="text-center">
                 <p className="text-3xl font-headline font-bold text-primary">2,500+</p>
