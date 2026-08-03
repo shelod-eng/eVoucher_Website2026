@@ -219,7 +219,10 @@ export default function FeaturedMerchants() {
   }, []);
 
   return (
-    <section aria-label="Featured Merchants" className="bg-gradient-to-b from-teal-50/70 via-white to-slate-50">
+    <section
+      aria-label="Featured Merchants"
+      className="bg-gradient-to-b from-teal-50/70 via-white to-slate-50"
+    >
       <div className="mx-auto max-w-7xl px-4 py-14 lg:px-6">
         <div className="mb-8 flex items-end justify-between">
           <div>

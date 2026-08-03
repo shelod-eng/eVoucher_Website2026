@@ -411,7 +411,8 @@ export default function HomepageLanding() {
                   Grow revenue with faster cashflow and better customer reach
                 </h2>
                 <p className="mb-6 text-muted-foreground">
-                  Join eVoucher to launch offers, manage your voucher catalogue, and get paid faster.
+                  Join eVoucher to launch offers, manage your voucher catalogue, and get paid
+                  faster.
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
                   <button

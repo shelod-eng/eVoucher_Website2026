@@ -51,7 +51,12 @@ export default function DashboardHeader({
             </h1>
             <p className="mt-2 max-w-2xl font-body text-sm text-teal-100/80 md:text-base">
               Track settlements, product performance, and growth levers from one premium operating
-              workspace. {email ? <span className="font-semibold text-white">{email}</span> : 'Secure access is active.'}
+              workspace.{' '}
+              {email ? (
+                <span className="font-semibold text-white">{email}</span>
+              ) : (
+                'Secure access is active.'
+              )}
             </p>
           </div>
 

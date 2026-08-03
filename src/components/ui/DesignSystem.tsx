@@ -54,15 +54,17 @@ export function getMerchantLogo(name: string): string {
 
 // ─── PageShell ────────────────────────────────────────────────────────────────
 export function PageShell({ children }: { children: ReactNode }) {
-  return (
-    <div className="min-h-screen bg-slate-50">
-      {children}
-    </div>
-  );
+  return <div className="min-h-screen bg-slate-50">{children}</div>;
 }
 
 // ─── PageContent ─────────────────────────────────────────────────────────────
-export function PageContent({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function PageContent({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={`mx-auto max-w-7xl px-4 pb-20 pt-20 lg:px-6 ${className}`}>
       <div className="space-y-6">{children}</div>
@@ -71,7 +73,11 @@ export function PageContent({ children, className = '' }: { children: ReactNode;
 }
 
 // ─── PremiumHero ─────────────────────────────────────────────────────────────
-interface StatItem { label: string; value: string; sub?: string }
+interface StatItem {
+  label: string;
+  value: string;
+  sub?: string;
+}
 interface PremiumHeroProps {
   eyebrow?: string;
   title: ReactNode;
@@ -79,9 +85,17 @@ interface PremiumHeroProps {
   stats?: StatItem[];
   actions?: ReactNode;
 }
-export function PremiumHero({ eyebrow = 'eVoucher Platform', title, subtitle, stats, actions }: PremiumHeroProps) {
+export function PremiumHero({
+  eyebrow = 'eVoucher Platform',
+  title,
+  subtitle,
+  stats,
+  actions,
+}: PremiumHeroProps) {
   return (
-    <section className={`overflow-hidden rounded-3xl ${BRAND.heroGradient} p-6 text-white shadow-xl lg:p-8`}>
+    <section
+      className={`overflow-hidden rounded-3xl ${BRAND.heroGradient} p-6 text-white shadow-xl lg:p-8`}
+    >
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="mb-1 font-headline text-xs font-semibold uppercase tracking-widest text-white/60">
@@ -111,13 +125,7 @@ export function PremiumHero({ eyebrow = 'eVoucher Platform', title, subtitle, st
 }
 
 // ─── SectionHeader ────────────────────────────────────────────────────────────
-export function SectionHeader({
-  title,
-  action,
-}: {
-  title: string;
-  action?: ReactNode;
-}) {
+export function SectionHeader({ title, action }: { title: string; action?: ReactNode }) {
   return (
     <div className="flex items-center justify-between">
       <h2 className="font-headline text-xl font-bold text-foreground">{title}</h2>
@@ -139,8 +147,12 @@ export function StatCard({
   accent?: boolean;
 }) {
   return (
-    <div className={`rounded-2xl border p-4 ${accent ? 'border-success/20 bg-success/5' : 'border-border bg-white'} shadow-sm`}>
-      <p className={`font-headline text-2xl font-bold ${accent ? 'text-success' : 'text-foreground'}`}>
+    <div
+      className={`rounded-2xl border p-4 ${accent ? 'border-success/20 bg-success/5' : 'border-border bg-white'} shadow-sm`}
+    >
+      <p
+        className={`font-headline text-2xl font-bold ${accent ? 'text-success' : 'text-foreground'}`}
+      >
         {value}
       </p>
       <p className="text-xs font-semibold text-muted-foreground">{label}</p>
@@ -184,7 +196,15 @@ export function ActionCard({
 }
 
 // ─── MerchantLogo ─────────────────────────────────────────────────────────────
-export function MerchantLogo({ name, src, size = 10 }: { name: string; src: string; size?: number }) {
+export function MerchantLogo({
+  name,
+  src,
+  size = 10,
+}: {
+  name: string;
+  src: string;
+  size?: number;
+}) {
   return (
     <div
       className={`flex h-${size} w-${size} shrink-0 items-center justify-center rounded-xl border border-border bg-white p-1 shadow-sm`}
@@ -241,7 +261,11 @@ export function ActivityTimeline({ items }: { items: ActivityItem[] }) {
         const date = new Date(item.createdAt);
         const diff = Math.floor((Date.now() - date.getTime()) / 86400000);
         const label =
-          diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : date.toLocaleDateString('en-ZA', { weekday: 'long' });
+          diff === 0
+            ? 'Today'
+            : diff === 1
+              ? 'Yesterday'
+              : date.toLocaleDateString('en-ZA', { weekday: 'long' });
         return (
           <div
             key={item.id}
@@ -276,13 +300,7 @@ export function ActivityTimeline({ items }: { items: ActivityItem[] }) {
 }
 
 // ─── SavingsStrip ─────────────────────────────────────────────────────────────
-export function SavingsStrip({
-  amount,
-  onShop,
-}: {
-  amount: number;
-  onShop: () => void;
-}) {
+export function SavingsStrip({ amount, onShop }: { amount: number; onShop: () => void }) {
   if (amount <= 0) return null;
   return (
     <section className="overflow-hidden rounded-2xl border border-success/20 bg-gradient-to-r from-success/10 to-teal-50 p-5">
@@ -353,7 +371,10 @@ export function TabBar<T extends string>({
   onChange: (id: T) => void;
 }) {
   return (
-    <div className="grid rounded-xl border border-border bg-white p-1.5 shadow-sm" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
+    <div
+      className="grid rounded-xl border border-border bg-white p-1.5 shadow-sm"
+      style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}
+    >
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -366,7 +387,9 @@ export function TabBar<T extends string>({
         >
           {tab.label}
           {tab.count !== undefined && (
-            <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active === tab.id ? 'bg-white/20' : 'bg-muted'}`}>
+            <span
+              className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active === tab.id ? 'bg-white/20' : 'bg-muted'}`}
+            >
               {tab.count}
             </span>
           )}
