@@ -399,7 +399,10 @@ export default function HomepageLanding() {
         {/* 11. Security & Trust */}
         <SecurityTrustSection />
 
-        {/* 12. Merchant CTA — unauthenticated only */}
+        {/* 12. Mobile App / APK Download / PWA */}
+        <MobileAppSection />
+
+        {/* 13. Merchant CTA — unauthenticated only */}
         {!isSignedIn && (
           <section className="bg-gradient-to-r from-primary/10 via-white to-secondary/10">
             <div className="mx-auto max-w-7xl px-4 py-14 text-center lg:px-6">
