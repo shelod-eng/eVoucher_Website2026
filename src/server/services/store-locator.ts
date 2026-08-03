@@ -9,6 +9,8 @@ export interface Coordinates {
   accuracy?: number;
 }
 
+export type StoreCategory = 'Groceries' | 'Electronics' | 'Cashback';
+
 export interface StoreLocation {
   id: string;
   name: string;
@@ -21,6 +23,8 @@ export interface StoreLocation {
   phone: string;
   openingHours: string;
   acceptsVouchers: boolean;
+  category?: StoreCategory;
+  status?: 'active' | 'inactive';
   distance?: number;
   merchantId?: string;
 }
@@ -31,6 +35,34 @@ export interface IPLocationData {
   country: string;
   coordinates: Coordinates;
   timezone: string;
+}
+
+const CATEGORY_BRAND_MAPPING: Record<StoreCategory, string[]> = {
+  Groceries: ['Shoprite', 'Pick n Pay'],
+  Electronics: ['Incredible Connection', 'Game'],
+  Cashback: ['Cashback Hub', 'Retail Rewards'],
+};
+
+function deriveCategory(store: StoreLocation): StoreCategory | undefined {
+  return Object.entries(CATEGORY_BRAND_MAPPING).reduce<StoreCategory | undefined>(
+    (found, [category, brands]) => {
+      if (found) return found;
+      return brands.includes(store.brand) ? (category as StoreCategory) : undefined;
+    },
+    undefined
+  );
+}
+
+function normalizeStore(store: StoreLocation): StoreLocation {
+  return {
+    ...store,
+    status: store.status ?? 'active',
+    category: store.category ?? deriveCategory(store),
+  };
+}
+
+function isStoreActive(store: StoreLocation): boolean {
+  return store.status !== 'inactive';
 }
 
 // Major South African grocery store chains with locations
@@ -202,6 +234,8 @@ const STORE_LOCATIONS: StoreLocation[] = [
   },
 ];
 
+const STORES = STORE_LOCATIONS.map(normalizeStore);
+
 /**
  * Get user's location using browser Geolocation API (GPS)
  */
@@ -297,11 +331,11 @@ export function findNearestStores(
   maxResults: number = 10,
   maxDistance: number = 50 // km
 ): StoreLocation[] {
-  const storesWithDistance = STORE_LOCATIONS.map((store) => ({
+  const storesWithDistance = STORES.map((store) => ({
     ...store,
     distance: calculateDistance(userLocation, store.coordinates),
   }))
-    .filter((store) => store.distance <= maxDistance)
+    .filter((store) => isStoreActive(store) && store.distance <= maxDistance)
     .sort((a, b) => a.distance - b.distance)
     .slice(0, maxResults);
 
@@ -312,21 +346,47 @@ export function findNearestStores(
  * Get stores by province
  */
 export function getStoresByProvince(province: string): StoreLocation[] {
-  return STORE_LOCATIONS.filter((store) => store.province.toLowerCase() === province.toLowerCase());
+  return STORES.filter(
+    (store) => isStoreActive(store) && store.province.toLowerCase() === province.toLowerCase()
+  );
 }
 
 /**
  * Get stores by city
  */
 export function getStoresByCity(city: string): StoreLocation[] {
-  return STORE_LOCATIONS.filter((store) => store.city.toLowerCase() === city.toLowerCase());
+  return STORES.filter(
+    (store) => isStoreActive(store) && store.city.toLowerCase() === city.toLowerCase()
+  );
 }
 
 /**
  * Get stores by brand
  */
 export function getStoresByBrand(brand: string): StoreLocation[] {
-  return STORE_LOCATIONS.filter((store) => store.brand.toLowerCase() === brand.toLowerCase());
+  return STORES.filter(
+    (store) => isStoreActive(store) && store.brand.toLowerCase() === brand.toLowerCase()
+  );
+}
+
+/**
+ * Get stores by category
+ */
+export function getStoresByCategory(category: StoreCategory): StoreLocation[] {
+  return STORES.filter((store) => isStoreActive(store) && store.category === category);
+}
+
+/**
+ * Get all unique categories
+ */
+export function getAllCategories(): StoreCategory[] {
+  return Array.from(
+    new Set(
+      STORES.filter((store) => isStoreActive(store) && store.category).map(
+        (store) => store.category as StoreCategory
+      )
+    )
+  ).sort() as StoreCategory[];
 }
 
 /**
@@ -334,12 +394,13 @@ export function getStoresByBrand(brand: string): StoreLocation[] {
  */
 export function searchStores(query: string): StoreLocation[] {
   const lowerQuery = query.toLowerCase();
-  return STORE_LOCATIONS.filter(
+  return STORES.filter(
     (store) =>
-      store.name.toLowerCase().includes(lowerQuery) ||
-      store.address.toLowerCase().includes(lowerQuery) ||
-      store.city.toLowerCase().includes(lowerQuery) ||
-      store.brand.toLowerCase().includes(lowerQuery)
+      isStoreActive(store) &&
+      (store.name.toLowerCase().includes(lowerQuery) ||
+        store.address.toLowerCase().includes(lowerQuery) ||
+        store.city.toLowerCase().includes(lowerQuery) ||
+        store.brand.toLowerCase().includes(lowerQuery))
   );
 }
 
@@ -347,21 +408,21 @@ export function searchStores(query: string): StoreLocation[] {
  * Get all unique provinces
  */
 export function getAllProvinces(): string[] {
-  return Array.from(new Set(STORE_LOCATIONS.map((store) => store.province))).sort();
+  return Array.from(new Set(STORES.map((store) => store.province))).sort();
 }
 
 /**
  * Get all unique cities
  */
 export function getAllCities(): string[] {
-  return Array.from(new Set(STORE_LOCATIONS.map((store) => store.city))).sort();
+  return Array.from(new Set(STORES.map((store) => store.city))).sort();
 }
 
 /**
  * Get all unique brands
  */
 export function getAllBrands(): string[] {
-  return Array.from(new Set(STORE_LOCATIONS.map((store) => store.brand))).sort();
+  return Array.from(new Set(STORES.map((store) => store.brand))).sort();
 }
 
 /**
@@ -389,12 +450,13 @@ export function getDirectionsUrl(destination: Coordinates, origin?: Coordinates)
  * Main function: Find stores near user with automatic location detection
  */
 export async function findStoresNearMe(
-  maxResults: number = 10
+  maxResults: number = 10,
+  maxDistance: number = 50
 ): Promise<{ stores: StoreLocation[]; userLocation: Coordinates; method: 'gps' | 'ip' }> {
   try {
     // Try GPS first
     const gpsLocation = await getUserLocation();
-    const stores = findNearestStores(gpsLocation, maxResults);
+    const stores = findNearestStores(gpsLocation, maxResults, maxDistance);
 
     return {
       stores,
@@ -406,7 +468,7 @@ export async function findStoresNearMe(
 
     // Fallback to IP-based location
     const ipLocation = await getLocationByIP();
-    const stores = findNearestStores(ipLocation.coordinates, maxResults);
+    const stores = findNearestStores(ipLocation.coordinates, maxResults, maxDistance);
 
     return {
       stores,

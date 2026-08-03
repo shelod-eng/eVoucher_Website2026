@@ -1,40 +1,47 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/common/Header';
 import Icon from '@/components/ui/AppIcon';
 import {
   findStoresNearMe,
   getStoresByProvince,
   getAllProvinces,
+  getAllCategories,
   getAllBrands,
   searchStores,
   formatDistance,
   getDirectionsUrl,
   type StoreLocation,
+  type StoreCategory,
   type Coordinates,
 } from '@/server/services/store-locator';
 
 export default function StoreLocatorPage() {
-  const [stores, setStores] = useState<StoreLocation[]>([]);
+  const [allStores, setAllStores] = useState<StoreLocation[]>([]);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [loading, setLoading] = useState(false);
   const [locationMethod, setLocationMethod] = useState<'gps' | 'ip' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProvince, setSelectedProvince] = useState('all');
   const [selectedBrand, setSelectedBrand] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | StoreCategory>('all');
+  const [selectedRadius, setSelectedRadius] = useState('20');
+  const [showActiveOnly, setShowActiveOnly] = useState(true);
   const [error, setError] = useState('');
 
   const provinces = getAllProvinces();
   const brands = getAllBrands();
+  const categories = getAllCategories();
 
   const handleFindNearMe = async () => {
     setLoading(true);
     setError('');
 
     try {
-      const result = await findStoresNearMe(20);
-      setStores(result.stores);
+      const radius = Number(selectedRadius) || 20;
+      const result = await findStoresNearMe(20, radius);
+      setAllStores(result.stores);
       setUserLocation(result.userLocation);
       setLocationMethod(result.method);
 
@@ -51,7 +58,7 @@ export default function StoreLocatorPage() {
   const handleSearch = () => {
     if (searchQuery.trim()) {
       const results = searchStores(searchQuery);
-      setStores(results);
+      setAllStores(results);
       setUserLocation(null);
       setLocationMethod(null);
     }
@@ -60,21 +67,21 @@ export default function StoreLocatorPage() {
   const handleProvinceChange = (province: string) => {
     setSelectedProvince(province);
     if (province === 'all') {
-      setStores([]);
+      setAllStores([]);
     } else {
       const results = getStoresByProvince(province);
-      setStores(results);
+      setAllStores(results);
       setUserLocation(null);
       setLocationMethod(null);
     }
   };
 
-  useEffect(() => {
-    if (selectedBrand !== 'all') {
-      const filtered = stores.filter((store) => store.brand === selectedBrand);
-      setStores(filtered);
-    }
-  }, [selectedBrand]);
+  const displayStores = useMemo(() => {
+    return allStores
+      .filter((store) => selectedBrand === 'all' || store.brand === selectedBrand)
+      .filter((store) => selectedCategory === 'all' || store.category === selectedCategory)
+      .filter((store) => !showActiveOnly || store.status !== 'inactive');
+  }, [allStores, selectedBrand, selectedCategory, showActiveOnly]);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,118,110,0.18),_transparent_45%),radial-gradient(circle_at_bottom_right,_rgba(20,184,166,0.16),_transparent_50%),#f4fbfa]">
@@ -94,7 +101,7 @@ export default function StoreLocatorPage() {
 
           {/* Search & Filters */}
           <div className="bg-card rounded-2xl shadow-lg p-6 border border-border mb-8">
-            <div className="grid md:grid-cols-4 gap-4 mb-4">
+            <div className="grid md:grid-cols-5 gap-4 mb-4">
               <div className="md:col-span-2">
                 <input
                   type="text"
@@ -131,9 +138,33 @@ export default function StoreLocatorPage() {
                   </option>
                 ))}
               </select>
+
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value as 'all' | StoreCategory)}
+                className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+              >
+                <option value="all">All Categories</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedRadius}
+                onChange={(e) => setSelectedRadius(e.target.value)}
+                className="px-4 py-3 border border-border rounded-lg bg-background font-body"
+              >
+                <option value="10">Within 10km</option>
+                <option value="20">Within 20km</option>
+                <option value="50">Within 50km</option>
+                <option value="100">Within 100km</option>
+              </select>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
               <button
                 onClick={handleFindNearMe}
                 disabled={loading}
@@ -149,6 +180,26 @@ export default function StoreLocatorPage() {
               >
                 Search
               </button>
+
+              <label className="flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={showActiveOnly}
+                  onChange={(e) => setShowActiveOnly(e.target.checked)}
+                  className="h-4 w-4 rounded border-border bg-white text-primary focus:ring-primary"
+                />
+                Active merchants only
+              </label>
+
+              <div className="ml-auto text-sm text-muted-foreground">
+                {displayStores.length > 0 ? (
+                  <>
+                    {displayStores.length} merchant{displayStores.length === 1 ? '' : 's'} found
+                  </>
+                ) : (
+                  'No merchants selected yet'
+                )}
+              </div>
             </div>
 
             {error && (
@@ -172,13 +223,16 @@ export default function StoreLocatorPage() {
                     </>
                   )}
                 </p>
+                <p className="text-sm text-success/80">
+                  Showing merchants within {selectedRadius}km of your location.
+                </p>
               </div>
             )}
           </div>
 
           {/* Results */}
           <div className="grid lg:grid-cols-2 gap-6">
-            {stores.length === 0 && !loading && (
+            {displayStores.length === 0 && !loading && (
               <div className="lg:col-span-2 text-center py-12">
                 <Icon
                   name="MapPinIcon"
@@ -192,7 +246,7 @@ export default function StoreLocatorPage() {
               </div>
             )}
 
-            {stores.map((store) => (
+            {displayStores.map((store) => (
               <div
                 key={store.id}
                 className="bg-card rounded-2xl shadow-lg p-6 border border-border hover:shadow-xl transition-shadow"

@@ -23,10 +23,13 @@ interface ProfilePayload {
   purchaseTransactions: Array<{
     id: string;
     merchant_id?: string | null;
+    merchant_name?: string | null;
+    merchant_brand?: string | null;
     voucher_code?: string | null;
     amount: number;
     consumer_benefit_amount?: number | null;
     card_brand?: string | null;
+    payment_method?: string | null;
     payment_status: string;
     created_at: string;
   }>;
@@ -68,6 +71,10 @@ export default function ProfilePage() {
     'transactions'
   );
   const [period, setPeriod] = useState<Period>('all');
+  const [transactionType, setTransactionType] = useState<'all' | 'purchases' | 'topups'>('all');
+  const [merchantFilter, setMerchantFilter] = useState<'all' | string>('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | string>('all');
+  const [selectedDrillMerchant, setSelectedDrillMerchant] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/signin');
@@ -134,15 +141,121 @@ export default function ProfilePage() {
   const walletBalance = payload?.walletBalance ?? 0;
   const badge = deriveBadge(totalSaved);
 
+  const normalizeMerchant = (tx: ProfilePayload['purchaseTransactions'][0]) =>
+    tx.merchant_name || tx.merchant_brand || String(tx.merchant_id ?? 'Unknown');
+
+  const normalizePaymentMethod = (tx: ProfilePayload['purchaseTransactions'][0]) => {
+    if (tx.payment_method) return tx.payment_method;
+    if (tx.card_brand) return tx.card_brand;
+    return tx.voucher_code ? 'Voucher' : 'Wallet';
+  };
+
+  const merchantOptions = useMemo(() => {
+    const names = new Set<string>();
+    (payload?.purchaseTransactions ?? []).forEach((tx) => {
+      names.add(normalizeMerchant(tx));
+    });
+    return ['all', ...Array.from(names).sort()];
+  }, [payload]);
+
+  const paymentMethodOptions = useMemo(() => {
+    const methods = new Set<string>();
+    (payload?.purchaseTransactions ?? []).forEach((tx) => {
+      methods.add(normalizePaymentMethod(tx));
+    });
+    return ['all', ...Array.from(methods).sort()];
+  }, [payload]);
+
   // Period-filtered transactions
   const filteredTx = useMemo(() => {
     const all = payload?.purchaseTransactions ?? [];
-    if (period === 'all') return all;
-    const months = period === '3m' ? 3 : period === '6m' ? 6 : 12;
+    const months = period === 'all' ? 1000 : period === '3m' ? 3 : period === '6m' ? 6 : 12;
     const cutoff = new Date();
     cutoff.setMonth(cutoff.getMonth() - months);
-    return all.filter((tx) => new Date(tx.created_at) >= cutoff);
-  }, [payload, period]);
+    let result = all.filter((tx) => new Date(tx.created_at) >= cutoff);
+    if (transactionType === 'purchases') {
+      result = result.filter((tx) => Boolean(tx.voucher_code));
+    }
+    if (transactionType === 'topups') {
+      result = result.filter((tx) => !tx.voucher_code);
+    }
+    if (merchantFilter !== 'all') {
+      result = result.filter((tx) => normalizeMerchant(tx) === merchantFilter);
+    }
+    if (paymentMethodFilter !== 'all') {
+      result = result.filter((tx) => normalizePaymentMethod(tx) === paymentMethodFilter);
+    }
+    return result;
+  }, [payload, period, transactionType, merchantFilter, paymentMethodFilter]);
+
+  const paymentBreakdown = useMemo(() => {
+    const map = new Map<string, { amount: number; count: number }>();
+    filteredTx.forEach((tx) => {
+      const method = normalizePaymentMethod(tx);
+      const entry = map.get(method) ?? { amount: 0, count: 0 };
+      entry.amount += Number(tx.amount ?? 0);
+      entry.count += 1;
+      map.set(method, entry);
+    });
+    const total = filteredTx.reduce((sum, tx) => sum + Number(tx.amount ?? 0), 0) || 1;
+    return Array.from(map.entries()).map(([method, data]) => ({
+      method,
+      amount: data.amount,
+      count: data.count,
+      share: (data.amount / total) * 100,
+    }));
+  }, [filteredTx]);
+
+  const walletTopupAmount = useMemo(
+    () =>
+      filteredTx.reduce((sum, tx) => {
+        const isTopup = !tx.voucher_code;
+        return isTopup ? sum + Number(tx.amount ?? 0) : sum;
+      }, 0),
+    [filteredTx]
+  );
+
+  const totalSpendAmount = useMemo(
+    () => filteredTx.reduce((sum, tx) => sum + Number(tx.amount ?? 0), 0),
+    [filteredTx]
+  );
+
+  const topupSpendRatio = totalSpendAmount > 0 ? (walletTopupAmount / totalSpendAmount) * 100 : 0;
+
+  const spendSavingsByMerchant = useMemo(() => {
+    const map = new Map<string, { spend: number; saved: number }>();
+    filteredTx.forEach((tx) => {
+      const name = normalizeMerchant(tx);
+      const entry = map.get(name) ?? { spend: 0, saved: 0 };
+      entry.spend += Number(tx.amount ?? 0);
+      entry.saved += Number(tx.consumer_benefit_amount ?? 0);
+      map.set(name, entry);
+    });
+    return Array.from(map.entries())
+      .map(([name, totals]) => ({ name, ...totals }))
+      .sort((a, b) => b.spend - a.spend)
+      .slice(0, 5);
+  }, [filteredTx]);
+
+  const selectedMerchantTx = useMemo(
+    () =>
+      selectedDrillMerchant
+        ? filteredTx.filter((tx) => normalizeMerchant(tx) === selectedDrillMerchant)
+        : [],
+    [filteredTx, selectedDrillMerchant]
+  );
+
+  const selectedMerchantTotals = useMemo(() => {
+    if (!selectedDrillMerchant) return { spend: 0, saved: 0, count: 0 };
+    return selectedMerchantTx.reduce(
+      (acc, tx) => ({
+        spend: acc.spend + Number(tx.amount ?? 0),
+        saved: acc.saved + Number(tx.consumer_benefit_amount ?? 0),
+        count: acc.count + 1,
+      }),
+      { spend: 0, saved: 0, count: 0 }
+    );
+  }, [selectedMerchantTx, selectedDrillMerchant]);
 
   // KPI tiles derived from filtered transactions
   const kpi = useMemo(() => {
@@ -180,18 +293,20 @@ export default function ProfilePage() {
 
   // Top 5 merchant spend breakdown
   const merchantBreakdown = useMemo(() => {
-    const map: Record<string, number> = {};
+    const map: Record<string, { name: string; amount: number }> = {};
     filteredTx.forEach((tx) => {
-      const key = String(tx.merchant_id ?? 'Unknown');
-      map[key] = (map[key] ?? 0) + Number(tx.amount ?? 0);
+      const name = tx.merchant_name || tx.merchant_brand || String(tx.merchant_id ?? 'Unknown');
+      if (!map[name]) {
+        map[name] = { name, amount: 0 };
+      }
+      map[name].amount += Number(tx.amount ?? 0);
     });
-    return Object.entries(map)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([id, amt]) => ({ id, amt }));
+    return Object.values(map)
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
   }, [filteredTx]);
 
-  const merchantMax = merchantBreakdown[0]?.amt ?? 1;
+  const merchantMax = merchantBreakdown[0]?.amount ?? 1;
 
   const QUICK_ACTIONS = [
     {
@@ -326,21 +441,97 @@ export default function ProfilePage() {
             {/* ── Transactions tab ── */}
             {activeTab === 'transactions' && (
               <>
-                {/* Period selector */}
-                <div className="mb-4 flex gap-2">
-                  {(['all', '3m', '6m', '12m'] as const).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPeriod(p)}
-                      className={`rounded-full px-3 py-1 font-headline text-xs font-bold transition-colors ${
-                        period === p
-                          ? 'bg-primary text-white'
-                          : 'bg-muted text-muted-foreground hover:bg-primary/10'
-                      }`}
+                {/* Period selector and filters */}
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-wrap gap-2">
+                    {(['all', '3m', '6m', '12m'] as const).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setPeriod(p)}
+                        className={`rounded-full px-3 py-1 font-headline text-xs font-bold transition-colors ${
+                          period === p
+                            ? 'bg-primary text-white'
+                            : 'bg-muted text-muted-foreground hover:bg-primary/10'
+                        }`}
+                      >
+                        {p === 'all' ? 'All time' : p.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
+                      Filter:
+                    </label>
+                    <select
+                      value={transactionType}
+                      onChange={(e) => setTransactionType(e.target.value as any)}
+                      className="rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-foreground"
                     >
-                      {p === 'all' ? 'All time' : p.toUpperCase()}
+                      <option value="all">All transactions</option>
+                      <option value="purchases">Purchases</option>
+                      <option value="topups">Wallet top-ups</option>
+                    </select>
+                    <select
+                      value={merchantFilter}
+                      onChange={(e) => setMerchantFilter(e.target.value as 'all' | string)}
+                      className="rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-foreground"
+                    >
+                      {merchantOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option === 'all' ? 'All merchants' : option}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={paymentMethodFilter}
+                      onChange={(e) => setPaymentMethodFilter(e.target.value as 'all' | string)}
+                      className="rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-foreground"
+                    >
+                      {paymentMethodOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option === 'all' ? 'All payment methods' : option}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        const csvRows = [
+                          ['Date', 'Merchant', 'Type', 'Amount', 'Saved', 'Payment Method'],
+                          ...filteredTx.map((tx) => [
+                            new Date(tx.created_at).toLocaleDateString('en-ZA'),
+                            tx.merchant_name || tx.merchant_brand || 'Wallet Top-Up',
+                            tx.voucher_code ? 'Voucher Purchase' : 'Wallet Top-Up',
+                            `R${Number(tx.amount ?? 0).toFixed(2)}`,
+                            `R${Number(tx.consumer_benefit_amount ?? 0).toFixed(2)}`,
+                            normalizePaymentMethod(tx),
+                          ]),
+                        ];
+                        const csvContent = csvRows
+                          .map((row) => {
+                            return row
+                              .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+                              .join(',');
+                          })
+                          .join('\n');
+                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.setAttribute(
+                          'download',
+                          `eVoucher-transactions-${period}-${transactionType}.csv`
+                        );
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary/90"
+                    >
+                      Export CSV
                     </button>
-                  ))}
+                  </div>
                 </div>
 
                 {/* 4 KPI tiles */}
@@ -432,23 +623,23 @@ export default function ProfilePage() {
                     </p>
                     <div className="space-y-2.5">
                       {merchantBreakdown.map((m, i) => (
-                        <div key={m.id} className="flex items-center gap-3">
+                        <div key={m.name} className="flex items-center gap-3">
                           <span className="w-4 shrink-0 font-headline text-xs font-bold text-muted-foreground">
                             {i + 1}
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className="mb-1 flex justify-between">
                               <p className="font-headline text-xs font-semibold text-foreground truncate max-w-[65%]">
-                                {m.id}
+                                {m.name}
                               </p>
                               <p className="font-headline text-xs font-bold text-primary">
-                                R{m.amt.toFixed(0)}
+                                R{m.amount.toFixed(0)}
                               </p>
                             </div>
                             <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
                               <div
                                 className="h-full rounded-full bg-primary/70 transition-all"
-                                style={{ width: `${(m.amt / merchantMax) * 100}%` }}
+                                style={{ width: `${(m.amount / merchantMax) * 100}%` }}
                               />
                             </div>
                           </div>
@@ -493,6 +684,8 @@ export default function ProfilePage() {
                               });
                       const saved = Number(tx.consumer_benefit_amount ?? 0);
                       const typeLabel = tx.voucher_code ? 'Voucher Purchase' : 'Wallet Top-Up';
+                      const merchantLabel =
+                        tx.merchant_name || tx.merchant_brand || 'Wallet Top-Up';
                       return (
                         <div
                           key={tx.id}
@@ -504,10 +697,10 @@ export default function ProfilePage() {
                           <div className="flex flex-1 items-start justify-between rounded-xl border border-border bg-white px-4 py-3 shadow-sm">
                             <div>
                               <p className="font-headline text-sm font-bold text-foreground">
-                                {typeLabel}
+                                {merchantLabel}
                               </p>
                               <p className="text-[11px] text-muted-foreground capitalize">
-                                {String(tx.card_brand ?? '').toUpperCase() || 'Payment'} · {label}
+                                {typeLabel} · {label}
                               </p>
                             </div>
                             <div className="text-right">
