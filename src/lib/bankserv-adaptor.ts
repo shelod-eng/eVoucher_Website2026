@@ -6,9 +6,11 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+function getSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
 
 // BankServ configuration
 const BANKSERV_CONFIG = {
@@ -70,6 +72,7 @@ export async function submitSettlementInstruction(
   instruction: SettlementInstruction
 ): Promise<{ success: boolean; bankservReference: string; error?: string }> {
   try {
+    const supabase = getSupabase();
     // 1. Validate merchant banking details exist
     const { data: merchantProfile, error: merchantError } = await supabase
       .from('user_profiles')
@@ -153,6 +156,7 @@ export async function createSettlementBatch(): Promise<{
   error?: string;
 }> {
   try {
+    const supabase = getSupabase();
     const today = new Date().toISOString().split('T')[0];
 
     // 1. Query all transactions ready for settlement
@@ -292,6 +296,7 @@ export async function generateBankServBatchFile(
   batchId: string
 ): Promise<{ success: boolean; filePath?: string; error?: string }> {
   try {
+    const supabase = getSupabase();
     // 1. Fetch batch and items
     const { data: batch, error: batchError } = await supabase
       .from('settlement_batches')
@@ -389,6 +394,7 @@ export async function generateBankServBatchFile(
  */
 export async function processBankServResponse(response: BankServACKResponse): Promise<void> {
   try {
+    const supabase = getSupabase();
     // 1. Find transaction by BankServ reference
     const { data: transaction } = await supabase
       .from('transactions')
@@ -470,6 +476,7 @@ export async function getMerchantSettlementSummary(merchantId: string): Promise<
   paidAmount: number;
   nextSettlementDate: string | null;
 }> {
+  const supabase = getSupabase();
   const { data: ledger } = await supabase
     .from('merchant_ledger')
     .select('credit_amount, settlement_status, settlement_date')
