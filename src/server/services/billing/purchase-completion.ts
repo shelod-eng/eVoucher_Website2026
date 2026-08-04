@@ -62,8 +62,8 @@ function isMissingSchemaField(error: any, fieldName: string) {
   return (
     message.includes(`column "${field}" does not exist`) ||
     message.includes(`could not find the '${field}' column`) ||
-    message.includes(`record "${field}" has no field`) ||
-    message.includes('schema cache')
+    message.includes(`could not find the '${field}' in the schema cache`) ||
+    message.includes(`record "${field}" has no field`)
   );
 }
 
