@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   mockBanks,
@@ -46,6 +46,9 @@ import {
   runBillingEngine,
   triggerReconciliationRun,
   listAuditEvents,
+  listReconciliationExceptions,
+  resolveReconciliationException,
+  replayPlatformEvents,
 } from '@/api/portal-api';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 
@@ -209,8 +212,57 @@ export default function BillingEngine() {
     onSuccess: () => {
       logAuditEvent('reconciliation.manual_run', { triggeredBy: session?.email });
       refetchReconciliation();
+      refetchExceptions();
     },
   });
+
+  const [exceptionFilter, setExceptionFilter] = useState('open');
+  const [resolutionNotes, setResolutionNotes] = useState({});
+  const { data: exceptionsResponse, refetch: refetchExceptions } = useQuery({
+    queryKey: ['reconciliation-exceptions', exceptionFilter],
+    queryFn: () => usePortalApi && session?.email ? listReconciliationExceptions(session, role, { status: exceptionFilter }) : Promise.resolve({ data: [] }),
+    enabled: usePortalApi && Boolean(session?.email),
+  });
+  const exceptions = exceptionsResponse?.data ?? [];
+
+  const resolveExceptionMutation = useMutation({
+    mutationFn: ({ exceptionId, notes }) => resolveReconciliationException(exceptionId, notes, session, role),
+    onSuccess: () => {
+      logAuditEvent('reconciliation.exception_resolved', { triggeredBy: session?.email });
+      refetchExceptions();
+      refetchReconciliation();
+    }
+  });
+
+  const [replayPayload, setReplayPayload] = useState({
+    eventIds: '',
+    fromDate: '',
+    toDate: '',
+    eventType: '',
+    forceLedgerRepost: false
+  });
+
+  const replayMutation = useMutation({
+    mutationFn: (payload) => replayPlatformEvents(payload, session, role),
+    onSuccess: (res) => {
+      logAuditEvent('compliance.event_replay', { triggeredBy: session?.email, replayRunId: res.replayRunId });
+      alert(`Event replay submitted successfully!\nReplayed: ${res.replayedCount} events\nRun ID: ${res.replayRunId}`);
+      refetchReconciliation();
+      refetchExceptions();
+      queryClient.invalidateQueries(['transactions']);
+    }
+  });
+
+  // Real-time synchronization: invalidate cached queries on new live events to update other tabs instantly
+  useEffect(() => {
+    if (liveEvents && liveEvents.length > 0) {
+      queryClient.invalidateQueries(['billing-dashboard']);
+      queryClient.invalidateQueries(['transactions']);
+      queryClient.invalidateQueries(['merchant-payouts']);
+      queryClient.invalidateQueries(['reconciliation-runs']);
+      queryClient.invalidateQueries(['reconciliation-exceptions']);
+    }
+  }, [liveEvents, queryClient]);
 
   const recentWebsiteTransactions = useMemo(() => {
     return (transactions ?? [])
@@ -1272,6 +1324,182 @@ export default function BillingEngine() {
                       })}
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Exceptions Section */}
+              <Card className="mt-6 bg-white/5 border-white/10 text-white">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-red-400" />
+                      Reconciliation Exceptions
+                    </CardTitle>
+                    <div className="flex gap-2">
+                      <Button
+                        size="xs"
+                        variant={exceptionFilter === 'open' ? 'solid' : 'outline'}
+                        className={exceptionFilter === 'open' ? 'bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1' : 'text-white border-white/10 text-xs px-2 py-1'}
+                        onClick={() => setExceptionFilter('open')}
+                      >
+                        Open Exceptions
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant={exceptionFilter === 'resolved' ? 'solid' : 'outline'}
+                        className={exceptionFilter === 'resolved' ? 'bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-2 py-1' : 'text-white border-white/10 text-xs px-2 py-1'}
+                        onClick={() => setExceptionFilter('resolved')}
+                      >
+                        Resolved
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-white/50">Discrepancies identified during ledger audits that require manual review or waivers.</p>
+                </CardHeader>
+                <CardContent>
+                  {exceptions.length === 0 ? (
+                    <p className="text-white/50 text-sm py-4 text-center">No {exceptionFilter} exceptions found.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {exceptions.map((ex) => (
+                        <div key={ex.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <Badge className="bg-red-500/20 text-red-300 border-red-500/30 text-[10px] capitalize">{ex.exception_type.replace('_', ' ')}</Badge>
+                                <span className="text-xs text-white/50">Ref: {ex.transaction_ref || 'N/A'}</span>
+                              </div>
+                              <p className="mt-2 text-sm font-semibold">{ex.notes}</p>
+                              <div className="mt-1 text-xs text-white/40">
+                                Detected on: {moment(ex.created_at).format('DD MMM YYYY HH:mm')}
+                              </div>
+                              {ex.status === 'resolved' && (
+                                <div className="mt-2 text-xs text-emerald-300 bg-emerald-500/10 rounded-lg p-2">
+                                  Resolved by: {ex.resolved_by || 'Auditor'} on {moment(ex.resolved_at).format('DD MMM HH:mm')}. Notes: {ex.notes}
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="text-md font-bold text-red-300">Variance: {formatCurrency(ex.variance)}</div>
+                              <div className="text-xs text-white/50">WS1: {formatCurrency(ex.ws1_amount)} • Ledger: {formatCurrency(ex.ledger_amount)}</div>
+                            </div>
+                          </div>
+                          {ex.status === 'open' && (
+                            <div className="mt-3 flex gap-2 border-t border-white/5 pt-3">
+                              <input
+                                type="text"
+                                placeholder="Resolution / waiver notes..."
+                                className="h-8 flex-1 rounded-md border border-white/10 bg-white/5 px-3 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-[#00A89D]"
+                                value={resolutionNotes[ex.id] || ''}
+                                onChange={(e) => setResolutionNotes({ ...resolutionNotes, [ex.id]: e.target.value })}
+                              />
+                              <Button
+                                size="sm"
+                                className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3"
+                                disabled={resolveExceptionMutation.isPending}
+                                onClick={() => {
+                                  const notes = resolutionNotes[ex.id]?.trim();
+                                  if (!notes) return alert('Please enter resolution notes before waiving.');
+                                  resolveExceptionMutation.mutate({ exceptionId: ex.id, notes });
+                                }}
+                              >
+                                Resolve / Waive
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Event Replay Console Section */}
+              <Card className="mt-6 bg-white/5 border-white/10 text-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-yellow-400" />
+                    Event Replay Console
+                  </CardTitle>
+                  <p className="text-sm text-white/50">Re-route or re-audit historical transaction events to reconstruct and correct ledger postings.</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-white/60 mb-1">Event IDs (Comma-separated, optional)</label>
+                      <textarea
+                        placeholder="e.g. 5d5a7dbe-9b37-4d7a-ba92-f045bb627b40"
+                        className="w-full h-20 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#00A89D]"
+                        value={replayPayload.eventIds}
+                        onChange={(e) => setReplayPayload({ ...replayPayload, eventIds: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-xs text-white/60 mb-1">Event Type Filter (optional)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. VOUCHER_PURCHASED"
+                          className="w-full h-8 rounded-md border border-white/10 bg-white/5 px-3 text-xs text-white focus:outline-none"
+                          value={replayPayload.eventType}
+                          onChange={(e) => setReplayPayload({ ...replayPayload, eventType: e.target.value })}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs text-white/60 mb-1">From Date (optional)</label>
+                          <input
+                            type="date"
+                            className="w-full h-8 rounded-md border border-white/10 bg-white/5 px-3 text-xs text-white focus:outline-none"
+                            value={replayPayload.fromDate}
+                            onChange={(e) => setReplayPayload({ ...replayPayload, fromDate: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/60 mb-1">To Date (optional)</label>
+                          <input
+                            type="date"
+                            className="w-full h-8 rounded-md border border-white/10 bg-white/5 px-3 text-xs text-white focus:outline-none"
+                            value={replayPayload.toDate}
+                            onChange={(e) => setReplayPayload({ ...replayPayload, toDate: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 border-t border-white/5 pt-3">
+                    <input
+                      type="checkbox"
+                      id="forceLedgerRepost"
+                      checked={replayPayload.forceLedgerRepost}
+                      onChange={(e) => setReplayPayload({ ...replayPayload, forceLedgerRepost: e.target.checked })}
+                      className="rounded border-white/10 bg-white/5 text-[#00A89D] focus:ring-[#00A89D]"
+                    />
+                    <label htmlFor="forceLedgerRepost" className="text-xs text-white/70">
+                      Force Ledger Repost (Warning: Deletes and recalculates existing ledger entries for matching keys!)
+                    </label>
+                  </div>
+
+                  <GoldButton
+                    className="bg-[#00A89D] hover:bg-[#00A89D]/90 text-white w-full md:w-auto"
+                    disabled={replayMutation.isPending}
+                    onClick={() => {
+                      const payload = {
+                        eventIds: replayPayload.eventIds ? replayPayload.eventIds.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+                        fromDate: replayPayload.fromDate || undefined,
+                        toDate: replayPayload.toDate || undefined,
+                        eventType: replayPayload.eventType || undefined,
+                        forceLedgerRepost: replayPayload.forceLedgerRepost
+                      };
+                      if (!payload.eventIds && !payload.fromDate && !payload.eventType) {
+                        return alert('Please enter at least one Event ID, a From Date, or an Event Type to replay.');
+                      }
+                      replayMutation.mutate(payload);
+                    }}
+                  >
+                    {replayMutation.isPending ? 'Replaying...' : 'Trigger Event Replay & Re-audit'}
+                  </GoldButton>
                 </CardContent>
               </Card>
             </div>

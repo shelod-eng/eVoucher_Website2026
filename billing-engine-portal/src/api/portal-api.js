@@ -337,6 +337,38 @@ export async function triggerReconciliationRun(session, role) {
   return portalFetchJson('/api/billing/reconciliation/run', { method: 'POST' }, session, role);
 }
 
+export async function listReconciliationExceptions(session, role, params = {}) {
+  const search = new URLSearchParams();
+  if (params.status) search.set('status', params.status);
+  if (params.limit) search.set('limit', String(params.limit ?? 50));
+  const suffix = search.toString() ? `?${search}` : '';
+  return portalFetchJson(`/api/billing/reconciliation/exceptions${suffix}`, {}, session, role);
+}
+
+export async function resolveReconciliationException(exceptionId, notes, session, role) {
+  return portalFetchJson(
+    '/api/billing/reconciliation/exceptions',
+    {
+      method: 'POST',
+      body: { exceptionId, notes }
+    },
+    session,
+    role
+  );
+}
+
+export async function replayPlatformEvents(payload, session, role) {
+  return portalFetchJson(
+    '/api/billing/events/replay',
+    {
+      method: 'POST',
+      body: payload
+    },
+    session,
+    role
+  );
+}
+
 export async function resolveEntityNames(merchantIds = [], customerIds = []) {
   const search = new URLSearchParams();
   if (merchantIds.length) search.set('merchantIds', merchantIds.join(','));

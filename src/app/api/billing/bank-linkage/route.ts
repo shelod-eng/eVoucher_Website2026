@@ -6,8 +6,10 @@ import { requirePortalUser } from '@/server/services/billing/portal-guard';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+import { logPopiaAccess } from '@/server/utils/popia-logger';
+
 export async function GET(request: Request) {
-  const { allowed } = await requirePortalUser(request, ['admin', 'finance_approver', 'auditor']);
+  const { allowed, user, role } = await requirePortalUser(request, ['admin', 'finance_approver', 'auditor']);
   if (!allowed) return jsonNoStore({ error: 'Forbidden' }, { status: 403 });
 
   try {
@@ -26,6 +28,19 @@ export async function GET(request: Request) {
     if (merchantId) query = query.eq('merchant_id', merchantId);
     const { data, error } = await query;
     if (error) throw error;
+
+    if (data && data.length > 0) {
+      await logPopiaAccess({
+        actorId: user?.id,
+        actorEmail: user?.email,
+        actorRole: role,
+        action: 'view_bank_linkages',
+        targetEntity: 'billing_bank_linkages',
+        targetId: merchantId || null,
+        piiFields: ['account_holder_name', 'account_number_last4'],
+        request
+      });
+    }
 
     return jsonNoStore({ success: true, data: data ?? [] });
   } catch (error: any) {

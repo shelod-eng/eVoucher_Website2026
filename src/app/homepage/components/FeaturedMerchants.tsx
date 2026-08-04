@@ -235,7 +235,7 @@ export default function FeaturedMerchants() {
             </p>
           </div>
           <button
-            onClick={() => router.push('/merchants')}
+            onClick={() => router.push('/stores')}
             className="hidden rounded-full border border-primary/20 bg-white px-5 py-2.5 font-headline text-sm font-semibold text-primary shadow-sm transition-all hover:bg-primary hover:text-white sm:block"
           >
             All Merchants →

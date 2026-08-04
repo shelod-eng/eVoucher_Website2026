@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser } from '@/server/utils/auth';
 import { resolveUserRole } from '@/server/utils/role';
 import { resolveRequestIp } from '@/server/utils/request-ip';
+import { logPopiaAccess } from '@/server/utils/popia-logger';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -77,11 +78,24 @@ export async function GET(request: Request) {
       };
     });
 
+    const requesterIp = resolveRequestIp(request.headers);
+
+    // POPIA access logging
+    await logPopiaAccess({
+      actorId: user?.id,
+      actorEmail: user?.email,
+      actorRole: role,
+      action: 'view_merchant_report',
+      targetEntity: 'merchants',
+      piiFields: ['email'],
+      request
+    });
+
     return NextResponse.json({
       timestamp: new Date().toISOString(),
       refreshIntervalSeconds: 60,
       kycAudit: {
-        requesterIpAddress: resolveRequestIp(request.headers),
+        requesterIpAddress: requesterIp,
       },
       report,
     });

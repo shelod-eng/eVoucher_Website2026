@@ -95,7 +95,9 @@ async function fetchMerchantDetails(merchantId: string): Promise<{
   return { data: data as unknown as Record<string, unknown>, error: null };
 }
 
-export async function GET(_request: Request, { params }: { params: { merchantId: string } }) {
+import { logPopiaAccess } from '@/server/utils/popia-logger';
+
+export async function GET(request: Request, { params }: { params: { merchantId: string } }) {
   try {
     const { supabase, user } = await getAuthenticatedUser();
     if (!user) {
@@ -121,6 +123,22 @@ export async function GET(_request: Request, { params }: { params: { merchantId:
     if (!merchant) {
       return NextResponse.json({ error: 'Merchant not found.' }, { status: 404 });
     }
+
+    // POPIA access logging for PII fields
+    await logPopiaAccess({
+      actorId: user.id,
+      actorEmail: user.email,
+      actorRole: role,
+      action: 'view_merchant_details',
+      targetEntity: 'merchants',
+      targetId: merchantId,
+      piiFields: [
+        'email', 'phone', 'physical_address', 'registration_number', 'tax_number',
+        'pharmacy_license_number', 'owner_id_number', 'bank_name', 'account_number',
+        'branch_code', 'account_holder_name'
+      ],
+      request
+    });
 
     return NextResponse.json(merchant);
   } catch (error: any) {
