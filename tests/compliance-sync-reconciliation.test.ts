@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { scrubPII, generateHMACSignature, generateServiceJWT } from '../src/lib/platform-events';
-import { validateServiceJWT } from '../src/app/api/billing/events/route';
+import { scrubPII, generateHMACSignature, generateServiceJWT, validateServiceJWT } from '../src/lib/platform-events';
 import { runDailyReconciliation } from '../src/server/services/billing/reconciliation-engine';
 import { createAdminClient } from '../src/lib/supabase/admin';
 

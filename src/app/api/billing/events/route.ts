@@ -57,38 +57,7 @@ export async function GET(request: Request) {
   }
 }
 
-import { createHmac } from 'crypto';
-
-export function validateServiceJWT(token: string): boolean {
-  try {
-    const [headerB64, payloadB64, signatureB64] = token.split('.');
-    if (!headerB64 || !payloadB64 || !signatureB64) return false;
-
-    const secret = process.env.BILLING_ENCRYPTION_KEY ?? 'dev-billing-key';
-    const computedSignature = Buffer.from(
-      createHmac('sha256', secret)
-        .update(`${headerB64}.${payloadB64}`)
-        .digest()
-    )
-      .toString('base64')
-      .replace(/=/g, '')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_');
-
-    if (computedSignature !== signatureB64) return false;
-
-    const payload = JSON.parse(
-      Buffer.from(payloadB64, 'base64').toString('utf8')
-    );
-    
-    if (payload.iss !== 'ws1') return false;
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return false;
-
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
+import { validateServiceJWT } from '@/lib/platform-events';
 
 /**
  * POST /api/billing/events

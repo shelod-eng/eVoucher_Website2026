@@ -108,8 +108,9 @@ export function generateHMACSignature(eventId: string, occurredAt: string, amoun
   return createHmac('sha256', secret).update(data).digest('hex');
 }
 
-function base64UrlEncode(str: string): string {
-  return Buffer.from(str)
+function base64UrlEncode(data: string | Buffer): string {
+  const buf = typeof data === 'string' ? Buffer.from(data) : data;
+  return buf
     .toString('base64')
     .replace(/=/g, '')
     .replace(/\+/g, '-')
@@ -131,6 +132,33 @@ export function generateServiceJWT(): string {
       .digest()
   );
   return `${header}.${payload}.${signature}`;
+}
+
+export function validateServiceJWT(token: string): boolean {
+  try {
+    const [headerB64, payloadB64, signatureB64] = token.split('.');
+    if (!headerB64 || !payloadB64 || !signatureB64) return false;
+
+    const secret = process.env.BILLING_ENCRYPTION_KEY ?? 'dev-billing-key';
+    const computedSignature = base64UrlEncode(
+      createHmac('sha256', secret)
+        .update(`${headerB64}.${payloadB64}`)
+        .digest()
+    );
+
+    if (computedSignature !== signatureB64) return false;
+
+    const payload = JSON.parse(
+      Buffer.from(payloadB64, 'base64').toString('utf8')
+    );
+    
+    if (payload.iss !== 'ws1') return false;
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return false;
+
+    return true;
+  } catch (err) {
+    return false;
+  }
 }
 
 /**
