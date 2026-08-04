@@ -24,7 +24,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import moment from 'moment';
 import { useAdminAuth } from '@/auth/admin-auth';
-import { listBillingEvents } from '@/api/portal-api';
+import { listBillingEvents, resolveEntityNames } from '@/api/portal-api';
 
 export default function VoucherLedger() {
   const { session, role } = useAdminAuth();
@@ -41,6 +41,20 @@ export default function VoucherLedger() {
   });
 
   const events = eventsResponse?.data ?? [];
+
+  const { data: nameMap } = useQuery({
+    queryKey: ['ledger-names', events.map(e => e.merchant_id + e.customer_id).join(',')],
+    queryFn: () => {
+      const merchantIds = [...new Set(events.map(e => e.merchant_id).filter(Boolean))];
+      const customerIds = [...new Set(events.map(e => e.customer_id).filter(Boolean))];
+      if (!merchantIds.length && !customerIds.length) return { merchants: {}, customers: {} };
+      return resolveEntityNames(merchantIds, customerIds);
+    },
+    enabled: events.length > 0,
+    staleTime: 60000,
+  });
+  const merchantNames = nameMap?.merchants ?? {};
+  const customerNames = nameMap?.customers ?? {};
 
   const formatCurrency = (value) => {
     const num = Number(value ?? 0);
@@ -119,9 +133,9 @@ export default function VoucherLedger() {
         transactionId: metadata.transactionReference ?? metadata.transaction_reference ?? event.id?.slice(0, 12),
         dateTime: event.occurred_at ?? event.created_at,
         consumerId: event.customer_id ?? 'N/A',
-        consumerName: metadata.customerName ?? metadata.customer_name ?? metadata.consumerName ?? 'Unknown Consumer',
+        consumerName: customerNames[event.customer_id] ?? metadata.customerName ?? metadata.customer_name ?? metadata.consumerName ?? 'Unknown Consumer',
         merchantId: event.merchant_id ?? 'N/A',
-        merchantName: metadata.merchantName ?? metadata.merchant_name ?? 'Unknown Merchant',
+        merchantName: merchantNames[event.merchant_id] ?? metadata.merchantName ?? metadata.merchant_name ?? 'Unknown Merchant',
         paymentMethod: getPaymentMethod(metadata),
         faceValue: grossAmount,
         consumerSavings,

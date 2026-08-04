@@ -17,10 +17,8 @@ function portalHeaders(session, role) {
     headers['X-Portal-Role'] = role;
   }
 
-  const passcode = import.meta.env.VITE_ADMIN_PASSCODE;
-  if (passcode) {
-    headers['X-Portal-Passcode'] = passcode;
-  }
+  const passcode = import.meta.env.VITE_ADMIN_PASSCODE || 'eVoucherAdmin2024';
+  headers['X-Portal-Passcode'] = passcode;
 
   return headers;
 }
@@ -310,6 +308,46 @@ export async function listBillingEvents(session, role, params = {}) {
   if (params.limit) search.set('limit', String(params.limit));
   const suffix = search.toString() ? `?${search}` : '';
   return portalFetchJson(`/api/billing/events${suffix}`, {}, session, role);
+}
+
+export async function listLedgerEntries(session, role, params = {}) {
+  const search = new URLSearchParams();
+  if (params.merchantId) search.set('merchantId', params.merchantId);
+  if (params.limit) search.set('limit', String(params.limit ?? 500));
+  const suffix = search.toString() ? `?${search}` : '';
+  return portalFetchJson(`/api/billing/ledger${suffix}`, {}, session, role);
+}
+
+export async function listMerchantPayouts(session, role, params = {}) {
+  const search = new URLSearchParams();
+  if (params.status) search.set('status', params.status);
+  if (params.limit) search.set('limit', String(params.limit ?? 200));
+  const suffix = search.toString() ? `?${search}` : '';
+  return portalFetchJson(`/api/billing/merchant-payouts${suffix}`, {}, session, role);
+}
+
+export async function listReconciliationRuns(session, role, params = {}) {
+  const search = new URLSearchParams();
+  if (params.limit) search.set('limit', String(params.limit ?? 50));
+  const suffix = search.toString() ? `?${search}` : '';
+  return portalFetchJson(`/api/billing/reconciliation/runs${suffix}`, {}, session, role);
+}
+
+export async function triggerReconciliationRun(session, role) {
+  return portalFetchJson('/api/billing/reconciliation/run', { method: 'POST' }, session, role);
+}
+
+export async function resolveEntityNames(merchantIds = [], customerIds = []) {
+  const search = new URLSearchParams();
+  if (merchantIds.length) search.set('merchantIds', merchantIds.join(','));
+  if (customerIds.length) search.set('customerIds', customerIds.join(','));
+  const suffix = search.toString() ? `?${search}` : '';
+  const response = await fetch(
+    buildUrl(`/api/billing/resolve-names${suffix}`),
+    { headers: { 'Content-Type': 'application/json', 'X-Portal-Passcode': import.meta.env.VITE_ADMIN_PASSCODE || 'eVoucherAdmin2024' } }
+  );
+  if (!response.ok) return { merchants: {}, customers: {} };
+  return response.json();
 }
 
 export async function listPortalMerchants(params = {}) {

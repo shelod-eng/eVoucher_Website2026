@@ -24,6 +24,10 @@ import {
   DollarSign,
   Banknote,
   Zap,
+  RefreshCw,
+  ShieldCheck,
+  Scale,
+  Landmark,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -35,8 +39,13 @@ import {
   getBillingDashboard,
   listBillingEvents,
   listBillingInvoices,
+  listMerchantPayouts,
+  listReconciliationRuns,
   listPortalMerchants,
+  resolveEntityNames,
   runBillingEngine,
+  triggerReconciliationRun,
+  listAuditEvents,
 } from '@/api/portal-api';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 
@@ -157,6 +166,52 @@ export default function BillingEngine() {
         ? listBillingEvents(session, role, { limit: 100 }).then((response) => response?.data ?? [])
         : Promise.resolve(mockTransactions),
   });
+  const { data: payoutsResponse } = useQuery({
+    queryKey: ['merchant-payouts'],
+    queryFn: () => usePortalApi && session?.email ? listMerchantPayouts(session, role, { limit: 200 }) : Promise.resolve({ data: [] }),
+    enabled: useMock || (usePortalApi && Boolean(session?.email)),
+    refetchInterval: 10000,
+  });
+  const payouts = payoutsResponse?.data ?? [];
+
+  const { data: reconciliationResponse, refetch: refetchReconciliation } = useQuery({
+    queryKey: ['reconciliation-runs'],
+    queryFn: () => usePortalApi && session?.email ? listReconciliationRuns(session, role) : Promise.resolve({ data: [] }),
+    enabled: usePortalApi && Boolean(session?.email),
+  });
+  const reconciliationRuns = reconciliationResponse?.data ?? [];
+
+  const { data: auditResponse } = useQuery({
+    queryKey: ['audit-events-billing'],
+    queryFn: () => usePortalApi && session?.email ? listAuditEvents(session, role, { limit: 100 }) : Promise.resolve({ data: [] }),
+    enabled: usePortalApi && Boolean(session?.email),
+    refetchInterval: 15000,
+  });
+  const auditEvents = auditResponse?.data ?? [];
+
+  // Resolve merchant + customer names for all events
+  const { data: nameMap } = useQuery({
+    queryKey: ['entity-names', transactions.map(t => t.merchant_id + t.customer_id).join(',')],
+    queryFn: () => {
+      const merchantIds = [...new Set(transactions.map(t => t.merchant_id).filter(Boolean))];
+      const customerIds = [...new Set(transactions.map(t => t.customer_id).filter(Boolean))];
+      if (!merchantIds.length && !customerIds.length) return { merchants: {}, customers: {} };
+      return resolveEntityNames(merchantIds, customerIds);
+    },
+    enabled: usePortalApi && transactions.length > 0,
+    staleTime: 60000,
+  });
+  const merchantNames = nameMap?.merchants ?? {};
+  const customerNames = nameMap?.customers ?? {};
+
+  const triggerReconciliationMutation = useMutation({
+    mutationFn: () => triggerReconciliationRun(session, role),
+    onSuccess: () => {
+      logAuditEvent('reconciliation.manual_run', { triggeredBy: session?.email });
+      refetchReconciliation();
+    },
+  });
+
   const recentWebsiteTransactions = useMemo(() => {
     return (transactions ?? [])
       .map((event) => {
@@ -510,7 +565,7 @@ export default function BillingEngine() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4 bg-white/5 border border-white/10">
+          <TabsList className="mb-4 bg-white/5 border border-white/10 flex-wrap">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="live-events" className="flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5" />
@@ -520,6 +575,15 @@ export default function BillingEngine() {
               )}
             </TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
+            <TabsTrigger value="settlements" className="flex items-center gap-1.5">
+              <Landmark className="w-3.5 h-3.5" />Settlements
+            </TabsTrigger>
+            <TabsTrigger value="reconciliation" className="flex items-center gap-1.5">
+              <Scale className="w-3.5 h-3.5" />Reconciliation
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5" />Audit Log
+            </TabsTrigger>
             <TabsTrigger value="banks">Bank Sponsors</TabsTrigger>
             <TabsTrigger value="logistics">Logistics</TabsTrigger>
           </TabsList>
@@ -713,13 +777,13 @@ export default function BillingEngine() {
                               <div className="mt-2 text-sm text-white/80">
                                 Merchant:{' '}
                                 <span className="font-semibold text-white">
-                                  {event.merchantId ?? 'N/A'}
+                                  {merchantNames[event.merchantId] ?? event.merchantId ?? 'N/A'}
                                 </span>
                               </div>
                               <div className="text-sm text-white/80">
                                 Customer:{' '}
                                 <span className="font-semibold text-white">
-                                  {event.customerId ?? 'N/A'}
+                                  {customerNames[event.customerId] ?? event.customerId ?? 'N/A'}
                                 </span>
                               </div>
                               <div className="text-sm text-white/80">
@@ -1088,6 +1152,164 @@ export default function BillingEngine() {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settlements">
+            <Card className="bg-white/5 border-white/10 text-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Landmark className="w-5 h-5 text-[#00A89D]" />
+                  Merchant Payouts
+                </CardTitle>
+                <p className="text-sm text-white/50">Live from merchant_payouts table — queued → pending → paid</p>
+              </CardHeader>
+              <CardContent>
+                {payouts.length === 0 ? (
+                  <p className="text-white/50 text-sm py-8 text-center">No payouts recorded yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-white/5 border-b border-white/10">
+                        <tr className="text-left text-white/60">
+                          <th className="px-3 py-2">Merchant</th>
+                          <th className="px-3 py-2 text-right">Amount</th>
+                          <th className="px-3 py-2">Status</th>
+                          <th className="px-3 py-2">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {payouts.map((p) => {
+                          const merchantName = p.merchants?.business_name ?? merchantNames[p.merchant_id] ?? p.merchant_id?.slice(0, 8);
+                          const statusColor = p.status === 'paid' ? 'bg-emerald-500/20 text-emerald-300'
+                            : p.status === 'pending' ? 'bg-orange-500/20 text-orange-300'
+                            : 'bg-white/10 text-white/60';
+                          return (
+                            <tr key={p.id} className="border-b border-white/5 hover:bg-white/5">
+                              <td className="px-3 py-2 font-medium">{merchantName}</td>
+                              <td className="px-3 py-2 text-right font-bold text-[#00A89D]">{formatCurrency(p.amount)}</td>
+                              <td className="px-3 py-2"><Badge className={statusColor}>{p.status}</Badge></td>
+                              <td className="px-3 py-2 text-white/50 text-xs">{p.created_at ? moment(p.created_at).format('DD MMM YYYY HH:mm') : '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="reconciliation">
+            <div className="space-y-4">
+              <Card className="bg-white/5 border-white/10 text-white">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Scale className="w-5 h-5 text-[#00A89D]" />
+                      Reconciliation Runs
+                    </CardTitle>
+                    <GoldButton
+                      size="sm"
+                      onClick={() => triggerReconciliationMutation.mutate()}
+                      disabled={triggerReconciliationMutation.isPending}
+                      className="bg-[#00A89D] hover:bg-[#00A89D]/90 text-white"
+                    >
+                      {triggerReconciliationMutation.isPending
+                        ? <RefreshCw className="w-4 h-4 animate-spin" />
+                        : <><RefreshCw className="w-4 h-4 mr-2" />Run Now</>}
+                    </GoldButton>
+                  </div>
+                  <p className="text-sm text-white/50">Compares billing_events vs billing_ledger_entries and flags variances</p>
+                </CardHeader>
+                <CardContent>
+                  {reconciliationRuns.length === 0 ? (
+                    <p className="text-white/50 text-sm py-8 text-center">No reconciliation runs yet. Click Run Now to start.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {reconciliationRuns.map((run) => {
+                        const statusColor = run.status === 'completed' ? 'bg-emerald-500/20 text-emerald-300'
+                          : run.status === 'exceptions' ? 'bg-red-500/20 text-red-300'
+                          : 'bg-yellow-500/20 text-yellow-300';
+                        return (
+                          <div key={run.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <div className="font-semibold">{run.run_date}</div>
+                                <div className="text-xs text-white/50">{run.completed_at ? moment(run.completed_at).format('HH:mm:ss') : '—'}</div>
+                              </div>
+                              <Badge className={statusColor}>{run.status}</Badge>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                              <div className="bg-white/5 rounded-lg p-2">
+                                <div className="text-white/50 text-xs">WS1 Events</div>
+                                <div className="font-bold">{run.ws1_tx_count ?? 0}</div>
+                              </div>
+                              <div className="bg-white/5 rounded-lg p-2">
+                                <div className="text-white/50 text-xs">Ledger Entries</div>
+                                <div className="font-bold">{run.ledger_count ?? 0}</div>
+                              </div>
+                              <div className="bg-white/5 rounded-lg p-2">
+                                <div className="text-white/50 text-xs">Matched</div>
+                                <div className="font-bold text-emerald-300">{run.matched_count ?? 0}</div>
+                              </div>
+                              <div className="bg-white/5 rounded-lg p-2">
+                                <div className="text-white/50 text-xs">Exceptions</div>
+                                <div className={`font-bold ${run.exception_count > 0 ? 'text-red-300' : 'text-emerald-300'}`}>{run.exception_count ?? 0}</div>
+                              </div>
+                            </div>
+                            {run.variance > 0 && (
+                              <div className="mt-3 text-xs text-red-300 bg-red-500/10 rounded-lg p-2">
+                                Variance: {formatCurrency(run.variance)} — WS1: {formatCurrency(run.total_ws1_value)} vs Ledger: {formatCurrency(run.total_ledger_value)}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="audit">
+            <Card className="bg-white/5 border-white/10 text-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-[#00A89D]" />
+                  Audit Log
+                </CardTitle>
+                <p className="text-sm text-white/50">Immutable compliance trail from pasa_audit_log</p>
+              </CardHeader>
+              <CardContent>
+                {auditEvents.length === 0 ? (
+                  <p className="text-white/50 text-sm py-8 text-center">No audit events recorded yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {auditEvents.map((evt) => (
+                      <div key={evt.id} className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge className="bg-white/10 text-white border-white/10 text-xs">{evt.action}</Badge>
+                            <span className="text-xs text-white/50">{evt.actor_role ?? evt.actorRole ?? 'system'}</span>
+                            {evt.entity_type && <span className="text-xs text-white/40">{evt.entity_type}</span>}
+                          </div>
+                          <span className="text-xs text-white/40 shrink-0">
+                            {evt.created_at ? moment(evt.created_at).format('DD MMM HH:mm:ss') : '—'}
+                          </span>
+                        </div>
+                        {evt.metadata && Object.keys(evt.metadata).length > 0 && (
+                          <pre className="mt-2 text-xs text-white/50 whitespace-pre-wrap">
+                            {JSON.stringify(evt.metadata, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
