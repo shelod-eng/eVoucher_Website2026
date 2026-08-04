@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { generateServiceJWT } from '@/lib/platform-events';
 
-const CRON_SECRET = process.env.CRON_SECRET || 'dev-cron-secret';
-
 export async function GET(request: NextRequest) {
   try {
     // 1. Verify cron secret
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    const cronSecret = String(process.env.CRON_SECRET ?? '').trim();
+    const hasValidCronBearer = !!cronSecret && authHeader === `Bearer ${cronSecret}`;
+    const isVercelCron = String(request.headers.get('user-agent') ?? '')
+      .toLowerCase()
+      .includes('vercel-cron');
+
+    if (!hasValidCronBearer && !(isVercelCron && !cronSecret)) {
       // Allow bypass in local development if no secret is configured
       const passcode = request.nextUrl.searchParams.get('passcode');
       if (process.env.NODE_ENV !== 'development' && passcode !== process.env.PORTAL_ADMIN_PASSCODE) {
@@ -33,7 +37,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, processed: 0, message: 'No pending events in outbox.' });
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4028';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
     const gatewayUrl = `${appUrl.replace(/\/$/, '')}/api/billing/events`;
     const jwt = generateServiceJWT();
 
