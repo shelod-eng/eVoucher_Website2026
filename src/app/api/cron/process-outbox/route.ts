@@ -15,7 +15,10 @@ export async function GET(request: NextRequest) {
     if (!hasValidCronBearer && !(isVercelCron && !cronSecret)) {
       // Allow bypass in local development if no secret is configured
       const passcode = request.nextUrl.searchParams.get('passcode');
-      if (process.env.NODE_ENV !== 'development' && passcode !== process.env.PORTAL_ADMIN_PASSCODE) {
+      if (
+        process.env.NODE_ENV !== 'development' &&
+        passcode !== process.env.PORTAL_ADMIN_PASSCODE
+      ) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
@@ -34,7 +37,11 @@ export async function GET(request: NextRequest) {
     if (fetchError) throw fetchError;
 
     if (!events || events.length === 0) {
-      return NextResponse.json({ success: true, processed: 0, message: 'No pending events in outbox.' });
+      return NextResponse.json({
+        success: true,
+        processed: 0,
+        message: 'No pending events in outbox.',
+      });
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
@@ -56,7 +63,7 @@ export async function GET(request: NextRequest) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwt}`,
+            Authorization: `Bearer ${jwt}`,
           },
           body: JSON.stringify(event.payload),
         });
@@ -65,19 +72,19 @@ export async function GET(request: NextRequest) {
           // Success! Mark as sent
           await admin
             .from('platform_event_outbox')
-            .update({ 
-              status: 'sent', 
-              error_message: null, 
-              updated_at: new Date().toISOString() 
+            .update({
+              status: 'sent',
+              error_message: null,
+              updated_at: new Date().toISOString(),
             })
             .eq('id', event.id);
 
           await admin
             .from('platform_events')
-            .update({ 
-              status: 'processed', 
+            .update({
+              status: 'processed',
               processed_at: new Date().toISOString(),
-              error_message: null
+              error_message: null,
             })
             .eq('event_id', event.event_id);
 
@@ -88,7 +95,7 @@ export async function GET(request: NextRequest) {
         }
       } catch (err: any) {
         console.error(`[Outbox Worker] Failed to process event ${event.event_id}:`, err.message);
-        
+
         const nextRetries = event.retries + 1;
         const nextStatus = nextRetries >= 5 ? 'dead_letter' : 'failed';
 
@@ -98,7 +105,7 @@ export async function GET(request: NextRequest) {
             status: nextStatus,
             retries: nextRetries,
             error_message: err.message,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq('id', event.id);
 
@@ -106,7 +113,7 @@ export async function GET(request: NextRequest) {
           .from('platform_events')
           .update({
             status: nextStatus === 'dead_letter' ? 'failed' : 'processing',
-            error_message: `[Outbox retry failed] ${err.message}`
+            error_message: `[Outbox retry failed] ${err.message}`,
           })
           .eq('event_id', event.event_id);
 

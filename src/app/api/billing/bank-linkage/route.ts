@@ -9,7 +9,11 @@ export const revalidate = 0;
 import { logPopiaAccess } from '@/server/utils/popia-logger';
 
 export async function GET(request: Request) {
-  const { allowed, user, role } = await requirePortalUser(request, ['admin', 'finance_approver', 'auditor']);
+  const { allowed, user, role } = await requirePortalUser(request, [
+    'admin',
+    'finance_approver',
+    'auditor',
+  ]);
   if (!allowed) return jsonNoStore({ error: 'Forbidden' }, { status: 403 });
 
   try {
@@ -38,7 +42,7 @@ export async function GET(request: Request) {
         targetEntity: 'billing_bank_linkages',
         targetId: merchantId || null,
         piiFields: ['account_holder_name', 'account_number_last4'],
-        request
+        request,
       });
     }
 

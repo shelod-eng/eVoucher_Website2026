@@ -33,6 +33,9 @@ export async function POST(request: Request) {
     const summary = await runDailyReconciliation(dateParam);
     return jsonNoStore({ success: true, data: summary }, { headers: CORS });
   } catch (error: any) {
-    return jsonNoStore({ error: error.message || 'Reconciliation run failed.' }, { status: 500, headers: CORS });
+    return jsonNoStore(
+      { error: error.message || 'Reconciliation run failed.' },
+      { status: 500, headers: CORS }
+    );
   }
 }

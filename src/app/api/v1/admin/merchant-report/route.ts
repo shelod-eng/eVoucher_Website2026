@@ -88,7 +88,7 @@ export async function GET(request: Request) {
       action: 'view_merchant_report',
       targetEntity: 'merchants',
       piiFields: ['email'],
-      request
+      request,
     });
 
     return NextResponse.json({

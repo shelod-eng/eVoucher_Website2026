@@ -41,7 +41,10 @@ export async function GET(request: Request) {
     if (error) throw error;
     return jsonNoStore({ success: true, data: data ?? [] }, { headers: CORS });
   } catch (error: any) {
-    return jsonNoStore({ error: error.message || 'Failed to list exceptions.' }, { status: 500, headers: CORS });
+    return jsonNoStore(
+      { error: error.message || 'Failed to list exceptions.' },
+      { status: 500, headers: CORS }
+    );
   }
 }
 
@@ -49,7 +52,7 @@ export async function POST(request: Request) {
   const passcode = request.headers.get('X-Portal-Passcode') ?? '';
   const envPasscode = process.env.PORTAL_ADMIN_PASSCODE ?? '';
   const passcodeValid = envPasscode && passcode === envPasscode;
-  
+
   let auditorId: string | null = null;
   if (!passcodeValid) {
     const { allowed, user } = await requirePortalUser(request, ['admin', 'finance_approver']);
@@ -63,12 +66,18 @@ export async function POST(request: Request) {
     const notes = String(body?.notes ?? '').trim();
 
     if (!exceptionId || !notes) {
-      return jsonNoStore({ error: 'exceptionId and notes are required.' }, { status: 400, headers: CORS });
+      return jsonNoStore(
+        { error: 'exceptionId and notes are required.' },
+        { status: 400, headers: CORS }
+      );
     }
 
     const updated = await resolveReconciliationException(exceptionId, auditorId, notes);
     return jsonNoStore({ success: true, data: updated }, { headers: CORS });
   } catch (error: any) {
-    return jsonNoStore({ error: error.message || 'Failed to resolve exception.' }, { status: 500, headers: CORS });
+    return jsonNoStore(
+      { error: error.message || 'Failed to resolve exception.' },
+      { status: 500, headers: CORS }
+    );
   }
 }

@@ -17,12 +17,13 @@ export interface PopiaLogInput {
 export async function logPopiaAccess(input: PopiaLogInput) {
   try {
     const admin = createAdminClient();
-    
+
     let ipAddress = null;
     let userAgent = null;
 
     if (input.request) {
-      ipAddress = input.request.headers.get('x-forwarded-for') || input.request.headers.get('x-real-ip');
+      ipAddress =
+        input.request.headers.get('x-forwarded-for') || input.request.headers.get('x-real-ip');
       userAgent = input.request.headers.get('user-agent');
     }
 

@@ -34,7 +34,9 @@ export async function GET(request: Request) {
       .from('merchants')
       .select('id, business_name')
       .in('id', merchantIds);
-    (data ?? []).forEach((m: any) => { merchants[m.id] = m.business_name; });
+    (data ?? []).forEach((m: any) => {
+      merchants[m.id] = m.business_name;
+    });
   }
 
   if (customerIds.length) {

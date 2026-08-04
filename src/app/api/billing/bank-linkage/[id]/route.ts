@@ -44,7 +44,10 @@ export async function PUT(request: Request, context: { params: { id: string } })
     if (verificationStatus === 'approved' || isActive === true) {
       if (user && existing.created_by === user.id) {
         return jsonNoStore(
-          { error: 'Dual-control violation: You cannot approve or activate a bank linkage that you created.' },
+          {
+            error:
+              'Dual-control violation: You cannot approve or activate a bank linkage that you created.',
+          },
           { status: 403 }
         );
       }

@@ -35,9 +35,9 @@ export async function runDailyReconciliation(dateStr?: string): Promise<Reconcil
       ledger_count: 0,
       matched_count: 0,
       exception_count: 0,
-      total_ws1_value: 0.00,
-      total_ledger_value: 0.00,
-      variance: 0.00,
+      total_ws1_value: 0.0,
+      total_ledger_value: 0.0,
+      variance: 0.0,
     })
     .select('*')
     .single();
@@ -75,7 +75,7 @@ export async function runDailyReconciliation(dateStr?: string): Promise<Reconcil
         .from('billing_ledger_entries')
         .select('*')
         .gte('created_at', startOfDay)
-        .lte('created_at', endOfDay)
+        .lte('created_at', endOfDay),
     ]);
 
     if (purchasesRes.error) throw purchasesRes.error;
@@ -109,7 +109,8 @@ export async function runDailyReconciliation(dateStr?: string): Promise<Reconcil
 
       // Verify purchase debit liability exists (asset:cash -> liability:voucher_outstanding)
       const purchaseEntry = entries.find(
-        (e) => e.debit_account === 'asset:cash' && e.credit_account === 'liability:voucher_outstanding'
+        (e) =>
+          e.debit_account === 'asset:cash' && e.credit_account === 'liability:voucher_outstanding'
       );
 
       if (!purchaseEntry) {
@@ -119,7 +120,7 @@ export async function runDailyReconciliation(dateStr?: string): Promise<Reconcil
           exception_type: 'missing_ledger',
           transaction_ref: ref,
           ws1_amount: expectedAmount,
-          ledger_amount: 0.00,
+          ledger_amount: 0.0,
           variance: expectedAmount,
           status: 'open',
           notes: `Completed purchase transaction has no double-entry ledger record.`,
@@ -156,7 +157,9 @@ export async function runDailyReconciliation(dateStr?: string): Promise<Reconcil
       totalLedgerValue += entries.reduce((sum, e) => sum + Number(e.amount), 0);
 
       const redemptionEntry = entries.find(
-        (e) => e.debit_account === 'liability:voucher_outstanding' && e.credit_account === 'liability:merchant_payable'
+        (e) =>
+          e.debit_account === 'liability:voucher_outstanding' &&
+          e.credit_account === 'liability:merchant_payable'
       );
 
       if (!redemptionEntry) {
@@ -165,7 +168,7 @@ export async function runDailyReconciliation(dateStr?: string): Promise<Reconcil
           exception_type: 'missing_ledger',
           transaction_ref: redemptionRef,
           ws1_amount: expectedAmount,
-          ledger_amount: 0.00,
+          ledger_amount: 0.0,
           variance: expectedAmount,
           status: 'open',
           notes: `Voucher redemption record has no double-entry ledger record.`,
@@ -232,7 +235,6 @@ export async function runDailyReconciliation(dateStr?: string): Promise<Reconcil
       totalLedgerValue: round2(totalLedgerValue),
       variance,
     };
-
   } catch (err: any) {
     console.error('[Reconciliation Engine] Unexpected run error:', err.message);
     await admin

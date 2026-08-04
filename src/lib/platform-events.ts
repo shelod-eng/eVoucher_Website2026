@@ -63,11 +63,24 @@ function round2(v: number) {
 
 // POPIA compliance: List of keys containing PII that must be redacted
 const PII_KEYS = new Set([
-  'email', 'user_email', 'customer_email',
-  'phone', 'phone_number', 'contact_number', 'cell_number',
-  'name', 'full_name', 'contact_name', 'first_name', 'last_name',
-  'account_number', 'bank_account', 'account_number_enc',
-  'address', 'physical_address', 'street_address'
+  'email',
+  'user_email',
+  'customer_email',
+  'phone',
+  'phone_number',
+  'contact_number',
+  'cell_number',
+  'name',
+  'full_name',
+  'contact_name',
+  'first_name',
+  'last_name',
+  'account_number',
+  'bank_account',
+  'account_number_enc',
+  'address',
+  'physical_address',
+  'street_address',
 ]);
 
 /**
@@ -83,10 +96,10 @@ export function scrubPII(val: any): any {
     for (const key of Object.keys(val)) {
       const lowerKey = key.toLowerCase();
       if (
-        PII_KEYS.has(lowerKey) || 
-        lowerKey.includes('email') || 
-        lowerKey.includes('phone') || 
-        lowerKey.includes('address') || 
+        PII_KEYS.has(lowerKey) ||
+        lowerKey.includes('email') ||
+        lowerKey.includes('phone') ||
+        lowerKey.includes('address') ||
         lowerKey.includes('account')
       ) {
         clean[key] = '[REDACTED]';
@@ -102,7 +115,11 @@ export function scrubPII(val: any): any {
 /**
  * HMAC-SHA256 of (event_id + occurred_at + amount), signed with shared secret
  */
-export function generateHMACSignature(eventId: string, occurredAt: string, amount: number | null): string {
+export function generateHMACSignature(
+  eventId: string,
+  occurredAt: string,
+  amount: number | null
+): string {
   const secret = process.env.BILLING_ENCRYPTION_KEY ?? 'dev-billing-key';
   const data = `${eventId}:${occurredAt}:${amount ?? 0}`;
   return createHmac('sha256', secret).update(data).digest('hex');
@@ -110,11 +127,7 @@ export function generateHMACSignature(eventId: string, occurredAt: string, amoun
 
 function base64UrlEncode(data: string | Buffer): string {
   const buf = typeof data === 'string' ? Buffer.from(data) : data;
-  return buf
-    .toString('base64')
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
+  return buf.toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 }
 
 /**
@@ -127,9 +140,7 @@ export function generateServiceJWT(): string {
   const exp = iat + 60 * 5; // 5 min expiry
   const payload = base64UrlEncode(JSON.stringify({ iss: 'ws1', iat, exp }));
   const signature = base64UrlEncode(
-    createHmac('sha256', secret)
-      .update(`${header}.${payload}`)
-      .digest()
+    createHmac('sha256', secret).update(`${header}.${payload}`).digest()
   );
   return `${header}.${payload}.${signature}`;
 }
@@ -141,17 +152,13 @@ export function validateServiceJWT(token: string): boolean {
 
     const secret = process.env.BILLING_ENCRYPTION_KEY ?? 'dev-billing-key';
     const computedSignature = base64UrlEncode(
-      createHmac('sha256', secret)
-        .update(`${headerB64}.${payloadB64}`)
-        .digest()
+      createHmac('sha256', secret).update(`${headerB64}.${payloadB64}`).digest()
     );
 
     if (computedSignature !== signatureB64) return false;
 
-    const payload = JSON.parse(
-      Buffer.from(payloadB64, 'base64').toString('utf8')
-    );
-    
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64').toString('utf8'));
+
     if (payload.iss !== 'ws1') return false;
     if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return false;
 
@@ -219,28 +226,26 @@ export async function publishPlatformEvent(input: PublishEventInput): Promise<st
     const discountPct = input.discountPct ?? DEFAULT_TOTAL_DISCOUNT_PCT;
 
     // ── 2. Write to Outbox table for guaranteed delivery ─────────────────────
-    const { error: outboxError } = await admin
-      .from('platform_event_outbox')
-      .insert({
+    const { error: outboxError } = await admin.from('platform_event_outbox').insert({
+      event_id: eventId,
+      payload: {
         event_id: eventId,
-        payload: {
-          event_id: eventId,
-          event_type: input.eventType,
-          source_system: 'ws1',
-          correlation_id: input.correlationId ?? input.transactionRef ?? null,
-          merchant_id: input.merchantId ?? null,
-          customer_id: input.customerId ?? null,
-          voucher_id: input.voucherId ?? null,
-          transaction_ref: input.transactionRef ?? null,
-          amount: amountVal,
-          face_value: input.faceValue != null ? round2(input.faceValue) : null,
-          discount_pct: input.discountPct ?? null,
-          occurred_at: occurredAt,
-          signature,
-          data: cleanPayload
-        },
-        status: 'pending'
-      });
+        event_type: input.eventType,
+        source_system: 'ws1',
+        correlation_id: input.correlationId ?? input.transactionRef ?? null,
+        merchant_id: input.merchantId ?? null,
+        customer_id: input.customerId ?? null,
+        voucher_id: input.voucherId ?? null,
+        transaction_ref: input.transactionRef ?? null,
+        amount: amountVal,
+        face_value: input.faceValue != null ? round2(input.faceValue) : null,
+        discount_pct: input.discountPct ?? null,
+        occurred_at: occurredAt,
+        signature,
+        data: cleanPayload,
+      },
+      status: 'pending',
+    });
 
     if (outboxError) {
       console.error('[PlatformEvents] outbox insert failed:', outboxError.message);
@@ -306,7 +311,6 @@ export async function publishPlatformEvent(input: PublishEventInput): Promise<st
           .update({ status: 'sent', updated_at: new Date().toISOString() })
           .eq('event_id', eventId);
       }
-
     } catch (billingErr: any) {
       // Billing failure must not block the user — log and mark failed
       console.error('[PlatformEvents] billing handler failed:', billingErr?.message);
@@ -322,4 +326,3 @@ export async function publishPlatformEvent(input: PublishEventInput): Promise<st
     return null;
   }
 }
-

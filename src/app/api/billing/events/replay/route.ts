@@ -60,7 +60,10 @@ export async function POST(request: Request) {
     if (fetchError) throw fetchError;
 
     if (!events || events.length === 0) {
-      return jsonNoStore({ success: true, replayed: 0, message: 'No matching events found to replay.' }, { headers: CORS_HEADERS });
+      return jsonNoStore(
+        { success: true, replayed: 0, message: 'No matching events found to replay.' },
+        { headers: CORS_HEADERS }
+      );
     }
 
     const replayRunId = randomUUID();
@@ -80,7 +83,7 @@ export async function POST(request: Request) {
           event_id: event.event_id,
           event_type: event.event_type,
           status: 'pending',
-          replayed_by: auditorUserId
+          replayed_by: auditorUserId,
         })
         .select('*')
         .single();
@@ -93,15 +96,9 @@ export async function POST(request: Request) {
       try {
         if (forceLedgerRepost) {
           // Void or delete existing entries for this eventKey to allow fresh posting
-          await admin
-            .from('billing_ledger_entries')
-            .delete()
-            .eq('source_id', eventKey);
+          await admin.from('billing_ledger_entries').delete().eq('source_id', eventKey);
 
-          await admin
-            .from('billing_events')
-            .delete()
-            .eq('event_key', eventKey);
+          await admin.from('billing_events').delete().eq('event_key', eventKey);
         }
 
         let replayed = false;
@@ -120,8 +117,8 @@ export async function POST(request: Request) {
             metadata: {
               source: 'event_replay_engine',
               replayRunId,
-              ...(event.payload ?? {})
-            }
+              ...(event.payload ?? {}),
+            },
           });
           replayed = true;
         } else if (event.event_type === 'VOUCHER_REDEEMED' && event.merchant_id) {
@@ -136,8 +133,8 @@ export async function POST(request: Request) {
             metadata: {
               source: 'event_replay_engine',
               replayRunId,
-              ...(event.payload ?? {})
-            }
+              ...(event.payload ?? {}),
+            },
           });
           replayed = true;
         }
@@ -158,21 +155,18 @@ export async function POST(request: Request) {
             metadata: {
               source: 'event_replay_engine',
               replayRunId,
-              ...(event.payload ?? {})
-            }
+              ...(event.payload ?? {}),
+            },
           });
         }
 
         // Update replay log to success
-        await admin
-          .from('event_replay_log')
-          .update({ status: 'success' })
-          .eq('id', replayLog.id);
+        await admin.from('event_replay_log').update({ status: 'success' }).eq('id', replayLog.id);
 
         results.push({ eventId: event.event_id, status: 'success' });
       } catch (err: any) {
         console.error(`Error replaying event ${event.event_id}:`, err.message);
-        
+
         await admin
           .from('event_replay_log')
           .update({ status: 'failed', error_message: err.message })
@@ -182,15 +176,20 @@ export async function POST(request: Request) {
       }
     }
 
-    return jsonNoStore({
-      success: true,
-      replayRunId,
-      replayedCount: results.length,
-      results
-    }, { headers: CORS_HEADERS });
-
+    return jsonNoStore(
+      {
+        success: true,
+        replayRunId,
+        replayedCount: results.length,
+        results,
+      },
+      { headers: CORS_HEADERS }
+    );
   } catch (error: any) {
     console.error('[Event Replay] Failed:', error);
-    return jsonNoStore({ error: error.message || 'Event replay failed.' }, { status: 500, headers: CORS_HEADERS });
+    return jsonNoStore(
+      { error: error.message || 'Event replay failed.' },
+      { status: 500, headers: CORS_HEADERS }
+    );
   }
 }

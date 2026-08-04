@@ -1,7 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { jsonNoStore } from '@/server/services/billing/no-store';
 import { requirePortalUser } from '@/server/services/billing/portal-guard';
-import { recordVoucherPurchaseBillingEvent, recordVoucherRedemptionBillingEvent } from '@/server/services/billing/billing-events';
+import {
+  recordVoucherPurchaseBillingEvent,
+  recordVoucherRedemptionBillingEvent,
+} from '@/server/services/billing/billing-events';
 import { DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
@@ -28,7 +31,8 @@ export async function GET(request: Request) {
   const passcodeValid = envPasscode && passcode === envPasscode;
   if (!passcodeValid) {
     const { allowed } = await requirePortalUser(request, ['admin', 'finance_approver', 'auditor']);
-    if (!allowed) return jsonNoStore({ error: 'Forbidden' }, { status: 403, headers: CORS_HEADERS });
+    if (!allowed)
+      return jsonNoStore({ error: 'Forbidden' }, { status: 403, headers: CORS_HEADERS });
   }
 
   try {
@@ -97,7 +101,9 @@ export async function POST(request: Request) {
   }
 
   const eventId = String(body?.event_id ?? body?.eventId ?? '').trim();
-  const eventType = String(body?.event_type ?? body?.eventType ?? '').trim().toUpperCase();
+  const eventType = String(body?.event_type ?? body?.eventType ?? '')
+    .trim()
+    .toUpperCase();
   const merchantId = String(body?.merchant_id ?? body?.merchantId ?? '').trim();
   const customerId = String(body?.customer_id ?? body?.customerId ?? '').trim();
   const voucherId = String(body?.voucher_id ?? body?.voucherId ?? '').trim() || null;
@@ -107,8 +113,13 @@ export async function POST(request: Request) {
   const occurredAt = String(body?.occurred_at ?? body?.occurredAt ?? new Date().toISOString());
   const correlationId = String(body?.correlation_id ?? body?.correlationId ?? eventId);
 
-  if (!eventId) return jsonNoStore({ error: 'event_id is required.' }, { status: 400, headers: CORS_HEADERS });
-  if (!eventType) return jsonNoStore({ error: 'event_type is required.' }, { status: 400, headers: CORS_HEADERS });
+  if (!eventId)
+    return jsonNoStore({ error: 'event_id is required.' }, { status: 400, headers: CORS_HEADERS });
+  if (!eventType)
+    return jsonNoStore(
+      { error: 'event_type is required.' },
+      { status: 400, headers: CORS_HEADERS }
+    );
 
   const admin = createAdminClient();
 
@@ -173,19 +184,23 @@ export async function POST(request: Request) {
     // All other event types (PAYMENT_CAPTURED, SETTLEMENT_*, WALLET_*, etc.)
     // are logged to platform_events and billing_events for audit — no ledger action needed.
     else if (merchantId) {
-      await admin.from('billing_events').insert({
-        event_key: eventId,
-        event_type: eventType.toLowerCase(),
-        merchant_id: merchantId,
-        customer_id: customerId || null,
-        voucher_id: voucherId,
-        gross_amount: amount || 0,
-        merchant_payout_amount: 0,
-        total_discount_pct: discountPct,
-        total_discount_amount: 0,
-        occurred_at: occurredAt,
-        metadata: { source: 'event_gateway', correlationId, ...(body?.data ?? {}) },
-      }).select('id').maybeSingle();
+      await admin
+        .from('billing_events')
+        .insert({
+          event_key: eventId,
+          event_type: eventType.toLowerCase(),
+          merchant_id: merchantId,
+          customer_id: customerId || null,
+          voucher_id: voucherId,
+          gross_amount: amount || 0,
+          merchant_payout_amount: 0,
+          total_discount_pct: discountPct,
+          total_discount_amount: 0,
+          occurred_at: occurredAt,
+          metadata: { source: 'event_gateway', correlationId, ...(body?.data ?? {}) },
+        })
+        .select('id')
+        .maybeSingle();
     }
 
     // Mark platform_event as processed

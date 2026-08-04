@@ -133,11 +133,19 @@ export async function GET(request: Request, { params }: { params: { merchantId: 
       targetEntity: 'merchants',
       targetId: merchantId,
       piiFields: [
-        'email', 'phone', 'physical_address', 'registration_number', 'tax_number',
-        'pharmacy_license_number', 'owner_id_number', 'bank_name', 'account_number',
-        'branch_code', 'account_holder_name'
+        'email',
+        'phone',
+        'physical_address',
+        'registration_number',
+        'tax_number',
+        'pharmacy_license_number',
+        'owner_id_number',
+        'bank_name',
+        'account_number',
+        'branch_code',
+        'account_holder_name',
       ],
-      request
+      request,
     });
 
     return NextResponse.json(merchant);
