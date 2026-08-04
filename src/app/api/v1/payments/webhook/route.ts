@@ -15,6 +15,8 @@ import {
   CONSUMER_DISCOUNT_SHARE,
   DEFAULT_TOTAL_DISCOUNT_PCT,
 } from '@/lib/pricing';
+import { recordVoucherPurchaseBillingEvent } from '@/server/services/billing/billing-events';
+import { publishPlatformEvent } from '@/lib/platform-events';
 
 interface WebhookPayload {
   eventId?: string;
@@ -158,6 +160,39 @@ export async function POST(request: Request) {
       .eq('transaction_reference', payload.transactionReference);
 
     if (normalizedStatus === 'completed' && !isWalletTopupTransaction) {
+      try {
+        await recordVoucherPurchaseBillingEvent(admin, {
+          eventKey: payload.transactionReference,
+          merchantId: String(transaction.merchant_id ?? ''),
+          customerId: String(transaction.customer_id ?? ''),
+          voucherId: undefined,
+          consumerPrice: settledAmount,
+          faceValue,
+          totalDiscountPct,
+          occurredAt: new Date().toISOString(),
+          metadata: {
+            source: 'payment_webhook',
+            provider,
+            voucherCode,
+            transactionReference: payload.transactionReference,
+          },
+        });
+      } catch {
+        // billing failure must never block the webhook response
+      }
+
+      publishPlatformEvent({
+        eventType: 'VOUCHER_PURCHASED',
+        transactionRef: payload.transactionReference,
+        merchantId: String(transaction.merchant_id ?? ''),
+        customerId: String(transaction.customer_id ?? ''),
+        amount: settledAmount,
+        faceValue,
+        discountPct: totalDiscountPct,
+        occurredAt: new Date().toISOString(),
+        payload: { voucherCode, source: 'payment_webhook' },
+      });
+
       try {
         await queueBankservSettlementTransaction(admin, {
           transactionReference: payload.transactionReference,
