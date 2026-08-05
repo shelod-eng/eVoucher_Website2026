@@ -49,3 +49,10 @@ eVoucher.session.sql
 
 .vercel
 .env*.local
+
+# Local AI tooling
+.codebuddy/
+
+# Local troubleshooting files
+cookies.txt
+git_status.txt

@@ -1,11 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  mockBanks,
-  mockInvoices,
-  mockMerchants,
-  mockTransactions,
-} from '@/api/billing-mock-data';
+import { mockBanks, mockInvoices, mockMerchants, mockTransactions } from '@/api/billing-mock-data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -171,7 +166,10 @@ export default function BillingEngine() {
   });
   const { data: payoutsResponse } = useQuery({
     queryKey: ['merchant-payouts'],
-    queryFn: () => usePortalApi && session?.email ? listMerchantPayouts(session, role, { limit: 200 }) : Promise.resolve({ data: [] }),
+    queryFn: () =>
+      usePortalApi && session?.email
+        ? listMerchantPayouts(session, role, { limit: 200 })
+        : Promise.resolve({ data: [] }),
     enabled: useMock || (usePortalApi && Boolean(session?.email)),
     refetchInterval: 10000,
   });
@@ -179,14 +177,20 @@ export default function BillingEngine() {
 
   const { data: reconciliationResponse, refetch: refetchReconciliation } = useQuery({
     queryKey: ['reconciliation-runs'],
-    queryFn: () => usePortalApi && session?.email ? listReconciliationRuns(session, role) : Promise.resolve({ data: [] }),
+    queryFn: () =>
+      usePortalApi && session?.email
+        ? listReconciliationRuns(session, role)
+        : Promise.resolve({ data: [] }),
     enabled: usePortalApi && Boolean(session?.email),
   });
   const reconciliationRuns = reconciliationResponse?.data ?? [];
 
   const { data: auditResponse } = useQuery({
     queryKey: ['audit-events-billing'],
-    queryFn: () => usePortalApi && session?.email ? listAuditEvents(session, role, { limit: 100 }) : Promise.resolve({ data: [] }),
+    queryFn: () =>
+      usePortalApi && session?.email
+        ? listAuditEvents(session, role, { limit: 100 })
+        : Promise.resolve({ data: [] }),
     enabled: usePortalApi && Boolean(session?.email),
     refetchInterval: 15000,
   });
@@ -194,12 +198,12 @@ export default function BillingEngine() {
 
   // Resolve merchant + customer names for all events
   const { data: nameMap } = useQuery({
-    queryKey: ['entity-names', transactions.map(t => t.merchant_id + t.customer_id).join(',')],
+    queryKey: ['entity-names', transactions.map((t) => t.merchant_id + t.customer_id).join(',')],
     queryFn: () => {
-      const merchantIds = [...new Set(transactions.map(t => t.merchant_id).filter(Boolean))];
-      const customerIds = [...new Set(transactions.map(t => t.customer_id).filter(Boolean))];
+      const merchantIds = [...new Set(transactions.map((t) => t.merchant_id).filter(Boolean))];
+      const customerIds = [...new Set(transactions.map((t) => t.customer_id).filter(Boolean))];
       if (!merchantIds.length && !customerIds.length) return { merchants: {}, customers: {} };
-      return resolveEntityNames(merchantIds, customerIds);
+      return resolveEntityNames(merchantIds, customerIds, session, role);
     },
     enabled: usePortalApi && transactions.length > 0,
     staleTime: 60000,
@@ -220,18 +224,22 @@ export default function BillingEngine() {
   const [resolutionNotes, setResolutionNotes] = useState({});
   const { data: exceptionsResponse, refetch: refetchExceptions } = useQuery({
     queryKey: ['reconciliation-exceptions', exceptionFilter],
-    queryFn: () => usePortalApi && session?.email ? listReconciliationExceptions(session, role, { status: exceptionFilter }) : Promise.resolve({ data: [] }),
+    queryFn: () =>
+      usePortalApi && session?.email
+        ? listReconciliationExceptions(session, role, { status: exceptionFilter })
+        : Promise.resolve({ data: [] }),
     enabled: usePortalApi && Boolean(session?.email),
   });
   const exceptions = exceptionsResponse?.data ?? [];
 
   const resolveExceptionMutation = useMutation({
-    mutationFn: ({ exceptionId, notes }) => resolveReconciliationException(exceptionId, notes, session, role),
+    mutationFn: ({ exceptionId, notes }) =>
+      resolveReconciliationException(exceptionId, notes, session, role),
     onSuccess: () => {
       logAuditEvent('reconciliation.exception_resolved', { triggeredBy: session?.email });
       refetchExceptions();
       refetchReconciliation();
-    }
+    },
   });
 
   const [replayPayload, setReplayPayload] = useState({
@@ -239,18 +247,23 @@ export default function BillingEngine() {
     fromDate: '',
     toDate: '',
     eventType: '',
-    forceLedgerRepost: false
+    forceLedgerRepost: false,
   });
 
   const replayMutation = useMutation({
     mutationFn: (payload) => replayPlatformEvents(payload, session, role),
     onSuccess: (res) => {
-      logAuditEvent('compliance.event_replay', { triggeredBy: session?.email, replayRunId: res.replayRunId });
-      alert(`Event replay submitted successfully!\nReplayed: ${res.replayedCount} events\nRun ID: ${res.replayRunId}`);
+      logAuditEvent('compliance.event_replay', {
+        triggeredBy: session?.email,
+        replayRunId: res.replayRunId,
+      });
+      alert(
+        `Event replay submitted successfully!\nReplayed: ${res.replayedCount} events\nRun ID: ${res.replayRunId}`
+      );
       refetchReconciliation();
       refetchExceptions();
       queryClient.invalidateQueries(['transactions']);
-    }
+    },
   });
 
   // Real-time synchronization: invalidate cached queries on new live events to update other tabs instantly
@@ -628,13 +641,16 @@ export default function BillingEngine() {
             </TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
             <TabsTrigger value="settlements" className="flex items-center gap-1.5">
-              <Landmark className="w-3.5 h-3.5" />Settlements
+              <Landmark className="w-3.5 h-3.5" />
+              Settlements
             </TabsTrigger>
             <TabsTrigger value="reconciliation" className="flex items-center gap-1.5">
-              <Scale className="w-3.5 h-3.5" />Reconciliation
+              <Scale className="w-3.5 h-3.5" />
+              Reconciliation
             </TabsTrigger>
             <TabsTrigger value="audit" className="flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5" />Audit Log
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Audit Log
             </TabsTrigger>
             <TabsTrigger value="banks">Bank Sponsors</TabsTrigger>
             <TabsTrigger value="logistics">Logistics</TabsTrigger>
@@ -1132,15 +1148,19 @@ export default function BillingEngine() {
                 <CardTitle className="flex items-center gap-2">
                   <Zap className="w-5 h-5 text-emerald-400" />
                   Real-Time Event Feed
-                  <Badge className={realtimeConnected
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                    : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
-                  }>
+                  <Badge
+                    className={
+                      realtimeConnected
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+                    }
+                  >
                     {realtimeConnected ? 'Connected' : 'Connecting…'}
                   </Badge>
                 </CardTitle>
                 <p className="text-sm text-white/50">
-                  Every WS1 action (purchase, redemption, settlement) appears here instantly via Supabase Realtime.
+                  Every WS1 action (purchase, redemption, settlement) appears here instantly via
+                  Supabase Realtime.
                 </p>
               </CardHeader>
               <CardContent>
@@ -1148,7 +1168,9 @@ export default function BillingEngine() {
                   <div className="py-12 text-center text-white/40">
                     <Zap className="w-10 h-10 mx-auto mb-3 opacity-30" />
                     <p className="text-sm">Waiting for events from www.evoucher.co.za…</p>
-                    <p className="text-xs mt-1">Trigger a voucher purchase or redemption to see it appear here.</p>
+                    <p className="text-xs mt-1">
+                      Trigger a voucher purchase or redemption to see it appear here.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -1160,45 +1182,87 @@ export default function BillingEngine() {
                         <div
                           key={ev.id}
                           className={`rounded-xl border px-4 py-3 ${
-                            isFinancial ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/10 bg-white/5'
+                            isFinancial
+                              ? 'border-emerald-500/30 bg-emerald-500/5'
+                              : 'border-white/10 bg-white/5'
                           }`}
                         >
                           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                             <div className="flex items-center gap-3">
-                              <span className="text-xl">{isPurchase ? '🛒' : isRedemption ? '✅' : '📡'}</span>
+                              <span className="text-xl">
+                                {isPurchase ? '🛒' : isRedemption ? '✅' : '📡'}
+                              </span>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <Badge className={`text-[10px] ${
-                                    isPurchase ? 'bg-blue-500/20 text-blue-300'
-                                    : isRedemption ? 'bg-emerald-500/20 text-emerald-300'
-                                    : 'bg-white/10 text-white/60'
-                                  }`}>{ev.event_type}</Badge>
-                                  <Badge className={`text-[10px] ${
-                                    ev.status === 'processed' ? 'bg-emerald-500/20 text-emerald-300'
-                                    : ev.status === 'failed' ? 'bg-red-500/20 text-red-300'
-                                    : 'bg-yellow-500/20 text-yellow-300'
-                                  }`}>{ev.status}</Badge>
+                                  <Badge
+                                    className={`text-[10px] ${
+                                      isPurchase
+                                        ? 'bg-blue-500/20 text-blue-300'
+                                        : isRedemption
+                                          ? 'bg-emerald-500/20 text-emerald-300'
+                                          : 'bg-white/10 text-white/60'
+                                    }`}
+                                  >
+                                    {ev.event_type}
+                                  </Badge>
+                                  <Badge
+                                    className={`text-[10px] ${
+                                      ev.status === 'processed'
+                                        ? 'bg-emerald-500/20 text-emerald-300'
+                                        : ev.status === 'failed'
+                                          ? 'bg-red-500/20 text-red-300'
+                                          : 'bg-yellow-500/20 text-yellow-300'
+                                    }`}
+                                  >
+                                    {ev.status}
+                                  </Badge>
                                 </div>
                                 <p className="mt-1 text-xs text-white/50">
-                                  {ev.correlation_id ? `ref: ${ev.correlation_id.slice(0, 16)}…` : ev.event_id?.slice(0, 16)}
+                                  {ev.correlation_id
+                                    ? `ref: ${ev.correlation_id.slice(0, 16)}…`
+                                    : ev.event_id?.slice(0, 16)}
                                 </p>
                               </div>
                             </div>
                             <div className="text-right">
                               {ev.amount ? (
-                                <p className="font-headline text-lg font-bold text-[#00A89D]">{formatCurrency(ev.amount)}</p>
+                                <p className="font-headline text-lg font-bold text-[#00A89D]">
+                                  {formatCurrency(ev.amount)}
+                                </p>
                               ) : null}
                               <p className="text-xs text-white/40">
-                                {ev.occurred_at ? moment(ev.occurred_at).format('YYYY-MM-DD HH:mm:ss') : '—'}
+                                {ev.occurred_at
+                                  ? moment(ev.occurred_at).format('YYYY-MM-DD HH:mm:ss')
+                                  : '—'}
                               </p>
                             </div>
                           </div>
                           {isFinancial && (
                             <div className="mt-2 grid grid-cols-2 gap-2 border-t border-white/5 pt-2 text-xs text-white/50 sm:grid-cols-4">
-                              <span>Merchant: <span className="text-white/70">{ev.merchant_id?.slice(0, 8) ?? '—'}</span></span>
-                              <span>Customer: <span className="text-white/70">{ev.customer_id?.slice(0, 8) ?? '—'}</span></span>
-                              <span>Voucher: <span className="text-white/70">{ev.voucher_id?.slice(0, 8) ?? '—'}</span></span>
-                              <span>Face value: <span className="text-white/70">{ev.face_value ? formatCurrency(ev.face_value) : '—'}</span></span>
+                              <span>
+                                Merchant:{' '}
+                                <span className="text-white/70">
+                                  {ev.merchant_id?.slice(0, 8) ?? '—'}
+                                </span>
+                              </span>
+                              <span>
+                                Customer:{' '}
+                                <span className="text-white/70">
+                                  {ev.customer_id?.slice(0, 8) ?? '—'}
+                                </span>
+                              </span>
+                              <span>
+                                Voucher:{' '}
+                                <span className="text-white/70">
+                                  {ev.voucher_id?.slice(0, 8) ?? '—'}
+                                </span>
+                              </span>
+                              <span>
+                                Face value:{' '}
+                                <span className="text-white/70">
+                                  {ev.face_value ? formatCurrency(ev.face_value) : '—'}
+                                </span>
+                              </span>
                             </div>
                           )}
                         </div>
@@ -1217,7 +1281,9 @@ export default function BillingEngine() {
                   <Landmark className="w-5 h-5 text-[#00A89D]" />
                   Merchant Payouts
                 </CardTitle>
-                <p className="text-sm text-white/50">Live from merchant_payouts table — queued → pending → paid</p>
+                <p className="text-sm text-white/50">
+                  Live from merchant_payouts table — queued → pending → paid
+                </p>
               </CardHeader>
               <CardContent>
                 {payouts.length === 0 ? (
@@ -1235,16 +1301,30 @@ export default function BillingEngine() {
                       </thead>
                       <tbody>
                         {payouts.map((p) => {
-                          const merchantName = p.merchants?.business_name ?? merchantNames[p.merchant_id] ?? p.merchant_id?.slice(0, 8);
-                          const statusColor = p.status === 'paid' ? 'bg-emerald-500/20 text-emerald-300'
-                            : p.status === 'pending' ? 'bg-orange-500/20 text-orange-300'
-                            : 'bg-white/10 text-white/60';
+                          const merchantName =
+                            p.merchants?.business_name ??
+                            merchantNames[p.merchant_id] ??
+                            p.merchant_id?.slice(0, 8);
+                          const statusColor =
+                            p.status === 'paid'
+                              ? 'bg-emerald-500/20 text-emerald-300'
+                              : p.status === 'pending'
+                                ? 'bg-orange-500/20 text-orange-300'
+                                : 'bg-white/10 text-white/60';
                           return (
                             <tr key={p.id} className="border-b border-white/5 hover:bg-white/5">
                               <td className="px-3 py-2 font-medium">{merchantName}</td>
-                              <td className="px-3 py-2 text-right font-bold text-[#00A89D]">{formatCurrency(p.amount)}</td>
-                              <td className="px-3 py-2"><Badge className={statusColor}>{p.status}</Badge></td>
-                              <td className="px-3 py-2 text-white/50 text-xs">{p.created_at ? moment(p.created_at).format('DD MMM YYYY HH:mm') : '—'}</td>
+                              <td className="px-3 py-2 text-right font-bold text-[#00A89D]">
+                                {formatCurrency(p.amount)}
+                              </td>
+                              <td className="px-3 py-2">
+                                <Badge className={statusColor}>{p.status}</Badge>
+                              </td>
+                              <td className="px-3 py-2 text-white/50 text-xs">
+                                {p.created_at
+                                  ? moment(p.created_at).format('DD MMM YYYY HH:mm')
+                                  : '—'}
+                              </td>
                             </tr>
                           );
                         })}
@@ -1271,28 +1351,47 @@ export default function BillingEngine() {
                       disabled={triggerReconciliationMutation.isPending}
                       className="bg-[#00A89D] hover:bg-[#00A89D]/90 text-white"
                     >
-                      {triggerReconciliationMutation.isPending
-                        ? <RefreshCw className="w-4 h-4 animate-spin" />
-                        : <><RefreshCw className="w-4 h-4 mr-2" />Run Now</>}
+                      {triggerReconciliationMutation.isPending ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Run Now
+                        </>
+                      )}
                     </GoldButton>
                   </div>
-                  <p className="text-sm text-white/50">Compares billing_events vs billing_ledger_entries and flags variances</p>
+                  <p className="text-sm text-white/50">
+                    Compares billing_events vs billing_ledger_entries and flags variances
+                  </p>
                 </CardHeader>
                 <CardContent>
                   {reconciliationRuns.length === 0 ? (
-                    <p className="text-white/50 text-sm py-8 text-center">No reconciliation runs yet. Click Run Now to start.</p>
+                    <p className="text-white/50 text-sm py-8 text-center">
+                      No reconciliation runs yet. Click Run Now to start.
+                    </p>
                   ) : (
                     <div className="space-y-3">
                       {reconciliationRuns.map((run) => {
-                        const statusColor = run.status === 'completed' ? 'bg-emerald-500/20 text-emerald-300'
-                          : run.status === 'exceptions' ? 'bg-red-500/20 text-red-300'
-                          : 'bg-yellow-500/20 text-yellow-300';
+                        const statusColor =
+                          run.status === 'completed'
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : run.status === 'exceptions'
+                              ? 'bg-red-500/20 text-red-300'
+                              : 'bg-yellow-500/20 text-yellow-300';
                         return (
-                          <div key={run.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                          <div
+                            key={run.id}
+                            className="rounded-xl border border-white/10 bg-white/5 p-4"
+                          >
                             <div className="flex items-center justify-between mb-3">
                               <div>
                                 <div className="font-semibold">{run.run_date}</div>
-                                <div className="text-xs text-white/50">{run.completed_at ? moment(run.completed_at).format('HH:mm:ss') : '—'}</div>
+                                <div className="text-xs text-white/50">
+                                  {run.completed_at
+                                    ? moment(run.completed_at).format('HH:mm:ss')
+                                    : '—'}
+                                </div>
                               </div>
                               <Badge className={statusColor}>{run.status}</Badge>
                             </div>
@@ -1307,16 +1406,24 @@ export default function BillingEngine() {
                               </div>
                               <div className="bg-white/5 rounded-lg p-2">
                                 <div className="text-white/50 text-xs">Matched</div>
-                                <div className="font-bold text-emerald-300">{run.matched_count ?? 0}</div>
+                                <div className="font-bold text-emerald-300">
+                                  {run.matched_count ?? 0}
+                                </div>
                               </div>
                               <div className="bg-white/5 rounded-lg p-2">
                                 <div className="text-white/50 text-xs">Exceptions</div>
-                                <div className={`font-bold ${run.exception_count > 0 ? 'text-red-300' : 'text-emerald-300'}`}>{run.exception_count ?? 0}</div>
+                                <div
+                                  className={`font-bold ${run.exception_count > 0 ? 'text-red-300' : 'text-emerald-300'}`}
+                                >
+                                  {run.exception_count ?? 0}
+                                </div>
                               </div>
                             </div>
                             {run.variance > 0 && (
                               <div className="mt-3 text-xs text-red-300 bg-red-500/10 rounded-lg p-2">
-                                Variance: {formatCurrency(run.variance)} — WS1: {formatCurrency(run.total_ws1_value)} vs Ledger: {formatCurrency(run.total_ledger_value)}
+                                Variance: {formatCurrency(run.variance)} — WS1:{' '}
+                                {formatCurrency(run.total_ws1_value)} vs Ledger:{' '}
+                                {formatCurrency(run.total_ledger_value)}
                               </div>
                             )}
                           </div>
@@ -1339,7 +1446,11 @@ export default function BillingEngine() {
                       <Button
                         size="xs"
                         variant={exceptionFilter === 'open' ? 'solid' : 'outline'}
-                        className={exceptionFilter === 'open' ? 'bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1' : 'text-white border-white/10 text-xs px-2 py-1'}
+                        className={
+                          exceptionFilter === 'open'
+                            ? 'bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1'
+                            : 'text-white border-white/10 text-xs px-2 py-1'
+                        }
                         onClick={() => setExceptionFilter('open')}
                       >
                         Open Exceptions
@@ -1347,27 +1458,43 @@ export default function BillingEngine() {
                       <Button
                         size="xs"
                         variant={exceptionFilter === 'resolved' ? 'solid' : 'outline'}
-                        className={exceptionFilter === 'resolved' ? 'bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-2 py-1' : 'text-white border-white/10 text-xs px-2 py-1'}
+                        className={
+                          exceptionFilter === 'resolved'
+                            ? 'bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-2 py-1'
+                            : 'text-white border-white/10 text-xs px-2 py-1'
+                        }
                         onClick={() => setExceptionFilter('resolved')}
                       >
                         Resolved
                       </Button>
                     </div>
                   </div>
-                  <p className="text-sm text-white/50">Discrepancies identified during ledger audits that require manual review or waivers.</p>
+                  <p className="text-sm text-white/50">
+                    Discrepancies identified during ledger audits that require manual review or
+                    waivers.
+                  </p>
                 </CardHeader>
                 <CardContent>
                   {exceptions.length === 0 ? (
-                    <p className="text-white/50 text-sm py-4 text-center">No {exceptionFilter} exceptions found.</p>
+                    <p className="text-white/50 text-sm py-4 text-center">
+                      No {exceptionFilter} exceptions found.
+                    </p>
                   ) : (
                     <div className="space-y-3">
                       {exceptions.map((ex) => (
-                        <div key={ex.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                        <div
+                          key={ex.id}
+                          className="rounded-xl border border-white/10 bg-white/5 p-4"
+                        >
                           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                             <div>
                               <div className="flex items-center gap-2">
-                                <Badge className="bg-red-500/20 text-red-300 border-red-500/30 text-[10px] capitalize">{ex.exception_type.replace('_', ' ')}</Badge>
-                                <span className="text-xs text-white/50">Ref: {ex.transaction_ref || 'N/A'}</span>
+                                <Badge className="bg-red-500/20 text-red-300 border-red-500/30 text-[10px] capitalize">
+                                  {ex.exception_type.replace('_', ' ')}
+                                </Badge>
+                                <span className="text-xs text-white/50">
+                                  Ref: {ex.transaction_ref || 'N/A'}
+                                </span>
                               </div>
                               <p className="mt-2 text-sm font-semibold">{ex.notes}</p>
                               <div className="mt-1 text-xs text-white/40">
@@ -1375,13 +1502,19 @@ export default function BillingEngine() {
                               </div>
                               {ex.status === 'resolved' && (
                                 <div className="mt-2 text-xs text-emerald-300 bg-emerald-500/10 rounded-lg p-2">
-                                  Resolved by: {ex.resolved_by || 'Auditor'} on {moment(ex.resolved_at).format('DD MMM HH:mm')}. Notes: {ex.notes}
+                                  Resolved by: {ex.resolved_by || 'Auditor'} on{' '}
+                                  {moment(ex.resolved_at).format('DD MMM HH:mm')}. Notes: {ex.notes}
                                 </div>
                               )}
                             </div>
                             <div className="text-right shrink-0">
-                              <div className="text-md font-bold text-red-300">Variance: {formatCurrency(ex.variance)}</div>
-                              <div className="text-xs text-white/50">WS1: {formatCurrency(ex.ws1_amount)} • Ledger: {formatCurrency(ex.ledger_amount)}</div>
+                              <div className="text-md font-bold text-red-300">
+                                Variance: {formatCurrency(ex.variance)}
+                              </div>
+                              <div className="text-xs text-white/50">
+                                WS1: {formatCurrency(ex.ws1_amount)} • Ledger:{' '}
+                                {formatCurrency(ex.ledger_amount)}
+                              </div>
                             </div>
                           </div>
                           {ex.status === 'open' && (
@@ -1391,7 +1524,12 @@ export default function BillingEngine() {
                                 placeholder="Resolution / waiver notes..."
                                 className="h-8 flex-1 rounded-md border border-white/10 bg-white/5 px-3 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-[#00A89D]"
                                 value={resolutionNotes[ex.id] || ''}
-                                onChange={(e) => setResolutionNotes({ ...resolutionNotes, [ex.id]: e.target.value })}
+                                onChange={(e) =>
+                                  setResolutionNotes({
+                                    ...resolutionNotes,
+                                    [ex.id]: e.target.value,
+                                  })
+                                }
                               />
                               <Button
                                 size="sm"
@@ -1399,7 +1537,8 @@ export default function BillingEngine() {
                                 disabled={resolveExceptionMutation.isPending}
                                 onClick={() => {
                                   const notes = resolutionNotes[ex.id]?.trim();
-                                  if (!notes) return alert('Please enter resolution notes before waiving.');
+                                  if (!notes)
+                                    return alert('Please enter resolution notes before waiving.');
                                   resolveExceptionMutation.mutate({ exceptionId: ex.id, notes });
                                 }}
                               >
@@ -1421,47 +1560,66 @@ export default function BillingEngine() {
                     <Zap className="w-5 h-5 text-yellow-400" />
                     Event Replay Console
                   </CardTitle>
-                  <p className="text-sm text-white/50">Re-route or re-audit historical transaction events to reconstruct and correct ledger postings.</p>
+                  <p className="text-sm text-white/50">
+                    Re-route or re-audit historical transaction events to reconstruct and correct
+                    ledger postings.
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs text-white/60 mb-1">Event IDs (Comma-separated, optional)</label>
+                      <label className="block text-xs text-white/60 mb-1">
+                        Event IDs (Comma-separated, optional)
+                      </label>
                       <textarea
                         placeholder="e.g. 5d5a7dbe-9b37-4d7a-ba92-f045bb627b40"
                         className="w-full h-20 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#00A89D]"
                         value={replayPayload.eventIds}
-                        onChange={(e) => setReplayPayload({ ...replayPayload, eventIds: e.target.value })}
+                        onChange={(e) =>
+                          setReplayPayload({ ...replayPayload, eventIds: e.target.value })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
                       <div>
-                        <label className="block text-xs text-white/60 mb-1">Event Type Filter (optional)</label>
+                        <label className="block text-xs text-white/60 mb-1">
+                          Event Type Filter (optional)
+                        </label>
                         <input
                           type="text"
                           placeholder="e.g. VOUCHER_PURCHASED"
                           className="w-full h-8 rounded-md border border-white/10 bg-white/5 px-3 text-xs text-white focus:outline-none"
                           value={replayPayload.eventType}
-                          onChange={(e) => setReplayPayload({ ...replayPayload, eventType: e.target.value })}
+                          onChange={(e) =>
+                            setReplayPayload({ ...replayPayload, eventType: e.target.value })
+                          }
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-xs text-white/60 mb-1">From Date (optional)</label>
+                          <label className="block text-xs text-white/60 mb-1">
+                            From Date (optional)
+                          </label>
                           <input
                             type="date"
                             className="w-full h-8 rounded-md border border-white/10 bg-white/5 px-3 text-xs text-white focus:outline-none"
                             value={replayPayload.fromDate}
-                            onChange={(e) => setReplayPayload({ ...replayPayload, fromDate: e.target.value })}
+                            onChange={(e) =>
+                              setReplayPayload({ ...replayPayload, fromDate: e.target.value })
+                            }
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-white/60 mb-1">To Date (optional)</label>
+                          <label className="block text-xs text-white/60 mb-1">
+                            To Date (optional)
+                          </label>
                           <input
                             type="date"
                             className="w-full h-8 rounded-md border border-white/10 bg-white/5 px-3 text-xs text-white focus:outline-none"
                             value={replayPayload.toDate}
-                            onChange={(e) => setReplayPayload({ ...replayPayload, toDate: e.target.value })}
+                            onChange={(e) =>
+                              setReplayPayload({ ...replayPayload, toDate: e.target.value })
+                            }
                           />
                         </div>
                       </div>
@@ -1473,11 +1631,14 @@ export default function BillingEngine() {
                       type="checkbox"
                       id="forceLedgerRepost"
                       checked={replayPayload.forceLedgerRepost}
-                      onChange={(e) => setReplayPayload({ ...replayPayload, forceLedgerRepost: e.target.checked })}
+                      onChange={(e) =>
+                        setReplayPayload({ ...replayPayload, forceLedgerRepost: e.target.checked })
+                      }
                       className="rounded border-white/10 bg-white/5 text-[#00A89D] focus:ring-[#00A89D]"
                     />
                     <label htmlFor="forceLedgerRepost" className="text-xs text-white/70">
-                      Force Ledger Repost (Warning: Deletes and recalculates existing ledger entries for matching keys!)
+                      Force Ledger Repost (Warning: Deletes and recalculates existing ledger entries
+                      for matching keys!)
                     </label>
                   </div>
 
@@ -1486,14 +1647,21 @@ export default function BillingEngine() {
                     disabled={replayMutation.isPending}
                     onClick={() => {
                       const payload = {
-                        eventIds: replayPayload.eventIds ? replayPayload.eventIds.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+                        eventIds: replayPayload.eventIds
+                          ? replayPayload.eventIds
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean)
+                          : undefined,
                         fromDate: replayPayload.fromDate || undefined,
                         toDate: replayPayload.toDate || undefined,
                         eventType: replayPayload.eventType || undefined,
-                        forceLedgerRepost: replayPayload.forceLedgerRepost
+                        forceLedgerRepost: replayPayload.forceLedgerRepost,
                       };
                       if (!payload.eventIds && !payload.fromDate && !payload.eventType) {
-                        return alert('Please enter at least one Event ID, a From Date, or an Event Type to replay.');
+                        return alert(
+                          'Please enter at least one Event ID, a From Date, or an Event Type to replay.'
+                        );
                       }
                       replayMutation.mutate(payload);
                     }}
@@ -1512,23 +1680,38 @@ export default function BillingEngine() {
                   <ShieldCheck className="w-5 h-5 text-[#00A89D]" />
                   Audit Log
                 </CardTitle>
-                <p className="text-sm text-white/50">Immutable compliance trail from pasa_audit_log</p>
+                <p className="text-sm text-white/50">
+                  Immutable compliance trail from pasa_audit_log
+                </p>
               </CardHeader>
               <CardContent>
                 {auditEvents.length === 0 ? (
-                  <p className="text-white/50 text-sm py-8 text-center">No audit events recorded yet.</p>
+                  <p className="text-white/50 text-sm py-8 text-center">
+                    No audit events recorded yet.
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {auditEvents.map((evt) => (
-                      <div key={evt.id} className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                      <div
+                        key={evt.id}
+                        className="rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+                      >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge className="bg-white/10 text-white border-white/10 text-xs">{evt.action}</Badge>
-                            <span className="text-xs text-white/50">{evt.actor_role ?? evt.actorRole ?? 'system'}</span>
-                            {evt.entity_type && <span className="text-xs text-white/40">{evt.entity_type}</span>}
+                            <Badge className="bg-white/10 text-white border-white/10 text-xs">
+                              {evt.action}
+                            </Badge>
+                            <span className="text-xs text-white/50">
+                              {evt.actor_role ?? evt.actorRole ?? 'system'}
+                            </span>
+                            {evt.entity_type && (
+                              <span className="text-xs text-white/40">{evt.entity_type}</span>
+                            )}
                           </div>
                           <span className="text-xs text-white/40 shrink-0">
-                            {evt.created_at ? moment(evt.created_at).format('DD MMM HH:mm:ss') : '—'}
+                            {evt.created_at
+                              ? moment(evt.created_at).format('DD MMM HH:mm:ss')
+                              : '—'}
                           </span>
                         </div>
                         {evt.metadata && Object.keys(evt.metadata).length > 0 && (

@@ -43,12 +43,12 @@ export default function VoucherLedger() {
   const events = eventsResponse?.data ?? [];
 
   const { data: nameMap } = useQuery({
-    queryKey: ['ledger-names', events.map(e => e.merchant_id + e.customer_id).join(',')],
+    queryKey: ['ledger-names', events.map((e) => e.merchant_id + e.customer_id).join(',')],
     queryFn: () => {
-      const merchantIds = [...new Set(events.map(e => e.merchant_id).filter(Boolean))];
-      const customerIds = [...new Set(events.map(e => e.customer_id).filter(Boolean))];
+      const merchantIds = [...new Set(events.map((e) => e.merchant_id).filter(Boolean))];
+      const customerIds = [...new Set(events.map((e) => e.customer_id).filter(Boolean))];
       if (!merchantIds.length && !customerIds.length) return { merchants: {}, customers: {} };
-      return resolveEntityNames(merchantIds, customerIds);
+      return resolveEntityNames(merchantIds, customerIds, session, role);
     },
     enabled: events.length > 0,
     staleTime: 60000,
@@ -62,7 +62,8 @@ export default function VoucherLedger() {
   };
 
   const getPaymentMethod = (metadata) => {
-    const method = metadata?.paymentMethod ?? metadata?.payment_method ?? metadata?.method ?? 'Card';
+    const method =
+      metadata?.paymentMethod ?? metadata?.payment_method ?? metadata?.method ?? 'Card';
     const methodMap = {
       card: 'Card',
       '3ds': '3DS Secure',
@@ -80,7 +81,7 @@ export default function VoucherLedger() {
   const getStatusBadge = (event) => {
     const metadata = event.metadata ?? {};
     const settlementStatus = metadata.settlementStatus ?? metadata.settlement_status;
-    
+
     if (settlementStatus === 'settled' || event.event_type === 'voucher_redemption') {
       return (
         <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1">
@@ -118,11 +119,11 @@ export default function VoucherLedger() {
       const metadata = event.metadata ?? {};
       const grossAmount = Number(event.gross_amount ?? 0);
       const discountAmount = Number(event.total_discount_amount ?? 0);
-      
+
       // 70/30 split: 70% consumer benefit, 30% platform
       const consumerSavings = discountAmount * 0.7; // 2.5% of face value
       const platformRevenue = discountAmount * 0.3; // 1.2% of face value
-      
+
       // Merchant gets 96% of face value
       const merchantGross = grossAmount * 0.96;
       const bankFee = merchantGross * 0.005; // 0.5% bank fee
@@ -130,12 +131,22 @@ export default function VoucherLedger() {
 
       return {
         id: event.id,
-        transactionId: metadata.transactionReference ?? metadata.transaction_reference ?? event.id?.slice(0, 12),
+        transactionId:
+          metadata.transactionReference ?? metadata.transaction_reference ?? event.id?.slice(0, 12),
         dateTime: event.occurred_at ?? event.created_at,
         consumerId: event.customer_id ?? 'N/A',
-        consumerName: customerNames[event.customer_id] ?? metadata.customerName ?? metadata.customer_name ?? metadata.consumerName ?? 'Unknown Consumer',
+        consumerName:
+          customerNames[event.customer_id] ??
+          metadata.customerName ??
+          metadata.customer_name ??
+          metadata.consumerName ??
+          'Unknown Consumer',
         merchantId: event.merchant_id ?? 'N/A',
-        merchantName: merchantNames[event.merchant_id] ?? metadata.merchantName ?? metadata.merchant_name ?? 'Unknown Merchant',
+        merchantName:
+          merchantNames[event.merchant_id] ??
+          metadata.merchantName ??
+          metadata.merchant_name ??
+          'Unknown Merchant',
         paymentMethod: getPaymentMethod(metadata),
         faceValue: grossAmount,
         consumerSavings,
@@ -258,17 +269,16 @@ export default function VoucherLedger() {
             </Link>
             <div>
               <h1 className="text-3xl font-bold text-white">Voucher Ledger</h1>
-              <p className="text-white/60">Fintech-grade transaction tracking synced with www.evoucher.co.za</p>
+              <p className="text-white/60">
+                Fintech-grade transaction tracking synced with www.evoucher.co.za
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 px-4 py-2">
               Live • {totals.count} Transactions
             </Badge>
-            <Button
-              onClick={exportToCSV}
-              className="bg-[#00A89D] hover:bg-[#00A89D]/90 text-white"
-            >
+            <Button onClick={exportToCSV} className="bg-[#00A89D] hover:bg-[#00A89D]/90 text-white">
               <Download className="w-4 h-4 mr-2" />
               Export CSV
             </Button>
@@ -297,7 +307,9 @@ export default function VoucherLedger() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-white">{formatCurrency(totals.merchantPayouts)}</p>
+              <p className="text-3xl font-bold text-white">
+                {formatCurrency(totals.merchantPayouts)}
+              </p>
               <p className="text-xs text-white/60 mt-1">Net after 0.5% bank fee</p>
             </CardContent>
           </Card>
@@ -310,7 +322,9 @@ export default function VoucherLedger() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-white">{formatCurrency(totals.memberBenefits)}</p>
+              <p className="text-3xl font-bold text-white">
+                {formatCurrency(totals.memberBenefits)}
+              </p>
               <p className="text-xs text-white/60 mt-1">Credited to wallets</p>
             </CardContent>
           </Card>
@@ -323,7 +337,9 @@ export default function VoucherLedger() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-white">{formatCurrency(totals.platformRevenue)}</p>
+              <p className="text-3xl font-bold text-white">
+                {formatCurrency(totals.platformRevenue)}
+              </p>
               <p className="text-xs text-white/60 mt-1">eVoucher earnings</p>
             </CardContent>
           </Card>
@@ -334,13 +350,22 @@ export default function VoucherLedger() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="bg-white/10 border border-white/20">
-                  <TabsTrigger value="all" className="data-[state=active]:bg-[#00A89D] data-[state=active]:text-white">
+                  <TabsTrigger
+                    value="all"
+                    className="data-[state=active]:bg-[#00A89D] data-[state=active]:text-white"
+                  >
                     All Transactions
                   </TabsTrigger>
-                  <TabsTrigger value="purchases" className="data-[state=active]:bg-[#00A89D] data-[state=active]:text-white">
+                  <TabsTrigger
+                    value="purchases"
+                    className="data-[state=active]:bg-[#00A89D] data-[state=active]:text-white"
+                  >
                     Purchases
                   </TabsTrigger>
-                  <TabsTrigger value="redemptions" className="data-[state=active]:bg-[#00A89D] data-[state=active]:text-white">
+                  <TabsTrigger
+                    value="redemptions"
+                    className="data-[state=active]:bg-[#00A89D] data-[state=active]:text-white"
+                  >
                     Redemptions
                   </TabsTrigger>
                 </TabsList>
@@ -362,10 +387,18 @@ export default function VoucherLedger() {
                   onChange={(e) => setDateFilter(e.target.value)}
                   className="h-10 px-3 rounded-md bg-white/10 border border-white/20 text-white text-sm"
                 >
-                  <option value="all" className="bg-slate-900">All Time</option>
-                  <option value="24h" className="bg-slate-900">Last 24 Hours</option>
-                  <option value="7d" className="bg-slate-900">Last 7 Days</option>
-                  <option value="30d" className="bg-slate-900">Last 30 Days</option>
+                  <option value="all" className="bg-slate-900">
+                    All Time
+                  </option>
+                  <option value="24h" className="bg-slate-900">
+                    Last 24 Hours
+                  </option>
+                  <option value="7d" className="bg-slate-900">
+                    Last 7 Days
+                  </option>
+                  <option value="30d" className="bg-slate-900">
+                    Last 30 Days
+                  </option>
                 </select>
               </div>
             </div>
@@ -396,7 +429,10 @@ export default function VoucherLedger() {
                         <div className="flex flex-col items-center gap-3">
                           <CreditCard className="w-12 h-12 text-white/20" />
                           <p className="text-white/60">No transactions found</p>
-                          <p className="text-xs text-white/40">Process a payment on www.evoucher.co.za to see it appear here within 5 seconds</p>
+                          <p className="text-xs text-white/40">
+                            Process a payment on www.evoucher.co.za to see it appear here within 5
+                            seconds
+                          </p>
                         </div>
                       </td>
                     </tr>
@@ -429,7 +465,9 @@ export default function VoucherLedger() {
                             <Users className="w-4 h-4 text-white/40" />
                             <div className="flex flex-col">
                               <span className="font-medium">{txn.consumerName}</span>
-                              <span className="text-xs text-white/60 font-mono">{txn.consumerId.slice(0, 8)}</span>
+                              <span className="text-xs text-white/60 font-mono">
+                                {txn.consumerId.slice(0, 8)}
+                              </span>
                             </div>
                           </div>
                         </td>
@@ -438,7 +476,9 @@ export default function VoucherLedger() {
                             <Store className="w-4 h-4 text-white/40" />
                             <div className="flex flex-col">
                               <span className="font-medium">{txn.merchantName}</span>
-                              <span className="text-xs text-white/60 font-mono">{txn.merchantId.slice(0, 8)}</span>
+                              <span className="text-xs text-white/60 font-mono">
+                                {txn.merchantId.slice(0, 8)}
+                              </span>
                             </div>
                           </div>
                         </td>
@@ -474,13 +514,17 @@ export default function VoucherLedger() {
                                   {txn.ackStatus && (
                                     <div>
                                       <span className="text-white/60">ACK Status:</span>
-                                      <p className="text-emerald-300 font-semibold">{txn.ackStatus}</p>
+                                      <p className="text-emerald-300 font-semibold">
+                                        {txn.ackStatus}
+                                      </p>
                                     </div>
                                   )}
                                   {txn.settlementBatchId && (
                                     <div>
                                       <span className="text-white/60">Batch ID:</span>
-                                      <p className="text-white font-mono">{txn.settlementBatchId}</p>
+                                      <p className="text-white font-mono">
+                                        {txn.settlementBatchId}
+                                      </p>
                                     </div>
                                   )}
                                 </div>

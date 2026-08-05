@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { jsonNoStore } from '@/server/services/billing/no-store';
+import { requirePortalUser } from '@/server/services/billing/portal-guard';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -17,8 +18,12 @@ export async function OPTIONS() {
 export async function GET(request: Request) {
   const passcode = request.headers.get('X-Portal-Passcode') ?? '';
   const envPasscode = process.env.PORTAL_ADMIN_PASSCODE ?? '';
-  if (!envPasscode || passcode !== envPasscode) {
-    return jsonNoStore({ error: 'Forbidden' }, { status: 403, headers: CORS_HEADERS });
+  const passcodeValid = !!envPasscode && passcode === envPasscode;
+  if (!passcodeValid) {
+    const { allowed } = await requirePortalUser(request, ['admin', 'finance_approver', 'auditor']);
+    if (!allowed) {
+      return jsonNoStore({ error: 'Forbidden' }, { status: 403, headers: CORS_HEADERS });
+    }
   }
 
   const { searchParams } = new URL(request.url);

@@ -10,12 +10,12 @@ import {
 } from '@/server/services/bankserv/adaptor';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { writeAuditEvent } from '@/server/utils/audit';
-import { createBillingEvent } from '@/lib/billing/billing-event-recorder';
 import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { resolveBrandFromMerchantName, getBrandByKey } from '@/lib/merchant-brand-catalog';
 import { getWalletBalance, recordWalletDebit } from '@/server/services/wallet/ledger';
+import { publishPlatformEvent } from '@/lib/platform-events';
 
 const SUPPORTED_PAYMENT_METHODS = new Set([
   'visa_secure',
@@ -610,26 +610,6 @@ export async function POST(request: Request) {
 
     if (transactionError) throw transactionError;
 
-    // Create billing event immediately for all transactions (regardless of status)
-    await createBillingEvent(admin, {
-      merchantId: merchant.id,
-      customerId: user.id,
-      transactionReference,
-      voucherCode: voucherCode || undefined,
-      grossAmount: pricing.faceValue,
-      totalDiscountAmount: pricing.totalDiscountAmount,
-      paymentMethod: body.paymentMethod,
-      eventType: 'payment_transaction',
-      metadata: {
-        paymentStatus,
-        consumerPrice: pricing.consumerPrice,
-        merchantReceivableAfterTotalDiscount: pricing.merchantReceivableAfterTotalDiscount,
-        merchantReceivableAfterEvoucherBenefit: pricing.merchantReceivableAfterEvoucherBenefit,
-        accessChannel,
-        selectedBranchId: selectedBranchContext?.id ?? null,
-      },
-    });
-
     if (paymentStatus === 'completed' && body.paymentMethod === 'wallet') {
       try {
         await recordWalletDebit(admin, {
@@ -645,6 +625,7 @@ export async function POST(request: Request) {
       }
     }
 
+    let issuedVoucherId: string | null = null;
     let issuedVouchers: Array<{ code: string; faceValue: number; expiresAt?: string | null }> = [];
     if (paymentStatus === 'completed' && voucherCode) {
       const issued = await voucherService.issueVoucher({
@@ -663,6 +644,7 @@ export async function POST(request: Request) {
         voucherCode,
         expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
       });
+      issuedVoucherId = issued.voucherId;
 
       const { data: voucherRow } = await admin
         .from('customer_vouchers')
@@ -698,6 +680,33 @@ export async function POST(request: Request) {
     }
 
     if (paymentStatus === 'completed') {
+      publishPlatformEvent({
+        eventType: 'VOUCHER_PURCHASED',
+        correlationId: transactionReference,
+        merchantId: merchant.id,
+        customerId: user.id,
+        voucherId: issuedVoucherId ?? undefined,
+        transactionRef: transactionReference,
+        amount: pricing.consumerPrice,
+        faceValue: pricing.faceValue,
+        discountPct: pricing.totalDiscountPct,
+        payload: {
+          voucherCode,
+          issuedVouchers,
+          merchantName: merchant.business_name,
+          parentBrand: resolvedParentBrand,
+          paymentMethod: body.paymentMethod,
+          accessChannel,
+          selectedBranchId: selectedBranchContext?.id ?? null,
+          selectedBranchName:
+            selectedBranchContext?.branch_name ??
+            selectedBranchContext?.business_name ??
+            body.selectedBranchName ??
+            null,
+          source: 'voucher_purchase_route',
+        },
+      });
+
       try {
         await queueBankservSettlementTransaction(admin, {
           transactionReference,

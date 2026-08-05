@@ -1,4 +1,7 @@
-const API_BASE = (import.meta.env.VITE_PORTAL_API_BASE_URL || 'https://www.evoucher.co.za').replace(/\/$/, '');
+const API_BASE = (import.meta.env.VITE_PORTAL_API_BASE_URL || 'https://www.evoucher.co.za').replace(
+  /\/$/,
+  ''
+);
 
 function buildUrl(path) {
   if (!API_BASE) return path;
@@ -149,7 +152,12 @@ export async function listAuditEvents(session, role, params = {}) {
 }
 
 export async function provisionPortalUser(payload, session, role) {
-  return portalFetchJson('/api/v1/admin/portal-users', { method: 'POST', body: payload }, session, role);
+  return portalFetchJson(
+    '/api/v1/admin/portal-users',
+    { method: 'POST', body: payload },
+    session,
+    role
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -211,7 +219,12 @@ export async function listBankLinkages(session, role, params = {}) {
 }
 
 export async function createBankLinkage(payload, session, role) {
-  return portalFetchJson('/api/billing/bank-linkage', { method: 'POST', body: payload }, session, role);
+  return portalFetchJson(
+    '/api/billing/bank-linkage',
+    { method: 'POST', body: payload },
+    session,
+    role
+  );
 }
 
 export async function validateBankLinkage(linkageId, session, role) {
@@ -350,7 +363,7 @@ export async function resolveReconciliationException(exceptionId, notes, session
     '/api/billing/reconciliation/exceptions',
     {
       method: 'POST',
-      body: { exceptionId, notes }
+      body: { exceptionId, notes },
     },
     session,
     role
@@ -362,22 +375,21 @@ export async function replayPlatformEvents(payload, session, role) {
     '/api/billing/events/replay',
     {
       method: 'POST',
-      body: payload
+      body: payload,
     },
     session,
     role
   );
 }
 
-export async function resolveEntityNames(merchantIds = [], customerIds = []) {
+export async function resolveEntityNames(merchantIds = [], customerIds = [], session, role) {
   const search = new URLSearchParams();
   if (merchantIds.length) search.set('merchantIds', merchantIds.join(','));
   if (customerIds.length) search.set('customerIds', customerIds.join(','));
   const suffix = search.toString() ? `?${search}` : '';
-  const response = await fetch(
-    buildUrl(`/api/billing/resolve-names${suffix}`),
-    { headers: { 'Content-Type': 'application/json', 'X-Portal-Passcode': import.meta.env.VITE_ADMIN_PASSCODE || 'eVoucherAdmin2024' } }
-  );
+  const response = await fetch(buildUrl(`/api/billing/resolve-names${suffix}`), {
+    headers: portalHeaders(session, role),
+  });
   if (!response.ok) return { merchants: {}, customers: {} };
   return response.json();
 }
@@ -404,7 +416,9 @@ export async function listPortalMerchants(params = {}) {
 function sandboxHeaders() {
   const apiKey = import.meta.env.VITE_SANDBOX_API_KEY || import.meta.env.VITE_ADMIN_PASSCODE;
   if (!apiKey) {
-    throw new Error('Missing VITE_SANDBOX_API_KEY (or fallback VITE_ADMIN_PASSCODE) for sandbox gateway access.');
+    throw new Error(
+      'Missing VITE_SANDBOX_API_KEY (or fallback VITE_ADMIN_PASSCODE) for sandbox gateway access.'
+    );
   }
 
   return {
@@ -432,7 +446,12 @@ async function sandboxFetchJson(path, options) {
 }
 
 export async function runBillingSimulation(payload, session, role) {
-  return portalFetchJson('/api/billing/simulator', { method: 'POST', body: payload }, session, role);
+  return portalFetchJson(
+    '/api/billing/simulator',
+    { method: 'POST', body: payload },
+    session,
+    role
+  );
 }
 
 export async function initiateSandboxPurchase(payload) {
