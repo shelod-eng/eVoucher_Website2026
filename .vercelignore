@@ -3,6 +3,7 @@
 /.next-local
 /.tmp_iscream_ppt
 /.vercel.backup-20260513
+/.codebuddy
 /billing-engine-portal
 /docs
 /postman
@@ -10,6 +11,7 @@
 /supabase
 /.github
 /.vscode
+/public/downloads
 *.log
 tsconfig.tsbuildinfo
 .vercel.preview.env
