@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { calculateRevenue } from '@/lib/billing/revenue-calculator';
 import { computeRedemptionBreakdown } from '@/lib/billing/redemption-breakdown';
+import { writeAuditEvent } from '@/server/utils/audit';
 
 export type BillingEventType = 'voucher_redemption' | 'payment_transaction' | 'manual_adjustment';
 
@@ -116,7 +117,6 @@ export async function recordVoucherRedemptionBillingEvent(
 
   if (!existingLedger || existingLedger.length === 0) {
     const entries = [
-      // Voucher liability reduced as it is redeemed; merchant payable increases.
       {
         entry_group_id: event.id,
         source_type: 'transaction',
@@ -132,7 +132,6 @@ export async function recordVoucherRedemptionBillingEvent(
           kind: 'merchant_payout',
         },
       },
-      // Remaining portion captured as platform benefit/fee (model can be refined later).
       ...(breakdown.platformBenefitAmount > 0
         ? [
             {
@@ -185,7 +184,6 @@ export async function recordVoucherRedemptionBillingEvent(
       totalDiscountAmount: breakdown.totalDiscountAmount,
       consumerBenefitAmount: breakdown.consumerBenefitAmount,
       platformBenefitAmount: breakdown.platformBenefitAmount,
-      // Keep TRD v2.0 breakdown available for future alignment.
       trdV2: (() => {
         try {
           return calculateRevenue(breakdown.grossAmount);
@@ -200,6 +198,7 @@ export async function recordVoucherRedemptionBillingEvent(
 /**
  * Records an idempotent billing event for voucher purchases + posts ledger entries.
  * When a voucher is purchased, a liability is created (voucher_outstanding).
+ * Also creates merchant_payouts, billing_settlements, billing_invoices, and audit_events.
  */
 export async function recordVoucherPurchaseBillingEvent(
   admin: SupabaseClient,
@@ -218,10 +217,20 @@ export async function recordVoucherPurchaseBillingEvent(
   const faceValue = safeNumber(input.faceValue);
   const totalDiscountPct = safeNumber(input.totalDiscountPct);
   const totalDiscountAmount = round2(faceValue - consumerPrice);
-  const platformRevenue = round2(
-    totalDiscountAmount * Number(input.metadata?.platformRevenuePct ?? 0.012)
-  );
-  const consumerBenefit = round2(totalDiscountAmount - platformRevenue);
+
+  // Use the canonical TRD v2.0 revenue model for consumer benefit and platform
+  // revenue so merchant_payouts, billing_settlements, billing_invoices, and the
+  // dashboard all agree with the ledger contra entries.
+  //   - consumerBenefit = 2.8% of face value
+  //   - platformRevenue = 1.2% of face value
+  let trdRevenue: ReturnType<typeof calculateRevenue> | null = null;
+  try {
+    trdRevenue = calculateRevenue(faceValue);
+  } catch {
+    trdRevenue = null;
+  }
+  const platformRevenue = trdRevenue?.platformRevenue ?? round2(faceValue * 0.012);
+  const consumerBenefit = trdRevenue?.consumerBenefit ?? round2(faceValue * 0.028);
 
   // First: idempotent event record.
   const { data: existing } = await admin
@@ -242,7 +251,7 @@ export async function recordVoucherPurchaseBillingEvent(
           customer_id: customerId,
           voucher_id: input.voucherId ?? null,
           gross_amount: faceValue,
-          merchant_payout_amount: 0, // No immediate payout on purchase
+          merchant_payout_amount: 0,
           total_discount_pct: totalDiscountPct,
           total_discount_amount: totalDiscountAmount,
           occurred_at: input.occurredAt,
@@ -281,7 +290,6 @@ export async function recordVoucherPurchaseBillingEvent(
 
   if (!existingLedger || existingLedger.length === 0) {
     const entries = [
-      // Voucher liability recorded when customer receives it.
       {
         entry_group_id: event.id,
         source_type: 'transaction',
@@ -297,7 +305,6 @@ export async function recordVoucherPurchaseBillingEvent(
           kind: 'voucher_liability',
         },
       },
-      // Consumer benefit captured.
       ...(consumerBenefit > 0
         ? [
             {
@@ -317,7 +324,6 @@ export async function recordVoucherPurchaseBillingEvent(
             },
           ]
         : []),
-      // Platform revenue captured.
       ...(platformRevenue > 0
         ? [
             {
@@ -343,6 +349,126 @@ export async function recordVoucherPurchaseBillingEvent(
     if (ledgerError) throw ledgerError;
   }
 
+  // ── 3. Create merchant_payouts record (idempotent by source_id) ────────────
+  const merchantGrossPayout = trdRevenue?.merchantGrossPayout ?? round2(faceValue * 0.96);
+  const bankFee = trdRevenue?.bankFee ?? round2(merchantGrossPayout * 0.005);
+  const merchantNetPayout = trdRevenue?.merchantNetPayout ?? round2(merchantGrossPayout - bankFee);
+
+  const { data: existingPayout } = await admin
+    .from('merchant_payouts')
+    .select('id')
+    .eq('source_id', eventKey)
+    .maybeSingle();
+
+  if (!existingPayout) {
+    try {
+      await admin.from('merchant_payouts').insert({
+        merchant_id: merchantId,
+        amount: merchantNetPayout,
+        gross_amount: merchantGrossPayout,
+        bank_fee_amount: bankFee,
+        consumer_benefit_amount: consumerBenefit,
+        platform_revenue_amount: platformRevenue,
+        status: 'pending',
+        source_id: eventKey,
+        source_type: 'payment_transaction',
+        settlement_target: process.env.SETTLEMENT_TARGET ?? 'sponsor_bank',
+        created_at: input.occurredAt,
+      });
+    } catch (payoutError: any) {
+      if (!isDuplicateKeyError(payoutError)) {
+        console.error('[BillingEvents] merchant_payouts insert failed:', payoutError?.message);
+      }
+    }
+  }
+
+  // ── 4. Create billing_settlements record (idempotent by source_id) ─────────
+  const { data: existingSettlement } = await admin
+    .from('billing_settlements')
+    .select('id')
+    .eq('source_id', eventKey)
+    .maybeSingle();
+
+  if (!existingSettlement) {
+    try {
+      await admin.from('billing_settlements').insert({
+        merchant_id: merchantId,
+        amount: merchantNetPayout,
+        gross_amount: merchantGrossPayout,
+        bank_fee_amount: bankFee,
+        consumer_benefit_amount: consumerBenefit,
+        platform_revenue_amount: platformRevenue,
+        settlement_target: process.env.SETTLEMENT_TARGET ?? 'sponsor_bank',
+        status: 'pending',
+        source_id: eventKey,
+        source_type: 'payment_transaction',
+        created_at: input.occurredAt,
+      });
+    } catch (settlementError: any) {
+      if (!isDuplicateKeyError(settlementError)) {
+        console.error('[BillingEvents] billing_settlements insert failed:', settlementError?.message);
+      }
+    }
+  }
+
+  // ── 5. Create billing_invoices record (idempotent by source_id) ────────────
+  const { data: existingInvoice } = await admin
+    .from('billing_invoices')
+    .select('id')
+    .eq('source_id', eventKey)
+    .maybeSingle();
+
+  if (!existingInvoice) {
+    try {
+      await admin.from('billing_invoices').insert({
+        merchant_id: merchantId,
+        customer_id: customerId,
+        invoice_number: `INV-${eventKey.slice(0, 12).toUpperCase()}`,
+        face_value: faceValue,
+        consumer_price: consumerPrice,
+        total_discount_amount: totalDiscountAmount,
+        net_payable_to_merchant: merchantNetPayout,
+        bank_fee_amount: bankFee,
+        consumer_benefit_amount: consumerBenefit,
+        platform_revenue_amount: platformRevenue,
+        status: 'approved',
+        source_id: eventKey,
+        source_type: 'payment_transaction',
+        created_at: input.occurredAt,
+      });
+    } catch (invoiceError: any) {
+      if (!isDuplicateKeyError(invoiceError)) {
+        console.error('[BillingEvents] billing_invoices insert failed:', invoiceError?.message);
+      }
+    }
+  }
+
+  // ── 6. Create audit_events record ─────────────────────────────────────────
+  try {
+    await writeAuditEvent(admin, {
+      actorId: customerId,
+      actorRole: 'customer',
+      entityType: 'billing_event',
+      entityId: event.id,
+      action: 'billing_event_created',
+      metadata: {
+        eventKey,
+        eventType: 'payment_transaction',
+        merchantId,
+        faceValue,
+        consumerPrice,
+        merchantNetPayout,
+        platformRevenue,
+        consumerBenefit,
+        bankFee,
+        source: 'billing_event_recorder',
+      },
+      requestId: eventKey,
+    });
+  } catch (auditError: any) {
+    console.error('[BillingEvents] audit_events insert failed:', auditError?.message);
+  }
+
   return {
     event,
     breakdown: {
@@ -351,6 +477,9 @@ export async function recordVoucherPurchaseBillingEvent(
       totalDiscountAmount,
       consumerBenefit,
       platformRevenue,
+      merchantGrossPayout,
+      bankFee,
+      merchantNetPayout,
     },
   };
 }

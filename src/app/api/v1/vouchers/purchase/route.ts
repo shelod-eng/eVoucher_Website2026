@@ -680,7 +680,7 @@ export async function POST(request: Request) {
     }
 
     if (paymentStatus === 'completed') {
-      publishPlatformEvent({
+      await publishPlatformEvent({
         eventType: 'VOUCHER_PURCHASED',
         correlationId: transactionReference,
         merchantId: merchant.id,

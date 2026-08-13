@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Scale,
   Landmark,
+  Search,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -46,10 +47,12 @@ import {
   replayPlatformEvents,
 } from '@/api/portal-api';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
+import BillingEventsTab from '@/components/BillingEventsTab';
 
 export default function BillingEngine() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
+  const [transactionSearch, setTransactionSearch] = useState('');
   const { session, role } = useAdminAuth();
   const [stockRows, setStockRows] = useState([
     { sku: 'SPC-WASH-DOUBLE', merchant: 'SuperPrecast', onHand: 42, reserved: 6, reorderLevel: 20 },
@@ -98,9 +101,17 @@ export default function BillingEngine() {
 
   const { events: liveEvents, connected: realtimeConnected } = usePlatformEvents({ limit: 25 });
 
-  const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
+  // Production MUST default to portal mode. Using 'mock' as the default here
+  // caused the Billing Engine to silently display fake financial data when the
+  // VITE_BILLING_DATA_MODE env var was missing at build time.
+  // Explicit 'mock' is still supported for local development only.
+  const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'portal').toLowerCase();
   const useMock = dataMode === 'mock';
   const usePortalApi = dataMode === 'portal';
+  const portalModeError =
+    !usePortalApi && !useMock
+      ? `Invalid VITE_BILLING_DATA_MODE="${dataMode}". Expected "portal" (or "mock" for local dev).`
+      : null;
 
   function formatCurrency(value) {
     const num = Number(value ?? 0);
@@ -485,6 +496,11 @@ export default function BillingEngine() {
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-7xl mx-auto space-y-6">
+        {portalModeError ? (
+          <div className="text-xs bg-red-50 border border-red-300 text-red-900 rounded-md px-3 py-2">
+            {portalModeError}
+          </div>
+        ) : null}
         {useMock ? (
           <div className="text-xs bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-md px-3 py-2">
             Demo mode: showing mock billing data. Set{' '}
@@ -515,6 +531,35 @@ export default function BillingEngine() {
             </Badge>
           </div>
         </div>
+
+        {/* Transaction Reference Search */}
+        <Card className="bg-white/5 border-white/10 text-white">
+          <CardContent className="flex flex-col md:flex-row gap-3 items-stretch md:items-center py-4">
+            <div className="flex-1">
+              <label className="block text-xs text-white/60 mb-1">
+                Search Transaction Reference (canonical identifier)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. TXN-20260812-XXXXXX or E2E-TEST-..."
+                className="w-full h-10 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-[#00A89D]"
+                value={transactionSearch}
+                onChange={(e) => setTransactionSearch(e.target.value)}
+              />
+            </div>
+            <Button
+              className="h-10 bg-[#00A89D] hover:bg-[#009488] text-white shrink-0"
+              onClick={() => {
+                if (transactionSearch.trim()) {
+                  setActiveTab('billing-events');
+                }
+              }}
+            >
+              <Search className="w-4 h-4 mr-2" />
+              Search
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
@@ -632,6 +677,10 @@ export default function BillingEngine() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4 bg-white/5 border border-white/10 flex-wrap">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="billing-events" className="flex items-center gap-1.5">
+              <CreditCard className="w-3.5 h-3.5" />
+              Billing Events
+            </TabsTrigger>
             <TabsTrigger value="live-events" className="flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5" />
               Live Events
@@ -911,6 +960,16 @@ export default function BillingEngine() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="billing-events">
+            <BillingEventsTab
+              session={session}
+              role={role}
+              transactionSearch={transactionSearch}
+              merchantNames={merchantNames}
+              customerNames={customerNames}
+            />
           </TabsContent>
 
           <TabsContent value="logistics">

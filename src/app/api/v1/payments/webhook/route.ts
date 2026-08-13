@@ -177,8 +177,11 @@ export async function POST(request: Request) {
             transactionReference: payload.transactionReference,
           },
         });
-      } catch {
-        // billing failure must never block the webhook response
+      } catch (billingError: any) {
+        console.error(
+          '[Webhook] Direct billing event recording failed (will be retried via platform event outbox):',
+          billingError?.message ?? billingError
+        );
       }
 
       publishPlatformEvent({

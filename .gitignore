@@ -56,3 +56,4 @@ eVoucher.session.sql
 # Local troubleshooting files
 cookies.txt
 git_status.txt
+.env*

@@ -1,5 +1,13 @@
 /**
- * BankServ Adaptor Service
+ * @deprecated BankServ Adaptor Service (Legacy)
+ *
+ * This adaptor is DEPRECATED. All settlement processing has been consolidated
+ * into the canonical path at src/server/services/bankserv/adaptor.ts.
+ *
+ * This file is retained for historical traceability and to ensure existing
+ * data in the legacy `transactions` and `settlement_batches` tables remains
+ * readable. NO NEW PRODUCTION WRITES should target this path.
+ *
  * Handles ACH/NAEDO settlement format, ACK/NCK responses, and batch processing
  * Integrates with BankServ Africa for merchant payouts
  */

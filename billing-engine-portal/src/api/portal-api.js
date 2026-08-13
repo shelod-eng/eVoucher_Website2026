@@ -318,6 +318,7 @@ export async function getBankServStatus(session, role) {
 export async function listBillingEvents(session, role, params = {}) {
   const search = new URLSearchParams();
   if (params.merchantId) search.set('merchantId', params.merchantId);
+  if (params.transactionRef) search.set('transactionRef', params.transactionRef);
   if (params.limit) search.set('limit', String(params.limit));
   const suffix = search.toString() ? `?${search}` : '';
   return portalFetchJson(`/api/billing/events${suffix}`, {}, session, role);

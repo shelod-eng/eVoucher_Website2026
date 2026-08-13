@@ -38,6 +38,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const merchantId = String(searchParams.get('merchantId') ?? '').trim();
+    const transactionRef = String(searchParams.get('transactionRef') ?? '').trim();
     const limit = Math.min(1000, Math.max(1, Number(searchParams.get('limit') ?? 100)));
 
     const admin = createAdminClient();
@@ -48,6 +49,9 @@ export async function GET(request: Request) {
       .limit(limit);
 
     if (merchantId) query = query.eq('merchant_id', merchantId);
+    // Canonical search by transaction_reference — billing_events.event_key
+    // holds the transaction_reference (see eventKey logic in POST handler).
+    if (transactionRef) query = query.eq('event_key', transactionRef);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -112,6 +116,9 @@ export async function POST(request: Request) {
   const discountPct = Number(body?.discount_pct ?? body?.discountPct ?? DEFAULT_TOTAL_DISCOUNT_PCT);
   const occurredAt = String(body?.occurred_at ?? body?.occurredAt ?? new Date().toISOString());
   const correlationId = String(body?.correlation_id ?? body?.correlationId ?? eventId);
+  const transactionRef = String(
+    body?.transaction_ref ?? body?.transactionRef ?? correlationId
+  ).trim();
 
   if (!eventId)
     return jsonNoStore({ error: 'event_id is required.' }, { status: 400, headers: CORS_HEADERS });
@@ -120,6 +127,14 @@ export async function POST(request: Request) {
       { error: 'event_type is required.' },
       { status: 400, headers: CORS_HEADERS }
     );
+
+  // Canonical billing event key.
+  // transaction_reference MUST remain the canonical identifier so the three
+  // write paths (direct webhook call, publishPlatformEvent in-process handler,
+  // and outbox cron retry via this gateway) all share the same idempotency key.
+  // Using the UUID eventId here would create duplicate billing_events rows.
+  const eventKey =
+    transactionRef || correlationId || eventId;
 
   const admin = createAdminClient();
 
@@ -159,7 +174,7 @@ export async function POST(request: Request) {
   try {
     if (eventType === 'VOUCHER_PURCHASED' && merchantId && customerId) {
       await recordVoucherPurchaseBillingEvent(admin, {
-        eventKey: eventId,
+        eventKey,
         merchantId,
         customerId,
         voucherId: voucherId || undefined,
@@ -171,7 +186,7 @@ export async function POST(request: Request) {
       });
     } else if (eventType === 'VOUCHER_REDEEMED' && merchantId) {
       await recordVoucherRedemptionBillingEvent(admin, {
-        eventKey: eventId,
+        eventKey,
         merchantId,
         customerId: customerId || null,
         voucherId: voucherId || null,
@@ -187,7 +202,7 @@ export async function POST(request: Request) {
       await admin
         .from('billing_events')
         .insert({
-          event_key: eventId,
+          event_key: eventKey,
           event_type: eventType.toLowerCase(),
           merchant_id: merchantId,
           customer_id: customerId || null,
