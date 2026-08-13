@@ -30,3 +30,8 @@ jobs:
       - run: npm run lint --if-present
       - run: npm test --if-present
       - run: npm run build --if-present
+      - name: Build Billing Engine portal
+        working-directory: billing-engine-portal
+        run: |
+          npm ci
+          npm run build
