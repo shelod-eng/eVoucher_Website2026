@@ -10,6 +10,21 @@ export function generateTransactionReference(prefix = 'TXN'): string {
   return `${prefix}-${Date.now()}-${random}`;
 }
 
+export function generateE2ETestTransactionReference(now = new Date()): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const stamp = [
+    now.getFullYear(),
+    pad(now.getMonth() + 1),
+    pad(now.getDate()),
+    '-',
+    pad(now.getHours()),
+    pad(now.getMinutes()),
+    pad(now.getSeconds()),
+  ].join('');
+  const random = crypto.randomBytes(2).toString('hex').toUpperCase();
+  return `E2E-TEST-${stamp}-${random}`;
+}
+
 export function sha256(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex');
 }

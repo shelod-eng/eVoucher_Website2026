@@ -32,6 +32,7 @@ import { logAuditEvent } from '@/audit/audit-log';
 import { useAdminAuth } from '@/auth/admin-auth';
 import {
   createBillingInvoice,
+  getTransactionLifecycle,
   getBillingDashboard,
   listBillingEvents,
   listBillingInvoices,
@@ -206,6 +207,19 @@ export default function BillingEngine() {
     refetchInterval: 15000,
   });
   const auditEvents = auditResponse?.data ?? [];
+
+  const lifecycleSearchTerm = transactionSearch.trim();
+  const {
+    data: lifecycleResponse,
+    isLoading: lifecycleLoading,
+    error: lifecycleError,
+    refetch: refetchLifecycle,
+  } = useQuery({
+    queryKey: ['transaction-lifecycle', lifecycleSearchTerm],
+    queryFn: () => getTransactionLifecycle(session, role, lifecycleSearchTerm),
+    enabled: usePortalApi && Boolean(session?.email && lifecycleSearchTerm),
+    staleTime: 5000,
+  });
 
   // Resolve merchant + customer names for all events
   const { data: nameMap } = useQuery({
@@ -493,6 +507,31 @@ export default function BillingEngine() {
     );
   };
 
+  const lifecycleStageTone = (status) => {
+    if (status === 'found') return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+    if (status === 'error') return 'bg-red-500/20 text-red-300 border-red-500/30';
+    return 'bg-yellow-500/20 text-yellow-200 border-yellow-500/30';
+  };
+
+  const lifecycleStageLabel = (status) => {
+    if (status === 'found') return 'FOUND';
+    if (status === 'error') return 'ERROR';
+    return 'MISSING';
+  };
+
+  const stageTitles = {
+    payment: 'Payment',
+    voucher: 'Voucher',
+    billingEvent: 'Billing Event',
+    ledger: 'Ledger',
+    merchantPayout: 'Merchant Payout',
+    invoice: 'Invoice',
+    settlement: 'Settlement',
+    bankservQueue: 'BankServ Queue',
+    audit: 'Audit Trail',
+    reconciliationExceptions: 'Reconciliation',
+  };
+
   return (
     <div className="min-h-screen bg-transparent">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -551,7 +590,7 @@ export default function BillingEngine() {
               className="h-10 bg-[#00A89D] hover:bg-[#009488] text-white shrink-0"
               onClick={() => {
                 if (transactionSearch.trim()) {
-                  setActiveTab('billing-events');
+                  setActiveTab('lifecycle');
                 }
               }}
             >
@@ -677,6 +716,10 @@ export default function BillingEngine() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4 bg-white/5 border border-white/10 flex-wrap">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="lifecycle" className="flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5" />
+              Lifecycle
+            </TabsTrigger>
             <TabsTrigger value="billing-events" className="flex items-center gap-1.5">
               <CreditCard className="w-3.5 h-3.5" />
               Billing Events
@@ -704,6 +747,145 @@ export default function BillingEngine() {
             <TabsTrigger value="banks">Bank Sponsors</TabsTrigger>
             <TabsTrigger value="logistics">Logistics</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="lifecycle">
+            <div className="space-y-4">
+              <Card className="bg-white/5 border-white/10 text-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Search className="w-5 h-5 text-[#00A89D]" />
+                    Transaction Control View
+                  </CardTitle>
+                  <p className="text-sm text-white/50">
+                    Enter a transaction_reference above to trace the same transaction through the
+                    internal financial lifecycle.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {!lifecycleSearchTerm ? (
+                    <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-200">
+                      Search an E2E-TEST or TXN reference to load the complete lifecycle.
+                    </div>
+                  ) : lifecycleError ? (
+                    <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+                      <p className="font-semibold">Lifecycle API error</p>
+                      <p className="mt-1 text-xs">{String(lifecycleError?.message ?? lifecycleError)}</p>
+                    </div>
+                  ) : lifecycleLoading ? (
+                    <div className="py-12 text-center text-white/40 text-sm">
+                      Loading lifecycle for {lifecycleSearchTerm}...
+                    </div>
+                  ) : lifecycleResponse ? (
+                    <div className="space-y-4">
+                      <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-semibold text-yellow-200">
+                              {lifecycleResponse.modeLabel}
+                            </p>
+                            <p className="text-xs text-white/50 mt-1">
+                              External payment provider and live BankServ connectivity are pending
+                              sponsor/legal/vendor approval.
+                            </p>
+                          </div>
+                          <Badge className="bg-yellow-500/20 text-yellow-200 border-yellow-500/30">
+                            {lifecycleResponse.externalDependencyBoundary?.provider ?? 'mock_sandbox'}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+                        {(lifecycleResponse.lifecycle ?? []).map((stage) => (
+                          <div
+                            key={stage.key}
+                            className="rounded-xl border border-white/10 bg-white/5 p-3"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-semibold">
+                                {stageTitles[stage.key] ?? stage.key}
+                              </p>
+                              <Badge className={lifecycleStageTone(stage.status)}>
+                                {lifecycleStageLabel(stage.status)}
+                              </Badge>
+                            </div>
+                            <p className="mt-2 text-xs text-white/40 font-mono">{stage.table}</p>
+                            <p className="mt-1 text-xs text-white/50">Records: {stage.count}</p>
+                            {stage.error ? (
+                              <p className="mt-2 text-xs text-red-300">{stage.error}</p>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <Card className="bg-white/5 border-white/10 text-white">
+                          <CardHeader>
+                            <CardTitle className="text-sm">Financial Consistency</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              {Object.entries(lifecycleResponse.financial?.values ?? {}).map(
+                                ([key, value]) => (
+                                  <div
+                                    key={key}
+                                    className="rounded-lg border border-white/10 bg-white/5 p-2"
+                                  >
+                                    <p className="text-white/40">{key}</p>
+                                    <p className="font-bold text-white">{formatCurrency(value)}</p>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              {(lifecycleResponse.financial?.checks ?? []).map((check) => (
+                                <div
+                                  key={check.name}
+                                  className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs"
+                                >
+                                  <span className="text-white/70">{check.name}</span>
+                                  <Badge
+                                    className={
+                                      check.ok
+                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                        : 'bg-red-500/20 text-red-300 border-red-500/30'
+                                    }
+                                  >
+                                    {check.ok ? 'OK/PENDING' : 'MISMATCH'}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-white/5 border-white/10 text-white">
+                          <CardHeader>
+                            <CardTitle className="text-sm">Raw Stage Evidence</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <pre className="max-h-96 overflow-auto rounded-lg border border-white/10 bg-black/30 p-3 text-xs text-white/70">
+                              {JSON.stringify(lifecycleResponse.stages, null, 2)}
+                            </pre>
+                            <Button
+                              className="mt-3 h-8 bg-white/10 hover:bg-white/20 text-white"
+                              onClick={() => refetchLifecycle()}
+                            >
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Refresh Lifecycle
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-12 text-center text-white/40 text-sm">
+                      No lifecycle data loaded.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           <TabsContent value="overview">
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

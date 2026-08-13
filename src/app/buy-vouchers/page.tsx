@@ -106,6 +106,7 @@ function BuyVouchersContent() {
   const branchSelectionModeFromQuery = searchParams.get('branchSelectionMode');
   const walletTopupMode = searchParams.get('walletTopup') === '1';
   const cartCheckout = searchParams.get('cartCheckout') === '1';
+  const controlledE2ETest = searchParams.get('e2e') === '1';
   const merchantLocked = Boolean(merchantIdFromQuery);
   const selectedMerchantDetails =
     merchants.find((merchant) => merchant.id === selectedMerchant) ?? null;
@@ -477,6 +478,7 @@ function BuyVouchersContent() {
             payfastEmail,
             billingAddress,
             eftProofName,
+            controlledE2ETest,
           }),
         });
         const data = await response.json();
@@ -755,7 +757,9 @@ function BuyVouchersContent() {
                 {purchaseStatus === 'completed' &&
                   (walletTopupMode
                     ? 'Your wallet top-up completed successfully.'
-                    : 'Your voucher has been issued and is ready to use.')}
+                    : controlledE2ETest
+                      ? 'Your controlled sandbox payment completed. Your voucher has been issued and is ready to use.'
+                      : 'Your voucher has been issued and is ready to use.')}
                 {purchaseStatus === 'pending' &&
                   (walletTopupMode
                     ? 'Your top-up payment is pending confirmation.'
@@ -803,6 +807,17 @@ function BuyVouchersContent() {
                     <span className="font-semibold text-foreground">Ref:</span>{' '}
                     {transactionReference}
                   </p>
+                )}
+                {controlledE2ETest && (
+                  <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3">
+                    <p className="text-xs font-headline font-semibold text-warning">
+                      MOCK / SANDBOX - EXTERNAL PAYMENT PROVIDER PENDING
+                    </p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      This confirms the internal eVoucher financial lifecycle only. It is not a
+                      live bank or payment-provider transaction.
+                    </p>
+                  </div>
                 )}
                 {issuedVouchers.length > 0 && (
                   <div className="pt-2 border-t border-border">
@@ -884,6 +899,17 @@ function BuyVouchersContent() {
             <h1 className="font-headline font-bold text-3xl lg:text-4xl text-foreground mb-2">
               {walletTopupMode ? 'Top Up Wallet' : 'Buy Vouchers'}
             </h1>
+            {controlledE2ETest && (
+              <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 p-4">
+                <p className="text-sm font-headline font-semibold text-warning">
+                  Controlled E2E payment sandbox
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  MOCK / SANDBOX - EXTERNAL PAYMENT PROVIDER PENDING. The generated transaction
+                  reference will use the E2E-TEST format for Billing Engine traceability.
+                </p>
+              </div>
+            )}
             <p className="text-muted-foreground font-body">
               {walletTopupMode
                 ? 'Choose amount, merchant, and payment method to add new voucher value to your wallet.'

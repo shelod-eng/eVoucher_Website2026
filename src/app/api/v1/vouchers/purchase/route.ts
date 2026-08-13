@@ -10,7 +10,11 @@ import {
 } from '@/server/services/bankserv/adaptor';
 import { DefaultVoucherService } from '@/server/services/voucher/default-voucher-service';
 import { writeAuditEvent } from '@/server/utils/audit';
-import { generateSecureVoucherCode, generateTransactionReference } from '@/server/utils/security';
+import {
+  generateE2ETestTransactionReference,
+  generateSecureVoucherCode,
+  generateTransactionReference,
+} from '@/server/utils/security';
 import { calculateDiscountPricing, DEFAULT_TOTAL_DISCOUNT_PCT } from '@/lib/pricing';
 import { isConsumerRole, resolveUserRole } from '@/server/utils/role';
 import { resolveBrandFromMerchantName, getBrandByKey } from '@/lib/merchant-brand-catalog';
@@ -294,7 +298,16 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     const paymentProvider = createPaymentProvider('production');
     const voucherService = new DefaultVoucherService();
-    const transactionReference = generateTransactionReference();
+    const controlledE2ETest = Boolean((body as any).controlledE2ETest);
+    const transactionReference = controlledE2ETest
+      ? generateE2ETestTransactionReference()
+      : generateTransactionReference();
+    const paymentBoundary = {
+      mode: controlledE2ETest ? 'controlled_e2e' : 'controlled_mock',
+      provider: 'mock_sandbox',
+      label: 'MOCK / SANDBOX - EXTERNAL PAYMENT PROVIDER PENDING',
+      liveProviderConnected: false,
+    };
     const accessChannel = String((body as any).accessChannel ?? 'web')
       .trim()
       .toLowerCase();
@@ -399,6 +412,10 @@ export async function POST(request: Request) {
       amount: pricing.consumerPrice,
       paymentMethod: body.paymentMethod,
       reference: transactionReference,
+      metadata: {
+        controlledE2ETest,
+        paymentBoundary,
+      },
     });
     const devForceSuccess = process.env.NODE_ENV === 'development';
     const paymentStatus = devForceSuccess ? 'completed' : payment.status;
@@ -696,6 +713,8 @@ export async function POST(request: Request) {
           merchantName: merchant.business_name,
           parentBrand: resolvedParentBrand,
           paymentMethod: body.paymentMethod,
+          paymentBoundary,
+          controlledE2ETest,
           accessChannel,
           selectedBranchId: selectedBranchContext?.id ?? null,
           selectedBranchName:
@@ -727,6 +746,8 @@ export async function POST(request: Request) {
           completionSource: 'checkout',
           metadata: {
             paymentStatus,
+            paymentBoundary,
+            controlledE2ETest,
             selectedBranchId: selectedBranchContext?.id ?? null,
             source: 'voucher_purchase_route',
           },
@@ -762,6 +783,8 @@ export async function POST(request: Request) {
         consumerBenefitPct: pricing.consumerBenefitPct,
         evoucherBenefitPct: pricing.evoucherBenefitPct,
         paymentMethod: body.paymentMethod,
+        paymentBoundary,
+        controlledE2ETest,
         accessChannel,
         voucherCode,
         issuedVouchers,
@@ -776,6 +799,8 @@ export async function POST(request: Request) {
       voucherCode,
       issuedVouchers,
       pricing,
+      paymentBoundary,
+      controlledE2ETest,
     });
   } catch (error: any) {
     return NextResponse.json(

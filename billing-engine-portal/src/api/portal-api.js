@@ -324,6 +324,12 @@ export async function listBillingEvents(session, role, params = {}) {
   return portalFetchJson(`/api/billing/events${suffix}`, {}, session, role);
 }
 
+export async function getTransactionLifecycle(session, role, transactionReference) {
+  const search = new URLSearchParams();
+  search.set('transactionReference', String(transactionReference || '').trim());
+  return portalFetchJson(`/api/billing/lifecycle?${search.toString()}`, {}, session, role);
+}
+
 export async function listLedgerEntries(session, role, params = {}) {
   const search = new URLSearchParams();
   if (params.merchantId) search.set('merchantId', params.merchantId);

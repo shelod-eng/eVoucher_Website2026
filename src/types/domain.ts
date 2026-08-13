@@ -35,6 +35,7 @@ export interface PurchaseVoucherRequest {
   selectedBranchCity?: string;
   selectedBranchProvince?: string;
   branchSelectionMode?: 'nearest' | 'manual';
+  controlledE2ETest?: boolean;
   cardLastFour?: string;
   cardBrand?: string;
   payfastEmail?: string;
