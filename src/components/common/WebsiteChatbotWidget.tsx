@@ -56,10 +56,13 @@ export default function WebsiteChatbotWidget() {
     ),
   ]);
 
+  const isMaintenanceMode = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true';
+
   const shouldHide = useMemo(() => {
+    if (isMaintenanceMode) return true;
     const current = String(pathname ?? '');
     return hiddenPrefixes.some((prefix) => current.startsWith(prefix));
-  }, [pathname]);
+  }, [pathname, isMaintenanceMode]);
 
   if (shouldHide) return null;
 
