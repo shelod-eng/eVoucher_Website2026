@@ -137,7 +137,10 @@ export async function GET(request: NextRequest) {
       .in('merchant_id', merchantIds)
       .eq('status', 'queued');
     if (adaptorUpdateError) {
-      console.warn('[Settlement Cron] Failed to update adaptor transactions:', adaptorUpdateError.message);
+      console.warn(
+        '[Settlement Cron] Failed to update adaptor transactions:',
+        adaptorUpdateError.message
+      );
     }
 
     // 8. Audit log

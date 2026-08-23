@@ -12,6 +12,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
+      // Billing Engine portal (separate Vite app) — lets website tests cover
+      // shared portal modules such as the hardened data-mode resolver.
+      '@portal': path.resolve(__dirname, 'billing-engine-portal/src'),
     },
   },
 });

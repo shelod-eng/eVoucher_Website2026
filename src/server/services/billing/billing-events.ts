@@ -37,9 +37,31 @@ function safeNumber(value: unknown) {
   return Number.isFinite(num) ? num : 0;
 }
 
+function isoDate(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return new Date().toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10);
+}
+
 function isDuplicateKeyError(error: any) {
   const message = String(error?.message ?? '').toLowerCase();
   return message.includes('duplicate key value') || message.includes('unique constraint');
+}
+
+/**
+ * True when PostgREST rejected the payload because a column does not exist on
+ * the deployed table (PGRST204 / "column ... does not exist"). Used to retry
+ * inserts with a reduced payload when the live schema lags behind the code.
+ */
+function isMissingColumnError(error: any, column: string) {
+  // Case-insensitive: PostgREST returns "Could not find the 'x' column ..."
+  // with a leading capital.
+  const message = String(error?.message ?? '').toLowerCase();
+  return (
+    message.includes(`column "${column}" does not exist`) ||
+    message.includes(`column ${column} does not exist`) ||
+    message.includes(`could not find the '${column}' column`)
+  );
 }
 
 /**
@@ -406,7 +428,10 @@ export async function recordVoucherPurchaseBillingEvent(
       });
     } catch (settlementError: any) {
       if (!isDuplicateKeyError(settlementError)) {
-        console.error('[BillingEvents] billing_settlements insert failed:', settlementError?.message);
+        console.error(
+          '[BillingEvents] billing_settlements insert failed:',
+          settlementError?.message
+        );
       }
     }
   }
@@ -419,23 +444,49 @@ export async function recordVoucherPurchaseBillingEvent(
     .maybeSingle();
 
   if (!existingInvoice) {
+    // Per-transaction spine invoice. The full payload includes customer_id;
+    // if the deployed table predates the customer_id migration we retry
+    // without it instead of silently losing the invoice record.
+    const invoicePayload = {
+      merchant_id: merchantId,
+      customer_id: customerId,
+      invoice_number: `INV-${eventKey.slice(0, 12).toUpperCase()}`,
+      period_start: isoDate(input.occurredAt),
+      period_end: isoDate(input.occurredAt),
+      face_value: faceValue,
+      consumer_price: consumerPrice,
+      total_face_value: faceValue,
+      total_consumer_paid: consumerPrice,
+      total_discount_amount: totalDiscountAmount,
+      merchant_payout_amount: merchantGrossPayout,
+      net_payable_to_merchant: merchantNetPayout,
+      bank_fee_amount: bankFee,
+      consumer_benefit_amount: consumerBenefit,
+      platform_revenue_amount: platformRevenue,
+      status: 'approved',
+      source_id: eventKey,
+      source_type: 'payment_transaction',
+      created_at: input.occurredAt,
+    };
+
     try {
-      await admin.from('billing_invoices').insert({
-        merchant_id: merchantId,
-        customer_id: customerId,
-        invoice_number: `INV-${eventKey.slice(0, 12).toUpperCase()}`,
-        face_value: faceValue,
-        consumer_price: consumerPrice,
-        total_discount_amount: totalDiscountAmount,
-        net_payable_to_merchant: merchantNetPayout,
-        bank_fee_amount: bankFee,
-        consumer_benefit_amount: consumerBenefit,
-        platform_revenue_amount: platformRevenue,
-        status: 'approved',
-        source_id: eventKey,
-        source_type: 'payment_transaction',
-        created_at: input.occurredAt,
-      });
+      let { error: invoiceInsertError } = await admin
+        .from('billing_invoices')
+        .insert(invoicePayload);
+
+      if (invoiceInsertError && isMissingColumnError(invoiceInsertError, 'customer_id')) {
+        const { customer_id: _omittedCustomerId, ...legacyInvoicePayload } = invoicePayload as any;
+        ({ error: invoiceInsertError } = await admin
+          .from('billing_invoices')
+          .insert(legacyInvoicePayload));
+      }
+
+      if (invoiceInsertError && !isDuplicateKeyError(invoiceInsertError)) {
+        console.error(
+          '[BillingEvents] billing_invoices insert failed:',
+          invoiceInsertError?.message
+        );
+      }
     } catch (invoiceError: any) {
       if (!isDuplicateKeyError(invoiceError)) {
         console.error('[BillingEvents] billing_invoices insert failed:', invoiceError?.message);

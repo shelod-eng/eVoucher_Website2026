@@ -45,13 +45,14 @@ import {
   markExported,
   markSubmitted,
 } from '@/settlements/mock-settlement-store';
+import { resolveDataMode } from '@/api/data-mode';
 
 export default function SettlementPayouts() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('pending');
-  const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
-  const useMock = dataMode === 'mock';
-  const usePortalApi = dataMode === 'portal';
+  // Hardened resolver: tolerates whitespace/quotes/casing in the deployed env
+  // config and defaults to portal (real website billing APIs).
+  const { mode: dataMode, useMock, usePortalApi } = resolveDataMode();
   const useDemoFlow = useMock || usePortalApi;
   const { session, isFinanceApprover, role } = useAdminAuth();
 

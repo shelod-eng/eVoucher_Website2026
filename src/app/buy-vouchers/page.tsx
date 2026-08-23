@@ -814,8 +814,8 @@ function BuyVouchersContent() {
                       MOCK / SANDBOX - EXTERNAL PAYMENT PROVIDER PENDING
                     </p>
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                      This confirms the internal eVoucher financial lifecycle only. It is not a
-                      live bank or payment-provider transaction.
+                      This confirms the internal eVoucher financial lifecycle only. It is not a live
+                      bank or payment-provider transaction.
                     </p>
                   </div>
                 )}

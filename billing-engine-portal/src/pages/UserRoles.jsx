@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { provisionPortalUser } from '@/api/portal-api';
+import { resolveDataMode } from '@/api/data-mode';
 
 export default function UserRoles() {
   const { session, role, isFinanceApprover } = useAdminAuth();
@@ -25,8 +26,9 @@ export default function UserRoles() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
-  const usePortalApi = dataMode === 'portal';
+  // Hardened resolver: tolerates whitespace/quotes/casing in the deployed env
+  // config and defaults to portal (real website billing APIs).
+  const { mode: dataMode, usePortalApi } = resolveDataMode();
 
   async function handleProvisionUser(event) {
     event.preventDefault();

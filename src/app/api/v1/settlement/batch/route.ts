@@ -55,7 +55,10 @@ export async function POST(request: NextRequest) {
     if (payoutsError) throw payoutsError;
 
     if (!payouts || payouts.length === 0) {
-      return NextResponse.json({ error: 'No pending payouts ready for settlement' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'No pending payouts ready for settlement' },
+        { status: 400 }
+      );
     }
 
     // 3. Resolve merchant banking details
@@ -135,7 +138,10 @@ export async function POST(request: NextRequest) {
       .in('merchant_id', merchantIds)
       .eq('status', 'queued');
     if (adaptorUpdateError) {
-      console.warn('[Settlement Batch] Failed to update adaptor transactions:', adaptorUpdateError.message);
+      console.warn(
+        '[Settlement Batch] Failed to update adaptor transactions:',
+        adaptorUpdateError.message
+      );
     }
 
     return NextResponse.json({
@@ -177,7 +183,8 @@ export async function GET(request: NextRequest) {
       if (payouts) {
         payouts.forEach((entry) => {
           if (entry.status === 'pending') summary.pendingAmount += Number(entry.amount ?? 0);
-          if (entry.status === 'batched' || entry.status === 'approved') summary.processingAmount += Number(entry.amount ?? 0);
+          if (entry.status === 'batched' || entry.status === 'approved')
+            summary.processingAmount += Number(entry.amount ?? 0);
           if (entry.status === 'settled') summary.paidAmount += Number(entry.amount ?? 0);
         });
       }
@@ -198,9 +205,7 @@ export async function GET(request: NextRequest) {
 
     // If batch ID provided, return batch details (canonical path)
     if (batchId) {
-      let batchQuery = admin
-        .from('billing_settlement_batches')
-        .select('*');
+      let batchQuery = admin.from('billing_settlement_batches').select('*');
 
       if (batchId) {
         batchQuery = batchQuery.eq('id', batchId);

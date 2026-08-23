@@ -133,8 +133,7 @@ export async function POST(request: Request) {
   // write paths (direct webhook call, publishPlatformEvent in-process handler,
   // and outbox cron retry via this gateway) all share the same idempotency key.
   // Using the UUID eventId here would create duplicate billing_events rows.
-  const eventKey =
-    transactionRef || correlationId || eventId;
+  const eventKey = transactionRef || correlationId || eventId;
 
   const admin = createAdminClient();
 

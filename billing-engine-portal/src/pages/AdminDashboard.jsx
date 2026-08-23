@@ -14,12 +14,14 @@ import {
 import moment from 'moment';
 import { getBillingDashboard, listBillingEvents, listPortalMerchants } from '@/api/portal-api';
 import { useAdminAuth } from '@/auth/admin-auth';
+import { resolveDataMode } from '@/api/data-mode';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const { session, role } = useAdminAuth();
-  const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
-  const usePortalApi = dataMode === 'portal';
+  // Hardened resolver: tolerates whitespace/quotes/casing in the deployed env
+  // config and defaults to portal (real website billing APIs).
+  const { mode: dataMode, usePortalApi } = resolveDataMode();
   
   const { data: merchants = [] } = useQuery({
     queryKey: ['merchants'],

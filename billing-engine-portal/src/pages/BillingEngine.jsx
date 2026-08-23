@@ -49,6 +49,7 @@ import {
 } from '@/api/portal-api';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 import BillingEventsTab from '@/components/BillingEventsTab';
+import { resolveDataMode } from '@/api/data-mode';
 
 export default function BillingEngine() {
   const queryClient = useQueryClient();
@@ -106,13 +107,14 @@ export default function BillingEngine() {
   // caused the Billing Engine to silently display fake financial data when the
   // VITE_BILLING_DATA_MODE env var was missing at build time.
   // Explicit 'mock' is still supported for local development only.
-  const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'portal').toLowerCase();
-  const useMock = dataMode === 'mock';
-  const usePortalApi = dataMode === 'portal';
-  const portalModeError =
-    !usePortalApi && !useMock
-      ? `Invalid VITE_BILLING_DATA_MODE="${dataMode}". Expected "portal" (or "mock" for local dev).`
-      : null;
+  // resolveDataMode() is hardened against whitespace/quotes/casing issues in
+  // the deployed env config (root cause of the dead live-data feed).
+  const {
+    mode: dataMode,
+    useMock,
+    usePortalApi,
+    invalidReason: portalModeError,
+  } = resolveDataMode();
 
   function formatCurrency(value) {
     const num = Number(value ?? 0);
@@ -171,10 +173,21 @@ export default function BillingEngine() {
 
   const { data: transactions = [] } = useQuery({
     queryKey: ['transactions'],
-    queryFn: () =>
-      usePortalApi && session?.email
-        ? listBillingEvents(session, role, { limit: 100 }).then((response) => response?.data ?? [])
-        : Promise.resolve(mockTransactions),
+    queryFn: () => {
+      if (usePortalApi && session?.email) {
+        return listBillingEvents(session, role, { limit: 100 }).then(
+          (response) => response?.data ?? []
+        );
+      }
+      // Portal mode without an authenticated admin session must NOT fall back
+      // to mock data — show an explicit empty state instead.
+      if (usePortalApi) return Promise.resolve([]);
+      return Promise.resolve(mockTransactions);
+    },
+    enabled: useMock || (usePortalApi && Boolean(session?.email)),
+    // Keep "Recent Website Transactions" on the Overview tab live — new
+    // purchases on www.evoucher.co.za appear here within ~10 seconds.
+    refetchInterval: 10000,
   });
   const { data: payoutsResponse } = useQuery({
     queryKey: ['merchant-payouts'],
@@ -1055,8 +1068,19 @@ export default function BillingEngine() {
                 </CardHeader>
                 <CardContent>
                   {recentWebsiteTransactions.length === 0 ? (
-                    <div className="text-sm text-white/60">
-                      No website transactions recorded yet.
+                    <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-200">
+                      <p className="font-semibold">No real billing records found</p>
+                      {usePortalApi && !session?.email ? (
+                        <p className="mt-1 text-xs text-yellow-200/80">
+                          Sign in with the admin passcode to load live billing events from
+                          www.evoucher.co.za. Mock data is never shown in portal mode.
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs text-yellow-200/80">
+                          Complete a consumer purchase on www.evoucher.co.za and it will appear
+                          here automatically within seconds.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-3">

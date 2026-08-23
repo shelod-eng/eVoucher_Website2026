@@ -21,13 +21,15 @@ import {
   listBillingSettlementBatches,
   submitBillingSettlementBatch,
 } from '@/api/portal-api';
+import { resolveDataMode } from '@/api/data-mode';
 
 export default function BankServ() {
   const { session, isFinanceApprover, role } = useAdminAuth();
   const [batches, setBatches] = useState([]);
   const [bankServStatus, setBankServStatus] = useState(null);
-  const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
-  const usePortalApi = dataMode === 'portal';
+  // Hardened resolver: tolerates whitespace/quotes/casing in the deployed env
+  // config and defaults to portal (real website billing APIs).
+  const { mode: dataMode, usePortalApi } = resolveDataMode();
 
   function downloadBlob(filename, blob) {
     const url = URL.createObjectURL(blob);

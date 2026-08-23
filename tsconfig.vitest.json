@@ -4,6 +4,7 @@
     "types": ["vitest/globals", "node"],
     "moduleResolution": "bundler",
     "module": "esnext",
+    "allowJs": true,
     "noEmit": true
   },
   "include": [
@@ -11,5 +12,9 @@
     "vitest.config.ts",
     "src/**/*.ts",
     "src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next"
   ]
 }

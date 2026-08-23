@@ -1,6 +1,9 @@
 import { createClient } from '@base44/sdk';
+import { resolveDataMode } from '@/api/data-mode';
 
-const dataMode = (import.meta.env.VITE_BILLING_DATA_MODE || 'mock').toLowerCase();
+// Hardened resolver: tolerates whitespace/quotes/casing in the deployed env
+// config and defaults to portal (real website billing APIs).
+const { mode: dataMode } = resolveDataMode();
 
 function createEntityStub(entityName) {
   return {

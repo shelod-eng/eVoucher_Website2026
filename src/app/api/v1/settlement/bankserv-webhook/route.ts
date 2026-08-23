@@ -9,7 +9,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { processAckNckRecord, enqueueAckNckTracking } from '@/server/services/bankserv/ack-nck-retry';
+import {
+  processAckNckRecord,
+  enqueueAckNckTracking,
+} from '@/server/services/bankserv/ack-nck-retry';
 import { writeAuditEvent } from '@/server/utils/audit';
 
 const BANKSERV_WEBHOOK_SECRET = process.env.BANKSERV_WEBHOOK_SECRET || 'dev-secret-key';
@@ -27,7 +30,9 @@ export async function POST(request: NextRequest) {
 
     // 3. Validate required fields
     const reference = String(payload.reference ?? '').trim();
-    const status = String(payload.status ?? '').trim().toUpperCase();
+    const status = String(payload.status ?? '')
+      .trim()
+      .toUpperCase();
 
     if (!reference || !status || !['ACK', 'NCK'].includes(status)) {
       return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 });
@@ -113,7 +118,8 @@ export async function POST(request: NextRequest) {
           actorRole: 'system',
           entityType: 'billing_settlement_batch',
           entityId: batch.id,
-          action: status === 'ACK' ? 'settlement_batch_ack_received' : 'settlement_batch_nck_received',
+          action:
+            status === 'ACK' ? 'settlement_batch_ack_received' : 'settlement_batch_nck_received',
           metadata: {
             batchNumber: batch.batch_number,
             reference,
@@ -152,7 +158,10 @@ export async function POST(request: NextRequest) {
 
         await processAckNckRecord(admin, record);
       } else {
-        console.warn('[BankServ Webhook] No matching batch or tracking record found for reference:', reference);
+        console.warn(
+          '[BankServ Webhook] No matching batch or tracking record found for reference:',
+          reference
+        );
       }
     }
 
