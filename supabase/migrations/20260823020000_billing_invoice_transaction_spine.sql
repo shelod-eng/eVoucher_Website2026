@@ -40,10 +40,10 @@ BEGIN
     AND t.relname = 'billing_invoices'
     AND c.contype = 'u'
     AND (
-      SELECT array_agg(a.attname ORDER BY k.ordinality)
+      SELECT array_agg(a.attname::TEXT ORDER BY k.ordinality)
       FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ordinality)
       JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = k.attnum
-    ) = ARRAY['merchant_id'::TEXT, 'period_start'::TEXT, 'period_end'::TEXT];
+    ) = ARRAY['merchant_id', 'period_start', 'period_end']::TEXT[];
 
   IF constraint_name IS NOT NULL THEN
     EXECUTE format('ALTER TABLE public.billing_invoices DROP CONSTRAINT %I', constraint_name);

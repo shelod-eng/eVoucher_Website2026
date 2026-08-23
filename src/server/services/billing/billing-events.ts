@@ -450,7 +450,9 @@ export async function recordVoucherPurchaseBillingEvent(
     const invoicePayload = {
       merchant_id: merchantId,
       customer_id: customerId,
-      invoice_number: `INV-${eventKey.slice(0, 12).toUpperCase()}`,
+      // Full canonical reference keeps invoice_number unique per transaction
+      // (a 12-char prefix collides across TXNs sharing the first 12 chars).
+      invoice_number: `INV-${eventKey.toUpperCase()}`,
       period_start: isoDate(input.occurredAt),
       period_end: isoDate(input.occurredAt),
       face_value: faceValue,

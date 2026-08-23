@@ -144,7 +144,8 @@ async function main() {
       const payload = {
         merchant_id: event.merchant_id,
         customer_id: event.customer_id ?? null,
-        invoice_number: `INV-${eventKey.slice(0, 12).toUpperCase()}`,
+        // Full canonical reference keeps invoice_number unique per transaction.
+        invoice_number: `INV-${eventKey.toUpperCase()}`,
         period_start: isoDate(occurredAt),
         period_end: isoDate(occurredAt),
         face_value: revenue.faceValue,
